@@ -1,0 +1,66 @@
+{
+  "enriched": {
+    "catalog": "Enriched Catalog (68 routes)",
+    "n": 16,
+    "s05_accuracy": 0.875,
+    "recall_at_k": 1.0,
+    "cascade_accuracy": 0.875,
+    "conditioned_accuracy": 0.875,
+    "ambiguity_rate": 0.3125,
+    "avg_retrieval_ms": 14.755640312500002,
+    "avg_deliberation_ms": 6313.9360626,
+    "receipts_verified": 16,
+    "receipts_checked": 16,
+    "outcomes_recorded": 16,
+    "per_class": {
+      "ingest": {
+        "total": 2,
+        "s05_ok": 1,
+        "cascade_ok": 1,
+        "shortlist_ok": 2
+      },
+      "inspect": {
+        "total": 2,
+        "s05_ok": 2,
+        "cascade_ok": 2,
+        "shortlist_ok": 2
+      },
+      "recall": {
+        "total": 2,
+        "s05_ok": 2,
+        "cascade_ok": 2,
+        "shortlist_ok": 2
+      },
+      "remember": {
+        "total": 2,
+        "s05_ok": 1,
+        "cascade_ok": 2,
+        "shortlist_ok": 2
+      },
+      "session_checkpoint": {
+        "total": 2,
+        "s05_ok": 2,
+        "cascade_ok": 2,
+        "shortlist_ok": 2
+      },
+      "session_continuity": {
+        "total": 2,
+        "s05_ok": 2,
+        "cascade_ok": 2,
+        "shortlist_ok": 2
+      },
+      "session_record": {
+        "total": 2,
+        "s05_ok": 2,
+        "cascade_ok": 2,
+        "shortlist_ok": 2
+      },
+      "status": {
+        "total": 2,
+        "s05_ok": 2,
+        "cascade_ok": 1,
+        "shortlist_ok": 2
+      }
+    }
+  }
+}

@@ -276,6 +276,79 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Rank a shortlist of candidate routes for a state via local static embeddings
+    #[cfg(feature = "system05")]
+    Shortlist {
+        /// State file (text or JSON); reads stdin when omitted
+        #[arg(long)]
+        state_file: Option<PathBuf>,
+        /// Candidate routes JSON (object or utterances); default: resolved enriched catalog
+        #[arg(long)]
+        routes: Option<PathBuf>,
+        /// Number of candidates to return (default 5)
+        #[arg(long, default_value_t = 5)]
+        k: usize,
+        /// Margin below which the shortlist is reported as ambiguous (default 0.02)
+        #[arg(long, default_value_t = 0.02)]
+        margin_threshold: f64,
+        /// Automatically cascade to System 1.5 Deliberator if ambiguous
+        #[arg(long)]
+        cascade: bool,
+        /// Checkpoint directory (defaults to WM_GEN3_SYSTEM05_MODEL or discovered paths)
+        #[arg(long)]
+        model: Option<PathBuf>,
+        /// Emit the raw shortlist JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Deliberate over ambiguous candidate routes using grammar-constrained local SLM
+    Deliberate {
+        /// Intent or state text
+        #[arg(long)]
+        intent: String,
+        /// Candidate routes JSON (array of route names or objects)
+        #[arg(long)]
+        candidates: Option<String>,
+        /// Candidate routes file path
+        #[arg(long)]
+        candidates_file: Option<PathBuf>,
+        /// Emit the raw deliberation JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Verify a signed Gen3 receipt (#decision, #shortlist, #deliberation, #outcome) against the store gate key
+    #[cfg(any(feature = "systemone", feature = "system05"))]
+    VerifyReceipt {
+        /// Path to the receipt JSON
+        path: PathBuf,
+        /// Emit raw JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Record an outcome for a dispatched receipt (signs and journals it)
+    #[cfg(any(feature = "systemone", feature = "system05"))]
+    Outcome {
+        /// Path to the subject receipt JSON
+        receipt: PathBuf,
+        /// Outcome: success | failure | corrected | unknown
+        #[arg(long)]
+        outcome: String,
+        /// Correct route when the outcome is 'corrected'
+        #[arg(long)]
+        corrected_route: Option<String>,
+        /// Free-form note
+        #[arg(long)]
+        note: Option<String>,
+        /// Session id
+        #[arg(long)]
+        session_id: Option<String>,
+        /// Tenant id
+        #[arg(long)]
+        tenant_id: Option<String>,
+        /// Emit raw JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Manage pluggable cyberbrain organs (neural micro-models, rerankers, embeddings)
     Organ {
         #[command(subcommand)]
@@ -1767,6 +1840,54 @@ fn main() {
             model,
             json,
         } => run_decision_command(state_file, &questions, model, json),
+        #[cfg(feature = "system05")]
+        Commands::Shortlist {
+            state_file,
+            routes,
+            k,
+            margin_threshold,
+            cascade,
+            model,
+            json,
+        } => run_shortlist_command(
+            state_file,
+            routes,
+            k,
+            margin_threshold,
+            cascade,
+            model,
+            json,
+            &store_path,
+        ),
+        Commands::Deliberate {
+            intent,
+            candidates,
+            candidates_file,
+            json,
+        } => run_deliberate_command(&intent, candidates, candidates_file, &store_path, json),
+        #[cfg(any(feature = "systemone", feature = "system05"))]
+        Commands::VerifyReceipt { path, json } => {
+            run_verify_receipt_command(&path, &store_path, json);
+        }
+        #[cfg(any(feature = "systemone", feature = "system05"))]
+        Commands::Outcome {
+            receipt,
+            outcome,
+            corrected_route,
+            note,
+            session_id,
+            tenant_id,
+            json,
+        } => run_outcome_command(
+            &receipt,
+            &outcome,
+            corrected_route,
+            note,
+            session_id,
+            tenant_id,
+            &store_path,
+            json,
+        ),
         Commands::Organ { command } => run_organ_command(command, &store_path),
         Commands::Peer { command } => run_peer_command(command, &store_path),
         Commands::Sentinel { command } => run_sentinel_command(command, &store_path),
@@ -1895,6 +2016,468 @@ fn run_decision_command(
         }
         Err(e) => {
             eprintln!("System One decision failed: {e}");
+            std::process::exit(1);
+        }
+    }
+}
+
+#[cfg(feature = "system05")]
+#[allow(clippy::too_many_arguments)]
+fn run_shortlist_command(
+    state_file: Option<PathBuf>,
+    routes_path: Option<PathBuf>,
+    k: usize,
+    margin_threshold: f64,
+    cascade: bool,
+    model: Option<PathBuf>,
+    json_output: bool,
+    store_path: &Path,
+) {
+    use wm_gen3_zeropointfive::System05;
+
+    let raw_state = match &state_file {
+        Some(path) => match std::fs::read_to_string(path) {
+            Ok(text) => text,
+            Err(e) => {
+                eprintln!("Failed to read state file {}: {e}", path.display());
+                std::process::exit(1);
+            }
+        },
+        None => {
+            let mut buffer = String::new();
+            if let Err(e) = std::io::Read::read_to_string(&mut std::io::stdin(), &mut buffer) {
+                eprintln!("Failed to read state from stdin: {e}");
+                std::process::exit(1);
+            }
+            buffer
+        }
+    };
+    let state_text = match serde_json::from_str::<serde_json::Value>(&raw_state) {
+        Ok(serde_json::Value::String(text)) => text,
+        Ok(other) => other.to_string(),
+        Err(_) => raw_state,
+    };
+
+    let routes_path = match System05::resolve_catalog_path(routes_path) {
+        Ok(path) => path,
+        Err(e) => {
+            eprintln!("System 0.5 catalog unavailable: {e}");
+            std::process::exit(1);
+        }
+    };
+    let routes: serde_json::Value = match std::fs::read_to_string(&routes_path)
+        .map_err(|e| e.to_string())
+        .and_then(|raw| serde_json::from_str(&raw).map_err(|e| e.to_string()))
+    {
+        Ok(value) => value,
+        Err(e) => {
+            eprintln!("Failed to read catalog {}: {e}", routes_path.display());
+            std::process::exit(1);
+        }
+    };
+
+    let model_dir = match System05::resolve_model_dir(model) {
+        Ok(dir) => dir,
+        Err(e) => {
+            eprintln!("System 0.5 model unavailable: {e}");
+            std::process::exit(1);
+        }
+    };
+
+    let organ = System05::new(model_dir);
+    match organ.shortlist(&state_text, &routes, k) {
+        Ok(mut outcome) => {
+            let margin = outcome
+                .get("margin")
+                .and_then(serde_json::Value::as_f64)
+                .unwrap_or(0.0);
+            let gate = if margin >= margin_threshold {
+                "dispatch"
+            } else {
+                "ambiguous"
+            };
+            outcome["gate"] = serde_json::json!(gate);
+            outcome["margin_threshold"] = serde_json::json!(margin_threshold);
+
+            let mut deliberated_info: Option<(String, f64, f64, String)> = None;
+            if gate == "ambiguous" && cascade {
+                let mut candidates: Vec<wm_gen3_harness::deliberation::CandidateRoute> = Vec::new();
+                if let Some(ranked) = outcome.get("ranked").and_then(serde_json::Value::as_array) {
+                    for entry in ranked {
+                        let name = entry.get("route").and_then(|v| v.as_str()).unwrap_or_default().to_string();
+                        let score = entry.get("score").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let description = match routes.get(&name) {
+                            Some(serde_json::Value::String(s)) => Some(s.clone()),
+                            Some(serde_json::Value::Array(arr)) => {
+                                arr.first().and_then(|v| v.as_str()).map(|s| s.to_string())
+                            }
+                            _ => None,
+                        };
+                        candidates.push(wm_gen3_harness::deliberation::CandidateRoute {
+                            name,
+                            score,
+                            description,
+                        });
+                    }
+                }
+                let deliberator = wm_gen3_harness::deliberation::Deliberator::default();
+                if let Ok((chosen, conf, lat)) = deliberator.deliberate(&state_text, &candidates) {
+                    let cand_names: Vec<String> = candidates.iter().map(|c| c.name.clone()).collect();
+                    if let Ok((signing_key, _)) = wm_gen3_core::mandala::resolve_or_create_mandala_gate_key(store_path) {
+                        let receipt = wm_gen3_harness::deliberation::DeliberationReceipt::sign(
+                            &signing_key,
+                            &state_text,
+                            &cand_names,
+                            &chosen,
+                            margin,
+                            margin_threshold,
+                            conf,
+                            lat,
+                        );
+                        let _ = receipt.persist(store_path);
+                        outcome["deliberation"] = serde_json::json!({
+                            "chosen_route": chosen,
+                            "confidence": conf,
+                            "latency_ms": lat,
+                            "receipt_id": receipt.receipt_id,
+                            "spec": receipt.spec,
+                        });
+                        deliberated_info = Some((chosen, conf, lat, receipt.receipt_id));
+                    }
+                }
+            }
+
+            let mut shortlist_receipt_id: Option<String> = None;
+            if let Ok((signing_key, _)) = wm_gen3_core::mandala::resolve_or_create_mandala_gate_key(store_path) {
+                let gate_did = format!(
+                    "did:key:{}",
+                    signing_key
+                        .verifying_key()
+                        .to_bytes()
+                        .iter()
+                        .map(|byte| format!("{byte:02x}"))
+                        .collect::<String>()
+                );
+                let mut receipt = wm_gen3_harness::shortlist_receipt::ShortlistReceipt::from_outcome(
+                    &outcome,
+                    &serde_json::Value::String(state_text.clone()),
+                    &routes,
+                    &serde_json::json!({
+                        "tenant_id": "local",
+                        "session_id": "cli",
+                        "task_class": "route_dispatch"
+                    }),
+                    gate_did,
+                );
+                receipt.sign(&signing_key);
+                let receipts_dir = store_path.join("receipts");
+                if let Ok(()) = std::fs::create_dir_all(&receipts_dir) {
+                    let receipt_path = receipts_dir.join(format!("shortlist-{}.json", receipt.receipt_id));
+                    if let Ok(serialized) = serde_json::to_string_pretty(&receipt) {
+                        let _ = std::fs::write(&receipt_path, serialized);
+                        outcome["receipt_path"] = serde_json::json!(receipt_path.display().to_string());
+                        outcome["receipt_id"] = serde_json::json!(receipt.receipt_id);
+                        outcome["spec"] = serde_json::json!(receipt.spec);
+                        shortlist_receipt_id = Some(receipt.receipt_id);
+                    }
+                }
+            }
+
+            if json_output {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&outcome).unwrap_or_default()
+                );
+                return;
+            }
+
+            println!("==================================================");
+            println!("   WhiteMagic Gen3 System 0.5 Shortlist (static)   ");
+            println!("==================================================");
+            if let Some(ranked) = outcome.get("ranked").and_then(serde_json::Value::as_array) {
+                for (index, entry) in ranked.iter().enumerate() {
+                    println!(
+                        "[{:2}] {:34} score={:.4}",
+                        index + 1,
+                        entry
+                            .get("route")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("?"),
+                        entry
+                            .get("score")
+                            .and_then(serde_json::Value::as_f64)
+                            .unwrap_or(0.0)
+                    );
+                }
+            }
+            if let Some(model_name) = outcome.get("model").and_then(serde_json::Value::as_str) {
+                println!("Model:       {model_name}");
+            }
+            println!(
+                "Candidates:  {}",
+                outcome
+                    .get("candidate_count")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or(0)
+            );
+            println!("Margin:      {margin:.4}  Gate: {gate} (tau={margin_threshold:.4})");
+            if let Some(latency) = outcome
+                .get("latency_ms")
+                .and_then(serde_json::Value::as_f64)
+            {
+                println!("Retrieval:   {latency:.1} ms");
+            }
+            if let Some((chosen, conf, lat, receipt_id)) = deliberated_info {
+                println!("--------------------------------------------------");
+                println!("System 1.5 Deliberator Cascade:");
+                println!("  Resolved:  {chosen} (conf={conf:.4}, lat={lat:.1} ms)");
+                println!("  Receipt:   deliberation-{receipt_id}.json");
+            }
+            if let Some(ref rid) = shortlist_receipt_id {
+                println!("Receipt:     shortlist-{rid}.json");
+            }
+            println!("==================================================");
+        }
+        Err(e) => {
+            eprintln!("System 0.5 shortlist failed: {e}");
+            std::process::exit(1);
+        }
+    }
+}
+
+fn parse_candidates_into(
+    val: &serde_json::Value,
+    out: &mut Vec<wm_gen3_harness::deliberation::CandidateRoute>,
+) {
+    match val {
+        serde_json::Value::Array(arr) => {
+            for item in arr {
+                match item {
+                    serde_json::Value::String(s) => {
+                        out.push(wm_gen3_harness::deliberation::CandidateRoute {
+                            name: s.clone(),
+                            score: 0.9,
+                            description: None,
+                        });
+                    }
+                    serde_json::Value::Object(obj) => {
+                        let name = obj
+                            .get("name")
+                            .or_else(|| obj.get("route"))
+                            .and_then(|v| v.as_str())
+                            .unwrap_or_default()
+                            .to_string();
+                        let score = obj.get("score").and_then(|v| v.as_f64()).unwrap_or(0.9);
+                        let desc = obj
+                            .get("description")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string());
+                        if !name.is_empty() {
+                            out.push(wm_gen3_harness::deliberation::CandidateRoute {
+                                name,
+                                score,
+                                description: desc,
+                            });
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        serde_json::Value::Object(obj) => {
+            for (k, v) in obj {
+                let desc = v.as_str().map(|s| s.to_string());
+                out.push(wm_gen3_harness::deliberation::CandidateRoute {
+                    name: k.clone(),
+                    score: 0.9,
+                    description: desc,
+                });
+            }
+        }
+        _ => {}
+    }
+}
+
+fn run_deliberate_command(
+    intent: &str,
+    candidates_json: Option<String>,
+    candidates_file: Option<PathBuf>,
+    store_path: &Path,
+    json_output: bool,
+) {
+    let deliberator = wm_gen3_harness::deliberation::Deliberator::default();
+    let mut candidate_routes: Vec<wm_gen3_harness::deliberation::CandidateRoute> = Vec::new();
+
+    if let Some(path) = candidates_file {
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&content) {
+                parse_candidates_into(&parsed, &mut candidate_routes);
+            }
+        }
+    } else if let Some(raw) = candidates_json {
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw) {
+            parse_candidates_into(&parsed, &mut candidate_routes);
+        }
+    }
+
+    if candidate_routes.is_empty() {
+        eprintln!("Error: no candidates provided (use --candidates or --candidates-file)");
+        std::process::exit(1);
+    }
+
+    let (gate_key, _) = match wm_gen3_core::mandala::resolve_or_create_mandala_gate_key(store_path) {
+        Ok(k) => k,
+        Err(e) => {
+            eprintln!("Gate key resolution failed: {e}");
+            std::process::exit(1);
+        }
+    };
+
+    let gate = wm_gen3_harness::deliberation::ConformalGate::default();
+    let tau = gate.calibrate_tau(store_path);
+
+    match deliberator.deliberate(intent, &candidate_routes) {
+        Ok((chosen_route, confidence, latency_ms)) => {
+            let candidate_names: Vec<String> =
+                candidate_routes.iter().map(|c| c.name.clone()).collect();
+            let receipt = wm_gen3_harness::deliberation::DeliberationReceipt::sign(
+                &gate_key,
+                intent,
+                &candidate_names,
+                &chosen_route,
+                0.0,
+                tau,
+                confidence,
+                latency_ms,
+            );
+            let _ = receipt.persist(store_path);
+
+            if json_output {
+                let out = serde_json::json!({
+                    "status": "success",
+                    "chosen_route": chosen_route,
+                    "confidence": confidence,
+                    "latency_ms": latency_ms,
+                    "candidates": candidate_names,
+                    "receipt": receipt,
+                });
+                println!("{}", serde_json::to_string_pretty(&out).unwrap_or_default());
+            } else {
+                println!("==================================================");
+                println!("   WhiteMagic Gen3 System 1.5 Deliberator (SLM)   ");
+                println!("==================================================");
+                println!("Intent:       {}", intent);
+                println!("Candidates:   {}", candidate_names.join(", "));
+                println!("Chosen:       {}", chosen_route);
+                println!("Confidence:   {:.4}", confidence);
+                println!("Latency:      {:.1} ms", latency_ms);
+                println!("Receipt ID:   {}", receipt.receipt_id);
+                println!("==================================================");
+            }
+        }
+        Err(e) => {
+            eprintln!("Deliberation failed: {e}");
+            std::process::exit(1);
+        }
+    }
+}
+
+#[cfg(any(feature = "systemone", feature = "system05"))]
+fn run_verify_receipt_command(path: &Path, store_path: &Path, json_output: bool) {
+    match wm_gen3_harness::receipt_verify::verify_receipt_file(path, store_path) {
+        Ok(report) => {
+            if json_output {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report).unwrap_or_default()
+                );
+            } else {
+                let valid = report["valid"].as_bool().unwrap_or(false);
+                println!("Receipt:    {}", path.display());
+                println!("Spec:       {}", report["spec"].as_str().unwrap_or("?"));
+                println!("Receipt ID: {}", report["receipt_id"]);
+                println!(
+                    "Issuer:     {}",
+                    report["issuer_did"].as_str().unwrap_or("?")
+                );
+                println!("Verdict:    {}", if valid { "VALID" } else { "INVALID" });
+                if let Some(detail) = report["detail"].as_str() {
+                    println!("Detail:     {detail}");
+                }
+            }
+            if !report["valid"].as_bool().unwrap_or(false) {
+                std::process::exit(1);
+            }
+        }
+        Err(e) => {
+            eprintln!("Receipt verification failed: {e}");
+            std::process::exit(1);
+        }
+    }
+}
+
+#[cfg(any(feature = "systemone", feature = "system05"))]
+#[allow(clippy::too_many_arguments)]
+fn run_outcome_command(
+    receipt: &Path,
+    outcome: &str,
+    corrected_route: Option<String>,
+    note: Option<String>,
+    session_id: Option<String>,
+    tenant_id: Option<String>,
+    store_path: &Path,
+    json_output: bool,
+) {
+    let mut args = serde_json::json!({
+        "receipt_path": receipt.display().to_string(),
+        "outcome": outcome,
+    });
+    if let Some(value) = corrected_route {
+        args["corrected_route"] = serde_json::json!(value);
+    }
+    if let Some(value) = note {
+        args["note"] = serde_json::json!(value);
+    }
+    if let Some(value) = session_id {
+        args["session_id"] = serde_json::json!(value);
+    }
+    if let Some(value) = tenant_id {
+        args["tenant_id"] = serde_json::json!(value);
+    }
+    match wm_gen3_harness::receipt_verify::record_outcome(&args, store_path, false) {
+        Ok(value) => {
+            if json_output {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&value).unwrap_or_default()
+                );
+            } else {
+                println!(
+                    "Outcome recorded: {}",
+                    value["outcome"]["outcome"].as_str().unwrap_or("?")
+                );
+                println!(
+                    "Subject:          {}",
+                    value["outcome"]["subject_receipt"].as_str().unwrap_or("?")
+                );
+                println!(
+                    "Subject verified: {}",
+                    value["outcome"]["subject_verified"]
+                        .as_bool()
+                        .unwrap_or(false)
+                );
+                println!(
+                    "Sidecar:          {}",
+                    value["sidecar_path"].as_str().unwrap_or("?")
+                );
+                println!(
+                    "Journal:          {}",
+                    value["journal_path"].as_str().unwrap_or("?")
+                );
+            }
+        }
+        Err(e) => {
+            eprintln!("Outcome recording failed: {e}");
             std::process::exit(1);
         }
     }

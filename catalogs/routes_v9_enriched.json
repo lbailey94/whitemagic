@@ -1,0 +1,286 @@
+{
+ "memory.create": [
+  "Store a new memory or fact.",
+  "Remember this for later.",
+  "Write this down and save it to memory.",
+  "Create a new memory entry.",
+  "Add this fact to the memory store.",
+  "Keep a note about this.",
+  "Create a note.",
+  "Save this information.",
+  "Persist a new fact.",
+  "Keep this in mind.",
+  "Make a note of this.",
+  "Note this down for later.",
+  "Record this as a memory."
+ ],
+ "memory.batch_create": [
+  "Batch-create memories (one call, one Tantivy commit; ~10-50x faster than repeated memory.c"
+ ],
+ "memory.read": [
+  "Memory recall, search, hybrid recall"
+ ],
+ "memory.list": [
+  "Memory recall, search, hybrid recall"
+ ],
+ "memory.delete": [
+  "Memory creation, fast write, consolidation"
+ ],
+ "memory.batch_delete": [
+  "Memory creation, fast write, consolidation"
+ ],
+ "memory.query": [
+  "Memory recall, search, hybrid recall"
+ ],
+ "memory.associate": [
+  "Association mining, emergence scan"
+ ],
+ "memory.associations": [
+  "Association mining, emergence scan"
+ ],
+ "memory.vector.search": [
+  "Memory recall, search, hybrid recall"
+ ],
+ "memory.reembed": [
+  "Backfill per-memory embedding vectors for memories that have none (dry-run by default; req"
+ ],
+ "memory.chat": [
+  "Memory recall, search, hybrid recall"
+ ],
+ "memory.search": [
+  "Retrieve memories by query.",
+  "Recall what we know about a topic.",
+  "Search the memory store.",
+  "Look up a previously stored fact.",
+  "Find memories matching a query.",
+  "What do we know about this?",
+  "Search stored facts.",
+  "Retrieve a note.",
+  "Query the memory index.",
+  "Recall something you were told.",
+  "Pull up a fact I mentioned.",
+  "Remind me about something."
+ ],
+ "memory.consolidate": [
+  "Deduplicate memories by content_hash within a galaxy"
+ ],
+ "memory.decay": [
+  "Lower importance of old, low-access memories (never deletes)"
+ ],
+ "memory.batch_read": [
+  "Read multiple memories by ID from a galaxy"
+ ],
+ "memory.update": [
+  "Update tags, importance, title/topic, or content of an existing memory"
+ ],
+ "memory.revisions": [
+  "List or verify a memory's content revision chain (tamper evidence)"
+ ],
+ "memory.tag": [
+  "Add or remove tags from a memory"
+ ],
+ "memory.stats": [
+  "Statistics for a galaxy (count, avg importance, tag frequency)"
+ ],
+ "memory.hybrid_recall": [
+  "Search memories: hybrid BM25+vector fusion with a real embedder; otherwise the episodic de"
+ ],
+ "memory.recall_feedback": [
+  "Record relevance feedback for conformal retrieval calibration (V8 S8)"
+ ],
+ "memory.episodic_search": [
+  "[V6 Experimental] Search explicit episodic records with provenance and lifecycle filtering"
+ ],
+ "memory.aggregate": [
+  "Aggregate over memories matching a query: count, distinct session count, or session span ("
+ ],
+ "memory.sort": [
+  "Sort memories by importance, recency, or access count"
+ ],
+ "memory.filter": [
+  "Filter memories by tags, date range, importance thresholds, and a content query substring "
+ ],
+ "memory.deduplicate": [
+  "Find and merge duplicate memories by content hash or similarity"
+ ],
+ "memory.export": [
+  "Export memories in JSON, CSV, or Markdown format"
+ ],
+ "session.start": [
+  "Start a new session \u2014 creates a session memory in Sessions galaxy"
+ ],
+ "session.checkpoint": [
+  "Save a session handoff or checkpoint.",
+  "Checkpoint the current session.",
+  "Snapshot session state for the next session.",
+  "Persist this session so it can be resumed.",
+  "Hand off the current context.",
+  "Save a handoff.",
+  "Snapshot the session.",
+  "Persist a checkpoint."
+ ],
+ "session.checkpoint_nodiscovery": [
+  "Store a no-discovery session checkpoint: exactly the supplied handoff fields \u2014 no reposito"
+ ],
+ "session.verify": [
+  "Verify a session's stored checkpoint against live git state \u2014 reports commit drift and dir"
+ ],
+ "session.recall": [
+  "Recall session memories by session_id"
+ ],
+ "session.digest": [
+  "Compile a session into a markdown handoff digest \u2014 turns grouped by type and importance-or"
+ ],
+ "session.end": [
+  "End a session \u2014 writes a session_end marker"
+ ],
+ "receipts.emit": [
+  "Emit a continuity-receipt bundle (session evidence or karma-chain-head attestation)"
+ ],
+ "receipts.verify": [
+  "Verify a continuity-receipt bundle (verify, do not judge)"
+ ],
+ "receipts.list": [
+  "List stored continuity receipts (evidence inventory)"
+ ],
+ "receipts.read": [
+  "Read a stored continuity receipt (bundle + verification)"
+ ],
+ "receipts.disclose": [
+  "Selective disclosure: redact into a re-signed variant, or reveal a subset"
+ ],
+ "receipts.anchor": [
+  "Anchor a receipt digest in the bundle (hash-only, or with an external proof digest)"
+ ],
+ "memory.associate_mine": [
+  "Mine associations across galaxies using keyword overlap"
+ ],
+ "memory.relate": [
+  "Relate two memories with a typed, Hebbian edge (related/extends/contradicts/supersedes/tem"
+ ],
+ "memory.corroborate": [
+  "Record this session's corroboration of a memory (bridging consensus counter input; ranking"
+ ],
+ "memory.count": [
+  "Count memories in a galaxy"
+ ],
+ "memory.tags": [
+  "List all unique tags in a galaxy"
+ ],
+ "session.list": [
+  "List session summaries in the Sessions galaxy (turns grouped by session)"
+ ],
+ "memory.nearby": [
+  "Find memories spatially near a query text using 5D holographic coordinates"
+ ],
+ "transaction.begin": [
+  "Begin a transaction \u2014 snapshots all memory galaxies (exact records) for potential rollback"
+ ],
+ "transaction.commit": [
+  "Commit a transaction \u2014 keeps all changes, removes the rollback snapshot"
+ ],
+ "transaction.rollback": [
+  "Rollback a transaction \u2014 restores exact pre-transaction records"
+ ],
+ "session.record": [
+  "Record a turn or event in the current session.",
+  "Append this exchange to the session log.",
+  "Log this message into the running session.",
+  "Capture this event in the current session.",
+  "Track what just happened in this session.",
+  "Log a turn.",
+  "Append to the session log.",
+  "Record an event.",
+  "Record a turn as an event.",
+  "Log a turn in this session."
+ ],
+ "session.replay": [
+  "Replay session turns"
+ ],
+ "session.continuity": [
+  "Resume or review the previous session.",
+  "Continue where we left off.",
+  "Load the session history.",
+  "What happened in the last session?",
+  "Restore the prior working context.",
+  "Resume the session.",
+  "Reload prior context.",
+  "Continue the previous work.",
+  "Resume from the saved handoff.",
+  "Continue from the last checkpoint.",
+  "Reload a prior handoff."
+ ],
+ "session.track_log": [
+  "Read the per-track implementation log \u2014 turns and checkpoints tagged with a track slug"
+ ],
+ "session.handoff": [
+  "Transfer or resume a session across devices (actions: transfer, accept, list)"
+ ],
+ "session.export": [
+  "Export a session as JSONL (start marker + turns + checkpoints, preserving ids/timestamps/t"
+ ],
+ "session.import": [
+  "Import sessions from session.export JSONL (path or inline jsonl) \u2014 envelope-v2 header vali"
+ ],
+ "gnosis.status": [
+  "Show system status and store counts.",
+  "How many memories are stored?",
+  "Check kernel health and epoch.",
+  "Report store statistics.",
+  "What is the current system state?",
+  "System status.",
+  "Store counts.",
+  "Epoch and health report.",
+  "Count the records in the store.",
+  "What is the memory kernel status?"
+ ],
+ "gnosis.history": [
+  "Explanation, bicameral reasoning, think"
+ ],
+ "gnosis.explain": [
+  "Explain why a memory or route was selected.",
+  "Justify a decision or routing choice.",
+  "Give the reasoning behind a selection.",
+  "Trace why this result was chosen.",
+  "Why did the system pick that?",
+  "Explain a route choice.",
+  "Justify a selection.",
+  "Reasoning trace.",
+  "Show the active constitution.",
+  "Describe the self-model.",
+  "Explain the internal invariants.",
+  "Describe how the system models itself."
+ ],
+ "claims": [
+  "Prescience claims ledger (actions: add, resolve, status, list, calibration)"
+ ],
+ "claims.add": [
+  "Record a new prescience claim (statement, domain, source_date, predicted_outcome, confiden"
+ ],
+ "claims.resolve": [
+  "Resolve a claim (claim_id, validated, event, event_date required)"
+ ],
+ "claims.status": [
+  "Prescience claims ledger summary \u2014 counts by status and points earned"
+ ],
+ "claims.list": [
+  "List claims, optionally filtered by domain or status"
+ ],
+ "claims.calibration": [
+  "Claims calibration scorecard \u2014 Brier, signed calibration gap, Wilson 95% hit-rate interval"
+ ],
+ "memory.ingest": [
+  "Import documents, transcripts, or events from a directory.",
+  "Ingest files into memory.",
+  "Bulk-load a transcript or document set.",
+  "Import a folder of notes.",
+  "Load external documents into the store.",
+  "Ingest a directory.",
+  "Bulk import transcripts.",
+  "Load documents.",
+  "Import a file or dataset.",
+  "Ingest records from a file.",
+  "Bring in external events.",
+  "Load a JSONL or transcript."
+ ]
+}

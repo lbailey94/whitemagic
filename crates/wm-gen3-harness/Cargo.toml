@@ -20,14 +20,18 @@ name = "wm"
 path = "src/bin/wm.rs"
 
 [features]
+default = []
 systemone = ["dep:wm-gen3-systemone"]
+system05 = ["dep:wm-gen3-zeropointfive"]
+system05-onig = ["system05", "wm-gen3-zeropointfive?/onig"]
 
 [dependencies]
 wm-gen3-core = { path = "../wm-gen3-core", features = ["operator"] }
 wm-gen3-systemone = { path = "../wm-gen3-systemone", optional = true }
+wm-gen3-zeropointfive = { path = "../wm-gen3-zeropointfive", optional = true }
 sha2 = "0.10"
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde_json = { version = "1", features = ["float_roundtrip"] }
 clap = { version = "4", features = ["derive"] }
 chrono = "0.4"
 uuid = { version = "1", features = ["serde", "v4", "v5"] }

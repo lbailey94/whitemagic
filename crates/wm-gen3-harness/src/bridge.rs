@@ -926,6 +926,17 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
     if let Value::Array(ref mut list) = tools {
         list.push(systemone_tool_schema(mode_hint));
     }
+    #[cfg(feature = "system05")]
+    if let Value::Array(ref mut list) = tools {
+        list.push(system05_tool_schema(mode_hint));
+    }
+    if let Value::Array(ref mut list) = tools {
+        list.push(deliberation_tool_schema(mode_hint));
+    }
+    #[cfg(any(feature = "systemone", feature = "system05"))]
+    if let Value::Array(ref mut list) = tools {
+        list.push(decision_outcome_tool_schema(mode_hint));
+    }
     tools
 }
 
@@ -935,6 +946,11 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
 const SYSTEMONE_TOOL_HINT: &str = ", systemone.decide";
 #[cfg(not(feature = "systemone"))]
 const SYSTEMONE_TOOL_HINT: &str = "";
+#[cfg(feature = "system05")]
+const SYSTEM05_TOOL_HINT: &str = ", decision.shortlist";
+#[cfg(not(feature = "system05"))]
+const SYSTEM05_TOOL_HINT: &str = "";
+const SYSTEM15_TOOL_HINT: &str = ", decision.deliberate";
 
 pub fn execute_hybrid_tool_call(
     name: &str,
@@ -1002,6 +1018,23 @@ pub fn execute_hybrid_tool_call(
             handle_systemone_decide(args, store_path, readonly)
         }
 
+        // ── System 0.5 Retrieval Organ (feature: system05) ─────────────────
+        #[cfg(feature = "system05")]
+        "decision.shortlist" | "system05.shortlist" | "system05_shortlist" => {
+            handle_decision_shortlist(args, store_path, readonly)
+        }
+
+        // ── System 1.5 Deliberator Organ ──────────────────────────────────
+        "decision.deliberate" | "system15.deliberate" | "deliberate" => {
+            handle_decision_deliberate(args, store_path, readonly)
+        }
+
+        // ── Receipt Outcomes (verify + backfill) ───────────────────────────
+        #[cfg(any(feature = "systemone", feature = "system05"))]
+        "decision.outcome" | "receipts.outcome" => {
+            crate::receipt_verify::record_outcome(args, store_path, readonly)
+        }
+
         // ── Mesh & Infrastructure ──────────────────────────────────────────
         "mesh_sync" | "sync" => handle_mesh_sync(args, substrate, store_path, readonly),
         "sweep" => handle_sweep(substrate, readonly),
@@ -1014,7 +1047,7 @@ pub fn execute_hybrid_tool_call(
         "sangha.post" | "sangha_post" | "sangha.chat" => handle_sangha_post(args, readonly),
 
         unknown => Err(format!(
-            "Unknown tool: '{unknown}'. Supported: memory.create, memory.search, memory.read, memory.list, session.record, session.continuity, session.checkpoint, mandala.status, mandala.triage, mandala.evaluate, mesh_sync, sangha.status, sangha.inbox, sangha.post, wm{SYSTEMONE_TOOL_HINT}"
+            "Unknown tool: '{unknown}'. Supported: memory.create, memory.search, memory.read, memory.list, session.record, session.continuity, session.checkpoint, mandala.status, mandala.triage, mandala.evaluate, mesh_sync, sangha.status, sangha.inbox, sangha.post, wm{SYSTEMONE_TOOL_HINT}{SYSTEM05_TOOL_HINT}{SYSTEM15_TOOL_HINT}"
         )),
     }
 }
@@ -2039,6 +2072,322 @@ fn handle_mandala_status(store_path: &Path) -> Result<Value, String> {
             "background_sleep_active": actuators.background_sleep_active,
             "write_throttle_factor": actuators.write_throttle_factor
         }
+    }))
+}
+
+#[cfg(any(feature = "systemone", feature = "system05"))]
+fn decision_outcome_tool_schema(mode_hint: &str) -> Value {
+    json!({
+        "name": "decision.outcome",
+        "title": "Record Decision Outcome",
+        "description": format!("Sign and journal the outcome of a dispatched decision/shortlist receipt (success, failure, corrected) for the learning loop.{mode_hint}"),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "receipt_path": { "type": "string", "description": "Path to the subject receipt JSON under <store>/receipts" },
+                "outcome": { "type": "string", "enum": ["success", "failure", "corrected", "unknown"], "description": "Observed outcome" },
+                "corrected_route": { "type": "string", "description": "Correct route when the outcome is 'corrected'" },
+                "note": { "type": "string", "description": "Free-form note" },
+                "session_id": { "type": "string" },
+                "tenant_id": { "type": "string" }
+            },
+            "required": ["receipt_path", "outcome"]
+        }
+    })
+}
+
+#[cfg(feature = "system05")]
+fn system05_tool_schema(mode_hint: &str) -> Value {
+    json!({
+        "name": "decision.shortlist",
+        "title": "System 0.5 Route Shortlist (Static Embeddings)",
+        "description": format!("Rank candidate routes/actions for a state with the local static-embedding retrieval organ (no network, no model forward pass) and emit a signed shortlist receipt.{mode_hint}"),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "state": { "type": ["string", "object"], "description": "State to retrieve candidates for (text or JSON)" },
+                "routes": { "type": "object", "description": "Candidate set: {name: description} or {name: [utterances...]}; multi-utterance routes score by best match" },
+                "catalog_path": { "type": "string", "description": "Path to a JSON file with {name: description}; used when `routes` is absent" },
+                "k": { "type": "integer", "description": "Shortlist size (default 5)" },
+                "margin_threshold": { "type": "number", "description": "Below this top1-top2 margin the gate is 'ambiguous' (default 0.02)" },
+                "cascade": { "type": "boolean", "description": "If ambiguous, cascade to System 1.5 Deliberator (default true)" },
+                "session_id": { "type": "string", "description": "Session id for the shortlist receipt" },
+                "tenant_id": { "type": "string", "description": "Tenant id for the shortlist receipt (default: local)" },
+                "task_class": { "type": "string", "description": "Task class (e.g. route_dispatch)" },
+                "emit_receipt": { "type": "boolean", "description": "Write a signed shortlist receipt to <store>/receipts (default true)" }
+            },
+            "required": ["state"]
+        }
+    })
+}
+
+fn deliberation_tool_schema(mode_hint: &str) -> Value {
+    json!({
+        "name": "decision.deliberate",
+        "title": "System 1.5 Local Deliberator (Grammar-Constrained SLM)",
+        "description": format!("Deliberate over ambiguous candidate options using local grammar-constrained SLM inference (100% schema guarantee, no hallucination) and emit a signed deliberation receipt.{mode_hint}"),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "intent": { "type": "string", "description": "User request or state description" },
+                "candidates": { "type": ["array", "object"], "description": "Allowed candidate action names, objects, or map" },
+                "emit_receipt": { "type": "boolean", "description": "Write signed deliberation receipt to <store>/receipts (default true)" }
+            },
+            "required": ["intent", "candidates"]
+        }
+    })
+}
+
+#[cfg(feature = "system05")]
+fn handle_decision_shortlist(
+    args: &Value,
+    store_path: &Path,
+    readonly: bool,
+) -> Result<Value, String> {
+    let state = args.get("state").ok_or("missing required field 'state'")?;
+    let state_text = match state {
+        Value::String(text) => text.clone(),
+        other => other.to_string(),
+    };
+    let routes = match args.get("routes") {
+        Some(value) => value.clone(),
+        None => {
+            let path = match args.get("catalog_path").and_then(Value::as_str) {
+                Some(path) => std::path::PathBuf::from(path),
+                None => wm_gen3_zeropointfive::System05::resolve_catalog_path(None)
+                    .map_err(|e| e.to_string())?,
+            };
+            let raw = std::fs::read_to_string(&path)
+                .map_err(|e| format!("catalog read ({}): {e}", path.display()))?;
+            serde_json::from_str(&raw).map_err(|e| format!("catalog parse: {e}"))?
+        }
+    };
+    let k = args.get("k").and_then(Value::as_u64).unwrap_or(5) as usize;
+    let tau = args
+        .get("margin_threshold")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.02);
+    let cascade = args.get("cascade").and_then(Value::as_bool).unwrap_or(true);
+
+    static ORGAN: std::sync::OnceLock<Result<wm_gen3_zeropointfive::System05, String>> =
+        std::sync::OnceLock::new();
+    let organ = ORGAN.get_or_init(|| {
+        wm_gen3_zeropointfive::System05::resolve_model_dir(None)
+            .map(wm_gen3_zeropointfive::System05::new)
+            .map_err(|e| e.to_string())
+    });
+    let organ = organ.as_ref().map_err(|e| e.clone())?;
+
+    let mut outcome = organ
+        .shortlist(&state_text, &routes, k)
+        .map_err(|e| e.to_string())?;
+    let margin = outcome.get("margin").and_then(Value::as_f64).unwrap_or(0.0);
+    let gate = if margin >= tau {
+        "dispatch"
+    } else {
+        "ambiguous"
+    };
+    outcome["gate"] = json!(gate);
+    outcome["margin_threshold"] = json!(tau);
+
+    // If ambiguous and cascade requested, run System 1.5 Deliberator
+    if gate == "ambiguous" && cascade {
+        let mut candidate_routes: Vec<crate::deliberation::CandidateRoute> = Vec::new();
+        if let Some(ranked) = outcome.get("ranked").and_then(Value::as_array) {
+            for entry in ranked {
+                let name = entry.get("route").and_then(Value::as_str).unwrap_or_default().to_string();
+                let score = entry.get("score").and_then(Value::as_f64).unwrap_or(0.0);
+                let description = match routes.get(&name) {
+                    Some(serde_json::Value::String(s)) => Some(s.clone()),
+                    Some(serde_json::Value::Array(arr)) => {
+                        arr.first().and_then(|v| v.as_str()).map(|s| s.to_string())
+                    }
+                    _ => None,
+                };
+                candidate_routes.push(crate::deliberation::CandidateRoute {
+                    name,
+                    score,
+                    description,
+                });
+            }
+        }
+        let deliberator = crate::deliberation::Deliberator::default();
+        if let Ok((chosen, conf, lat)) = deliberator.deliberate(&state_text, &candidate_routes) {
+            let cand_names: Vec<String> = candidate_routes.iter().map(|c| c.name.clone()).collect();
+            if let Ok((signing_key, _)) = resolve_or_create_mandala_gate_key(store_path) {
+                let receipt = crate::deliberation::DeliberationReceipt::sign(
+                    &signing_key,
+                    &state_text,
+                    &cand_names,
+                    &chosen,
+                    margin,
+                    tau,
+                    conf,
+                    lat,
+                );
+                if !readonly {
+                    let _ = receipt.persist(store_path);
+                }
+                outcome["deliberation"] = json!({
+                    "chosen_route": chosen,
+                    "confidence": conf,
+                    "latency_ms": lat,
+                    "receipt_id": receipt.receipt_id,
+                    "spec": receipt.spec,
+                });
+                outcome["dispatched_route"] = json!(chosen);
+            }
+        }
+    }
+
+    let emit_receipt = args
+        .get("emit_receipt")
+        .and_then(Value::as_bool)
+        .unwrap_or(true);
+    if readonly || !emit_receipt {
+        outcome["receipt"] = Value::Null;
+        outcome["receipt_emitted"] = json!(false);
+        return Ok(outcome);
+    }
+
+    let (signing_key, _) = resolve_or_create_mandala_gate_key(store_path)
+        .map_err(|e| format!("gate key error: {e}"))?;
+    let gate_did = format!(
+        "did:key:{}",
+        signing_key
+            .verifying_key()
+            .to_bytes()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>()
+    );
+    let mut receipt = crate::shortlist_receipt::ShortlistReceipt::from_outcome(
+        &outcome, state, &routes, args, gate_did,
+    );
+    receipt.sign(&signing_key);
+    receipt
+        .verify(&signing_key.verifying_key())
+        .map_err(|e| format!("shortlist receipt self-verification failed: {e}"))?;
+
+    let receipts_dir = store_path.join("receipts");
+    std::fs::create_dir_all(&receipts_dir).map_err(|e| format!("receipt dir: {e}"))?;
+    let receipt_path = receipts_dir.join(format!("shortlist-{}.json", receipt.receipt_id));
+    let serialized =
+        serde_json::to_string_pretty(&receipt).map_err(|e| format!("receipt serialize: {e}"))?;
+    std::fs::write(&receipt_path, serialized).map_err(|e| format!("receipt write: {e}"))?;
+
+    outcome["receipt"] = serde_json::to_value(&receipt).map_err(|e| e.to_string())?;
+    outcome["receipt_path"] = json!(receipt_path.display().to_string());
+    outcome["receipt_emitted"] = json!(true);
+    Ok(outcome)
+}
+
+fn handle_decision_deliberate(
+    args: &Value,
+    store_path: &Path,
+    readonly: bool,
+) -> Result<Value, String> {
+    let intent = args
+        .get("intent")
+        .or_else(|| args.get("state"))
+        .and_then(Value::as_str)
+        .ok_or("missing required field 'intent' or 'state'")?;
+
+    let candidates_val = args
+        .get("candidates")
+        .ok_or("missing required field 'candidates'")?;
+
+    let mut candidate_routes: Vec<crate::deliberation::CandidateRoute> = Vec::new();
+    match candidates_val {
+        Value::Array(arr) => {
+            for item in arr {
+                match item {
+                    Value::String(s) => {
+                        candidate_routes.push(crate::deliberation::CandidateRoute {
+                            name: s.clone(),
+                            score: 0.9,
+                            description: None,
+                        });
+                    }
+                    Value::Object(obj) => {
+                        let name = obj
+                            .get("name")
+                            .or_else(|| obj.get("route"))
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_string();
+                        let score = obj.get("score").and_then(Value::as_f64).unwrap_or(0.9);
+                        let desc = obj
+                            .get("description")
+                            .and_then(Value::as_str)
+                            .map(|s| s.to_string());
+                        if !name.is_empty() {
+                            candidate_routes.push(crate::deliberation::CandidateRoute {
+                                name,
+                                score,
+                                description: desc,
+                            });
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        Value::Object(obj) => {
+            for (k, v) in obj {
+                let desc = v.as_str().map(|s| s.to_string());
+                candidate_routes.push(crate::deliberation::CandidateRoute {
+                    name: k.clone(),
+                    score: 0.9,
+                    description: desc,
+                });
+            }
+        }
+        _ => return Err("candidates must be an array of route names or objects".to_string()),
+    }
+
+    if candidate_routes.is_empty() {
+        return Err("candidates list cannot be empty".to_string());
+    }
+
+    let deliberator = crate::deliberation::Deliberator::default();
+    let (chosen_route, confidence, latency_ms) = deliberator.deliberate(intent, &candidate_routes)?;
+
+    let gate = crate::deliberation::ConformalGate::default();
+    let tau = gate.calibrate_tau(store_path);
+
+    let candidate_names: Vec<String> = candidate_routes.iter().map(|c| c.name.clone()).collect();
+    let (signing_key, _) = resolve_or_create_mandala_gate_key(store_path)
+        .map_err(|e| format!("gate key resolution: {e}"))?;
+
+    let receipt = crate::deliberation::DeliberationReceipt::sign(
+        &signing_key,
+        intent,
+        &candidate_names,
+        &chosen_route,
+        0.0,
+        tau,
+        confidence,
+        latency_ms,
+    );
+
+    let emit_receipt = args
+        .get("emit_receipt")
+        .and_then(Value::as_bool)
+        .unwrap_or(true);
+    if !readonly && emit_receipt {
+        let _ = receipt.persist(store_path);
+    }
+
+    Ok(json!({
+        "status": "success",
+        "chosen_route": chosen_route,
+        "confidence": confidence,
+        "latency_ms": latency_ms,
+        "candidates": candidate_names,
+        "receipt": receipt,
+        "receipt_id": receipt.receipt_id,
+        "spec": receipt.spec,
     }))
 }
 

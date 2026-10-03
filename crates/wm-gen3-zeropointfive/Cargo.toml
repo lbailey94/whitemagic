@@ -1,0 +1,20 @@
+[package]
+name = "wm-gen3-zeropointfive"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "WhiteMagic Gen3 — System 0.5 retrieval organ (static embeddings, local-only)"
+
+[dependencies]
+model2vec-rs = { version = "0.3.0", default-features = false, features = ["local-only"] }
+serde_json = "1"
+
+[features]
+default = ["fancy-regex"]
+fancy-regex = ["model2vec-rs/fancy-regex"]
+onig = ["model2vec-rs/onig"]
+
+[lints]
+workspace = true
