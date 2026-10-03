@@ -104,7 +104,8 @@ check_and_heal_service() {
 
 # Run probes on services if we are on VPS
 if [ -d "/srv/whitemagic" ]; then
-    check_and_heal_service "whitemagic-hosted.service" "http://127.0.0.1:8000/health" || true
+    # Traverses authd and live wm tools/list discovery path
+    check_and_heal_service "whitemagic-hosted.service" "http://127.0.0.1:18797/ready" || true
 fi
 
 # ============================================================================
