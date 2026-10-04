@@ -74,8 +74,8 @@ agents. The version number is a compatibility signal; the channel is
 an evidence claim (beta and stable each require their own exit conditions,
 not a version milestone).
 
-- **Install path: Linux x86-64, Linux arm64, macOS arm64 + x86_64, and Windows x86_64** — install-gated. Linux ships fully static (musl) builds with no glibc or distribution requirements, selected automatically by the installer; dynamically linked builds remain available for glibc 2.39+ hosts, and releases also publish gzipped distributables (~58% smaller) that the installer prefers on slow links. macOS installs through the same checksum-verified installer (hardware smoke evidence in [issue #2](https://github.com/lbailey94/whitemagic/issues/2)); Windows installs through `scripts/install.ps1`. Every gated installer path is certified against the published release in CI.
-- **Support window:** the current minor and the previous minor on the install-gated lines (Linux x86-64, Linux arm64, macOS arm64 + x86_64, Windows x86_64) receive fixes; older minors are archival — see [`SECURITY.md`](SECURITY.md).
+- **Install path: Linux x86-64, Linux arm64, macOS arm64, and Windows x86_64** — install-gated. Linux builds are dynamically linked (glibc 2.39+): the ONNX runtime the v10 line loads has no static musl build (pre-v10 releases still ship musl). Releases also publish gzipped distributables (~58% smaller) that the installer prefers on slow links. macOS installs through the same checksum-verified installer (hardware smoke evidence in [issue #2](https://github.com/lbailey94/whitemagic/issues/2)); Windows installs through `scripts/install.ps1`. Every gated installer path is certified against the published release in CI.
+- **Support window:** the current minor and the previous minor on the install-gated lines (Linux x86-64, Linux arm64, macOS arm64, Windows x86_64) receive fixes; older minors are archival — see [`SECURITY.md`](SECURITY.md).
 - Trusted, local-first, single-user operation with Landlock containment and firebreak guards.
 
 ## What it does
@@ -95,13 +95,13 @@ The supported alpha contract:
 Download the binary and its checksum from the
 [latest release](https://github.com/lbailey94/whitemagic/releases), then
 (substituting your platform's artifact name — for example
-`wm-linux-x86_64-musl`, `wm-linux-aarch64-musl`, or `wm-macos-aarch64`; the
+`wm-linux-x86_64`, `wm-linux-aarch64`, or `wm-macos-aarch64`; the
 `.gz` variants decompress with `gunzip -c <file>.gz > <file>`):
 
 ```bash
-sha256sum -c wm-linux-x86_64-musl.sha256
-chmod +x wm-linux-x86_64-musl
-mkdir -p ~/.local/bin && mv wm-linux-x86_64-musl ~/.local/bin/wm
+sha256sum -c wm-linux-x86_64.sha256
+chmod +x wm-linux-x86_64
+mkdir -p ~/.local/bin && mv wm-linux-x86_64 ~/.local/bin/wm
 ```
 
 If `~/.local/bin` is not on your `PATH`:

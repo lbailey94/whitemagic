@@ -39,26 +39,25 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # artifact filename -> target key in the manifest
+# Mirrors the release.yml build matrix (glibc Linux, macOS arm64, Windows —
+# the ONNX-runtime-capable targets); musl and macos-x86_64 were dropped from
+# the matrix in 5d9b03d. Targets absent from the artifacts dir are skipped,
+# so a release without one of these simply omits it from the manifest.
 TARGETS = {
-    "wm-linux-x86_64-musl": "linux-x86_64-musl",
     "wm-linux-x86_64": "linux-x86_64",
-    "wm-linux-aarch64-musl": "linux-aarch64-musl",
     "wm-linux-aarch64": "linux-aarch64",
-    "wm-macos-x86_64": "macos-x86_64",
     "wm-macos-aarch64": "macos-aarch64",
     "wm-windows-x86_64.exe": "windows-x86_64",
 }
 
 # Targets whose install path is gated (README §Install path: Linux x86-64,
-# Linux arm64, macOS arm64 + x86_64, and Windows x86_64 as of 9.3.3 — Linux
-# via native CI smoke, macOS arm64 via hardware field smoke evidence in
-# issue #2, macOS x86_64 + Windows via tagged-release installer
-# certification in release.yml).
+# Linux arm64, macOS arm64, and Windows x86_64 — the v10 matrix; Linux via
+# native CI smoke, macOS arm64 via hardware field smoke evidence in issue
+# #2, Windows via tagged-release installer certification in release.yml).
 DEFAULT_INSTALL_GATED = [
     "linux-x86_64",
     "linux-aarch64",
     "macos-aarch64",
-    "macos-x86_64",
     "windows-x86_64",
 ]
 

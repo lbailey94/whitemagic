@@ -40,12 +40,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 UA = "wm-release-health/1.0 (+https://github.com/lbailey94/whitemagic)"
+# Mirrors the release.yml build matrix. The v10 line is glibc-only (the ONNX
+# runtime the binary loads has no musl build) and macOS arm64-only — musl and
+# macos-x86_64 were dropped from the matrix in 5d9b03d. Keep this list in
+# lockstep with the matrix: a stale entry here is a guaranteed false LAGGING.
 TARGETS = [
-    "wm-linux-x86_64-musl",
     "wm-linux-x86_64",
-    "wm-linux-aarch64-musl",
     "wm-linux-aarch64",
-    "wm-macos-x86_64",
     "wm-macos-aarch64",
     "wm-windows-x86_64.exe",
 ]

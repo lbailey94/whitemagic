@@ -1,16 +1,18 @@
-# WhiteMagic v9 — packages the RELEASED binary, does not compile.
-# Tiny build: fetch the static musl build + checksum from the GitHub
-# release, verify, install. See docs/DOCKER_HUB_RUNBOOK.md.
+# WhiteMagic v10 — packages the RELEASED binary, does not compile.
+# Fetches the glibc (gnu) linux build + checksum from the GitHub release,
+# verifies, installs. The binary carries the ONNX runtime (fastembed), which
+# is glibc-only — hence the Ubuntu base and the gnu asset. Pre-v10 images used
+# the static musl build on Alpine; the v10 matrix no longer builds musl
+# (5d9b03d). See docs/DOCKER_HUB_RUNBOOK.md.
 #
-#   docker build --build-arg WM_VERSION=v9 -t whitemagic:9 .
+#   docker build --build-arg WM_VERSION=v10.0.0-alpha -t whitemagic:alpha .
 #   docker buildx build --platform linux/amd64,linux/arm64 --push \
-#     --build-arg WM_VERSION=v9 -t whitemagic:9 .
-#   docker run --rm whitemagic:9 --version
-ARG ALPINE_VERSION=3.21
-FROM alpine:${ALPINE_VERSION}
+#     --build-arg WM_VERSION=v10.0.0-alpha -t whitemagic:alpha .
+#   docker run --rm whitemagic:alpha --version
+ARG UBUNTU_VERSION=24.04
+FROM ubuntu:${UBUNTU_VERSION}
 
 ARG WM_VERSION=v9.3.4
-ARG WM_TARGET=musl
 # Explicit arch override for classic `docker build`; with buildx, TARGETARCH
 # is mapped automatically (amd64 -> x86_64, arm64 -> aarch64).
 ARG WM_ARCH=
@@ -20,7 +22,7 @@ ARG TARGETARCH
 # package reference in npm/whitemagic-mcp/server.json).
 LABEL io.modelcontextprotocol.server.name="io.github.lbailey94/whitemagic-mcp" \
       org.opencontainers.image.title="WhiteMagic MCP server" \
-      org.opencontainers.image.version="9.3.4" \
+      org.opencontainers.image.version="${WM_VERSION}" \
       org.opencontainers.image.url="https://whitemagic.dev" \
       org.opencontainers.image.source="https://github.com/lbailey94/whitemagic"
 
@@ -33,8 +35,10 @@ RUN set -eu; \
         *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
       esac; \
     fi; \
-    asset="wm-linux-${arch}-${WM_TARGET}"; \
-    apk add --no-cache curl coreutils; \
+    asset="wm-linux-${arch}"; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates curl coreutils; \
+    rm -rf /var/lib/apt/lists/*; \
     curl -fsSL "https://github.com/lbailey94/whitemagic/releases/download/${WM_VERSION}/${asset}" \
       -o "/tmp/${asset}"; \
     curl -fsSL "https://github.com/lbailey94/whitemagic/releases/download/${WM_VERSION}/${asset}.sha256" \

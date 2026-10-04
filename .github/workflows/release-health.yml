@@ -34,12 +34,32 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           V="${{ github.event.inputs.version }}"
+          if [ -z "$V" ] && [ "${{ github.event_name }}" = "workflow_run" ]; then
+            # A prerelease never appears in releases/latest, so the tag that
+            # triggered the Release run is the only honest source here.
+            V="${{ github.event.workflow_run.head_branch }}"
+            V="${V#v}"
+          fi
           if [ -z "$V" ]; then
             V="$(gh api "repos/${{ github.repository }}/releases/latest" --jq .tag_name | sed 's/^v//')"
           fi
           [ -n "$V" ] || { echo "could not resolve a version"; exit 1; }
           echo "version=$V" >> "$GITHUB_OUTPUT"
           echo "probing v$V"
+
+      - name: Check out the release tree
+        # The probe (and every retry) must run against the tag's own tree:
+        # the crate list, npm package, and Dockerfile are version-specific.
+        # Probing an old release with main's scripts was the 2026-10-04
+        # false-LAGGING class (main's gen3 crate list vs a v9 release).
+        run: |
+          set -eu
+          V="${{ steps.version.outputs.version }}"
+          git fetch --depth=1 origin "refs/tags/v${V}"
+          git checkout --detach FETCH_HEAD
+          TREE_V="$(python3 -c "import tomllib;print(tomllib.load(open('Cargo.toml','rb'))['workspace']['package']['version'])")"
+          [ "$TREE_V" = "$V" ] || { echo "::error::tag v${V} tree declares workspace version ${TREE_V}"; exit 1; }
+          echo "probing from tag v${V} tree ($(git log -1 --format='%h %s'))"
 
       - name: Probe registries (initial)
         continue-on-error: true
@@ -66,21 +86,34 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: Retry npm (if lagging)
+        continue-on-error: true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           [ "$(jq -r '.registries.npm.status' release-health.json)" = "live" ] && { echo "npm live"; exit 0; }
           cd npm/whitemagic-mcp
-          npm publish --access public
+          VERSION="${{ steps.version.outputs.version }}"
+          if [[ "$VERSION" == *-* ]]; then
+            npm publish --access public --tag next
+          else
+            npm publish --access public
+          fi
 
       - uses: dtolnay/rust-toolchain@stable
         if: ${{ !cancelled() }}
 
       - name: Retry crates.io (if lagging)
         if: ${{ !cancelled() }}
+        continue-on-error: true
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TREE_V="$(python3 -c "import tomllib;print(tomllib.load(open('Cargo.toml','rb'))['workspace']['package']['version'])")"
+          if [ "$TREE_V" != "$VERSION" ]; then
+            echo "::warning::tree is at ${TREE_V} but probing ${VERSION}; refusing to publish mis-versioned crates"
+            exit 0
+          fi
           missing="$(jq -r '.registries["crates.io"].missing[]? // empty' release-health.json)"
           if [ "$(jq -r '.registries["crates.io"].status' release-health.json)" = "live" ] || [ -z "$missing" ]; then
             echo "crates.io live"; exit 0
@@ -92,6 +125,7 @@ jobs:
 
       - name: Retry Docker Hub (if lagging)
         if: ${{ !cancelled() }}
+        continue-on-error: true
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -102,12 +136,21 @@ jobs:
           if [ -z "${DOCKERHUB_TOKEN:-}" ]; then echo "DOCKERHUB_TOKEN not set - cannot retry"; exit 0; fi
           VERSION="${{ steps.version.outputs.version }}"; MAJOR="${VERSION%%.*}"
           echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-          docker build --build-arg "WM_VERSION=v${VERSION}" \
-            -t "lbailey94/whitemagic:${VERSION}" -t "lbailey94/whitemagic:${MAJOR}" -t lbailey94/whitemagic:latest .
-          docker push "lbailey94/whitemagic:${VERSION}"
+          # Prereleases tag only the exact version; latest/major stay stable.
+          if [[ "$VERSION" == *-* ]]; then
+            TAGS=(-t "lbailey94/whitemagic:${VERSION}")
+          else
+            TAGS=(-t "lbailey94/whitemagic:${VERSION}" -t "lbailey94/whitemagic:${MAJOR}" -t lbailey94/whitemagic:latest)
+          fi
+          docker build --build-arg "WM_VERSION=v${VERSION}" "${TAGS[@]}" .
+          for tag in "${TAGS[@]}"; do
+            [ "$tag" = "-t" ] && continue
+            docker push "$tag"
+          done
 
       - name: Retry MCP registry (if lagging)
         if: ${{ !cancelled() }}
+        continue-on-error: true
         run: |
           if [ "$(jq -r '.registries["mcp-registry"].status' release-health.json)" = "live" ]; then
             echo "mcp-registry live"; exit 0

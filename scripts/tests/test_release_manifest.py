@@ -27,23 +27,40 @@ class ReleaseManifestFactsTest(unittest.TestCase):
             self.assertEqual(rm.workspace_crate_count(root), 2)
 
     def test_install_gated_defaults_to_the_gated_lines(self) -> None:
-        # 2026-10-01: macOS x86_64 and Windows x86_64 join the gate via
-        # tagged-release installer certification — the manifest must declare
-        # what the docs and the installers say.
+        # 2026-10-04: the v10 matrix is glibc Linux + macOS arm64 + Windows
+        # (5d9b03d, ONNX runtime is glibc-only); musl and macos-x86_64 are
+        # not built, so they are not install-gated claims. Mirrors the
+        # release.yml matrix — the manifest must declare what CI builds.
         self.assertEqual(
             rm.DEFAULT_INSTALL_GATED,
             [
                 "linux-x86_64",
                 "linux-aarch64",
                 "macos-aarch64",
-                "macos-x86_64",
                 "windows-x86_64",
             ],
         )
 
     def test_arm64_artifacts_map_to_manifest_targets(self) -> None:
         self.assertEqual(rm.TARGETS["wm-linux-aarch64"], "linux-aarch64")
-        self.assertEqual(rm.TARGETS["wm-linux-aarch64-musl"], "linux-aarch64-musl")
+        self.assertEqual(rm.TARGETS["wm-windows-x86_64.exe"], "windows-x86_64")
+
+    def test_health_required_assets_match_manifest_targets(self) -> None:
+        # The release-health probe's required-asset list must stay in
+        # lockstep with the manifest targets (and so with the build matrix);
+        # drift here is the 2026-10-04 false-LAGGING class.
+        import release_health as rh
+
+        expected = set()
+        for filename in rm.TARGETS:
+            expected.add(filename)
+            expected.add(f"{filename}.sha256")
+            if not filename.endswith(".exe"):
+                expected.add(f"{filename}.gz")
+                expected.add(f"{filename}.gz.sha256")
+        expected |= {"release-manifest.json", "release-manifest.json.sig"}
+        self.assertEqual(set(rh.REQUIRED_RELEASE_ASSETS), expected)
+        self.assertEqual(len(rh.REQUIRED_RELEASE_ASSETS), len(expected))
 
     def test_load_tests_and_benchmarks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
