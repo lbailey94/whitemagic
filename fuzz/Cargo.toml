@@ -1,0 +1,28 @@
+[workspace]
+
+[package]
+name = "wm-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+wm-gen3-core = { path = "../crates/wm-gen3-core" }
+
+[[bin]]
+name = "frame_read"
+path = "fuzz_targets/frame_read.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "envelope_parse"
+path = "fuzz_targets/envelope_parse.rs"
+test = false
+doc = false
+bench = false
