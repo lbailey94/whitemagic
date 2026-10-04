@@ -9,5 +9,10 @@ rust-version = "1.85"
 license = "MIT"
 authors = ["WhiteMagic Project"]
 
+[workspace.dependencies]
+wm-gen3-core = { path = "crates/wm-gen3-core", version = "10.2.0-alpha" }
+wm-gen3-systemone = { path = "crates/wm-gen3-systemone", version = "10.2.0-alpha" }
+wm-gen3-zeropointfive = { path = "crates/wm-gen3-zeropointfive", version = "10.2.0-alpha" }
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
