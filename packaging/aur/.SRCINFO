@@ -1,0 +1,17 @@
+pkgbase = whitemagic-bin
+	pkgdesc = Local-first memory, recall, and continuity engine for AI agents (prebuilt)
+	pkgver = 9.3.4
+	pkgrel = 1
+	url = https://whitemagic.dev
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	provides = whitemagic
+	conflicts = whitemagic
+	options = !strip
+	source_x86_64 = whitemagic-bin-9.3.4-x86_64::https://github.com/lbailey94/whitemagic/releases/download/v9.3.4/wm-linux-x86_64
+	sha256sums_x86_64 = 0e7e666552d865c1c2bec9f5761ad449e5fe258d2eff3da65dc3bd85c9af57c5
+	source_aarch64 = whitemagic-bin-9.3.4-aarch64::https://github.com/lbailey94/whitemagic/releases/download/v9.3.4/wm-linux-aarch64
+	sha256sums_aarch64 = d7b889f24aef0ce43c3818f4e7f7044ec007c923abb17b407b8f2cf620f6ee95
+
+pkgname = whitemagic-bin
