@@ -254,6 +254,7 @@ jobs:
         with:
           files: artifacts/*
           body_path: release-notes.md
+          prerelease: ${{ contains(github.ref_name, '-') }}
 
   certify-install:
     name: Certify install.sh (${{ matrix.arch }})
@@ -368,6 +369,8 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           if npm view "whitemagic-mcp@${VERSION}" version >/dev/null 2>&1; then
             echo "npm ${VERSION} already published - skipping"
+          elif [[ "$VERSION" == *-* ]]; then
+            npm publish --access public --tag next
           else
             npm publish --access public
           fi
@@ -398,24 +401,30 @@ jobs:
           if [ -z "${DOCKERHUB_TOKEN:-}" ]; then echo "DOCKERHUB_TOKEN not set - skipping"; exit 0; fi
           VERSION="${GITHUB_REF_NAME#v}"; MAJOR="${VERSION%%.*}"
           echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+          # Prereleases publish only the exact version tag; `latest` and the
+          # major alias stay on the newest stable so `docker run ...:latest`
+          # never silently jumps to an alpha.
+          if [[ "$VERSION" == *-* ]]; then
+            TAGS=(-t "lbailey94/whitemagic:${VERSION}")
+          else
+            TAGS=(-t "lbailey94/whitemagic:${VERSION}" -t "lbailey94/whitemagic:${MAJOR}" -t lbailey94/whitemagic:latest)
+          fi
           # Multi-arch: amd64 uses the x86_64-musl asset, arm64 the
           # aarch64-musl asset (shipped in the same release). If the
           # multi-arch build fails, fall back to the amd64-only path so a
           # release is never blocked by the image lane.
           if docker buildx build --platform linux/amd64,linux/arm64 \
                --build-arg "WM_VERSION=${GITHUB_REF_NAME}" \
-               -t "lbailey94/whitemagic:${VERSION}" \
-               -t "lbailey94/whitemagic:${MAJOR}" \
-               -t lbailey94/whitemagic:latest \
+               "${TAGS[@]}" \
                --push .; then
             echo "docker: multi-arch (linux/amd64, linux/arm64) published"
           else
             echo "::warning::multi-arch image build failed - publishing amd64 only"
-            docker build --build-arg "WM_VERSION=${GITHUB_REF_NAME}" \
-              -t "lbailey94/whitemagic:${VERSION}" -t "lbailey94/whitemagic:${MAJOR}" -t lbailey94/whitemagic:latest .
-            docker push "lbailey94/whitemagic:${VERSION}"
-            docker push "lbailey94/whitemagic:${MAJOR}"
-            docker push lbailey94/whitemagic:latest
+            docker build --build-arg "WM_VERSION=${GITHUB_REF_NAME}" "${TAGS[@]}" .
+            for tag in "${TAGS[@]}"; do
+              [ "$tag" = "-t" ] && continue
+              docker push "$tag"
+            done
           fi
 
       - name: Publish MCP registry (GitHub OIDC, propagation-aware)
