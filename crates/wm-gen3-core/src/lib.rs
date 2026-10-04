@@ -18,6 +18,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod action_skeleton;
 pub mod adaptive;
 pub mod admin;
 pub mod apotheosis;
@@ -27,6 +28,7 @@ pub mod bicameral;
 pub mod capability;
 pub mod catuskoti;
 pub mod causal;
+pub mod causal_ticket;
 pub mod cladistics;
 pub mod compat;
 pub mod conformal;
@@ -54,10 +56,17 @@ pub mod recipe;
 pub mod relativity;
 pub mod sentinel;
 pub mod spectroscopy;
+pub mod stigmergy;
 pub mod store;
 pub mod sweep;
 pub(crate) mod sweep_planner;
 pub mod transport;
+pub mod tuple_space;
+
+pub use action_skeleton::{ActionSkeleton, AstActionType, AstDelta, SkeletonValidationResult};
+pub use causal_ticket::CausalCapabilityTicket;
+pub use stigmergy::{Pheromone, PheromoneKind, StigmergicField};
+pub use tuple_space::{Tuple, TupleKind, TuplePattern, TupleSpace};
 
 pub use factory::{FactoryAdjudication, FactoryCandidate, SoftwareFactory, SoftwareFactoryConfig};
 pub use ops::{SessionCheckpoint, SessionContinuityView};
