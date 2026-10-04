@@ -749,6 +749,264 @@ fn handle_route(
                 })),
             }
         }
+        "causal.status" => Some(json!({
+            "status": "success",
+            "route": "causal.status",
+            "engine": "Pearl Structural Causal Model & do(X) Interventions",
+            "layers": [
+                "Layer 1: Association P(Y | X)",
+                "Layer 2: Intervention P(Y | do(X)) via Graph Mutilation",
+                "Layer 3: Counterfactual P(Y_x | x', y') via Abduction-Action-Prediction"
+            ],
+            "acyclicity_enforcement": "Kahn's Topological Sort",
+            "adjustment_criteria": ["Back-Door Criterion", "Front-Door Criterion"],
+            "receipt_attestation": "Ed25519 CausalInterventionReceipt",
+        })),
+        "causal.intervene" => {
+            let treatment = args.get("treatment").and_then(Value::as_str).unwrap_or("X");
+            let value = args.get("value").and_then(Value::as_f64).unwrap_or(1.0);
+            let samples = args.get("samples").and_then(Value::as_u64).unwrap_or(500) as usize;
+
+            let mut scm = wm_gen3_core::causal::StructuralCausalModel::new();
+            scm.add_node(wm_gen3_core::causal::CausalNode {
+                id: "Z".into(),
+                name: "TaskComplexity".into(),
+                role: wm_gen3_core::causal::VariableRole::Confounder,
+                is_exogenous: false,
+                description: "Background task difficulty & ambiguity".into(),
+            });
+            scm.add_node(wm_gen3_core::causal::CausalNode {
+                id: "X".into(),
+                name: "RouteChoice".into(),
+                role: wm_gen3_core::causal::VariableRole::Treatment,
+                is_exogenous: false,
+                description: "Intervention candidate: 0=fast, 1=deliberator".into(),
+            });
+            scm.add_node(wm_gen3_core::causal::CausalNode {
+                id: "M".into(),
+                name: "ContextQuality".into(),
+                role: wm_gen3_core::causal::VariableRole::Mediator,
+                is_exogenous: false,
+                description: "Context enrichment quality".into(),
+            });
+            scm.add_node(wm_gen3_core::causal::CausalNode {
+                id: "Y".into(),
+                name: "SuccessScore".into(),
+                role: wm_gen3_core::causal::VariableRole::Outcome,
+                is_exogenous: false,
+                description: "Task outcome verification score".into(),
+            });
+
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
+                from: "Z".into(),
+                to: "X".into(),
+                weight: 0.8,
+                sign: 1,
+                mechanism: "Complexity triggers deliberation".into(),
+            });
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
+                from: "Z".into(),
+                to: "Y".into(),
+                weight: -0.7,
+                sign: -1,
+                mechanism: "Complexity degrades baseline success".into(),
+            });
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
+                from: "X".into(),
+                to: "M".into(),
+                weight: 0.6,
+                sign: 1,
+                mechanism: "Deliberation enriches context".into(),
+            });
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
+                from: "M".into(),
+                to: "Y".into(),
+                weight: 0.9,
+                sign: 1,
+                mechanism: "Context quality drives task success".into(),
+            });
+
+            scm.set_equation("Z", wm_gen3_core::causal::LinearStructuralEquation::new(1.0, 0.2));
+            scm.set_equation("X", wm_gen3_core::causal::LinearStructuralEquation::new(0.1, 0.1).with_coefficient("Z", 0.8));
+            scm.set_equation("M", wm_gen3_core::causal::LinearStructuralEquation::new(0.2, 0.1).with_coefficient("X", 0.6));
+            scm.set_equation("Y", wm_gen3_core::causal::LinearStructuralEquation::new(0.5, 0.1).with_coefficient("Z", -0.7).with_coefficient("M", 0.9));
+
+            match scm.interventional_expectation("Y", treatment, value, samples, 42) {
+                Ok(expected_outcome) => {
+                    let baseline_outcome = scm.interventional_expectation("Y", treatment, 0.0, samples, 42).unwrap_or(0.0);
+                    let causal_lift = expected_outcome - baseline_outcome;
+
+                    let secret: [u8; 32] = [
+                        0xca, 0x11, 0x5a, 0x11, 0xef, 0xfd, 0x5a, 0x60, 0xba, 0x84, 0x4a, 0xf4, 0x92, 0xec, 0x2c,
+                        0xc4, 0x44, 0x49, 0xc5, 0x69, 0x7b, 0x32, 0x69, 0x19, 0x70, 0x3b, 0xac, 0x03, 0x1c, 0xae,
+                        0x7f, 0x60,
+                    ];
+                    let signing_key = wm_gen3_core::causal::SigningKey::from_bytes(&secret);
+                    let backdoor = vec!["Z".to_string()];
+                    let receipt = wm_gen3_core::causal::CausalInterventionReceipt::mint(
+                        &signing_key,
+                        treatment,
+                        value,
+                        causal_lift,
+                        &backdoor,
+                        &scm,
+                    );
+
+                    Some(json!({
+                        "status": "success",
+                        "route": "causal.intervene",
+                        "treatment": treatment,
+                        "intervention_value": value,
+                        "expected_outcome": expected_outcome,
+                        "baseline_outcome": baseline_outcome,
+                        "causal_lift": causal_lift,
+                        "receipt": receipt,
+                        "verified": receipt.verify(),
+                    }))
+                }
+                Err(e) => Some(json!({
+                    "status": "error",
+                    "route": "causal.intervene",
+                    "error": e.to_string(),
+                })),
+            }
+        }
+        "causal.counterfactual" => {
+            let treatment = args.get("treatment").and_then(Value::as_str).unwrap_or("X");
+            let counterfactual_value = args.get("counterfactual_value").and_then(Value::as_f64).unwrap_or(1.0);
+            let target_outcome = args.get("target_outcome").and_then(Value::as_str).unwrap_or("Y");
+
+            let mut factual = std::collections::BTreeMap::new();
+            if let Some(obj) = args.get("factual_evidence").and_then(Value::as_object) {
+                for (k, v) in obj {
+                    if let Some(num) = v.as_f64() {
+                        factual.insert(k.clone(), num);
+                    }
+                }
+            } else {
+                factual.insert("Z".into(), 1.5);
+                factual.insert("X".into(), 0.2);
+                factual.insert("M".into(), 0.32);
+                factual.insert("Y".into(), -0.26);
+            }
+
+            let mut scm = wm_gen3_core::causal::StructuralCausalModel::new();
+            scm.add_node(wm_gen3_core::causal::CausalNode {
+                id: "Z".into(),
+                name: "TaskComplexity".into(),
+                role: wm_gen3_core::causal::VariableRole::Confounder,
+                is_exogenous: false,
+                description: "Background task difficulty".into(),
+            });
+            scm.add_node(wm_gen3_core::causal::CausalNode {
+                id: "X".into(),
+                name: "RouteChoice".into(),
+                role: wm_gen3_core::causal::VariableRole::Treatment,
+                is_exogenous: false,
+                description: "Route selection".into(),
+            });
+            scm.add_node(wm_gen3_core::causal::CausalNode {
+                id: "M".into(),
+                name: "ContextQuality".into(),
+                role: wm_gen3_core::causal::VariableRole::Mediator,
+                is_exogenous: false,
+                description: "Context enrichment".into(),
+            });
+            scm.add_node(wm_gen3_core::causal::CausalNode {
+                id: "Y".into(),
+                name: "SuccessScore".into(),
+                role: wm_gen3_core::causal::VariableRole::Outcome,
+                is_exogenous: false,
+                description: "Task success".into(),
+            });
+
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
+                from: "Z".into(), to: "X".into(), weight: 0.8, sign: 1, mechanism: "Difficulty induces deliberation".into(),
+            });
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
+                from: "Z".into(), to: "Y".into(), weight: -0.7, sign: -1, mechanism: "Difficulty lowers success".into(),
+            });
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
+                from: "X".into(), to: "M".into(), weight: 0.6, sign: 1, mechanism: "Deliberation improves context".into(),
+            });
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
+                from: "M".into(), to: "Y".into(), weight: 0.9, sign: 1, mechanism: "Context drives success".into(),
+            });
+
+            scm.set_equation("Z", wm_gen3_core::causal::LinearStructuralEquation::new(1.0, 0.2));
+            scm.set_equation("X", wm_gen3_core::causal::LinearStructuralEquation::new(0.1, 0.1).with_coefficient("Z", 0.8));
+            scm.set_equation("M", wm_gen3_core::causal::LinearStructuralEquation::new(0.2, 0.1).with_coefficient("X", 0.6));
+            scm.set_equation("Y", wm_gen3_core::causal::LinearStructuralEquation::new(0.5, 0.1).with_coefficient("Z", -0.7).with_coefficient("M", 0.9));
+
+            match scm.counterfactual_reasoning(&factual, treatment, counterfactual_value, target_outcome) {
+                Ok(cf) => Some(json!({
+                    "status": "success",
+                    "route": "causal.counterfactual",
+                    "treatment": cf.treatment,
+                    "factual_treatment_value": cf.factual_treatment_value,
+                    "counterfactual_treatment_value": cf.counterfactual_treatment_value,
+                    "target_outcome": cf.target_outcome,
+                    "factual_outcome": cf.factual_outcome,
+                    "counterfactual_outcome": cf.counterfactual_outcome,
+                    "causal_lift": cf.causal_lift,
+                    "abducted_noises": cf.abducted_noises,
+                })),
+                Err(e) => Some(json!({
+                    "status": "error",
+                    "route": "causal.counterfactual",
+                    "error": e.to_string(),
+                })),
+            }
+        }
+        "causal.backdoor" => {
+            let treatment = args.get("treatment").and_then(Value::as_str).unwrap_or("X");
+            let outcome = args.get("outcome").and_then(Value::as_str).unwrap_or("Y");
+            let z_set: std::collections::BTreeSet<String> = args
+                .get("conditioning_set")
+                .and_then(Value::as_array)
+                .map(|a| a.iter().filter_map(Value::as_str).map(String::from).collect())
+                .unwrap_or_else(|| {
+                    let mut s = std::collections::BTreeSet::new();
+                    s.insert("Z".to_string());
+                    s
+                });
+
+            let mut scm = wm_gen3_core::causal::StructuralCausalModel::new();
+            scm.add_node(wm_gen3_core::causal::CausalNode {
+                id: "Z".into(), name: "TaskComplexity".into(), role: wm_gen3_core::causal::VariableRole::Confounder, is_exogenous: false, description: "Confounder".into(),
+            });
+            scm.add_node(wm_gen3_core::causal::CausalNode {
+                id: "X".into(), name: "RouteChoice".into(), role: wm_gen3_core::causal::VariableRole::Treatment, is_exogenous: false, description: "Treatment".into(),
+            });
+            scm.add_node(wm_gen3_core::causal::CausalNode {
+                id: "M".into(), name: "ContextQuality".into(), role: wm_gen3_core::causal::VariableRole::Mediator, is_exogenous: false, description: "Mediator".into(),
+            });
+            scm.add_node(wm_gen3_core::causal::CausalNode {
+                id: "Y".into(), name: "SuccessScore".into(), role: wm_gen3_core::causal::VariableRole::Outcome, is_exogenous: false, description: "Outcome".into(),
+            });
+
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge { from: "Z".into(), to: "X".into(), weight: 0.8, sign: 1, mechanism: "Z->X".into() });
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge { from: "Z".into(), to: "Y".into(), weight: -0.7, sign: -1, mechanism: "Z->Y".into() });
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge { from: "X".into(), to: "M".into(), weight: 0.6, sign: 1, mechanism: "X->M".into() });
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge { from: "M".into(), to: "Y".into(), weight: 0.9, sign: 1, mechanism: "M->Y".into() });
+
+            match scm.is_backdoor_admissible(treatment, outcome, &z_set) {
+                Ok(admissible) => Some(json!({
+                    "status": "success",
+                    "route": "causal.backdoor",
+                    "treatment": treatment,
+                    "outcome": outcome,
+                    "conditioning_set": z_set,
+                    "is_admissible": admissible,
+                    "mechanism": if admissible { "Conditioning set blocks all spurious back-door paths" } else { "Back-door path is open or conditioning set contains treatment descendants" },
+                })),
+                Err(e) => Some(json!({
+                    "status": "error",
+                    "route": "causal.backdoor",
+                    "error": e.to_string(),
+                })),
+            }
+        }
         _ => None,
     }
 }
@@ -864,5 +1122,59 @@ mod tests {
                 .contains("item_ordinal must be a non-negative integer")
         );
         assert_eq!(store.store().record_count().expect("count"), 0);
+    }
+
+    #[test]
+    fn test_causal_routes_end_to_end() {
+        let mut store = substrate("causal-test");
+        let authority = RatifiedChannel::mint("test-harness");
+
+        // 1. causal.status
+        let resp_status = handle_route(&mut store, &authority, "causal.status", &json!({}), false).expect("status");
+        assert_eq!(resp_status["status"], "success");
+        assert_eq!(resp_status["route"], "causal.status");
+
+        // 2. causal.intervene
+        let resp_intervene = handle_route(
+            &mut store,
+            &authority,
+            "causal.intervene",
+            &json!({ "treatment": "X", "value": 1.0, "samples": 300 }),
+            false,
+        )
+        .expect("intervene");
+        assert_eq!(resp_intervene["status"], "success");
+        assert_eq!(resp_intervene["verified"], true);
+        assert!(resp_intervene["causal_lift"].as_f64().unwrap() > 0.0);
+
+        // 3. causal.counterfactual
+        let resp_cf = handle_route(
+            &mut store,
+            &authority,
+            "causal.counterfactual",
+            &json!({
+                "treatment": "X",
+                "counterfactual_value": 1.0,
+                "target_outcome": "Y",
+                "factual_evidence": { "Z": 1.5, "X": 0.2, "M": 0.32, "Y": -0.26 }
+            }),
+            false,
+        )
+        .expect("counterfactual");
+        assert_eq!(resp_cf["status"], "success");
+        assert!(resp_cf["counterfactual_outcome"].as_f64().unwrap() > resp_cf["factual_outcome"].as_f64().unwrap());
+        assert!((resp_cf["causal_lift"].as_f64().unwrap() - 0.432).abs() < 0.05);
+
+        // 4. causal.backdoor
+        let resp_backdoor = handle_route(
+            &mut store,
+            &authority,
+            "causal.backdoor",
+            &json!({ "treatment": "X", "outcome": "Y", "conditioning_set": ["Z"] }),
+            false,
+        )
+        .expect("backdoor");
+        assert_eq!(resp_backdoor["status"], "success");
+        assert_eq!(resp_backdoor["is_admissible"], true);
     }
 }

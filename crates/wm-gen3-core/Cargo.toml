@@ -46,7 +46,7 @@ name = "gate10_cyberbrain_provenance_and_transfer_battery"
 required-features = ["operator"]
 
 [[test]]
-name = "cyberbrain_baseline_benchmark"
+name = "gate11_causal_graph_battery"
 required-features = ["operator"]
 
 [dependencies]

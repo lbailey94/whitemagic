@@ -25,6 +25,7 @@ pub mod attractor;
 pub mod bicameral;
 pub mod capability;
 pub mod catuskoti;
+pub mod causal;
 pub mod cladistics;
 pub mod compat;
 pub mod conformal;
