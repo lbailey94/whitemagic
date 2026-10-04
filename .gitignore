@@ -56,6 +56,7 @@ wm-leases.json
 /vercel-placeholder/
 
 # Embedding model cache
+.fastembed_cache
 .fastembed_cache/
 
 # IDE config
@@ -63,6 +64,9 @@ wm-leases.json
 
 # Criterion benchmark artifacts
 /criterion
+/experiments/
+/reference/gen1-v26
+/reference/gen2-wmv9
 /crates/**/benches/**/target
 
 # Fuzz build artifacts
@@ -150,6 +154,8 @@ wm-leases.json
 !/scripts/release_manifest.py
 !/scripts/release_health.py
 !/scripts/release_notes.py
+!/scripts/release.sh
+!/scripts/crystal_client.py
 !/scripts/t1_reader.py
 !/scripts/t1_judge.py
 !/scripts/t1_oracle_to_retrieval.py
@@ -169,6 +175,10 @@ wm-leases.json
 !/scripts/tests/test_eval_protocol.py
 !/scripts/tests/test_t1_scoring.py
 !/scripts/tests/test_version_truth.py
+!/scripts/tests/test_crystal_client.py
+!/scripts/tests/test_install_sh.py
+!/scripts/tests/test_release_manifest.py
+!/scripts/tests/test_release_notes.py
 !/scripts/system05/
 !/scripts/system05/*
 !/scripts/system15/
