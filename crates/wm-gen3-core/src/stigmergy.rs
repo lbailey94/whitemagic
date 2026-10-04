@@ -110,6 +110,61 @@ impl Pheromone {
         self.current_intensity(now_ms) < threshold.max(0.001)
     }
 
+    /// Convert to RawPheromone for zero-copy POSIX shared memory substrate.
+    pub fn to_raw(&self) -> wm_gen3_shm::RawPheromone {
+        let kind_code = match &self.kind {
+            PheromoneKind::MutationActive => 0,
+            PheromoneKind::Inspection => 1,
+            PheromoneKind::Refactoring => 2,
+            PheromoneKind::ReviewPending => 3,
+            PheromoneKind::Custom(_) => 4,
+        };
+        let (line_start, line_end) = self.line_range.unwrap_or((1, 1));
+        let ast_scope_str = self.ast_scope.join("::");
+
+        wm_gen3_shm::RawPheromone {
+            id: self.id,
+            kind: kind_code,
+            target_path: self.target_path.clone(),
+            ast_scope: ast_scope_str,
+            line_start,
+            line_end,
+            initial_intensity: self.initial_intensity as f32,
+            half_life_ms: self.half_life_ms as u32,
+            emitted_at_ms: self.emitted_at_ms,
+            issuer: self.issuer.clone(),
+        }
+    }
+
+    /// Construct Pheromone from RawPheromone.
+    pub fn from_raw(raw: &wm_gen3_shm::RawPheromone) -> Self {
+        let kind = match raw.kind {
+            0 => PheromoneKind::MutationActive,
+            1 => PheromoneKind::Inspection,
+            2 => PheromoneKind::Refactoring,
+            3 => PheromoneKind::ReviewPending,
+            _ => PheromoneKind::Custom("shm_signal".into()),
+        };
+        let ast_scope = if raw.ast_scope.is_empty() {
+            Vec::new()
+        } else {
+            raw.ast_scope.split("::").map(String::from).collect()
+        };
+
+        Pheromone {
+            id: raw.id,
+            target_path: raw.target_path.clone(),
+            ast_scope,
+            line_range: Some((raw.line_start, raw.line_end)),
+            kind,
+            initial_intensity: raw.initial_intensity as f64,
+            half_life_ms: raw.half_life_ms as u64,
+            emitted_at_ms: raw.emitted_at_ms,
+            issuer: raw.issuer.clone(),
+            metadata: HashMap::new(),
+        }
+    }
+
     /// Checks if this pheromone overlaps with a candidate target and AST scope.
     #[must_use]
     pub fn overlaps(&self, target_path: &str, candidate_ast_scope: &[String], candidate_lines: Option<(u32, u32)>) -> bool {
@@ -243,6 +298,18 @@ impl StigmergicField {
         std::fs::write(&tmp_path, json)?;
         std::fs::rename(tmp_path, path)?;
         Ok(())
+    }
+
+    /// Connect to a named zero-copy POSIX shared memory substrate.
+    pub fn open_shm(name: &str) -> std::io::Result<wm_gen3_shm::ShmStigmergyField> {
+        let substrate = wm_gen3_shm::ShmSubstrate::open_or_create(name)?;
+        Ok(wm_gen3_shm::ShmStigmergyField::new(std::sync::Arc::new(substrate)))
+    }
+
+    /// Attach to an inherited shared memory file descriptor (for Landlock sandboxes).
+    pub fn attach_shm_fd(fd: std::os::unix::io::RawFd, is_owner: bool) -> std::io::Result<wm_gen3_shm::ShmStigmergyField> {
+        let substrate = wm_gen3_shm::ShmSubstrate::from_raw_fd(fd, is_owner)?;
+        Ok(wm_gen3_shm::ShmStigmergyField::new(std::sync::Arc::new(substrate)))
     }
 }
 

@@ -286,6 +286,7 @@ impl CausalCapabilityTicket {
             network_allowed: self.network_allowed,
             kekkai_phase: crate::mandala::KekkaiPhase::default(),
             resource_limits: None,
+            inherited_shm_fd: None,
             created_at: self.issued_at_ms / 1000,
             expires_at: self.expires_at_ms / 1000,
             signature: Some(self.signature.to_vec()),

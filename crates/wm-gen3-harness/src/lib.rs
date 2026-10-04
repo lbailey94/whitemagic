@@ -15,3 +15,5 @@ pub mod shortlist_receipt;
 pub mod receipt_verify;
 
 pub mod deliberation;
+pub mod starter_galaxy;
+pub mod grimoire;

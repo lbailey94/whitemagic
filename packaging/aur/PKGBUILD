@@ -2,7 +2,7 @@
 # Prebuilt-binary package; the v10 line is glibc-only (ONNX runtime), so the
 # gnu assets are used. Bump pkgver + both checksums when a stable tag ships.
 pkgname=whitemagic-bin
-pkgver=9.3.4
+pkgver=10.2.0
 pkgrel=1
 pkgdesc="Local-first memory, recall, and continuity engine for AI agents (prebuilt)"
 arch=('x86_64' 'aarch64')

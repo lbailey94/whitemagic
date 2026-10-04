@@ -351,6 +351,7 @@ impl SoftwareFactory {
             network_allowed: false,
             kekkai_phase: KekkaiPhase::Joshiki,
             resource_limits: Some(resource_limits),
+            inherited_shm_fd: None,
             created_at: now_ms / 1000,
             expires_at: (now_ms / 1000) + 300,
             signature: None,

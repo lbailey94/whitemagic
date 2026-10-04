@@ -1,6 +1,13 @@
 [workspace]
 resolver = "2"
-members = ["crates/wm-gen3-core", "crates/wm-gen3-harness", "crates/wm-gen3-systemone", "crates/wm-gen3-zeropointfive"]
+members = [
+    "crates/wm-gen3-core",
+    "crates/wm-gen3-harness",
+    "crates/wm-gen3-shm",
+    "crates/wm-gen3-systemone",
+    "crates/wm-gen3-vault",
+    "crates/wm-gen3-zeropointfive",
+]
 
 [workspace.package]
 version = "10.2.0-alpha"
@@ -11,7 +18,9 @@ authors = ["WhiteMagic Project"]
 
 [workspace.dependencies]
 wm-gen3-core = { path = "crates/wm-gen3-core", version = "10.2.0-alpha" }
+wm-gen3-shm = { path = "crates/wm-gen3-shm", version = "10.2.0-alpha" }
 wm-gen3-systemone = { path = "crates/wm-gen3-systemone", version = "10.2.0-alpha" }
+wm-gen3-vault = { path = "crates/wm-gen3-vault", version = "10.2.0-alpha" }
 wm-gen3-zeropointfive = { path = "crates/wm-gen3-zeropointfive", version = "10.2.0-alpha" }
 
 [workspace.lints.rust]

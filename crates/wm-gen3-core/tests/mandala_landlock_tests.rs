@@ -43,6 +43,7 @@ fn test_workspace_claim_and_ruleset_construction() {
         network_allowed: false,
         kekkai_phase: KekkaiPhase::Hoi,
         resource_limits: Some(SandboxResourceLimits::default()),
+        inherited_shm_fd: None,
         created_at: 1_700_000_000,
         expires_at: 1_700_003_600,
         signature: None,
@@ -167,6 +168,7 @@ fn test_landlock_subprocess_confinement() {
                 max_cpu_seconds: 5,
                 max_open_files: 64,
             }),
+            inherited_shm_fd: None,
             created_at: 1_700_000_000,
             expires_at: 1_700_003_600,
             signature: None,
@@ -312,3 +314,56 @@ fn test_delegated_token_landlock_confinement() {
         "Expired identity token must be denied Landlock ruleset generation"
     );
 }
+
+#[test]
+fn test_landlock_inherited_shm_fd() {
+    let test_shm_name = format!("/wm_test_landlock_shm_{}", uuid::Uuid::new_v4().simple());
+    let mut substrate = wm_gen3_shm::ShmSubstrate::open_or_create(&test_shm_name)
+        .expect("Create shared memory segment");
+    let raw_fd = substrate.raw_fd().expect("Raw FD exists");
+
+    let claim = WorkspaceClaim {
+        claim_id: "claim-shm-fd-001".to_string(),
+        tenant_id: "tenant-lucas".to_string(),
+        agent_id: "agent-sandboxed-shm".to_string(),
+        workspace_root: PathBuf::from("/tmp"),
+        read_only_paths: vec![PathBuf::from("/usr")],
+        read_write_paths: vec![PathBuf::from("/tmp")],
+        network_allowed: false,
+        kekkai_phase: KekkaiPhase::Hoi,
+        resource_limits: None,
+        inherited_shm_fd: Some(raw_fd),
+        created_at: 1000,
+        expires_at: 5000,
+        signature: None,
+    };
+
+    // Sandboxed subagent attaches to inherited shm without touching /dev/shm filesystem
+    let attached = claim.attach_shm().expect("attach_shm Some").expect("Attached cleanly");
+    assert_eq!(attached.superblock().magic, wm_gen3_shm::SHM_MAGIC);
+
+    // Verify Linda tuple write via inherited FD
+    let space = wm_gen3_shm::ShmTupleSpace::new(std::sync::Arc::new(attached));
+    let t = wm_gen3_shm::RawTuple {
+        id: uuid::Uuid::new_v4(),
+        kind_discriminator: 1,
+        resource_hash: 1234,
+        holder_issuer_hash: 5678,
+        resource_path: "/workspace/token.txt".to_string(),
+        tag: "claim:sandboxed".to_string(),
+        payload: b"inherited fd verification".to_vec(),
+        created_at_ms: 100,
+        expires_at_ms: 0,
+        landlock_token: [0u8; 32],
+        capability_mask: 0x01,
+    };
+    space.out(&t).expect("Out tuple over inherited FD");
+
+    let matching = space.rd_matching(Some(1), Some(1234), 1, 100);
+    assert_eq!(matching.len(), 1);
+    assert_eq!(matching[0].payload, b"inherited fd verification");
+
+    // Cleanup
+    let _ = substrate.unlink();
+}
+

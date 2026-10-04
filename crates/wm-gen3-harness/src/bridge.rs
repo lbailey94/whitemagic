@@ -351,8 +351,25 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
                     "thought": { "type": "string", "description": "Natural language request auto-routed via TF-IDF NLU" },
                     "route": { "type": "string", "description": "Explicit tool name or route for direct dispatch (e.g. 'memory.search', 'session.continuity')" },
                     "args": { "type": "object", "description": "Arguments to pass through to target tool" },
-                    "action": { "type": "string", "description": "Legacy action selector: recall, remember, get, stats, sync, sweep, inspect, session_checkpoint, session_continuity, session_record, session_list" }
+                    "action": { "type": "string", "description": "Legacy action selector: recall, remember, get, stats, sync, sweep, inspect, session_checkpoint, session_continuity, session_record, session_list, galaxy_list, galaxy_fork" }
                 }
+            }
+        },
+        {
+            "name": "galaxy_list",
+            "description": "List all active sovereign memory galaxies, their record counts, sample tags, and starter guide status.",
+            "inputSchema": { "type": "object", "properties": {} }
+        },
+        {
+            "name": "galaxy_fork",
+            "description": format!("Fork an existing galaxy partition into a new sovereign galaxy branch (e.g. 'guide' -> 'project-alpha').{mode_hint}"),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "source": { "type": "string", "description": "Source galaxy name to fork from (e.g. 'guide')" },
+                    "target": { "type": "string", "description": "Target galaxy name to establish (e.g. 'project-alpha')" }
+                },
+                "required": ["source", "target"]
             }
         }
     ]);
@@ -477,6 +494,41 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
                     "cold_scan_limit": { "type": "integer", "description": "Maximum cold records to scan when include_cold is set (default 2048)" }
                 },
                 "required": ["query"]
+            }
+        },
+        {
+            "name": "galaxy.list",
+            "title": "List Galaxies",
+            "description": "List all active sovereign memory galaxies, their record counts, sample tags, and starter guide status.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {}
+            }
+        },
+        {
+            "name": "galaxy.fork",
+            "title": "Fork Galaxy",
+            "description": format!("Fork an existing galaxy partition into a new sovereign galaxy branch (e.g. 'guide' -> 'project-alpha').{mode_hint}"),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "source": { "type": "string", "description": "Source galaxy name to fork from (e.g. 'guide')" },
+                    "target": { "type": "string", "description": "Target galaxy name to establish (e.g. 'project-alpha')" }
+                },
+                "required": ["source", "target"]
+            }
+        },
+        {
+            "name": "galaxy.create",
+            "title": "Create Galaxy",
+            "description": format!("Establish a new sovereign galaxy namespace with an initial genesis beacon.{mode_hint}"),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "description": "Galaxy name (lowercase, no colons/spaces)" },
+                    "description": { "type": "string", "description": "Optional description of the galaxy's purpose" }
+                },
+                "required": ["name"]
             }
         },
         {
@@ -1046,8 +1098,15 @@ pub fn execute_hybrid_tool_call(
         "sangha.inbox" | "sangha_inbox" => handle_sangha_inbox(args),
         "sangha.post" | "sangha_post" | "sangha.chat" => handle_sangha_post(args, readonly),
 
+        // ── Galaxy Operations ──────────────────────────────────────────────
+        "galaxy.list" | "galaxy_list" => handle_galaxy_list(substrate),
+        "galaxy.fork" | "galaxy_fork" | "galaxy.branch" | "galaxy_branch" => {
+            handle_galaxy_fork(args, substrate, readonly)
+        }
+        "galaxy.create" | "galaxy_create" => handle_galaxy_create(args, substrate, readonly),
+
         unknown => Err(format!(
-            "Unknown tool: '{unknown}'. Supported: memory.create, memory.search, memory.read, memory.list, session.record, session.continuity, session.checkpoint, mandala.status, mandala.triage, mandala.evaluate, mesh_sync, sangha.status, sangha.inbox, sangha.post, wm{SYSTEMONE_TOOL_HINT}{SYSTEM05_TOOL_HINT}{SYSTEM15_TOOL_HINT}"
+            "Unknown tool: '{unknown}'. Supported: memory.create, memory.search, memory.read, memory.list, galaxy.list, galaxy.fork, session.record, session.continuity, session.checkpoint, mandala.status, mandala.triage, mandala.evaluate, mesh_sync, sangha.status, sangha.inbox, sangha.post, wm{SYSTEMONE_TOOL_HINT}{SYSTEM05_TOOL_HINT}{SYSTEM15_TOOL_HINT}"
         )),
     }
 }
@@ -1170,9 +1229,20 @@ fn handle_memory_create(
         })
         .unwrap_or_default();
 
+    let effective_source = if source.starts_with("corpus:") {
+        source.to_string()
+    } else {
+        let tag_suffix = if tags.is_empty() {
+            source.replace(':', "_")
+        } else {
+            tags.join(",")
+        };
+        format!("corpus:{galaxy}:{tag_suffix}")
+    };
+
     let item = RememberItem {
         content: content.to_string(),
-        source: source.to_string(),
+        source: effective_source,
         kind,
     };
 
@@ -1261,7 +1331,7 @@ fn handle_memory_search(args: &Value, substrate: &mut Substrate) -> Result<Value
                 "rank": hit.rank,
                 "source": hit.source,
                 "recall_mode": "substrate",
-                "galaxy": "codex",
+                "galaxy": crate::starter_galaxy::extract_galaxy_from_source(&hit.source),
                 "superseded_by": hit.superseded_by
             })
         })
@@ -1293,6 +1363,8 @@ fn handle_memory_read(args: &Value, substrate: &Substrate) -> Result<Value, Stri
         .lookup_uuid_by_id(record_id)
         .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &record_id.to_be_bytes()));
 
+    let galaxy = crate::starter_galaxy::extract_galaxy_from_source(record.source());
+
     Ok(json!({
         "status": "success",
         "record": {
@@ -1306,7 +1378,7 @@ fn handle_memory_read(args: &Value, substrate: &Substrate) -> Result<Value, Stri
             "status": format!("{:?}", record.status()),
             "created_at": record.created_at(),
             "confidence": record.confidence(),
-            "galaxy": "codex"
+            "galaxy": galaxy
         }
     }))
 }
@@ -1327,6 +1399,7 @@ fn handle_memory_list(args: &Value, substrate: &Substrate) -> Result<Value, Stri
             let uuid = substrate
                 .lookup_uuid_by_id(rec.id())
                 .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &rec.id().to_be_bytes()));
+            let galaxy = crate::starter_galaxy::extract_galaxy_from_source(rec.source());
             json!({
                 "id": uuid.to_string(),
                 "record_id": rec.id(),
@@ -1334,7 +1407,7 @@ fn handle_memory_list(args: &Value, substrate: &Substrate) -> Result<Value, Stri
                 "content": rec.content(),
                 "source": rec.source(),
                 "created_at": rec.created_at(),
-                "galaxy": "codex"
+                "galaxy": galaxy
             })
         })
         .collect();
@@ -1379,6 +1452,63 @@ fn handle_memory_stats(
         "journal_ok": substrate.journal_ok(),
         "violations": substrate.violations(),
         "articles": "Articles 1-9 Inviolate (Zero unmetered background threads)"
+    }))
+}
+
+fn handle_galaxy_list(substrate: &Substrate) -> Result<Value, String> {
+    let list = crate::starter_galaxy::list_galaxies(substrate)?;
+    Ok(json!({
+        "status": "success",
+        "count": list.len(),
+        "galaxies": list
+    }))
+}
+
+fn handle_galaxy_fork(
+    args: &Value,
+    substrate: &mut Substrate,
+    readonly: bool,
+) -> Result<Value, String> {
+    if readonly {
+        return Err("read-only mode: galaxy fork refused by Article 1".to_string());
+    }
+    let source = args
+        .get("source")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'source'".to_string())?;
+    let target = args
+        .get("target")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'target'".to_string())?;
+
+    let forked_count = crate::starter_galaxy::fork_galaxy(substrate, source, target)?;
+    Ok(json!({
+        "status": "success",
+        "source": source,
+        "target": target,
+        "records_forked": forked_count
+    }))
+}
+
+fn handle_galaxy_create(
+    args: &Value,
+    substrate: &mut Substrate,
+    readonly: bool,
+) -> Result<Value, String> {
+    if readonly {
+        return Err("read-only mode: galaxy creation refused by Article 1".to_string());
+    }
+    let name = args
+        .get("name")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'name'".to_string())?;
+    let description = args.get("description").and_then(Value::as_str);
+
+    let record_id = crate::starter_galaxy::create_galaxy(substrate, name, description)?;
+    Ok(json!({
+        "status": "success",
+        "galaxy": name,
+        "record_id": record_id
     }))
 }
 

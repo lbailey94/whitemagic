@@ -19,22 +19,29 @@ path = "src/main.rs"
 name = "wm"
 path = "src/bin/wm.rs"
 
+[[bin]]
+name = "wm_benchmark"
+path = "src/bin/wm_benchmark.rs"
+
 [features]
-default = []
+default = ["system05"]
 systemone = ["dep:wm-gen3-systemone"]
-system05 = ["dep:wm-gen3-zeropointfive"]
-system05-onig = ["system05", "wm-gen3-zeropointfive?/onig"]
+system05 = []
+system05-onig = ["system05", "wm-gen3-zeropointfive/onig"]
 
 [dependencies]
 wm-gen3-core = { workspace = true, features = ["operator"] }
+wm-gen3-shm = { workspace = true }
+wm-gen3-vault = { workspace = true }
+wm-gen3-zeropointfive = { workspace = true }
 wm-gen3-systemone = { workspace = true, optional = true }
-wm-gen3-zeropointfive = { workspace = true, optional = true }
 sha2 = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 clap = { version = "4", features = ["derive"] }
 chrono = "0.4"
 uuid = { version = "1", features = ["serde", "v4", "v5"] }
+ed25519-dalek = "3.0.0"
 
 [lints]
 workspace = true

@@ -1,0 +1,130 @@
+{"id": "rem01", "text": "remember this: the red block belongs in bay 3", "gold": "remember"}
+{"id": "rem02", "text": "store this fact for later", "gold": "remember"}
+{"id": "rem03", "text": "save a note that the deploy window is Friday", "gold": "remember"}
+{"id": "rem04", "text": "add this to memory: Alice prefers UTC timestamps", "gold": "remember"}
+{"id": "rem05", "text": "write down that the demo freeze is October 10", "gold": "remember"}
+{"id": "rem06", "text": "keep this in mind - the kitchen sensor is flaky", "gold": "remember"}
+{"id": "rem07", "text": "memorize the new wifi password policy", "gold": "remember"}
+{"id": "rem08", "text": "record this for the record: budget approved", "gold": "remember"}
+{"id": "rem09", "text": "note that the vendor moved the delivery to Tuesday", "gold": "remember"}
+{"id": "rem10", "text": "save this new fact about the customer's timezone", "gold": "remember"}
+{"id": "rec01", "text": "what do you remember about the demo dates", "gold": "recall"}
+{"id": "rec02", "text": "find memories about the red block", "gold": "recall"}
+{"id": "rec03", "text": "look up what we decided about vendors", "gold": "recall"}
+{"id": "rec04", "text": "search your memory for Alice's preferences", "gold": "recall"}
+{"id": "rec05", "text": "do you recall the wifi policy", "gold": "recall"}
+{"id": "rec06", "text": "retrieve everything about the freeze window", "gold": "recall"}
+{"id": "rec07", "text": "what do we know about the kitchen sensor", "gold": "recall"}
+{"id": "rec08", "text": "pull up what I told you about timezones", "gold": "recall"}
+{"id": "rec09", "text": "find what was said about the budget", "gold": "recall"}
+{"id": "rec10", "text": "remind me what the vendor situation is", "gold": "recall"}
+{"id": "chk01", "text": "save a checkpoint before we stop", "gold": "session_checkpoint"}
+{"id": "chk02", "text": "checkpoint the session with the next steps", "gold": "session_checkpoint"}
+{"id": "chk03", "text": "write a session handoff so tomorrow can resume", "gold": "session_checkpoint"}
+{"id": "chk04", "text": "take a checkpoint of the current state", "gold": "session_checkpoint"}
+{"id": "chk05", "text": "save our progress as a handoff", "gold": "session_checkpoint"}
+{"id": "chk06", "text": "checkpoint: next queue is the video edit", "gold": "session_checkpoint"}
+{"id": "chk07", "text": "record a checkpoint with the open flags", "gold": "session_checkpoint"}
+{"id": "chk08", "text": "hand off the session now", "gold": "session_checkpoint"}
+{"id": "chk09", "text": "save the session state for the next shift", "gold": "session_checkpoint"}
+{"id": "chk10", "text": "create a checkpoint labeled night close", "gold": "session_checkpoint"}
+{"id": "con01", "text": "where did we leave off", "gold": "session_continuity"}
+{"id": "con02", "text": "resume the last session", "gold": "session_continuity"}
+{"id": "con03", "text": "what was I working on before the restart", "gold": "session_continuity"}
+{"id": "con04", "text": "pick up where we left off", "gold": "session_continuity"}
+{"id": "con05", "text": "load the continuity state", "gold": "session_continuity"}
+{"id": "con06", "text": "show the handoff from the previous session", "gold": "session_continuity"}
+{"id": "con07", "text": "what are the next steps from last time", "gold": "session_continuity"}
+{"id": "con08", "text": "continue from the checkpoint", "gold": "session_continuity"}
+{"id": "con09", "text": "what was pending at the last session close", "gold": "session_continuity"}
+{"id": "con10", "text": "recall the session handoff", "gold": "session_continuity"}
+{"id": "sre01", "text": "log this turn in the session", "gold": "session_record"}
+{"id": "sre02", "text": "record that the build succeeded in the session", "gold": "session_record"}
+{"id": "sre03", "text": "add an event to the current session log", "gold": "session_record"}
+{"id": "sre04", "text": "note in the session that we shipped the fix", "gold": "session_record"}
+{"id": "sre05", "text": "record this breakthrough", "gold": "session_record"}
+{"id": "sre06", "text": "log the error we just hit", "gold": "session_record"}
+{"id": "sre07", "text": "append this decision to the session", "gold": "session_record"}
+{"id": "sre08", "text": "record the test results in the session", "gold": "session_record"}
+{"id": "sre09", "text": "save this turn as an error event", "gold": "session_record"}
+{"id": "sre10", "text": "log the checkpoint outcome in the session", "gold": "session_record"}
+{"id": "sta01", "text": "how is the system doing", "gold": "status"}
+{"id": "sta02", "text": "show store health", "gold": "status"}
+{"id": "sta03", "text": "what's the status of the memory kernel", "gold": "status"}
+{"id": "sta04", "text": "how many records do we have", "gold": "status"}
+{"id": "sta05", "text": "check the epoch and counts", "gold": "status"}
+{"id": "sta06", "text": "is the store healthy", "gold": "status"}
+{"id": "sta07", "text": "system status please", "gold": "status"}
+{"id": "sta08", "text": "give me the health summary", "gold": "status"}
+{"id": "sta09", "text": "what does the kernel report", "gold": "status"}
+{"id": "sta10", "text": "check on the runtime status", "gold": "status"}
+{"id": "ins01", "text": "show me the invariants", "gold": "inspect"}
+{"id": "ins02", "text": "inspect the constitution view", "gold": "inspect"}
+{"id": "ins03", "text": "what does the self-model say", "gold": "inspect"}
+{"id": "ins04", "text": "check the substrate invariants", "gold": "inspect"}
+{"id": "ins05", "text": "inspect system state", "gold": "inspect"}
+{"id": "ins06", "text": "show the active constitution", "gold": "inspect"}
+{"id": "ins07", "text": "look at the self-model state", "gold": "inspect"}
+{"id": "ins08", "text": "verify the invariants are holding", "gold": "inspect"}
+{"id": "ins09", "text": "inspect the kernel's internal state", "gold": "inspect"}
+{"id": "ins10", "text": "show me what the substrate thinks of itself", "gold": "inspect"}
+{"id": "swp01", "text": "run a think sweep", "gold": "sweep"}
+{"id": "swp02", "text": "do a cognitive sweep pass", "gold": "sweep"}
+{"id": "swp03", "text": "sweep the memory now", "gold": "sweep"}
+{"id": "swp04", "text": "run one thinking pass over the store", "gold": "sweep"}
+{"id": "swp05", "text": "trigger an explicit sweep", "gold": "sweep"}
+{"id": "swp06", "text": "do a consolidation sweep", "gold": "sweep"}
+{"id": "swp07", "text": "run the sweep cycle", "gold": "sweep"}
+{"id": "swp08", "text": "perform a cognitive sweep", "gold": "sweep"}
+{"id": "swp09", "text": "sweep through the records once", "gold": "sweep"}
+{"id": "swp10", "text": "run the thinking sweep over everything", "gold": "sweep"}
+{"id": "drm01", "text": "run a dream cycle", "gold": "dream"}
+{"id": "drm02", "text": "consolidate passively overnight", "gold": "dream"}
+{"id": "drm03", "text": "start dream incubation", "gold": "dream"}
+{"id": "drm04", "text": "let it dream for a while", "gold": "dream"}
+{"id": "drm05", "text": "run the passive consolidation cycle", "gold": "dream"}
+{"id": "drm06", "text": "dream incubation now", "gold": "dream"}
+{"id": "drm07", "text": "do a dream pass", "gold": "dream"}
+{"id": "drm08", "text": "consolidate associations in a dream cycle", "gold": "dream"}
+{"id": "drm09", "text": "kick off the overnight dream", "gold": "dream"}
+{"id": "drm10", "text": "run passive associative consolidation", "gold": "dream"}
+{"id": "ing01", "text": "import this JSONL file", "gold": "ingest"}
+{"id": "ing02", "text": "ingest the transcripts folder", "gold": "ingest"}
+{"id": "ing03", "text": "load these documents into the store", "gold": "ingest"}
+{"id": "ing04", "text": "harvest this directory into memory", "gold": "ingest"}
+{"id": "ing05", "text": "import the session logs", "gold": "ingest"}
+{"id": "ing06", "text": "ingest from stdin", "gold": "ingest"}
+{"id": "ing07", "text": "bring in the execution events", "gold": "ingest"}
+{"id": "ing08", "text": "load the transcript dump", "gold": "ingest"}
+{"id": "ing09", "text": "ingest these markdown files", "gold": "ingest"}
+{"id": "ing10", "text": "import the records from the JSONL", "gold": "ingest"}
+{"id": "gal01", "text": "generate the galaxy visualization", "gold": "galaxy"}
+{"id": "gal02", "text": "show the 3D holographic view", "gold": "galaxy"}
+{"id": "gal03", "text": "export the galaxy coordinates", "gold": "galaxy"}
+{"id": "gal04", "text": "render the memory galaxy", "gold": "galaxy"}
+{"id": "gal05", "text": "give me the 6D coordinates", "gold": "galaxy"}
+{"id": "gal06", "text": "build the WebGL galaxy", "gold": "galaxy"}
+{"id": "gal07", "text": "visualize the store as a galaxy", "gold": "galaxy"}
+{"id": "gal08", "text": "export holographic coordinates for the records", "gold": "galaxy"}
+{"id": "gal09", "text": "make me the interactive 3D view", "gold": "galaxy"}
+{"id": "gal10", "text": "generate the 6D galaxy export", "gold": "galaxy"}
+{"id": "cen01", "text": "audit the legacy store", "gold": "census"}
+{"id": "cen02", "text": "run a census on the old LMDB", "gold": "census"}
+{"id": "cen03", "text": "check the gen2 store's integrity", "gold": "census"}
+{"id": "cen04", "text": "census the legacy database", "gold": "census"}
+{"id": "cen05", "text": "verify the old store's hashes", "gold": "census"}
+{"id": "cen06", "text": "audit the gen2 records", "gold": "census"}
+{"id": "cen07", "text": "run the compatibility census", "gold": "census"}
+{"id": "cen08", "text": "check the legacy store health", "gold": "census"}
+{"id": "cen09", "text": "count and verify the old store", "gold": "census"}
+{"id": "cen10", "text": "census the pre-migration data", "gold": "census"}
+{"id": "mig01", "text": "migrate the old store to gen3", "gold": "migrate"}
+{"id": "mig02", "text": "upgrade the gen2 data", "gold": "migrate"}
+{"id": "mig03", "text": "import the legacy store into gen3", "gold": "migrate"}
+{"id": "mig04", "text": "move the old records to gen3", "gold": "migrate"}
+{"id": "mig05", "text": "migrate from the gen2 LMDB", "gold": "migrate"}
+{"id": "mig06", "text": "convert the legacy store", "gold": "migrate"}
+{"id": "mig07", "text": "bring the old store forward", "gold": "migrate"}
+{"id": "mig08", "text": "run the gen2 to gen3 migration", "gold": "migrate"}
+{"id": "mig09", "text": "upgrade legacy memories into the new kernel", "gold": "migrate"}
+{"id": "mig10", "text": "migrate everything into gen3", "gold": "migrate"}

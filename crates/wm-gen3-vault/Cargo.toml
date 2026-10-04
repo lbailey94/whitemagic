@@ -1,0 +1,30 @@
+[package]
+name = "wm-gen3-vault"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "WhiteMagic Gen3 — Tacit Continuity Vault Miner (DIR-08)"
+
+[dependencies]
+wm-gen3-core = { workspace = true }
+wm-gen3-shm = { workspace = true }
+wm-gen3-zeropointfive = { workspace = true }
+rusqlite = { version = "0.33", features = ["bundled"] }
+memmap2 = "0.9"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rayon = "1.10"
+sha2 = "0.10"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["serde", "v4"] }
+tar = "0.4"
+zstd = "0.13"
+
+[dev-dependencies]
+tempfile = "3"
+libc = "0.2"
+
+[lints.rust]
+unsafe_code = "allow"

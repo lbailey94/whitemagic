@@ -278,6 +278,33 @@ impl System05 {
         }
     }
 
+    /// Encode a single text into a normalized embedding vector.
+    pub fn encode_single(&self, text: &str) -> Result<Vec<f32>, Error> {
+        self.ensure_loaded()?;
+        let model = self
+            .model
+            .lock()
+            .map_err(|_| Error::Inference("system05 lock poisoned".to_string()))?;
+        let model = model
+            .as_ref()
+            .ok_or_else(|| Error::Inference("model not loaded".to_string()))?;
+        Ok(l2_normalize(model.encode_single(text)))
+    }
+
+    /// Encode a batch of texts into normalized embedding vectors.
+    pub fn encode_batch(&self, texts: &[String]) -> Result<Vec<Vec<f32>>, Error> {
+        self.ensure_loaded()?;
+        let model = self
+            .model
+            .lock()
+            .map_err(|_| Error::Inference("system05 lock poisoned".to_string()))?;
+        let model = model
+            .as_ref()
+            .ok_or_else(|| Error::Inference("model not loaded".to_string()))?;
+        let encoded = model.encode(texts);
+        Ok(encoded.into_iter().map(l2_normalize).collect())
+    }
+
     /// Rank candidate routes for a state and return a shortlist report.
     /// Rank candidate routes for a state and return a shortlist report.
     ///

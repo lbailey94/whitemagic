@@ -168,6 +168,128 @@ impl Tuple {
     pub fn is_expired(&self, now_ms: u64) -> bool {
         self.expires_at_ms > 0 && now_ms > self.expires_at_ms
     }
+
+    /// Convert to RawTuple for zero-copy POSIX shared memory substrate.
+    pub fn to_raw(&self) -> wm_gen3_shm::RawTuple {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let (kind_discriminator, resource_path, tag, payload, landlock_token, capability_mask, holder_issuer) =
+            match &self.kind {
+                TupleKind::Claim { resource, holder, .. } => {
+                    (1, resource.clone(), "claim:exclusive".to_string(), Vec::new(), [0u8; 32], 0, holder.clone())
+                }
+                TupleKind::Task { task_id: _, action, target, payload } => {
+                    (2, target.clone(), format!("task:{action}"), payload.clone(), [0u8; 32], 0, String::new())
+                }
+                TupleKind::AuthorityGrant { task_id: _, granter, capability_mask, landlock_token } => {
+                    (3, String::new(), "authority:grant".to_string(), Vec::new(), *landlock_token, *capability_mask, granter.clone())
+                }
+                TupleKind::ResultNotice { task_id: _, success, output_summary, duration_ms } => {
+                    let payload_bytes = serde_json::to_vec(&(success, duration_ms, output_summary)).unwrap_or_default();
+                    (4, String::new(), "result:notice".to_string(), payload_bytes, [0u8; 32], 0, String::new())
+                }
+                TupleKind::PheromoneSync { resource, intensity, issuer } => {
+                    let payload_bytes = intensity.to_le_bytes().to_vec();
+                    (5, resource.clone(), "pheromone:sync".to_string(), payload_bytes, [0u8; 32], 0, issuer.clone())
+                }
+                TupleKind::Generic { tag, payload } => {
+                    (6, String::new(), tag.clone(), payload.as_bytes().to_vec(), [0u8; 32], 0, String::new())
+                }
+            };
+
+        let mut r_hasher = DefaultHasher::new();
+        resource_path.hash(&mut r_hasher);
+        let resource_hash = r_hasher.finish();
+
+        let mut h_hasher = DefaultHasher::new();
+        holder_issuer.hash(&mut h_hasher);
+        let holder_issuer_hash = h_hasher.finish();
+
+        wm_gen3_shm::RawTuple {
+            id: self.id,
+            kind_discriminator,
+            resource_hash,
+            holder_issuer_hash,
+            resource_path,
+            tag,
+            payload,
+            created_at_ms: self.created_at_ms,
+            expires_at_ms: self.expires_at_ms,
+            landlock_token,
+            capability_mask,
+        }
+    }
+
+    /// Construct Tuple from RawTuple.
+    pub fn from_raw(raw: &wm_gen3_shm::RawTuple) -> Self {
+        let kind = match raw.kind_discriminator {
+            1 => TupleKind::Claim {
+                resource: raw.resource_path.clone(),
+                holder: String::new(),
+                ttl_ms: raw.expires_at_ms.saturating_sub(raw.created_at_ms),
+            },
+            2 => {
+                let action = raw.tag.strip_prefix("task:").unwrap_or(&raw.tag).to_string();
+                TupleKind::Task {
+                    task_id: raw.id,
+                    action,
+                    target: raw.resource_path.clone(),
+                    payload: raw.payload.clone(),
+                }
+            }
+            3 => TupleKind::AuthorityGrant {
+                task_id: raw.id,
+                granter: String::new(),
+                capability_mask: raw.capability_mask,
+                landlock_token: raw.landlock_token,
+            },
+            4 => {
+                if let Ok((success, duration_ms, output_summary)) =
+                    serde_json::from_slice::<(bool, u64, String)>(&raw.payload)
+                {
+                    TupleKind::ResultNotice {
+                        task_id: raw.id,
+                        success,
+                        output_summary,
+                        duration_ms,
+                    }
+                } else {
+                    TupleKind::ResultNotice {
+                        task_id: raw.id,
+                        success: true,
+                        output_summary: String::from_utf8_lossy(&raw.payload).into_owned(),
+                        duration_ms: 0,
+                    }
+                }
+            }
+            5 => {
+                let intensity = if raw.payload.len() >= 8 {
+                    let mut b = [0u8; 8];
+                    b.copy_from_slice(&raw.payload[..8]);
+                    f64::from_le_bytes(b)
+                } else {
+                    1.0
+                };
+                TupleKind::PheromoneSync {
+                    resource: raw.resource_path.clone(),
+                    intensity,
+                    issuer: String::new(),
+                }
+            }
+            _ => TupleKind::Generic {
+                tag: raw.tag.clone(),
+                payload: String::from_utf8_lossy(&raw.payload).into_owned(),
+            },
+        };
+
+        Tuple {
+            id: raw.id,
+            kind,
+            created_at_ms: raw.created_at_ms,
+            expires_at_ms: raw.expires_at_ms,
+        }
+    }
 }
 
 /// Associative query pattern for matching tuples.
@@ -450,6 +572,18 @@ impl TupleSpace {
         std::fs::write(&tmp_path, bytes)?;
         std::fs::rename(tmp_path, path)?;
         Ok(())
+    }
+
+    /// Connect to a named zero-copy POSIX shared memory substrate.
+    pub fn open_shm(name: &str) -> std::io::Result<wm_gen3_shm::ShmTupleSpace> {
+        let substrate = wm_gen3_shm::ShmSubstrate::open_or_create(name)?;
+        Ok(wm_gen3_shm::ShmTupleSpace::new(std::sync::Arc::new(substrate)))
+    }
+
+    /// Attach to an inherited shared memory file descriptor (for Landlock sandboxes).
+    pub fn attach_shm_fd(fd: std::os::unix::io::RawFd, is_owner: bool) -> std::io::Result<wm_gen3_shm::ShmTupleSpace> {
+        let substrate = wm_gen3_shm::ShmSubstrate::from_raw_fd(fd, is_owner)?;
+        Ok(wm_gen3_shm::ShmTupleSpace::new(std::sync::Arc::new(substrate)))
     }
 }
 

@@ -945,12 +945,18 @@ pub struct WorkspaceClaim {
     pub kekkai_phase: KekkaiPhase,
     #[serde(default)]
     pub resource_limits: Option<SandboxResourceLimits>,
+    #[serde(default)]
+    pub inherited_shm_fd: Option<i32>,
     pub created_at: u64,
     pub expires_at: u64,
     pub signature: Option<Vec<u8>>,
 }
 
 impl WorkspaceClaim {
+    /// Attaches to the inherited shared memory substrate without requiring /dev/shm filesystem access.
+    pub fn attach_shm(&self) -> Option<std::io::Result<wm_gen3_shm::ShmSubstrate>> {
+        self.inherited_shm_fd.map(|fd| wm_gen3_shm::ShmSubstrate::from_raw_fd(fd, false))
+    }
     /// Computes the canonical SHA-256 digest of this workspace claim.
     #[must_use]
     pub fn canonical_digest(&self) -> String {
@@ -1031,7 +1037,7 @@ impl LandlockSandbox {
             Ruleset, RulesetAttr, RulesetCreatedAttr,
         };
 
-        let abi = ABI::V1;
+        let abi = ABI::V5;
         let mut builder = Ruleset::default()
             .set_compatibility(CompatLevel::BestEffort)
             .handle_access(AccessFs::from_all(abi))
@@ -1754,6 +1760,7 @@ mod tests {
             network_allowed: false,
             kekkai_phase: KekkaiPhase::Hoi,
             resource_limits: Some(SandboxResourceLimits::default()),
+            inherited_shm_fd: None,
             created_at: 1000,
             expires_at: 5000,
             signature: None,
@@ -1785,6 +1792,7 @@ mod tests {
             network_allowed: false,
             kekkai_phase: KekkaiPhase::Hoi,
             resource_limits: None,
+            inherited_shm_fd: None,
             created_at: 1000,
             expires_at: 5000,
             signature: None,

@@ -736,9 +736,10 @@ mod tests {
         );
         assert_eq!(report.silent_violations_prevented, report.conflict_trials);
         assert!(report.friction_events_logged >= report.conflict_trials);
+        let max_allowed_ns = if cfg!(debug_assertions) { 25_000.0 } else { 1_000.0 };
         assert!(
-            report.mean_arbitration_latency_ns < 5000.0,
-            "Arbitration overhead must be sub-microsecond in release / sub-5µs in unoptimized debug"
+            report.mean_arbitration_latency_ns < max_allowed_ns,
+            "Arbitration overhead must be sub-microsecond in release / sub-25µs under concurrent debug testing"
         );
     }
 

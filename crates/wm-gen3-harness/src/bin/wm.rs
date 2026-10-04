@@ -37,7 +37,7 @@ use wm_gen3_harness::bridge::{
 #[derive(Parser)]
 #[command(
     name = "wm",
-    version = "10.0.0-alpha",
+    version = "10.2.0-alpha",
     about = "WhiteMagic Gen3 — sovereign cognitive kernel and local-first memory",
     after_help = "Gate 9B Compatibility Shell — all mutations dispatch as sovereign pulses."
 )]
@@ -52,6 +52,21 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Run guided first-run onboarding pass, surface the starter guide galaxy, and verify setup
+    Grimoire {
+        /// Output report as JSON for agent consumption
+        #[arg(long)]
+        json: bool,
+        /// Write detected MCP configurations to local client config files
+        #[arg(long)]
+        write: bool,
+    },
+    /// Initialize and provision a local WhiteMagic substrate store with the starter guide galaxy
+    Init {
+        /// Force re-seeding of the starter guide galaxy even if store already exists
+        #[arg(long)]
+        force: bool,
+    },
     /// Display system status, epoch, record counts, and store health
     Status {
         /// Optional path to legacy Gen2 store to inspect
@@ -62,6 +77,9 @@ enum Commands {
     Remember {
         /// Content of the memory to record
         content: String,
+        /// Target memory galaxy (default: 'codex' or 'guide')
+        #[arg(long)]
+        galaxy: Option<String>,
         /// Epistemic source attribution (default: "operator:cli")
         #[arg(long, default_value = "operator:cli")]
         source: String,
@@ -126,8 +144,11 @@ enum Commands {
         #[arg(long, default_value_t = 0.8)]
         utility: f64,
     },
-    /// Generate 6D holographic coordinates and export interactive 3D WebGL galaxy
+    /// Manage sovereign memory galaxies (list, fork, create, visualize)
     Galaxy {
+        /// Subcommand action: list (default), fork, create, or visualize
+        #[command(subcommand)]
+        action: Option<GalaxyAction>,
         /// Output path for interactive HTML visualization (default: <store>/galaxy.html)
         #[arg(long)]
         output_html: Option<PathBuf>,
@@ -562,6 +583,39 @@ enum SessionCommands {
     List,
 }
 
+#[derive(Subcommand, Debug, Clone)]
+enum GalaxyAction {
+    /// List all active galaxies in the substrate with record counts and sample tags
+    List,
+    /// Fork an existing galaxy into a new sovereign partition
+    Fork {
+        /// Source galaxy to fork from (e.g. 'guide')
+        source: String,
+        /// Target galaxy to create (e.g. 'project-alpha')
+        target: String,
+    },
+    /// Create a new empty galaxy with an initial genesis beacon
+    Create {
+        /// Galaxy name (e.g. 'research')
+        name: String,
+        /// Optional description for the genesis beacon
+        #[arg(long)]
+        description: Option<String>,
+    },
+    /// Export 6D coordinates and interactive 3D WebGL visualizer
+    Visualize {
+        /// Output path for interactive HTML visualization (default: <store>/galaxy.html)
+        #[arg(long)]
+        output_html: Option<PathBuf>,
+        /// Output path for 6D coordinates JSON dataset (default: <store>/galaxy_6d.json)
+        #[arg(long)]
+        output_json: Option<PathBuf>,
+        /// Sample limit for visualization (default: 2000)
+        #[arg(long, default_value_t = 2000)]
+        limit: usize,
+    },
+}
+
 #[derive(Subcommand)]
 enum MeshCommands {
     /// Show local mesh node identity, verifying key, and epoch
@@ -774,6 +828,43 @@ fn main() {
     let store_path = resolve_store_path(cli.store.as_ref());
 
     match cli.command {
+        Commands::Grimoire { json, write } => {
+            if let Err(e) = wm_gen3_harness::grimoire::run_grimoire(&store_path, json, write) {
+                eprintln!("Grimoire run failed: {e}");
+                std::process::exit(1);
+            }
+        }
+        Commands::Init { force } => {
+            println!("Initializing WhiteMagic substrate at: {}", store_path.display());
+            let existed = store_path.exists();
+            if !existed {
+                if let Err(e) = std::fs::create_dir_all(&store_path) {
+                    eprintln!("Failed to create store directory: {e}");
+                    std::process::exit(1);
+                }
+            }
+            let journal_path = store_path.join("journal.jsonl");
+            let mut substrate = match Substrate::open(&store_path, Some(&journal_path), default_view()) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("Store init error: {e}");
+                    std::process::exit(1);
+                }
+            };
+
+            let count = substrate.store().record_count().unwrap_or(0);
+            if count == 0 || force {
+                match wm_gen3_harness::starter_galaxy::seed_starter_guide_force(&mut substrate) {
+                    Ok(seeded) => println!("✓ Initialized and seeded starter guide galaxy ({} records committed).", seeded),
+                    Err(e) => {
+                        eprintln!("Warning: failed seeding starter guide: {e}");
+                    }
+                }
+            } else {
+                println!("✓ Store already initialized ({} records present). Starter guide preserved.", count);
+            }
+            println!("✓ Status: Ready. Run 'wm grimoire' for full diagnostic pass.");
+        }
         Commands::Status { legacy } => {
             if let Some(legacy_path) = legacy {
                 run_legacy_census(&legacy_path);
@@ -792,7 +883,7 @@ fn main() {
                 println!("       WhiteMagic Gen3 Kernel Status (v10.0.0-alpha)");
                 println!("==================================================");
                 println!("Store Path:       {} (uninitialized)", store_path.display());
-                println!("Status:           Ready (Run 'wm init' to provision)");
+                println!("Status:           Ready (Run 'wm grimoire' or 'wm init' to provision)");
                 println!("Mode:             Clean Environment");
                 println!("Architecture:     {}", std::env::consts::ARCH);
                 println!("Target OS:        {}", std::env::consts::OS);
@@ -811,6 +902,7 @@ fn main() {
                         .map(|r| r.len())
                         .unwrap_or(0);
                     let epoch = substrate.store().epoch().unwrap_or(0);
+                    let active_galaxies = wm_gen3_harness::starter_galaxy::list_galaxies(&substrate).unwrap_or_default();
                     println!("==================================================");
                     println!("       WhiteMagic Gen3 Kernel Status (v10.0.0-alpha)");
                     println!("==================================================");
@@ -818,6 +910,7 @@ fn main() {
                     println!("Mode:             ReadOnly (Inspection)");
                     println!("Epoch:            {}", epoch);
                     println!("Records Count:    {}", records_count);
+                    println!("Galaxies Active:  {} (Run 'wm galaxy' to inspect)", active_galaxies.len());
                     println!("Relations Count:  {}", relations_count);
                     println!("Budget RPM:       {}", substrate.budget());
                     println!(
@@ -844,6 +937,7 @@ fn main() {
         }
         Commands::Remember {
             content,
+            galaxy,
             source,
             kind,
         } => {
@@ -863,12 +957,22 @@ fn main() {
                 _ => ImportKind::Reported,
             };
 
+            let effective_source = if let Some(gal) = galaxy {
+                if source.starts_with("corpus:") {
+                    source
+                } else {
+                    format!("corpus:{gal}:{source}")
+                }
+            } else {
+                source
+            };
+
             let authority = RatifiedChannel::mint("wm-cli-operator");
             substrate.set_intake_authority(authority);
 
             let item = RememberItem {
                 content,
-                source,
+                source: effective_source,
                 kind: import_kind,
             };
 
@@ -1467,94 +1571,172 @@ fn main() {
             println!("==================================================");
         }
         Commands::Galaxy {
+            action,
             output_html,
             output_json,
             limit,
         } => {
             let journal_path = store_path.join("journal.jsonl");
-            let substrate =
-                match Substrate::open_readonly(&store_path, Some(&journal_path), default_view()) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        eprintln!("Error opening store at {}: {e}", store_path.display());
-                        std::process::exit(1);
-                    }
-                };
-
-            let total_records = substrate.store().record_count().unwrap_or(0);
-            let epoch = substrate.store().epoch().unwrap_or(0);
-            let sample_count = limit.min(total_records).max(1);
-            let stride = (total_records / sample_count).max(1);
-
-            println!("==================================================");
-            println!("    WhiteMagic Gen3 6D Holographic Galaxy Engine  ");
-            println!("==================================================");
-            println!("Store Path:           {}", store_path.display());
-            println!("Total Store Records:  {}", total_records);
-            println!("Current Store Epoch:  {}", epoch);
-            println!("Visualization Sample: {}", sample_count);
-            println!("Sampling Stride:      {}", stride);
-            println!("==================================================");
-
-            let mut projections = Vec::new();
-            let start = std::time::Instant::now();
-
-            for i in 0..sample_count {
-                let id = (i * stride).min(total_records.saturating_sub(1)) as u64;
-                if let Ok(Some(record)) = substrate.store().get_record(id) {
-                    let coords = wm_gen3_core::hologram::Holographic6D::from_record(
-                        id,
-                        record.content(),
-                        epoch,
-                        0.90,
-                    );
-                    let preview = if record.content().len() > 160 {
-                        let mut end = 160;
-                        while end > 0 && !record.content().is_char_boundary(end) {
-                            end -= 1;
+            match action {
+                Some(GalaxyAction::Fork { source, target }) => {
+                    let mut substrate = match Substrate::open(&store_path, Some(&journal_path), default_view()) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!("Error opening store for fork: {e}");
+                            std::process::exit(1);
                         }
-                        format!("{}...", &record.content()[..end])
-                    } else {
-                        record.content().to_string()
                     };
-                    projections.push(serde_json::json!({
-                        "id": id,
-                        "x": coords.x,
-                        "y": coords.y,
-                        "z": coords.z,
-                        "tau": coords.tau,
-                        "sigma": coords.sigma,
-                        "omega": coords.omega as u32,
-                        "preview": preview,
-                        "source": record.source(),
-                    }));
+                    match wm_gen3_harness::starter_galaxy::fork_galaxy(&mut substrate, &source, &target) {
+                        Ok(n) => println!("✓ Forked {} records from galaxy '{}' into '{}'.", n, source, target),
+                        Err(e) => {
+                            eprintln!("Galaxy fork failed: {e}");
+                            std::process::exit(1);
+                        }
+                    }
+                }
+                Some(GalaxyAction::Create { name, description }) => {
+                    let mut substrate = match Substrate::open(&store_path, Some(&journal_path), default_view()) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!("Error opening store: {e}");
+                            std::process::exit(1);
+                        }
+                    };
+                    match wm_gen3_harness::starter_galaxy::create_galaxy(&mut substrate, &name, description.as_deref()) {
+                        Ok(id) => println!("✓ Galaxy '{}' created (genesis beacon record: {}).", name, id),
+                        Err(e) => {
+                            eprintln!("Galaxy creation failed: {e}");
+                            std::process::exit(1);
+                        }
+                    }
+                }
+                Some(GalaxyAction::List) | None if output_html.is_none() && output_json.is_none() => {
+                    let substrate = match Substrate::open_readonly(&store_path, Some(&journal_path), default_view()) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!("Error opening store at {}: {e}", store_path.display());
+                            std::process::exit(1);
+                        }
+                    };
+                    let galaxies = wm_gen3_harness::starter_galaxy::list_galaxies(&substrate)
+                        .unwrap_or_default();
+                    println!("==================================================");
+                    println!("         WhiteMagic Sovereign Galaxies            ");
+                    println!("==================================================");
+                    println!("Store: {}", store_path.display());
+                    println!("Total Active Galaxies: {}", galaxies.len());
+                    println!("{:<18} | {:<8} | {:<32}", "Galaxy", "Records", "Sample Tags");
+                    println!("--------------------------------------------------");
+                    for g in &galaxies {
+                        let marker = if g.is_starter { " (starter)" } else { "" };
+                        let name_display = format!("{}{}", g.name, marker);
+                        println!("{:<18} | {:<8} | {:<32}", name_display, g.record_count, g.tags.join(", "));
+                    }
+                    println!("==================================================");
+                    println!("Branching: 'wm galaxy fork <src> <tgt>', 'wm galaxy create <name>'");
+                    println!("Visualizer: 'wm galaxy visualize'");
+                }
+                _ => {
+                    let opt_html = output_html.or(match &action {
+                        Some(GalaxyAction::Visualize { output_html: h, .. }) => h.clone(),
+                        _ => None,
+                    });
+                    let opt_json = output_json.or(match &action {
+                        Some(GalaxyAction::Visualize { output_json: j, .. }) => j.clone(),
+                        _ => None,
+                    });
+                    let eff_limit = if limit != 2000 {
+                        limit
+                    } else if let Some(GalaxyAction::Visualize { limit: l, .. }) = &action {
+                        *l
+                    } else {
+                        limit
+                    };
+
+                    let substrate =
+                        match Substrate::open_readonly(&store_path, Some(&journal_path), default_view()) {
+                            Ok(s) => s,
+                            Err(e) => {
+                                eprintln!("Error opening store at {}: {e}", store_path.display());
+                                std::process::exit(1);
+                            }
+                        };
+
+                    let total_records = substrate.store().record_count().unwrap_or(0);
+                    let epoch = substrate.store().epoch().unwrap_or(0);
+                    let sample_count = eff_limit.min(total_records).max(1);
+                    let stride = (total_records / sample_count).max(1);
+
+                    println!("==================================================");
+                    println!("    WhiteMagic Gen3 6D Holographic Galaxy Engine  ");
+                    println!("==================================================");
+                    println!("Store Path:           {}", store_path.display());
+                    println!("Total Store Records:  {}", total_records);
+                    println!("Current Store Epoch:  {}", epoch);
+                    println!("Visualization Sample: {}", sample_count);
+                    println!("Sampling Stride:      {}", stride);
+                    println!("==================================================");
+
+                    let mut projections = Vec::new();
+                    let start = std::time::Instant::now();
+
+                    for i in 0..sample_count {
+                        let id = (i * stride).min(total_records.saturating_sub(1)) as u64;
+                        if let Ok(Some(record)) = substrate.store().get_record(id) {
+                            let coords = wm_gen3_core::hologram::Holographic6D::from_record(
+                                id,
+                                record.content(),
+                                epoch,
+                                0.90,
+                            );
+                            let preview = if record.content().len() > 160 {
+                                let mut end = 160;
+                                while end > 0 && !record.content().is_char_boundary(end) {
+                                    end -= 1;
+                                }
+                                format!("{}...", &record.content()[..end])
+                            } else {
+                                record.content().to_string()
+                            };
+                            projections.push(serde_json::json!({
+                                "id": id,
+                                "x": coords.x,
+                                "y": coords.y,
+                                "z": coords.z,
+                                "tau": coords.tau,
+                                "sigma": coords.sigma,
+                                "omega": coords.omega as u32,
+                                "preview": preview,
+                                "source": record.source(),
+                            }));
+                        }
+                    }
+
+                    println!(
+                        "Derived 6D coordinates for {} nodes in {:.2?}",
+                        projections.len(),
+                        start.elapsed()
+                    );
+
+                    let json_path = opt_json.unwrap_or_else(|| store_path.join("galaxy_6d.json"));
+                    let html_path = opt_html.unwrap_or_else(|| store_path.join("galaxy.html"));
+
+                    let json_data = serde_json::to_string(&projections).unwrap_or_default();
+                    if let Err(e) = std::fs::write(&json_path, &json_data) {
+                        eprintln!("Warning: failed writing json dataset: {e}");
+                    } else {
+                        println!("Saved 6D dataset:      {}", json_path.display());
+                    }
+
+                    let html_content = generate_galaxy_html(&json_data, total_records, epoch);
+                    if let Err(e) = std::fs::write(&html_path, html_content) {
+                        eprintln!("Error writing galaxy HTML: {e}");
+                    } else {
+                        println!("Saved 3D Galaxy HTML:  {}", html_path.display());
+                        println!("Visualizer ready. Open in browser to view the Sangha Galaxy in 3D.");
+                    }
                 }
             }
-
-            println!(
-                "Derived 6D coordinates for {} nodes in {:.2?}",
-                projections.len(),
-                start.elapsed()
-            );
-
-            let json_path = output_json.unwrap_or_else(|| store_path.join("galaxy_6d.json"));
-            let html_path = output_html.unwrap_or_else(|| store_path.join("galaxy.html"));
-
-            let json_data = serde_json::to_string(&projections).unwrap_or_default();
-            if let Err(e) = std::fs::write(&json_path, &json_data) {
-                eprintln!("Warning: failed writing json dataset: {e}");
-            } else {
-                println!("Saved 6D dataset:      {}", json_path.display());
-            }
-
-            let html_content = generate_galaxy_html(&json_data, total_records, epoch);
-            if let Err(e) = std::fs::write(&html_path, html_content) {
-                eprintln!("Error writing galaxy HTML: {e}");
-            } else {
-                println!("Saved 3D Galaxy HTML:  {}", html_path.display());
-                println!("Visualizer ready. Open in browser to view the Sangha Galaxy in 3D.");
-            }
-            println!("==================================================");
         }
         Commands::Inspect { scope } => {
             let journal_path = store_path.join("journal.jsonl");
