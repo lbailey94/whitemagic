@@ -3015,6 +3015,9 @@ fn handle_sangha_post(args: &Value, readonly: bool) -> Result<Value, String> {
 
     let scope = args.get("scope").and_then(Value::as_str);
     let expires = args.get("expires").and_then(Value::as_str);
+    let room = args.get("room").and_then(Value::as_str);
+    let thread = args.get("thread").and_then(Value::as_str);
+    let hop = args.get("hop").and_then(Value::as_u64);
 
     let payload = json!({
         "title": title,
@@ -3023,7 +3026,10 @@ fn handle_sangha_post(args: &Value, readonly: bool) -> Result<Value, String> {
         "target": target,
         "type": post_type,
         "scope": scope,
-        "expires": expires
+        "expires": expires,
+        "room": room,
+        "thread": thread,
+        "hop": hop
     });
 
     match sangha_bridge_request("POST", "/api/post", Some(&payload)) {
@@ -3087,11 +3093,22 @@ fn handle_sangha_post(args: &Value, readonly: bool) -> Result<Value, String> {
                 if let Some(ex) = expires {
                     parts.push(format!("Expires: {ex}"));
                 }
+                if let Some(rm) = room {
+                    parts.push(format!("Room: {rm}"));
+                }
                 header_meta = format!("> {}\n", parts.join(" · "));
             }
 
+            let mut extra_headers = String::new();
+            if let Some(hp) = hop {
+                extra_headers.push_str(&format!("> Hop: {hp}\n"));
+            }
+            if let Some(th) = thread {
+                extra_headers.push_str(&format!("> Thread: {th}\n"));
+            }
+
             let md_content = format!(
-                "# {title}\n\n> Posted by {author} on t4800-s at {stamp_str}\n> Target: {target}\n{header_meta}\n{body}\n"
+                "# {title}\n\n> Posted by {author} on t4800-s at {stamp_str}\n> Target: {target}\n{header_meta}{extra_headers}\n{body}\n"
             );
             std::fs::write(&fpath, md_content)
                 .map_err(|e| format!("Fallback file write failed: {e}"))?;
@@ -3108,6 +3125,9 @@ fn handle_sangha_post(args: &Value, readonly: bool) -> Result<Value, String> {
                 "type": post_type,
                 "scope": scope,
                 "expires": expires,
+                "room": room,
+                "thread": thread,
+                "hop": hop,
                 "read": false
             });
             let meta_line = format!("{}\n", serde_json::to_string(&post_meta).unwrap());
