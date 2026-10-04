@@ -889,6 +889,56 @@ fn handle_route(
                 })),
             }
         }
+        "causal.mutilate_do" => {
+            let treatment = args.get("treatment").and_then(Value::as_str).unwrap_or("X");
+            let value = args.get("value").and_then(Value::as_f64).unwrap_or(1.0);
+            let outcome = args.get("outcome").and_then(Value::as_str).unwrap_or("Y");
+            let samples = args.get("samples").and_then(Value::as_u64).unwrap_or(500) as usize;
+
+            let scm = demo_causal_scm();
+            let severed_from = scm.parents(treatment);
+            match scm.intervene(treatment, value) {
+                Ok(mutilated) => {
+                    let topological_order = mutilated.topological_sort().unwrap_or_default();
+                    let expectation = mutilated
+                        .interventional_expectation(outcome, treatment, value, samples, 42)
+                        .ok();
+                    let baseline = mutilated
+                        .interventional_expectation(outcome, treatment, 0.0, samples, 43)
+                        .ok();
+                    let causal_lift = match (expectation, baseline) {
+                        (Some(expected), Some(base)) => Some(expected - base),
+                        _ => None,
+                    };
+                    Some(json!({
+                        "status": "success",
+                        "route": "causal.mutilate_do",
+                        "treatment": treatment,
+                        "intervention_value": value,
+                        "outcome": outcome,
+                        "graph_mutilation": {
+                            "incoming_edges_severed": severed_from.len(),
+                            "severed_from": severed_from,
+                            "treatment_mechanism": format!("{treatment} := {value} (deterministic, noise suppressed)"),
+                            "mechanisms_preserved": mutilated.nodes.len() == scm.nodes.len(),
+                            "node_count": mutilated.nodes.len(),
+                            "edge_count_before": scm.edges.len(),
+                            "edge_count_after": mutilated.edges.len(),
+                            "acyclic_after": !topological_order.is_empty(),
+                            "topological_order": topological_order,
+                        },
+                        "interventional_expectation": expectation,
+                        "baseline_expectation": baseline,
+                        "causal_lift": causal_lift,
+                    }))
+                }
+                Err(e) => Some(json!({
+                    "status": "error",
+                    "route": "causal.mutilate_do",
+                    "error": e.to_string(),
+                })),
+            }
+        }
         "causal.counterfactual" => {
             let treatment = args.get("treatment").and_then(Value::as_str).unwrap_or("X");
             let counterfactual_value = args
@@ -1244,23 +1294,8 @@ fn handle_route(
                 .and_then(Value::as_u64)
                 .unwrap_or(100);
 
-            let root_secret: [u8; 32] = [0x50; 32];
-            let root_key = wm_gen3_core::causal::SigningKey::from_bytes(&root_secret);
-
-            let agent_secret: [u8; 32] = [0x60; 32];
-            let agent_key = wm_gen3_core::causal::SigningKey::from_bytes(&agent_secret);
-
-            let token = wm_gen3_core::attestation::AgentIdentityToken::mint(
-                &root_key,
-                agent_id,
-                &agent_key.verifying_key(),
-                role,
-                caps,
-                10,
-                ttl,
-                [0x77; 16],
-            );
-
+            let root_key = wm_gen3_core::causal::SigningKey::from_bytes(&[0x50; 32]);
+            let token = demo_identity_token(agent_id, role, caps, ttl);
             let valid = token.verify(&root_key.verifying_key(), 15).is_ok();
 
             Some(json!({
@@ -1270,8 +1305,181 @@ fn handle_route(
                 "verified": valid,
             }))
         }
+        "attestation.verify_identity" | "attest.verify_identity" => {
+            let current_epoch = args
+                .get("current_epoch")
+                .and_then(Value::as_u64)
+                .unwrap_or(15);
+            let (authority_vk, authority_source) = match args
+                .get("root_public_key_hex")
+                .and_then(Value::as_str)
+            {
+                Some(hex) => match parse_hex_32(hex)
+                    .and_then(|bytes| wm_gen3_core::causal::VerifyingKey::from_bytes(&bytes).ok())
+                {
+                    Some(vk) => (vk, "explicit-root-public-key"),
+                    None => {
+                        return Some(json!({
+                            "status": "error",
+                            "route": route,
+                            "error": "root_public_key_hex must be 64 hex characters (32-byte Ed25519 public key)",
+                        }));
+                    }
+                },
+                None => (
+                    wm_gen3_core::causal::SigningKey::from_bytes(&[0x50; 32]).verifying_key(),
+                    "demo-root-key",
+                ),
+            };
+
+            let token = match args.get("token") {
+                Some(value) if !value.is_null() => {
+                    match serde_json::from_value::<wm_gen3_core::attestation::AgentIdentityToken>(
+                        value.clone(),
+                    ) {
+                        Ok(token) => token,
+                        Err(e) => {
+                            return Some(json!({
+                                "status": "error",
+                                "route": route,
+                                "error": format!("malformed identity token: {e}"),
+                            }));
+                        }
+                    }
+                }
+                _ => demo_identity_token(
+                    "did:key:agent-default",
+                    "Executor",
+                    vec!["memory:read".into(), "memory:write".into()],
+                    100,
+                ),
+            };
+
+            let verification = token.verify(&authority_vk, current_epoch);
+            Some(json!({
+                "status": "success",
+                "route": route,
+                "valid": verification.is_ok(),
+                "reason": verification.err().map(|e| e.to_string()),
+                "current_epoch": current_epoch,
+                "authority_source": authority_source,
+                "token": {
+                    "token_id": token.token_id,
+                    "agent_id": token.agent_id,
+                    "agent_role": token.agent_role,
+                    "capabilities": token.capabilities,
+                    "issued_at_epoch": token.issued_at_epoch,
+                    "expires_at_epoch": token.expires_at_epoch,
+                    "nonce_hex": token.nonce_hex,
+                },
+            }))
+        }
         _ => None,
     }
+}
+
+/// The canonical four-node demo SCM shared by the causal routes:
+/// Z (confounder) -> X (treatment) -> M (mediator) -> Y (outcome), plus Z -> Y.
+fn demo_causal_scm() -> wm_gen3_core::causal::StructuralCausalModel {
+    use wm_gen3_core::causal::{
+        CausalEdge, CausalNode, LinearStructuralEquation, StructuralCausalModel, VariableRole,
+    };
+
+    let mut scm = StructuralCausalModel::new();
+    scm.add_node(CausalNode {
+        id: "Z".into(),
+        name: "TaskComplexity".into(),
+        role: VariableRole::Confounder,
+        is_exogenous: false,
+        description: "Background task difficulty & ambiguity".into(),
+    });
+    scm.add_node(CausalNode {
+        id: "X".into(),
+        name: "RouteChoice".into(),
+        role: VariableRole::Treatment,
+        is_exogenous: false,
+        description: "Intervention candidate: 0=fast, 1=deliberator".into(),
+    });
+    scm.add_node(CausalNode {
+        id: "M".into(),
+        name: "ContextQuality".into(),
+        role: VariableRole::Mediator,
+        is_exogenous: false,
+        description: "Context enrichment quality".into(),
+    });
+    scm.add_node(CausalNode {
+        id: "Y".into(),
+        name: "SuccessScore".into(),
+        role: VariableRole::Outcome,
+        is_exogenous: false,
+        description: "Task outcome verification score".into(),
+    });
+    let _ = scm.add_edge(CausalEdge {
+        from: "Z".into(),
+        to: "X".into(),
+        weight: 0.8,
+        sign: 1,
+        mechanism: "Complexity triggers deliberation".into(),
+    });
+    let _ = scm.add_edge(CausalEdge {
+        from: "Z".into(),
+        to: "Y".into(),
+        weight: -0.7,
+        sign: -1,
+        mechanism: "Complexity degrades baseline success".into(),
+    });
+    let _ = scm.add_edge(CausalEdge {
+        from: "X".into(),
+        to: "M".into(),
+        weight: 0.6,
+        sign: 1,
+        mechanism: "Deliberation enriches context".into(),
+    });
+    let _ = scm.add_edge(CausalEdge {
+        from: "M".into(),
+        to: "Y".into(),
+        weight: 0.9,
+        sign: 1,
+        mechanism: "Context quality drives task success".into(),
+    });
+    scm.set_equation("Z", LinearStructuralEquation::new(1.0, 0.2));
+    scm.set_equation(
+        "X",
+        LinearStructuralEquation::new(0.1, 0.1).with_coefficient("Z", 0.8),
+    );
+    scm.set_equation(
+        "M",
+        LinearStructuralEquation::new(0.2, 0.1).with_coefficient("X", 0.6),
+    );
+    scm.set_equation(
+        "Y",
+        LinearStructuralEquation::new(0.5, 0.1)
+            .with_coefficient("Z", -0.7)
+            .with_coefficient("M", 0.9),
+    );
+    scm
+}
+
+/// The canonical demo identity token used by the attestation routes: fixed
+/// root/agent/nonce material, issued at epoch 10, signed by the demo root.
+fn demo_identity_token(
+    agent_id: &str,
+    agent_role: &str,
+    capabilities: Vec<String>,
+    ttl_epochs: u64,
+) -> wm_gen3_core::attestation::AgentIdentityToken {
+    let root_key = wm_gen3_core::causal::SigningKey::from_bytes(&[0x50; 32]);
+    let agent_key = wm_gen3_core::causal::SigningKey::from_bytes(&[0x60; 32]);
+    wm_gen3_core::attestation::AgentIdentityToken::mint(
+        &root_key,
+        agent_id,
+        &agent_key.verifying_key(),
+        agent_role,
+        capabilities,
+        10,
+        ttl_epochs,
+        [0x77; 16],
+    )
 }
 
 fn respond(stdout: &mut std::io::Stdout, id: &Value, payload: &Value) {
@@ -1313,6 +1521,18 @@ fn hex_bytes(bytes: &[u8]) -> String {
         let _ = write!(out, "{byte:02x}");
     }
     out
+}
+
+fn parse_hex_32(value: &str) -> Option<[u8; 32]> {
+    if value.len() != 64 || !value.is_ascii() {
+        return None;
+    }
+    let mut bytes = [0_u8; 32];
+    for (index, slot) in bytes.iter_mut().enumerate() {
+        let start = index * 2;
+        *slot = u8::from_str_radix(&value[start..start + 2], 16).ok()?;
+    }
+    Some(bytes)
 }
 
 #[cfg(test)]
@@ -1443,6 +1663,35 @@ mod tests {
         .expect("backdoor");
         assert_eq!(resp_backdoor["status"], "success");
         assert_eq!(resp_backdoor["is_admissible"], true);
+
+        // 5. causal.mutilate_do (Pearl graph surgery, Gate 11)
+        let resp_mutilate = handle_route(
+            &mut store,
+            &authority,
+            "causal.mutilate_do",
+            &json!({ "treatment": "X", "value": 1.0, "samples": 64 }),
+            false,
+        )
+        .expect("mutilate_do");
+        assert_eq!(resp_mutilate["status"], "success");
+        assert_eq!(
+            resp_mutilate["graph_mutilation"]["incoming_edges_severed"],
+            1
+        );
+        assert_eq!(resp_mutilate["graph_mutilation"]["severed_from"][0], "Z");
+        assert_eq!(resp_mutilate["graph_mutilation"]["edge_count_before"], 4);
+        assert_eq!(resp_mutilate["graph_mutilation"]["edge_count_after"], 3);
+        assert_eq!(resp_mutilate["graph_mutilation"]["acyclic_after"], true);
+        assert_eq!(
+            resp_mutilate["graph_mutilation"]["mechanisms_preserved"],
+            true
+        );
+        assert!(
+            resp_mutilate["interventional_expectation"]
+                .as_f64()
+                .unwrap()
+                > 0.0
+        );
     }
 
     #[test]
@@ -1512,5 +1761,46 @@ mod tests {
         .expect("mint");
         assert_eq!(resp_mint["status"], "success");
         assert_eq!(resp_mint["verified"], true);
+
+        // 3. attestation.verify_identity — the minted token round-trips
+        // through the verification surface (Gate 13).
+        let resp_verify = handle_route(
+            &mut store,
+            &authority,
+            "attestation.verify_identity",
+            &json!({ "token": resp_mint["token"].clone(), "current_epoch": 15 }),
+            false,
+        )
+        .expect("verify");
+        assert_eq!(resp_verify["status"], "success");
+        assert_eq!(resp_verify["valid"], true);
+        assert_eq!(resp_verify["token"]["agent_id"], "did:key:antigravity-test");
+        assert_eq!(resp_verify["authority_source"], "demo-root-key");
+
+        // 4. the attest.* alias resolves to the same verifier
+        let resp_alias = handle_route(
+            &mut store,
+            &authority,
+            "attest.verify_identity",
+            &json!({ "current_epoch": 15 }),
+            false,
+        )
+        .expect("alias verify");
+        assert_eq!(resp_alias["status"], "success");
+        assert_eq!(resp_alias["valid"], true);
+
+        // 5. an epoch past expiry must fail verification truthfully
+        let resp_expired = handle_route(
+            &mut store,
+            &authority,
+            "attestation.verify_identity",
+            &json!({ "current_epoch": 1000 }),
+            false,
+        )
+        .expect("verify expired");
+        assert_eq!(resp_expired["status"], "success");
+        assert_eq!(resp_expired["valid"], false);
+        let reason = resp_expired["reason"].as_str().unwrap_or("");
+        assert!(reason.to_lowercase().contains("expir"), "reason: {reason}");
     }
 }
