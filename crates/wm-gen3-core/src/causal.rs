@@ -597,6 +597,90 @@ impl StructuralCausalModel {
             abducted_noises,
         })
     }
+
+    /// Evaluates an action candidate through Pearl's Layer 2 ($do(X = x)$) and Layer 3 (Counterfactual) inference
+    /// to generate an unconfounded, risk-bounded input for the JEV Decision Tensor.
+    pub fn evaluate_action_candidate(
+        &self,
+        treatment: &str,
+        candidate_value: f64,
+        baseline_value: f64,
+        outcome: &str,
+        factual_context: Option<&BTreeMap<String, f64>>,
+        compute_cost: f64,
+    ) -> Result<CausalDecisionInput, CausalError> {
+        if !self.nodes.contains_key(treatment) {
+            return Err(CausalError::NodeNotFound(treatment.to_string()));
+        }
+        if !self.nodes.contains_key(outcome) {
+            return Err(CausalError::NodeNotFound(outcome.to_string()));
+        }
+
+        // Layer 2: Interventional expectation under do(treatment = candidate) vs do(treatment = baseline)
+        let sample_count = 200;
+        let seed = 42;
+        let e_candidate = self.interventional_expectation(
+            outcome,
+            treatment,
+            candidate_value,
+            sample_count,
+            seed,
+        )?;
+        let e_baseline = self.interventional_expectation(
+            outcome,
+            treatment,
+            baseline_value,
+            sample_count,
+            seed + 1,
+        )?;
+        let causal_lift = e_candidate - e_baseline;
+
+        // Layer 3: If factual context is available, run counterfactual abduction
+        let (min_risk, max_risk) = if let Some(facts) = factual_context {
+            if facts.contains_key(treatment) && facts.contains_key(outcome) {
+                let cf =
+                    self.counterfactual_reasoning(facts, treatment, candidate_value, outcome)?;
+                let risk_val = (-cf.counterfactual_outcome).max(0.0).min(1.0);
+                (risk_val * 0.8, risk_val)
+            } else {
+                let risk_val = (-e_candidate).max(0.0).min(1.0);
+                (risk_val * 0.5, risk_val)
+            }
+        } else {
+            let risk_val = (-e_candidate).max(0.0).min(1.0);
+            (risk_val * 0.5, risk_val)
+        };
+
+        // Identifiability check: verify back-door admissibility against observed context variables
+        let context_nodes: BTreeSet<String> = self
+            .nodes
+            .iter()
+            .filter(|(_, n)| n.role == VariableRole::Context || n.role == VariableRole::Confounder)
+            .map(|(k, _)| k.clone())
+            .collect();
+        let is_identifiable = self
+            .is_backdoor_admissible(treatment, outcome, &context_nodes)
+            .unwrap_or(false);
+        let identifiability_confidence = if is_identifiable { 1.0 } else { 0.6 };
+
+        Ok(CausalDecisionInput {
+            candidate_action: treatment.to_string(),
+            causal_lift,
+            counterfactual_risk_bound: (min_risk, max_risk),
+            identifiability_confidence,
+            compute_cost,
+        })
+    }
+}
+
+/// Typed input for non-autoregressive Causal JEV decision scoring.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CausalDecisionInput {
+    pub candidate_action: String,
+    pub causal_lift: f64,
+    pub counterfactual_risk_bound: (f64, f64),
+    pub identifiability_confidence: f64,
+    pub compute_cost: f64,
 }
 
 /// The result of a Layer 3 counterfactual computation.

@@ -1150,6 +1150,163 @@ impl LandlockSandbox {
             Ok(())
         }
     }
+
+    /// Builds a Landlock ruleset directly from a cryptographically verified `AgentIdentityToken`
+    /// and optional `DelegationProof`.
+    ///
+    /// Validates the Ed25519 signature chain against `root_authority_vk`, verifies delegation depth <= 3,
+    /// asserts strict capability attenuation, and compiles effective capabilities into Landlock rules.
+    #[cfg(target_os = "linux")]
+    pub fn build_delegated_ruleset(
+        token: &crate::attestation::AgentIdentityToken,
+        proof: Option<&crate::attestation::DelegationProof>,
+        root_authority_vk: &ed25519_dalek::VerifyingKey,
+        current_epoch: u64,
+    ) -> Result<SandboxRuleset, MandalaError> {
+        use landlock::{
+            ABI, Access, AccessFs, AccessNet, CompatLevel, Compatible, PathBeneath, PathFd,
+            Ruleset, RulesetAttr, RulesetCreatedAttr,
+        };
+
+        // 1. Cryptographically verify parent token
+        token
+            .verify(root_authority_vk, current_epoch)
+            .map_err(|_e| MandalaError::SignatureInvalid)?;
+
+        // 2. If a delegation proof is provided, verify the entire delegation chain
+        let effective_caps = if let Some(p) = proof {
+            p.verify_chain(root_authority_vk, current_epoch)
+                .map_err(|e| MandalaError::IllegalForkAttenuation(e.to_string()))?;
+            &p.delegated_capabilities
+        } else {
+            &token.capabilities
+        };
+
+        let abi = ABI::V1;
+        let mut builder = Ruleset::default()
+            .set_compatibility(CompatLevel::BestEffort)
+            .handle_access(AccessFs::from_all(abi))
+            .map_err(|e| {
+                MandalaError::PersistenceFailure(format!("Failed to handle access: {e}"))
+            })?;
+
+        let mut network_allowed = true;
+        let mut custom_ro_paths = Vec::new();
+        let mut custom_rw_paths = Vec::new();
+
+        for cap in effective_caps {
+            if cap == "net:deny" {
+                network_allowed = false;
+            } else if let Some(path) = cap.strip_prefix("fs:ro:") {
+                custom_ro_paths.push(PathBuf::from(path));
+            } else if let Some(path) = cap.strip_prefix("fs:rw:") {
+                custom_rw_paths.push(PathBuf::from(path));
+            }
+        }
+
+        if !network_allowed {
+            builder = builder
+                .handle_access(AccessNet::from_all(ABI::V4))
+                .map_err(|e| {
+                    MandalaError::PersistenceFailure(format!(
+                        "Failed to handle network access: {e}"
+                    ))
+                })?;
+        }
+
+        let mut ruleset = builder.create().map_err(|e| {
+            MandalaError::PersistenceFailure(format!("Failed to create Landlock ruleset: {e}"))
+        })?;
+
+        // Allow read access to standard system paths if present
+        let default_ro_paths = ["/usr", "/lib", "/lib64", "/bin", "/etc/ssl", "/nix/store"];
+        for path_str in default_ro_paths {
+            let p = Path::new(path_str);
+            if p.exists() {
+                if let Ok(fd) = PathFd::new(p) {
+                    let rule = PathBeneath::new(fd, AccessFs::from_read(abi));
+                    ruleset = ruleset.add_rule(rule).map_err(|e| {
+                        MandalaError::PersistenceFailure(format!(
+                            "Failed to add Landlock rule for {path_str}: {e}"
+                        ))
+                    })?;
+                }
+            }
+        }
+
+        // Add custom read-only paths
+        for p in &custom_ro_paths {
+            if p.exists() {
+                if let Ok(fd) = PathFd::new(p) {
+                    let rule = PathBeneath::new(fd, AccessFs::from_read(abi));
+                    ruleset = ruleset.add_rule(rule).map_err(|e| {
+                        MandalaError::PersistenceFailure(format!(
+                            "Failed to add Landlock rule for {p:?}: {e}"
+                        ))
+                    })?;
+                }
+            }
+        }
+
+        // Add custom read-write paths
+        let rw_access = AccessFs::from_all(abi);
+        for p in &custom_rw_paths {
+            if p.exists() {
+                if let Ok(fd) = PathFd::new(p) {
+                    let rule = PathBeneath::new(fd, rw_access);
+                    ruleset = ruleset.add_rule(rule).map_err(|e| {
+                        MandalaError::PersistenceFailure(format!(
+                            "Failed to add Landlock rule for {p:?}: {e}"
+                        ))
+                    })?;
+                }
+            }
+        }
+
+        Ok(SandboxRuleset { inner: ruleset })
+    }
+
+    /// Non-Linux fallback
+    #[cfg(not(target_os = "linux"))]
+    pub fn build_delegated_ruleset(
+        _token: &crate::attestation::AgentIdentityToken,
+        _proof: Option<&crate::attestation::DelegationProof>,
+        _root_authority_vk: &ed25519_dalek::VerifyingKey,
+        _current_epoch: u64,
+    ) -> Result<SandboxRuleset, MandalaError> {
+        Ok(SandboxRuleset)
+    }
+
+    /// Enforces Landlock confinement on the current thread/process derived from a verified delegation proof.
+    pub fn restrict_delegated_process(
+        token: &crate::attestation::AgentIdentityToken,
+        proof: Option<&crate::attestation::DelegationProof>,
+        root_authority_vk: &ed25519_dalek::VerifyingKey,
+        current_epoch: u64,
+    ) -> Result<(), MandalaError> {
+        #[cfg(target_os = "linux")]
+        {
+            let ruleset =
+                Self::build_delegated_ruleset(token, proof, root_authority_vk, current_epoch)?;
+            let status = ruleset.inner.restrict_self().map_err(|e| {
+                MandalaError::PersistenceFailure(format!("Landlock restrict_self failed: {e}"))
+            })?;
+
+            match status.ruleset {
+                landlock::RulesetStatus::FullyEnforced
+                | landlock::RulesetStatus::PartiallyEnforced => Ok(()),
+                landlock::RulesetStatus::NotEnforced => Err(MandalaError::OperationNotAllowed {
+                    operation: "landlock_confinement".to_string(),
+                    reason: "Landlock ruleset was not enforced by the kernel".to_string(),
+                }),
+            }
+        }
+
+        #[cfg(not(target_os = "linux"))]
+        {
+            Ok(())
+        }
+    }
 }
 
 // ============================================================================

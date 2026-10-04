@@ -188,6 +188,109 @@ impl DecisionReceipt {
         key.verify(&self.canonical_signing_bytes(), &signature)
             .map_err(|e| format!("signature invalid: {e}"))
     }
+
+    /// Converts a legacy 0.5 DecisionReceipt into an IETF SCITT ContinuityReceipt20 envelope.
+    #[must_use]
+    pub fn to_scitt_envelope(&self, parent_hash: &str, ledger_hash: &str) -> ContinuityReceipt20 {
+        let statement = ScittStatement {
+            issuer_did: self.issuer_did.clone(),
+            subject: format!("decision:{}", self.session_id),
+            timestamp_ms: self.timestamp_ms,
+            payload_digest: self.decision_digest.clone(),
+            action_type: "decision".to_string(),
+            causal_lift: None,
+            counterfactual_risk: None,
+            eu_ai_act_article_50: true,
+            transparency_tier: "machine_marked_verified".to_string(),
+        };
+
+        ContinuityReceipt20::new(
+            format!("cr20-{}", self.receipt_id),
+            statement,
+            parent_hash,
+            ledger_hash,
+        )
+    }
+}
+
+/// IETF SCITT-compatible Claim Statement for WhiteMagic Continuity Receipt 2.0.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ScittStatement {
+    pub issuer_did: String,
+    pub subject: String,
+    pub timestamp_ms: u64,
+    pub payload_digest: String,
+    pub action_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub causal_lift: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub counterfactual_risk: Option<(f64, f64)>,
+    pub eu_ai_act_article_50: bool,
+    pub transparency_tier: String,
+}
+
+/// Continuity Receipt 2.0: IETF SCITT Architecture & EU AI Act Article 50 Compliant Envelope.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ContinuityReceipt20 {
+    pub scitt_profile: String,
+    pub receipt_id: String,
+    pub statement: ScittStatement,
+    #[serde(default)]
+    pub signature: Option<String>,
+    pub parent_hash: String,
+    pub ledger_hash: String,
+}
+
+impl ContinuityReceipt20 {
+    pub const SCITT_PROFILE: &'static str = "io.whitemagic.cr.scitt.v1";
+
+    #[must_use]
+    pub fn new(
+        receipt_id: impl Into<String>,
+        statement: ScittStatement,
+        parent_hash: impl Into<String>,
+        ledger_hash: impl Into<String>,
+    ) -> Self {
+        Self {
+            scitt_profile: Self::SCITT_PROFILE.to_string(),
+            receipt_id: receipt_id.into(),
+            statement,
+            signature: None,
+            parent_hash: parent_hash.into(),
+            ledger_hash: ledger_hash.into(),
+        }
+    }
+
+    /// Computes canonical signing bytes over the SCITT statement and inclusion metadata.
+    #[must_use]
+    pub fn canonical_bytes(&self) -> Vec<u8> {
+        let stmt_json = serde_json::to_string(&self.statement).unwrap_or_default();
+        format!(
+            "SCITT_CR20:profile={}:id={}:stmt={}:parent={}:ledger={}",
+            self.scitt_profile, self.receipt_id, stmt_json, self.parent_hash, self.ledger_hash
+        )
+        .into_bytes()
+    }
+
+    /// Signs the SCITT envelope with an Ed25519 signing key.
+    pub fn sign(&mut self, key: &SigningKey) {
+        let signature = key.sign(&self.canonical_bytes());
+        self.signature = Some(hex_encode(&signature.to_bytes()));
+    }
+
+    /// Verifies the Ed25519 signature of the SCITT envelope.
+    pub fn verify(&self, key: &VerifyingKey) -> Result<(), &'static str> {
+        let sig_hex = self.signature.as_deref().ok_or("missing signature")?;
+        let bytes = hex_decode(sig_hex).ok_or("malformed hex signature")?;
+        if bytes.len() != 64 {
+            return Err("invalid signature length");
+        }
+        let mut arr = [0u8; 64];
+        arr.copy_from_slice(&bytes);
+        let signature = wm_gen3_core::mandala::Signature::from_bytes(&arr);
+        key.verify(&self.canonical_bytes(), &signature)
+            .map_err(|_| "signature verification failed")
+    }
 }
 
 fn arg_str(args: &Value, key: &str) -> Option<String> {
@@ -280,5 +383,35 @@ mod tests {
         assert_eq!(first.state_digest, second.state_digest);
         assert_eq!(first.candidate_set_digest, second.candidate_set_digest);
         assert_eq!(first.decision_digest, second.decision_digest);
+    }
+
+    #[test]
+    fn scitt_cr20_roundtrip_and_tamper_evidence() {
+        let receipt = fixture();
+        let mut cr20 = receipt.to_scitt_envelope(
+            "sha256:parent_audit_hash_001",
+            "sha256:ledger_root_hash_001",
+        );
+        assert_eq!(cr20.scitt_profile, "io.whitemagic.cr.scitt.v1");
+        assert!(cr20.statement.eu_ai_act_article_50);
+
+        let key = SigningKey::from_bytes(&[42u8; 32]);
+        cr20.sign(&key);
+        assert!(cr20.signature.is_some());
+        assert!(cr20.verify(&key.verifying_key()).is_ok());
+
+        // Wrong key must fail
+        let wrong_key = SigningKey::from_bytes(&[99u8; 32]);
+        assert!(cr20.verify(&wrong_key.verifying_key()).is_err());
+
+        // Tampering with payload digest must fail
+        let mut tampered = cr20.clone();
+        tampered.statement.payload_digest = "sha256:tampered_digest".to_string();
+        assert!(tampered.verify(&key.verifying_key()).is_err());
+
+        // Tampering with parent inclusion hash must fail
+        let mut tampered2 = cr20.clone();
+        tampered2.parent_hash = "sha256:forged_parent".to_string();
+        assert!(tampered2.verify(&key.verifying_key()).is_err());
     }
 }

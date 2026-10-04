@@ -335,3 +335,116 @@ fn gate11_layer3_counterfactual_attribution_and_receipt() {
         "Tampered receipt must fail strict signature verification"
     );
 }
+
+#[test]
+fn gate11_causal_jev_coupling_and_decision_arbitration() {
+    let mut scm = StructuralCausalModel::new();
+
+    // Confounder C (System Load / Confounding Context)
+    // Treatment T (Cautious Sandboxed Action vs Hasty Action)
+    // Outcome Y (Net Execution Fitness / Reliability)
+    scm.add_node(CausalNode {
+        id: "C".into(),
+        name: "Confounder".into(),
+        role: VariableRole::Confounder,
+        is_exogenous: false,
+        description: "Background system load".into(),
+    });
+    scm.add_node(CausalNode {
+        id: "T".into(),
+        name: "Treatment".into(),
+        role: VariableRole::Treatment,
+        is_exogenous: false,
+        description: "Selected action tier".into(),
+    });
+    scm.add_node(CausalNode {
+        id: "Y".into(),
+        name: "Outcome".into(),
+        role: VariableRole::Outcome,
+        is_exogenous: false,
+        description: "Net utility".into(),
+    });
+
+    // Spurious path: C -> T and C -> Y
+    scm.add_edge(CausalEdge {
+        from: "C".into(),
+        to: "T".into(),
+        weight: 0.8,
+        sign: 1,
+        mechanism: "High load tempts shortcuts".into(),
+    })
+    .unwrap();
+    scm.add_edge(CausalEdge {
+        from: "C".into(),
+        to: "Y".into(),
+        weight: -0.6,
+        sign: -1,
+        mechanism: "High load degrades reliability".into(),
+    })
+    .unwrap();
+    // True causal path: T -> Y
+    scm.add_edge(CausalEdge {
+        from: "T".into(),
+        to: "Y".into(),
+        weight: 0.9,
+        sign: 1,
+        mechanism: "Sandboxed action improves reliability".into(),
+    })
+    .unwrap();
+
+    scm.set_equation("C", LinearStructuralEquation::new(0.5, 0.2));
+    scm.set_equation(
+        "T",
+        LinearStructuralEquation::new(0.2, 0.1).with_coefficient("C", 0.8),
+    );
+    scm.set_equation(
+        "Y",
+        LinearStructuralEquation::new(0.1, 0.1)
+            .with_coefficient("C", -0.6)
+            .with_coefficient("T", 0.9),
+    );
+
+    // 1. Evaluate candidate action T = 1.0 (Sandboxed) vs baseline T = 0.0 (Unsandboxed)
+    let decision_input = scm
+        .evaluate_action_candidate("T", 1.0, 0.0, "Y", None, 0.05)
+        .expect("Causal action evaluation must succeed");
+
+    assert!(
+        decision_input.causal_lift > 0.8,
+        "True causal lift must reflect direct coefficient ~0.9, got {}",
+        decision_input.causal_lift
+    );
+    assert_eq!(
+        decision_input.identifiability_confidence, 1.0,
+        "Backdoor condition through C must be admissible"
+    );
+
+    // 2. Score via JEV Decision Tensor
+    let tensor = wm_gen3_core::bicameral::JevDecisionTensor::default();
+    let jev_score = tensor.compute_causal_jev(&decision_input);
+
+    assert!(
+        jev_score > 0.20,
+        "Positive causal lift must yield positive JEV score: {jev_score}"
+    );
+
+    // 3. Counterfactual Risk under severe adverse factual context
+    let mut factual_bad = BTreeMap::new();
+    factual_bad.insert("C".into(), 2.0); // Extreme load
+    factual_bad.insert("T".into(), 0.0);
+    factual_bad.insert("Y".into(), -1.1); // Observed failure
+
+    let adverse_decision = scm
+        .evaluate_action_candidate("T", 1.0, 0.0, "Y", Some(&factual_bad), 0.05)
+        .expect("Adverse counterfactual evaluation must succeed");
+
+    let adverse_jev = tensor.compute_causal_jev(&adverse_decision);
+    assert!(
+        adverse_decision.counterfactual_risk_bound.1 >= 0.0,
+        "Counterfactual risk bounds must be well-formed"
+    );
+    assert!(
+        adverse_jev <= jev_score,
+        "Adverse factual context with risk must produce lower or equal JEV score"
+    );
+}

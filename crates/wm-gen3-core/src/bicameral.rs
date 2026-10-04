@@ -1391,6 +1391,25 @@ impl JevDecisionTensor {
         }
     }
 
+    /// Calculates the Causal Joint Expected Value (Causal-JEV) score by integrating
+    /// Pearl Level 2/3 interventional lift, counterfactual risk bounds, and epistemic non-identifiability.
+    #[must_use]
+    pub fn compute_causal_jev(&self, input: &crate::causal::CausalDecisionInput) -> f64 {
+        let expected_utility = input.causal_lift;
+        // Upper bound of counterfactual risk represents worst-case regret
+        let risk = input.counterfactual_risk_bound.1;
+        // Non-identifiability and risk spread expand epistemic variance
+        let epistemic_variance = (1.0 - input.identifiability_confidence) * 0.50
+            + (input.counterfactual_risk_bound.1 - input.counterfactual_risk_bound.0) * 0.50;
+
+        self.compute_jev(
+            expected_utility,
+            risk,
+            epistemic_variance,
+            input.compute_cost,
+        )
+    }
+
     /// Modulates decision weights in real time according to the active Homeostatic Regime and Hardware Vital Signs.
     /// Under thermal stress or battery drain, compute cost and risk weights escalate to throttle heavy speculative workloads.
     #[must_use]

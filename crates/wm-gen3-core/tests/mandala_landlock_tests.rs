@@ -224,3 +224,91 @@ fn test_landlock_subprocess_confinement() {
         "Child process should either exit 0 (Landlock enforced) or 77 (kernel unsupported), got {code}"
     );
 }
+
+#[test]
+fn test_delegated_token_landlock_confinement() {
+    let (authority_sk, authority_vk) = test_keys();
+
+    // 1. Primary Agent Identity Token
+    let agent_sk = SigningKey::from_bytes(&[88u8; 32]);
+    let agent_vk = agent_sk.verifying_key();
+    let (ws_path, _outside) = create_temp_subdirs("wm_test_delegated");
+
+    let primary_token = wm_gen3_core::attestation::AgentIdentityToken::mint(
+        &authority_sk,
+        "agent-prime",
+        &agent_vk,
+        "primary_builder",
+        vec![
+            format!("fs:rw:{}", ws_path.display()),
+            "fs:ro:/usr".to_string(),
+            "net:deny".to_string(),
+        ],
+        100, // current epoch
+        50,  // ttl
+        [1u8; 16],
+    );
+
+    assert!(primary_token.verify(&authority_vk, 100).is_ok());
+
+    // 2. Delegate to Subagent with subset capability
+    let subagent_sk = SigningKey::from_bytes(&[99u8; 32]);
+    let subagent_vk = subagent_sk.verifying_key();
+
+    let proof = wm_gen3_core::attestation::DelegationProof::delegate(
+        &agent_sk,
+        primary_token.clone(),
+        "subagent-worker-01",
+        &subagent_vk,
+        vec![
+            format!("fs:rw:{}", ws_path.display()),
+            "net:deny".to_string(),
+        ],
+        0, // initial depth
+    )
+    .expect("Delegation should succeed");
+
+    assert!(proof.verify_chain(&authority_vk, 100).is_ok());
+
+    // 3. Build Landlock ruleset from verified delegation proof
+    #[cfg(target_os = "linux")]
+    {
+        let ruleset_res = LandlockSandbox::build_delegated_ruleset(
+            &primary_token,
+            Some(&proof),
+            &authority_vk,
+            100,
+        );
+        assert!(
+            ruleset_res.is_ok(),
+            "Delegated Landlock ruleset must build cleanly: {:?}",
+            ruleset_res.err()
+        );
+    }
+
+    // 4. Privilege Escalation Attempt: subagent requesting unauthorized capability
+    let escalation_attempt = wm_gen3_core::attestation::DelegationProof::delegate(
+        &agent_sk,
+        primary_token.clone(),
+        "subagent-malicious",
+        &subagent_vk,
+        vec!["fs:rw:/etc".to_string()],
+        0,
+    );
+    assert!(
+        escalation_attempt.is_err(),
+        "Privilege escalation beyond parent token must be rejected"
+    );
+
+    // 5. Expired Token Attempt
+    let expired_build = LandlockSandbox::build_delegated_ruleset(
+        &primary_token,
+        Some(&proof),
+        &authority_vk,
+        999, // epoch beyond expiration (150)
+    );
+    assert!(
+        expired_build.is_err(),
+        "Expired identity token must be denied Landlock ruleset generation"
+    );
+}
