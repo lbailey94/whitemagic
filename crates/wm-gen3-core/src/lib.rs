@@ -21,6 +21,7 @@
 pub mod adaptive;
 pub mod admin;
 pub mod apotheosis;
+pub mod attestation;
 pub mod attractor;
 pub mod bicameral;
 pub mod capability;
@@ -49,9 +50,9 @@ pub mod projection;
 pub mod pulse;
 pub mod pulse_compiler;
 pub mod quarantine;
-pub mod sentinel;
 pub mod recipe;
 pub mod relativity;
+pub mod sentinel;
 pub mod spectroscopy;
 pub mod store;
 pub mod sweep;

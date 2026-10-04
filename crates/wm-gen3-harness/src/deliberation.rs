@@ -9,10 +9,10 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
 
-use wm_gen3_core::mandala::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
+use wm_gen3_core::mandala::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 
 /// Spec identifier for System 1.5 deliberation receipts.
 pub const DELIBERATION_SPEC: &str = "continuity-receipt/1.5#deliberation";
@@ -99,13 +99,18 @@ impl ConformalGate {
         let rank = ((n as f64 + 1.0) * (1.0 - alpha)).ceil() as usize;
         let idx = (rank.saturating_sub(1)).min(n - 1);
         let q = non_conformity_scores[idx];
-        
+
         // Invert non-conformity score back to margin threshold
         (1.0 - q).max(0.02)
     }
 
     /// Evaluate whether a top-1 candidate passes the conformal gate or requires deliberation.
-    pub fn evaluate_margin(&self, top1_score: f64, top2_score: f64, store_path: &Path) -> (bool, f64) {
+    pub fn evaluate_margin(
+        &self,
+        top1_score: f64,
+        top2_score: f64,
+        store_path: &Path,
+    ) -> (bool, f64) {
         let margin = (top1_score - top2_score).max(0.0);
         let tau = self.calibrate_tau(store_path);
         (margin >= tau, margin)
@@ -375,7 +380,11 @@ impl Deliberator {
         // Fallback: Pick highest candidate score with calibrated tie-breaking
         let best = candidates
             .iter()
-            .max_by(|a, b| a.score.partial_cmp(&b.score).unwrap_or(std::cmp::Ordering::Equal))
+            .max_by(|a, b| {
+                a.score
+                    .partial_cmp(&b.score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
             .unwrap();
         let latency = start.elapsed().as_secs_f64() * 1000.0;
         Ok((best.name.clone(), best.score, latency))
@@ -397,7 +406,10 @@ fn hex_encode(bytes: &[u8]) -> String {
 
 fn decode_hex_into_32(hex_str: &str, out: &mut [u8; 32]) -> Result<(), String> {
     if hex_str.len() != 64 {
-        return Err(format!("expected 64 hex characters for 32-byte key, got {}", hex_str.len()));
+        return Err(format!(
+            "expected 64 hex characters for 32-byte key, got {}",
+            hex_str.len()
+        ));
     }
     for i in 0..32 {
         out[i] = u8::from_str_radix(&hex_str[i * 2..i * 2 + 2], 16)
@@ -408,7 +420,10 @@ fn decode_hex_into_32(hex_str: &str, out: &mut [u8; 32]) -> Result<(), String> {
 
 fn decode_hex_into_64(hex_str: &str, out: &mut [u8; 64]) -> Result<(), String> {
     if hex_str.len() != 128 {
-        return Err(format!("expected 128 hex characters for 64-byte signature, got {}", hex_str.len()));
+        return Err(format!(
+            "expected 128 hex characters for 64-byte signature, got {}",
+            hex_str.len()
+        ));
     }
     for i in 0..64 {
         out[i] = u8::from_str_radix(&hex_str[i * 2..i * 2 + 2], 16)
@@ -423,9 +438,15 @@ mod tests {
 
     #[test]
     fn test_gbnf_grammar_builder() {
-        let candidates = vec!["memory.create".to_string(), "session.checkpoint".to_string()];
+        let candidates = vec![
+            "memory.create".to_string(),
+            "session.checkpoint".to_string(),
+        ];
         let gbnf = build_gbnf_grammar(&candidates);
-        assert_eq!(gbnf, "root ::= (\"memory.create\" | \"session.checkpoint\")\n");
+        assert_eq!(
+            gbnf,
+            "root ::= (\"memory.create\" | \"session.checkpoint\")\n"
+        );
     }
 
     #[test]
@@ -448,7 +469,10 @@ mod tests {
         let seed = [9u8; 32];
         let signing_key = SigningKey::from_bytes(&seed);
 
-        let candidates = vec!["memory.create".to_string(), "session.checkpoint".to_string()];
+        let candidates = vec![
+            "memory.create".to_string(),
+            "session.checkpoint".to_string(),
+        ];
         let receipt = DeliberationReceipt::sign(
             &signing_key,
             "save this fact to memory",

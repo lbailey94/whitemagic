@@ -1135,9 +1135,8 @@ impl LandlockSandbox {
             })?;
 
             match status.ruleset {
-                landlock::RulesetStatus::FullyEnforced | landlock::RulesetStatus::PartiallyEnforced => {
-                    Ok(())
-                }
+                landlock::RulesetStatus::FullyEnforced
+                | landlock::RulesetStatus::PartiallyEnforced => Ok(()),
                 landlock::RulesetStatus::NotEnforced => Err(MandalaError::OperationNotAllowed {
                     operation: "landlock_confinement".to_string(),
                     reason: "Landlock ruleset was not enforced by the kernel".to_string(),

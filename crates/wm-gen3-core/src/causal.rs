@@ -280,8 +280,7 @@ impl StructuralCausalModel {
         nodes: &BTreeMap<String, CausalNode>,
         edges: &[CausalEdge],
     ) -> Result<Vec<String>, CausalError> {
-        let mut in_degree: BTreeMap<String, usize> =
-            nodes.keys().map(|k| (k.clone(), 0)).collect();
+        let mut in_degree: BTreeMap<String, usize> = nodes.keys().map(|k| (k.clone(), 0)).collect();
         for e in edges {
             if let Some(entry) = in_degree.get_mut(&e.to) {
                 *entry += 1;
@@ -345,8 +344,14 @@ impl StructuralCausalModel {
         // Add directed edges as undirected edges in the moral subgraph
         for e in &self.edges {
             if all_ancestors.contains(&e.from) && all_ancestors.contains(&e.to) {
-                adjacency.entry(e.from.clone()).or_default().insert(e.to.clone());
-                adjacency.entry(e.to.clone()).or_default().insert(e.from.clone());
+                adjacency
+                    .entry(e.from.clone())
+                    .or_default()
+                    .insert(e.to.clone());
+                adjacency
+                    .entry(e.to.clone())
+                    .or_default()
+                    .insert(e.from.clone());
             }
         }
 
@@ -442,11 +447,7 @@ impl StructuralCausalModel {
     /// - Mutilates the DAG: severs all incoming arrows directed into $X$ ($Pa(X) \leftarrow \emptyset$).
     /// - Freezes $X$ to a deterministic assignment $x$.
     /// - Leaves all other mechanisms $V_j := f_j(Pa(V_j), U_j)$ intact.
-    pub fn intervene(
-        &self,
-        treatment: &str,
-        assigned_value: f64,
-    ) -> Result<Self, CausalError> {
+    pub fn intervene(&self, treatment: &str, assigned_value: f64) -> Result<Self, CausalError> {
         if !self.nodes.contains_key(treatment) {
             return Err(CausalError::NodeNotFound(treatment.to_string()));
         }
@@ -587,10 +588,7 @@ impl StructuralCausalModel {
 
         Ok(CounterfactualResult {
             treatment: treatment.to_string(),
-            factual_treatment_value: factual_observations
-                .get(treatment)
-                .copied()
-                .unwrap_or(0.0),
+            factual_treatment_value: factual_observations.get(treatment).copied().unwrap_or(0.0),
             counterfactual_treatment_value: counterfactual_value,
             target_outcome: target_outcome.to_string(),
             factual_outcome,
@@ -738,7 +736,9 @@ fn hex_decode_64(hex_str: &str) -> Option<[u8; 64]> {
 
 /// Minimal linear congruential generator for deterministic sampling without external RNG state.
 fn lcg_f64(state: &mut u64) -> f64 {
-    *state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+    *state = state
+        .wrapping_mul(6364136223846793005)
+        .wrapping_add(1442695040888963407);
     ((*state >> 11) as f64) / ((1u64 << 53) as f64)
 }
 
@@ -832,8 +832,14 @@ mod tests {
 
         // Structural equations
         scm.set_equation("Z", LinearStructuralEquation::new(1.0, 0.2));
-        scm.set_equation("X", LinearStructuralEquation::new(0.1, 0.1).with_coefficient("Z", 0.8));
-        scm.set_equation("M", LinearStructuralEquation::new(0.2, 0.1).with_coefficient("X", 0.6));
+        scm.set_equation(
+            "X",
+            LinearStructuralEquation::new(0.1, 0.1).with_coefficient("Z", 0.8),
+        );
+        scm.set_equation(
+            "M",
+            LinearStructuralEquation::new(0.2, 0.1).with_coefficient("X", 0.6),
+        );
         scm.set_equation(
             "Y",
             LinearStructuralEquation::new(0.5, 0.1)
@@ -967,23 +973,20 @@ mod tests {
     fn test_causal_receipt_cryptographic_verification() {
         let scm = build_confounded_test_scm();
         let secret_bytes: [u8; 32] = [
-            0x9d, 0x61, 0xb1, 0x9d, 0xef, 0xfd, 0x5a, 0x60, 0xba, 0x84, 0x4a, 0xf4, 0x92, 0xec, 0x2c,
-            0xc4, 0x44, 0x49, 0xc5, 0x69, 0x7b, 0x32, 0x69, 0x19, 0x70, 0x3b, 0xac, 0x03, 0x1c, 0xae,
-            0x7f, 0x60,
+            0x9d, 0x61, 0xb1, 0x9d, 0xef, 0xfd, 0x5a, 0x60, 0xba, 0x84, 0x4a, 0xf4, 0x92, 0xec,
+            0x2c, 0xc4, 0x44, 0x49, 0xc5, 0x69, 0x7b, 0x32, 0x69, 0x19, 0x70, 0x3b, 0xac, 0x03,
+            0x1c, 0xae, 0x7f, 0x60,
         ];
         let signing_key = SigningKey::from_bytes(&secret_bytes);
 
         let backdoor = vec!["Z".to_string()];
-        let receipt = CausalInterventionReceipt::mint(
-            &signing_key,
-            "X",
-            1.0,
-            0.54,
-            &backdoor,
-            &scm,
-        );
+        let receipt =
+            CausalInterventionReceipt::mint(&signing_key, "X", 1.0, 0.54, &backdoor, &scm);
 
-        assert!(receipt.verify(), "Valid causal receipt must verify strictly");
+        assert!(
+            receipt.verify(),
+            "Valid causal receipt must verify strictly"
+        );
 
         // Tamper test: alter the expected outcome lift
         let mut tampered = receipt.clone();

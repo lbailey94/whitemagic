@@ -12,8 +12,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use wm_gen3_core::causal::{
-    CausalEdge, CausalInterventionReceipt, CausalNode, LinearStructuralEquation,
-    SigningKey, StructuralCausalModel, VariableRole,
+    CausalEdge, CausalInterventionReceipt, CausalNode, LinearStructuralEquation, SigningKey,
+    StructuralCausalModel, VariableRole,
 };
 
 #[test]
@@ -107,7 +107,10 @@ fn gate11_scm_dag_invariants_and_acyclicity() {
         sign: 1,
         mechanism: "Cycle attempt".into(),
     });
-    assert!(cycle_result.is_err(), "Adding a back-edge to an ancestor must fail acyclicity check");
+    assert!(
+        cycle_result.is_err(),
+        "Adding a back-edge to an ancestor must fail acyclicity check"
+    );
 }
 
 #[test]
@@ -169,7 +172,10 @@ fn gate11_pearl_graph_mutilation_and_backdoor() {
 
     // Structural equations
     scm.set_equation("Z", LinearStructuralEquation::new(1.0, 0.2));
-    scm.set_equation("X", LinearStructuralEquation::new(0.0, 0.1).with_coefficient("Z", 0.7));
+    scm.set_equation(
+        "X",
+        LinearStructuralEquation::new(0.0, 0.1).with_coefficient("Z", 0.7),
+    );
     scm.set_equation(
         "Y",
         LinearStructuralEquation::new(0.2, 0.1)
@@ -195,12 +201,24 @@ fn gate11_pearl_graph_mutilation_and_backdoor() {
 
     // Perform graph surgery: do(X = 1.0)
     let mutilated = scm.intervene("X", 1.0).expect("Intervention must succeed");
-    assert_eq!(mutilated.parents("X").len(), 0, "All parents of X must be severed under do(X)");
-    assert_eq!(mutilated.children("X"), vec!["Y".to_string()], "Child edge X -> Y must persist");
+    assert_eq!(
+        mutilated.parents("X").len(),
+        0,
+        "All parents of X must be severed under do(X)"
+    );
+    assert_eq!(
+        mutilated.children("X"),
+        vec!["Y".to_string()],
+        "Child edge X -> Y must persist"
+    );
 
     // Interventional expectation: Delta = 1.0 * w_{XY} = 0.80
-    let y_do_1 = mutilated.interventional_expectation("Y", "X", 1.0, 500, 101).unwrap();
-    let y_do_0 = mutilated.interventional_expectation("Y", "X", 0.0, 500, 101).unwrap();
+    let y_do_1 = mutilated
+        .interventional_expectation("Y", "X", 1.0, 500, 101)
+        .unwrap();
+    let y_do_0 = mutilated
+        .interventional_expectation("Y", "X", 0.0, 500, 101)
+        .unwrap();
     let causal_delta = y_do_1 - y_do_0;
     assert!(
         (causal_delta - 0.80).abs() < 0.05,
@@ -262,7 +280,10 @@ fn gate11_layer3_counterfactual_attribution_and_receipt() {
     .unwrap();
 
     scm.set_equation("Load", LinearStructuralEquation::new(1.2, 0.1));
-    scm.set_equation("Tier", LinearStructuralEquation::new(0.1, 0.1).with_coefficient("Load", 0.6));
+    scm.set_equation(
+        "Tier",
+        LinearStructuralEquation::new(0.1, 0.1).with_coefficient("Load", 0.6),
+    );
     scm.set_equation(
         "Health",
         LinearStructuralEquation::new(0.4, 0.05)
@@ -309,5 +330,8 @@ fn gate11_layer3_counterfactual_attribution_and_receipt() {
 
     let mut tampered = receipt.clone();
     tampered.intervention_value = 0.0;
-    assert!(!tampered.verify(), "Tampered receipt must fail strict signature verification");
+    assert!(
+        !tampered.verify(),
+        "Tampered receipt must fail strict signature verification"
+    );
 }

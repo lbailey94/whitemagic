@@ -1424,13 +1424,29 @@ fn main() {
                             let start = std::time::Instant::now();
                             if let Ok(res) = organ.decide(&test_state, &test_questions) {
                                 let elapsed = start.elapsed();
-                                println!("System One Latency: {:.2} ms", elapsed.as_secs_f64() * 1000.0);
-                                if let Some(answers) = res.get("answers").and_then(serde_json::Value::as_object) {
+                                println!(
+                                    "System One Latency: {:.2} ms",
+                                    elapsed.as_secs_f64() * 1000.0
+                                );
+                                if let Some(answers) =
+                                    res.get("answers").and_then(serde_json::Value::as_object)
+                                {
                                     for (qid, ans) in answers {
-                                        let val = ans.get("value").and_then(serde_json::Value::as_str).unwrap_or("?");
-                                        let conf = ans.get("confidence").and_then(serde_json::Value::as_f64).unwrap_or(0.0);
-                                        let act = ans.get("act").and_then(serde_json::Value::as_f64).unwrap_or(0.0);
-                                        println!("  [{qid}] choice: {val} (confidence: {conf:.4}, act_prob: {act:.2})");
+                                        let val = ans
+                                            .get("value")
+                                            .and_then(serde_json::Value::as_str)
+                                            .unwrap_or("?");
+                                        let conf = ans
+                                            .get("confidence")
+                                            .and_then(serde_json::Value::as_f64)
+                                            .unwrap_or(0.0);
+                                        let act = ans
+                                            .get("act")
+                                            .and_then(serde_json::Value::as_f64)
+                                            .unwrap_or(0.0);
+                                        println!(
+                                            "  [{qid}] choice: {val} (confidence: {conf:.4}, act_prob: {act:.2})"
+                                        );
                                     }
                                 }
                             }
@@ -1893,9 +1909,13 @@ fn main() {
         Commands::Sentinel { command } => run_sentinel_command(command, &store_path),
         Commands::Selftest { json } => {
             if json {
-                println!(r#"{{"status":"ok","invariants":"pass","engine":"gen3","version":"10.0.0-alpha.1"}}"#);
+                println!(
+                    r#"{{"status":"ok","invariants":"pass","engine":"gen3","version":"10.0.0-alpha.1"}}"#
+                );
             } else {
-                println!("WhiteMagic Gen3 Substrate Invariants: PASS (status: ok, version: 10.0.0-alpha.1)");
+                println!(
+                    "WhiteMagic Gen3 Substrate Invariants: PASS (status: ok, version: 10.0.0-alpha.1)"
+                );
             }
         }
     }
@@ -2104,7 +2124,11 @@ fn run_shortlist_command(
                 let mut candidates: Vec<wm_gen3_harness::deliberation::CandidateRoute> = Vec::new();
                 if let Some(ranked) = outcome.get("ranked").and_then(serde_json::Value::as_array) {
                     for entry in ranked {
-                        let name = entry.get("route").and_then(|v| v.as_str()).unwrap_or_default().to_string();
+                        let name = entry
+                            .get("route")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or_default()
+                            .to_string();
                         let score = entry.get("score").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let description = match routes.get(&name) {
                             Some(serde_json::Value::String(s)) => Some(s.clone()),
@@ -2122,8 +2146,11 @@ fn run_shortlist_command(
                 }
                 let deliberator = wm_gen3_harness::deliberation::Deliberator::default();
                 if let Ok((chosen, conf, lat)) = deliberator.deliberate(&state_text, &candidates) {
-                    let cand_names: Vec<String> = candidates.iter().map(|c| c.name.clone()).collect();
-                    if let Ok((signing_key, _)) = wm_gen3_core::mandala::resolve_or_create_mandala_gate_key(store_path) {
+                    let cand_names: Vec<String> =
+                        candidates.iter().map(|c| c.name.clone()).collect();
+                    if let Ok((signing_key, _)) =
+                        wm_gen3_core::mandala::resolve_or_create_mandala_gate_key(store_path)
+                    {
                         let receipt = wm_gen3_harness::deliberation::DeliberationReceipt::sign(
                             &signing_key,
                             &state_text,
@@ -2148,7 +2175,9 @@ fn run_shortlist_command(
             }
 
             let mut shortlist_receipt_id: Option<String> = None;
-            if let Ok((signing_key, _)) = wm_gen3_core::mandala::resolve_or_create_mandala_gate_key(store_path) {
+            if let Ok((signing_key, _)) =
+                wm_gen3_core::mandala::resolve_or_create_mandala_gate_key(store_path)
+            {
                 let gate_did = format!(
                     "did:key:{}",
                     signing_key
@@ -2158,24 +2187,27 @@ fn run_shortlist_command(
                         .map(|byte| format!("{byte:02x}"))
                         .collect::<String>()
                 );
-                let mut receipt = wm_gen3_harness::shortlist_receipt::ShortlistReceipt::from_outcome(
-                    &outcome,
-                    &serde_json::Value::String(state_text.clone()),
-                    &routes,
-                    &serde_json::json!({
-                        "tenant_id": "local",
-                        "session_id": "cli",
-                        "task_class": "route_dispatch"
-                    }),
-                    gate_did,
-                );
+                let mut receipt =
+                    wm_gen3_harness::shortlist_receipt::ShortlistReceipt::from_outcome(
+                        &outcome,
+                        &serde_json::Value::String(state_text.clone()),
+                        &routes,
+                        &serde_json::json!({
+                            "tenant_id": "local",
+                            "session_id": "cli",
+                            "task_class": "route_dispatch"
+                        }),
+                        gate_did,
+                    );
                 receipt.sign(&signing_key);
                 let receipts_dir = store_path.join("receipts");
                 if let Ok(()) = std::fs::create_dir_all(&receipts_dir) {
-                    let receipt_path = receipts_dir.join(format!("shortlist-{}.json", receipt.receipt_id));
+                    let receipt_path =
+                        receipts_dir.join(format!("shortlist-{}.json", receipt.receipt_id));
                     if let Ok(serialized) = serde_json::to_string_pretty(&receipt) {
                         let _ = std::fs::write(&receipt_path, serialized);
-                        outcome["receipt_path"] = serde_json::json!(receipt_path.display().to_string());
+                        outcome["receipt_path"] =
+                            serde_json::json!(receipt_path.display().to_string());
                         outcome["receipt_id"] = serde_json::json!(receipt.receipt_id);
                         outcome["spec"] = serde_json::json!(receipt.spec);
                         shortlist_receipt_id = Some(receipt.receipt_id);
@@ -2325,7 +2357,8 @@ fn run_deliberate_command(
         std::process::exit(1);
     }
 
-    let (gate_key, _) = match wm_gen3_core::mandala::resolve_or_create_mandala_gate_key(store_path) {
+    let (gate_key, _) = match wm_gen3_core::mandala::resolve_or_create_mandala_gate_key(store_path)
+    {
         Ok(k) => k,
         Err(e) => {
             eprintln!("Gate key resolution failed: {e}");
@@ -2505,7 +2538,10 @@ fn run_organ_command(cmd: OrganCommands, _store_path: &Path) {
                 }
                 #[cfg(not(feature = "systemone"))]
                 {
-                    ("DISABLED (build with --features systemone)", "none".to_string())
+                    (
+                        "DISABLED (build with --features systemone)",
+                        "none".to_string(),
+                    )
                 }
             };
             println!("1. [organ:systemone] Laya Fast Reflex Decision Model");
@@ -2574,7 +2610,9 @@ fn run_organ_command(cmd: OrganCommands, _store_path: &Path) {
             }
 
             println!("Inference Engines: Pure Rust Candle + ONNX Runtime (CPU SIMD)");
-            println!("Thread Model:      Single-threaded synchronous / caller-driven (Zero thread leak)");
+            println!(
+                "Thread Model:      Single-threaded synchronous / caller-driven (Zero thread leak)"
+            );
             println!("==================================================");
         }
         OrganCommands::Verify => {
@@ -2599,7 +2637,10 @@ fn run_organ_command(cmd: OrganCommands, _store_path: &Path) {
                         match organ.decide(&test_state, &test_questions) {
                             Ok(res) => {
                                 let elapsed = start.elapsed();
-                                println!("  Result:  PASS ({:.2} ms)", elapsed.as_secs_f64() * 1000.0);
+                                println!(
+                                    "  Result:  PASS ({:.2} ms)",
+                                    elapsed.as_secs_f64() * 1000.0
+                                );
                                 if let Some(answers) = res.get("answers") {
                                     println!("  Verdict: {}", answers);
                                 }
@@ -2702,30 +2743,26 @@ fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
             }
             println!("Peer `{node_id}` admitted as `{parsed_tier}`.");
         }
-        PeerCommands::Trust { target } => {
-            match dir.set_tier(&target, PeerTrustTier::Trusted) {
-                Ok(_) => {
-                    let _ = dir.save(&peer_file);
-                    println!("Peer `{target}` promoted to `trusted`.");
-                }
-                Err(e) => {
-                    eprintln!("Error: {e}");
-                    std::process::exit(1);
-                }
+        PeerCommands::Trust { target } => match dir.set_tier(&target, PeerTrustTier::Trusted) {
+            Ok(_) => {
+                let _ = dir.save(&peer_file);
+                println!("Peer `{target}` promoted to `trusted`.");
             }
-        }
-        PeerCommands::Block { target } => {
-            match dir.set_tier(&target, PeerTrustTier::Blocked) {
-                Ok(_) => {
-                    let _ = dir.save(&peer_file);
-                    println!("Peer `{target}` demoted to `blocked`.");
-                }
-                Err(e) => {
-                    eprintln!("Error: {e}");
-                    std::process::exit(1);
-                }
+            Err(e) => {
+                eprintln!("Error: {e}");
+                std::process::exit(1);
             }
-        }
+        },
+        PeerCommands::Block { target } => match dir.set_tier(&target, PeerTrustTier::Blocked) {
+            Ok(_) => {
+                let _ = dir.save(&peer_file);
+                println!("Peer `{target}` demoted to `blocked`.");
+            }
+            Err(e) => {
+                eprintln!("Error: {e}");
+                std::process::exit(1);
+            }
+        },
         PeerCommands::SetTier { target, tier } => {
             let parsed_tier = match tier.parse::<PeerTrustTier>() {
                 Ok(t) => t,
@@ -2763,13 +2800,14 @@ fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
                 .or_else(|_| std::env::var("HOSTNAME"))
                 .unwrap_or_else(|_| "local-host".into());
 
-            let target_pubkey_hex = if target.len() == 64 && target.chars().all(|c| c.is_ascii_hexdigit()) {
-                Some(target.clone())
-            } else if let Some(p) = dir.get_by_id(&target) {
-                Some(p.public_key_hex.clone())
-            } else {
-                None
-            };
+            let target_pubkey_hex =
+                if target.len() == 64 && target.chars().all(|c| c.is_ascii_hexdigit()) {
+                    Some(target.clone())
+                } else if let Some(p) = dir.get_by_id(&target) {
+                    Some(p.public_key_hex.clone())
+                } else {
+                    None
+                };
 
             let ev_hash = evidence.unwrap_or_else(|| {
                 use sha2::{Digest, Sha256};
@@ -2799,7 +2837,10 @@ fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
                 Ok(msg) => {
                     let _ = dir.save(&peer_file);
                     println!("BanCertificate issued and applied:");
-                    println!("  Issuer:    {} ({})", cert.issuer_node_id, cert.issuer_public_key_hex);
+                    println!(
+                        "  Issuer:    {} ({})",
+                        cert.issuer_node_id, cert.issuer_public_key_hex
+                    );
                     println!("  Target:    {}", cert.target_identity);
                     println!("  Reason:    {}", cert.reason);
                     println!("  Evidence:  {}", cert.evidence_hash);
@@ -2830,7 +2871,10 @@ fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
                 match std::fs::read_to_string(&cert_file) {
                     Ok(s) => s,
                     Err(e) => {
-                        eprintln!("Failed to read certificate file {}: {e}", cert_file.display());
+                        eprintln!(
+                            "Failed to read certificate file {}: {e}",
+                            cert_file.display()
+                        );
                         std::process::exit(1);
                     }
                 }
@@ -2852,8 +2896,13 @@ fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
             match dir.apply_ban(&cert, now) {
                 Ok(msg) => {
                     let _ = dir.save(&peer_file);
-                    println!("BanCertificate successfully verified and applied to fleet directory:");
-                    println!("  Issuer:    {} ({})", cert.issuer_node_id, cert.issuer_public_key_hex);
+                    println!(
+                        "BanCertificate successfully verified and applied to fleet directory:"
+                    );
+                    println!(
+                        "  Issuer:    {} ({})",
+                        cert.issuer_node_id, cert.issuer_public_key_hex
+                    );
                     println!("  Target:    {}", cert.target_identity);
                     println!("  Reason:    {}", cert.reason);
                     println!("  Status:    BLOCKED");
@@ -2869,7 +2918,10 @@ fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
             let content = match std::fs::read_to_string(&cert_file) {
                 Ok(s) => s,
                 Err(e) => {
-                    eprintln!("Failed to read certificate file {}: {e}", cert_file.display());
+                    eprintln!(
+                        "Failed to read certificate file {}: {e}",
+                        cert_file.display()
+                    );
                     std::process::exit(1);
                 }
             };
@@ -3012,10 +3064,7 @@ fn run_sentinel_command(cmd: SentinelCommands, store_path: &Path) {
                 );
                 println!("Store Epoch:      {}", report.store_epoch);
                 println!("Store Records:    {}", report.store_records);
-                println!(
-                    "CPU Thermal:      {:.1}°C",
-                    report.telemetry.cpu_temp_c
-                );
+                println!("CPU Thermal:      {:.1}°C", report.telemetry.cpu_temp_c);
                 println!(
                     "RAM Available:    {:.1} MB",
                     report.telemetry.mem_available_mb

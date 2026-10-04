@@ -2195,7 +2195,11 @@ fn handle_decision_shortlist(
         let mut candidate_routes: Vec<crate::deliberation::CandidateRoute> = Vec::new();
         if let Some(ranked) = outcome.get("ranked").and_then(Value::as_array) {
             for entry in ranked {
-                let name = entry.get("route").and_then(Value::as_str).unwrap_or_default().to_string();
+                let name = entry
+                    .get("route")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
                 let score = entry.get("score").and_then(Value::as_f64).unwrap_or(0.0);
                 let description = match routes.get(&name) {
                     Some(serde_json::Value::String(s)) => Some(s.clone()),
@@ -2351,7 +2355,8 @@ fn handle_decision_deliberate(
     }
 
     let deliberator = crate::deliberation::Deliberator::default();
-    let (chosen_route, confidence, latency_ms) = deliberator.deliberate(intent, &candidate_routes)?;
+    let (chosen_route, confidence, latency_ms) =
+        deliberator.deliberate(intent, &candidate_routes)?;
 
     let gate = crate::deliberation::ConformalGate::default();
     let tau = gate.calibrate_tau(store_path);

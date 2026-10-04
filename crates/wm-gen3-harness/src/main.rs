@@ -826,20 +826,38 @@ fn handle_route(
                 mechanism: "Context quality drives task success".into(),
             });
 
-            scm.set_equation("Z", wm_gen3_core::causal::LinearStructuralEquation::new(1.0, 0.2));
-            scm.set_equation("X", wm_gen3_core::causal::LinearStructuralEquation::new(0.1, 0.1).with_coefficient("Z", 0.8));
-            scm.set_equation("M", wm_gen3_core::causal::LinearStructuralEquation::new(0.2, 0.1).with_coefficient("X", 0.6));
-            scm.set_equation("Y", wm_gen3_core::causal::LinearStructuralEquation::new(0.5, 0.1).with_coefficient("Z", -0.7).with_coefficient("M", 0.9));
+            scm.set_equation(
+                "Z",
+                wm_gen3_core::causal::LinearStructuralEquation::new(1.0, 0.2),
+            );
+            scm.set_equation(
+                "X",
+                wm_gen3_core::causal::LinearStructuralEquation::new(0.1, 0.1)
+                    .with_coefficient("Z", 0.8),
+            );
+            scm.set_equation(
+                "M",
+                wm_gen3_core::causal::LinearStructuralEquation::new(0.2, 0.1)
+                    .with_coefficient("X", 0.6),
+            );
+            scm.set_equation(
+                "Y",
+                wm_gen3_core::causal::LinearStructuralEquation::new(0.5, 0.1)
+                    .with_coefficient("Z", -0.7)
+                    .with_coefficient("M", 0.9),
+            );
 
             match scm.interventional_expectation("Y", treatment, value, samples, 42) {
                 Ok(expected_outcome) => {
-                    let baseline_outcome = scm.interventional_expectation("Y", treatment, 0.0, samples, 42).unwrap_or(0.0);
+                    let baseline_outcome = scm
+                        .interventional_expectation("Y", treatment, 0.0, samples, 42)
+                        .unwrap_or(0.0);
                     let causal_lift = expected_outcome - baseline_outcome;
 
                     let secret: [u8; 32] = [
-                        0xca, 0x11, 0x5a, 0x11, 0xef, 0xfd, 0x5a, 0x60, 0xba, 0x84, 0x4a, 0xf4, 0x92, 0xec, 0x2c,
-                        0xc4, 0x44, 0x49, 0xc5, 0x69, 0x7b, 0x32, 0x69, 0x19, 0x70, 0x3b, 0xac, 0x03, 0x1c, 0xae,
-                        0x7f, 0x60,
+                        0xca, 0x11, 0x5a, 0x11, 0xef, 0xfd, 0x5a, 0x60, 0xba, 0x84, 0x4a, 0xf4,
+                        0x92, 0xec, 0x2c, 0xc4, 0x44, 0x49, 0xc5, 0x69, 0x7b, 0x32, 0x69, 0x19,
+                        0x70, 0x3b, 0xac, 0x03, 0x1c, 0xae, 0x7f, 0x60,
                     ];
                     let signing_key = wm_gen3_core::causal::SigningKey::from_bytes(&secret);
                     let backdoor = vec!["Z".to_string()];
@@ -873,8 +891,14 @@ fn handle_route(
         }
         "causal.counterfactual" => {
             let treatment = args.get("treatment").and_then(Value::as_str).unwrap_or("X");
-            let counterfactual_value = args.get("counterfactual_value").and_then(Value::as_f64).unwrap_or(1.0);
-            let target_outcome = args.get("target_outcome").and_then(Value::as_str).unwrap_or("Y");
+            let counterfactual_value = args
+                .get("counterfactual_value")
+                .and_then(Value::as_f64)
+                .unwrap_or(1.0);
+            let target_outcome = args
+                .get("target_outcome")
+                .and_then(Value::as_str)
+                .unwrap_or("Y");
 
             let mut factual = std::collections::BTreeMap::new();
             if let Some(obj) = args.get("factual_evidence").and_then(Value::as_object) {
@@ -921,24 +945,61 @@ fn handle_route(
             });
 
             let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
-                from: "Z".into(), to: "X".into(), weight: 0.8, sign: 1, mechanism: "Difficulty induces deliberation".into(),
+                from: "Z".into(),
+                to: "X".into(),
+                weight: 0.8,
+                sign: 1,
+                mechanism: "Difficulty induces deliberation".into(),
             });
             let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
-                from: "Z".into(), to: "Y".into(), weight: -0.7, sign: -1, mechanism: "Difficulty lowers success".into(),
+                from: "Z".into(),
+                to: "Y".into(),
+                weight: -0.7,
+                sign: -1,
+                mechanism: "Difficulty lowers success".into(),
             });
             let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
-                from: "X".into(), to: "M".into(), weight: 0.6, sign: 1, mechanism: "Deliberation improves context".into(),
+                from: "X".into(),
+                to: "M".into(),
+                weight: 0.6,
+                sign: 1,
+                mechanism: "Deliberation improves context".into(),
             });
             let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
-                from: "M".into(), to: "Y".into(), weight: 0.9, sign: 1, mechanism: "Context drives success".into(),
+                from: "M".into(),
+                to: "Y".into(),
+                weight: 0.9,
+                sign: 1,
+                mechanism: "Context drives success".into(),
             });
 
-            scm.set_equation("Z", wm_gen3_core::causal::LinearStructuralEquation::new(1.0, 0.2));
-            scm.set_equation("X", wm_gen3_core::causal::LinearStructuralEquation::new(0.1, 0.1).with_coefficient("Z", 0.8));
-            scm.set_equation("M", wm_gen3_core::causal::LinearStructuralEquation::new(0.2, 0.1).with_coefficient("X", 0.6));
-            scm.set_equation("Y", wm_gen3_core::causal::LinearStructuralEquation::new(0.5, 0.1).with_coefficient("Z", -0.7).with_coefficient("M", 0.9));
+            scm.set_equation(
+                "Z",
+                wm_gen3_core::causal::LinearStructuralEquation::new(1.0, 0.2),
+            );
+            scm.set_equation(
+                "X",
+                wm_gen3_core::causal::LinearStructuralEquation::new(0.1, 0.1)
+                    .with_coefficient("Z", 0.8),
+            );
+            scm.set_equation(
+                "M",
+                wm_gen3_core::causal::LinearStructuralEquation::new(0.2, 0.1)
+                    .with_coefficient("X", 0.6),
+            );
+            scm.set_equation(
+                "Y",
+                wm_gen3_core::causal::LinearStructuralEquation::new(0.5, 0.1)
+                    .with_coefficient("Z", -0.7)
+                    .with_coefficient("M", 0.9),
+            );
 
-            match scm.counterfactual_reasoning(&factual, treatment, counterfactual_value, target_outcome) {
+            match scm.counterfactual_reasoning(
+                &factual,
+                treatment,
+                counterfactual_value,
+                target_outcome,
+            ) {
                 Ok(cf) => Some(json!({
                     "status": "success",
                     "route": "causal.counterfactual",
@@ -964,7 +1025,12 @@ fn handle_route(
             let z_set: std::collections::BTreeSet<String> = args
                 .get("conditioning_set")
                 .and_then(Value::as_array)
-                .map(|a| a.iter().filter_map(Value::as_str).map(String::from).collect())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(Value::as_str)
+                        .map(String::from)
+                        .collect()
+                })
                 .unwrap_or_else(|| {
                     let mut s = std::collections::BTreeSet::new();
                     s.insert("Z".to_string());
@@ -973,30 +1039,70 @@ fn handle_route(
 
             let mut scm = wm_gen3_core::causal::StructuralCausalModel::new();
             scm.add_node(wm_gen3_core::causal::CausalNode {
-                id: "Z".into(), name: "TaskComplexity".into(), role: wm_gen3_core::causal::VariableRole::Confounder, is_exogenous: false, description: "Confounder".into(),
+                id: "Z".into(),
+                name: "TaskComplexity".into(),
+                role: wm_gen3_core::causal::VariableRole::Confounder,
+                is_exogenous: false,
+                description: "Confounder".into(),
             });
             scm.add_node(wm_gen3_core::causal::CausalNode {
-                id: "X".into(), name: "RouteChoice".into(), role: wm_gen3_core::causal::VariableRole::Treatment, is_exogenous: false, description: "Treatment".into(),
+                id: "X".into(),
+                name: "RouteChoice".into(),
+                role: wm_gen3_core::causal::VariableRole::Treatment,
+                is_exogenous: false,
+                description: "Treatment".into(),
             });
             scm.add_node(wm_gen3_core::causal::CausalNode {
-                id: "M".into(), name: "ContextQuality".into(), role: wm_gen3_core::causal::VariableRole::Mediator, is_exogenous: false, description: "Mediator".into(),
+                id: "M".into(),
+                name: "ContextQuality".into(),
+                role: wm_gen3_core::causal::VariableRole::Mediator,
+                is_exogenous: false,
+                description: "Mediator".into(),
             });
             scm.add_node(wm_gen3_core::causal::CausalNode {
-                id: "Y".into(), name: "SuccessScore".into(), role: wm_gen3_core::causal::VariableRole::Outcome, is_exogenous: false, description: "Outcome".into(),
+                id: "Y".into(),
+                name: "SuccessScore".into(),
+                role: wm_gen3_core::causal::VariableRole::Outcome,
+                is_exogenous: false,
+                description: "Outcome".into(),
             });
 
-            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge { from: "Z".into(), to: "X".into(), weight: 0.8, sign: 1, mechanism: "Z->X".into() });
-            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge { from: "Z".into(), to: "Y".into(), weight: -0.7, sign: -1, mechanism: "Z->Y".into() });
-            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge { from: "X".into(), to: "M".into(), weight: 0.6, sign: 1, mechanism: "X->M".into() });
-            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge { from: "M".into(), to: "Y".into(), weight: 0.9, sign: 1, mechanism: "M->Y".into() });
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
+                from: "Z".into(),
+                to: "X".into(),
+                weight: 0.8,
+                sign: 1,
+                mechanism: "Z->X".into(),
+            });
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
+                from: "Z".into(),
+                to: "Y".into(),
+                weight: -0.7,
+                sign: -1,
+                mechanism: "Z->Y".into(),
+            });
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
+                from: "X".into(),
+                to: "M".into(),
+                weight: 0.6,
+                sign: 1,
+                mechanism: "X->M".into(),
+            });
+            let _ = scm.add_edge(wm_gen3_core::causal::CausalEdge {
+                from: "M".into(),
+                to: "Y".into(),
+                weight: 0.9,
+                sign: 1,
+                mechanism: "M->Y".into(),
+            });
 
             match scm.is_backdoor_admissible(treatment, outcome, &z_set) {
                 Ok(admissible) => Some(json!({
-                    "status": "success",
-                    "route": "causal.backdoor",
-                    "treatment": treatment,
-                    "outcome": outcome,
-                    "conditioning_set": z_set,
+                "status": "success",
+                "route": "causal.backdoor",
+                "treatment": treatment,
+                "outcome": outcome,
+                "conditioning_set": z_set,
                     "is_admissible": admissible,
                     "mechanism": if admissible { "Conditioning set blocks all spurious back-door paths" } else { "Back-door path is open or conditioning set contains treatment descendants" },
                 })),
@@ -1006,6 +1112,163 @@ fn handle_route(
                     "error": e.to_string(),
                 })),
             }
+        }
+        "sleep.cycle" => {
+            let q = args
+                .get("quiescence")
+                .and_then(Value::as_f64)
+                .unwrap_or(1.0) as f32;
+            let budget = args
+                .get("budget_steps")
+                .and_then(Value::as_u64)
+                .unwrap_or(150) as usize;
+            let mode_str = args
+                .get("mode")
+                .and_then(Value::as_str)
+                .unwrap_or("genuine");
+            let mode = match mode_str {
+                "sham" => wm_gen3_core::dream::IncubationMode::ShamDreaming,
+                "baseline" => wm_gen3_core::dream::IncubationMode::BaselineIdle,
+                _ => wm_gen3_core::dream::IncubationMode::GenuineDreaming,
+            };
+
+            let regime = wm_gen3_core::dream::RegimeVector::from_quiescence(q, 0.2);
+            let telemetry = wm_gen3_core::dream::execute_dual_phase_sleep_cycle(
+                mode, &regime, budget, substrate, 42,
+            );
+
+            Some(json!({
+                "status": "success",
+                "route": "sleep.cycle",
+                "mode": format!("{:?}", telemetry.mode),
+                "nrem_compaction": {
+                    "chains_scanned": telemetry.nrem.session_chains_scanned,
+                    "superseded_pruned": telemetry.nrem.superseded_entries_pruned,
+                    "contradictions_resolved": telemetry.nrem.contradictions_resolved,
+                    "summaries_minted": telemetry.nrem.compacted_summaries_minted,
+                    "token_compaction_ratio": telemetry.nrem.token_compaction_ratio,
+                    "duration_us": telemetry.nrem.duration_us,
+                },
+                "rem_incubation": {
+                    "candidates_generated": telemetry.rem.candidates_generated,
+                    "candidates_evaluated": telemetry.rem.candidates_evaluated,
+                    "candidates_committed": telemetry.rem.candidates_committed,
+                    "commit_rate": telemetry.rem.commit_rate,
+                    "diversity_entropy": telemetry.rem.candidate_diversity_shannon_entropy,
+                    "insights_count": telemetry.rem.committed_insights.len(),
+                },
+                "synthesized_skeletons_count": telemetry.synthesized_skeletons.len(),
+                "total_duration_us": telemetry.total_duration_us,
+            }))
+        }
+        "dream.incubate" => {
+            let q = args
+                .get("quiescence")
+                .and_then(Value::as_f64)
+                .unwrap_or(0.8) as f32;
+            let budget = args
+                .get("budget_steps")
+                .and_then(Value::as_u64)
+                .unwrap_or(200) as usize;
+            let regime = wm_gen3_core::dream::RegimeVector::from_quiescence(q, 0.2);
+
+            let telem = wm_gen3_core::dream::execute_incubation_epoch(
+                wm_gen3_core::dream::IncubationMode::GenuineDreaming,
+                &regime,
+                budget,
+                substrate,
+                101,
+            );
+
+            Some(json!({
+                "status": "success",
+                "route": "dream.incubate",
+                "quiescence": telem.quiescence,
+                "candidates_evaluated": telem.candidates_evaluated,
+                "candidates_committed": telem.candidates_committed,
+                "commit_rate": telem.commit_rate,
+                "shannon_entropy": telem.candidate_diversity_shannon_entropy,
+                "committed_insights": telem.committed_insights,
+                "duration_us": telem.duration_us,
+            }))
+        }
+        "dream.status" => {
+            let regime = wm_gen3_core::dream::RegimeVector::from_quiescence(0.9, 0.2);
+            Some(json!({
+                "status": "success",
+                "route": "dream.status",
+                "circadian_phase": "quiescent",
+                "regime_vector": {
+                    "quiescence": regime.quiescence,
+                    "temperature": regime.temperature,
+                    "associative_radius": regime.associative_radius,
+                    "counterfactual_rate": regime.counterfactual_rate,
+                    "compression_pressure": regime.compression_pressure,
+                    "adaptive_commit_threshold": regime.adaptive_commit_threshold,
+                },
+                "homeostatic_regime": "nominal",
+            }))
+        }
+        "attestation.status" => Some(json!({
+            "status": "success",
+            "route": "attestation.status",
+            "engine": "Ed25519 Cryptographic Agent Identity, Capability Delegation & Audit Chains",
+            "supported_primitives": [
+                "AgentIdentityToken",
+                "DelegationProof (Max Depth 3, Strict Subsetting)",
+                "AuditAttestation (Hash-Chained Action Logging)"
+            ],
+            "sovereign_enforcement": "Strict Non-Escalation & Epoch Bounded Lifetime",
+        })),
+        "attestation.mint_token" => {
+            let agent_id = args
+                .get("agent_id")
+                .and_then(Value::as_str)
+                .unwrap_or("did:key:agent-default");
+            let role = args
+                .get("role")
+                .and_then(Value::as_str)
+                .unwrap_or("Executor");
+            let caps: Vec<String> = args
+                .get("capabilities")
+                .and_then(Value::as_array)
+                .map(|a| {
+                    a.iter()
+                        .filter_map(Value::as_str)
+                        .map(String::from)
+                        .collect()
+                })
+                .unwrap_or_else(|| vec!["memory:read".into(), "memory:write".into()]);
+            let ttl = args
+                .get("ttl_epochs")
+                .and_then(Value::as_u64)
+                .unwrap_or(100);
+
+            let root_secret: [u8; 32] = [0x50; 32];
+            let root_key = wm_gen3_core::causal::SigningKey::from_bytes(&root_secret);
+
+            let agent_secret: [u8; 32] = [0x60; 32];
+            let agent_key = wm_gen3_core::causal::SigningKey::from_bytes(&agent_secret);
+
+            let token = wm_gen3_core::attestation::AgentIdentityToken::mint(
+                &root_key,
+                agent_id,
+                &agent_key.verifying_key(),
+                role,
+                caps,
+                10,
+                ttl,
+                [0x77; 16],
+            );
+
+            let valid = token.verify(&root_key.verifying_key(), 15).is_ok();
+
+            Some(json!({
+                "status": "success",
+                "route": "attestation.mint_token",
+                "token": token,
+                "verified": valid,
+            }))
         }
         _ => None,
     }
@@ -1130,7 +1393,8 @@ mod tests {
         let authority = RatifiedChannel::mint("test-harness");
 
         // 1. causal.status
-        let resp_status = handle_route(&mut store, &authority, "causal.status", &json!({}), false).expect("status");
+        let resp_status = handle_route(&mut store, &authority, "causal.status", &json!({}), false)
+            .expect("status");
         assert_eq!(resp_status["status"], "success");
         assert_eq!(resp_status["route"], "causal.status");
 
@@ -1162,7 +1426,10 @@ mod tests {
         )
         .expect("counterfactual");
         assert_eq!(resp_cf["status"], "success");
-        assert!(resp_cf["counterfactual_outcome"].as_f64().unwrap() > resp_cf["factual_outcome"].as_f64().unwrap());
+        assert!(
+            resp_cf["counterfactual_outcome"].as_f64().unwrap()
+                > resp_cf["factual_outcome"].as_f64().unwrap()
+        );
         assert!((resp_cf["causal_lift"].as_f64().unwrap() - 0.432).abs() < 0.05);
 
         // 4. causal.backdoor
@@ -1176,5 +1443,74 @@ mod tests {
         .expect("backdoor");
         assert_eq!(resp_backdoor["status"], "success");
         assert_eq!(resp_backdoor["is_admissible"], true);
+    }
+
+    #[test]
+    fn test_sleep_and_dream_routes_end_to_end() {
+        let mut store = substrate("sleep-test");
+        let authority = RatifiedChannel::mint("test-harness");
+
+        // 1. dream.status
+        let resp_status = handle_route(&mut store, &authority, "dream.status", &json!({}), false)
+            .expect("status");
+        assert_eq!(resp_status["status"], "success");
+        assert_eq!(resp_status["circadian_phase"], "quiescent");
+
+        // 2. dream.incubate
+        let resp_dream = handle_route(
+            &mut store,
+            &authority,
+            "dream.incubate",
+            &json!({ "quiescence": 0.8, "budget_steps": 50 }),
+            false,
+        )
+        .expect("incubate");
+        assert_eq!(resp_dream["status"], "success");
+
+        // 3. sleep.cycle (dual-phase)
+        let resp_sleep = handle_route(
+            &mut store,
+            &authority,
+            "sleep.cycle",
+            &json!({ "quiescence": 1.0, "budget_steps": 50, "mode": "genuine" }),
+            false,
+        )
+        .expect("sleep");
+        assert_eq!(resp_sleep["status"], "success");
+        assert!(resp_sleep["total_duration_us"].as_f64().unwrap() >= 0.0);
+    }
+
+    #[test]
+    fn test_attestation_routes_end_to_end() {
+        let mut store = substrate("attest-test");
+        let authority = RatifiedChannel::mint("test-harness");
+
+        // 1. attestation.status
+        let resp_status = handle_route(
+            &mut store,
+            &authority,
+            "attestation.status",
+            &json!({}),
+            false,
+        )
+        .expect("status");
+        assert_eq!(resp_status["status"], "success");
+
+        // 2. attestation.mint_token
+        let resp_mint = handle_route(
+            &mut store,
+            &authority,
+            "attestation.mint_token",
+            &json!({
+                "agent_id": "did:key:antigravity-test",
+                "role": "Architect",
+                "capabilities": ["memory:read", "causal:intervene", "sleep:cycle"],
+                "ttl_epochs": 100
+            }),
+            false,
+        )
+        .expect("mint");
+        assert_eq!(resp_mint["status"], "success");
+        assert_eq!(resp_mint["verified"], true);
     }
 }

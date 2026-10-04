@@ -90,7 +90,8 @@ impl PeerIdentity {
             public_key,
             public_key_hex,
             trust_tier,
-            reputation: if trust_tier == PeerTrustTier::Trusted || trust_tier == PeerTrustTier::Local
+            reputation: if trust_tier == PeerTrustTier::Trusted
+                || trust_tier == PeerTrustTier::Local
             {
                 1.0
             } else {
@@ -117,7 +118,9 @@ impl PeerIdentity {
         if self.trust_tier == PeerTrustTier::Blocked {
             return false;
         }
-        self.capabilities.iter().any(|c| c == capability || c == "*")
+        self.capabilities
+            .iter()
+            .any(|c| c == capability || c == "*")
     }
 }
 
@@ -410,9 +413,10 @@ impl PeerDirectory {
         let mut issuer_key = [0u8; 32];
         decode_hex_into_32(&cert.issuer_public_key_hex, &mut issuer_key)?;
 
-        let issuer_peer = self.peers.values().find(|p| {
-            p.public_key == issuer_key || p.public_key_hex == cert.issuer_public_key_hex
-        });
+        let issuer_peer = self
+            .peers
+            .values()
+            .find(|p| p.public_key == issuer_key || p.public_key_hex == cert.issuer_public_key_hex);
 
         match issuer_peer {
             Some(p) if p.trust_tier >= PeerTrustTier::Trusted => {
@@ -462,7 +466,11 @@ impl PeerDirectory {
         if !target_found {
             let mut new_peer = PeerIdentity::new(
                 &cert.target_identity,
-                if has_target_key { target_pubkey } else { [0u8; 32] },
+                if has_target_key {
+                    target_pubkey
+                } else {
+                    [0u8; 32]
+                },
                 PeerTrustTier::Blocked,
             );
             new_peer.reputation = 0.0;
@@ -471,7 +479,11 @@ impl PeerDirectory {
         }
 
         // 4. Record certificate (deduplicated by signature)
-        if !self.ban_certificates.iter().any(|c| c.signature_hex == cert.signature_hex) {
+        if !self
+            .ban_certificates
+            .iter()
+            .any(|c| c.signature_hex == cert.signature_hex)
+        {
             self.ban_certificates.push(cert.clone());
         }
 
@@ -592,9 +604,21 @@ mod tests {
         let stranger_pubkey = stranger_signing_key.verifying_key().to_bytes();
 
         let mut dir = PeerDirectory::default();
-        dir.admit(PeerIdentity::new("trusted-authority", trusted_pubkey, PeerTrustTier::Trusted));
-        dir.admit(PeerIdentity::new("stranger-node", stranger_pubkey, PeerTrustTier::Stranger));
-        dir.admit(PeerIdentity::new("innocent-peer", [33u8; 32], PeerTrustTier::Net));
+        dir.admit(PeerIdentity::new(
+            "trusted-authority",
+            trusted_pubkey,
+            PeerTrustTier::Trusted,
+        ));
+        dir.admit(PeerIdentity::new(
+            "stranger-node",
+            stranger_pubkey,
+            PeerTrustTier::Stranger,
+        ));
+        dir.admit(PeerIdentity::new(
+            "innocent-peer",
+            [33u8; 32],
+            PeerTrustTier::Net,
+        ));
 
         // 1. Stranger attempts to ban innocent peer -> MUST FAIL (unauthorized issuer)
         let stranger_cert = BanCertificate::issue(
@@ -608,7 +632,10 @@ mod tests {
             0,
         );
         assert!(dir.apply_ban(&stranger_cert, 1005).is_err());
-        assert_eq!(dir.get_by_id("innocent-peer").unwrap().trust_tier, PeerTrustTier::Net);
+        assert_eq!(
+            dir.get_by_id("innocent-peer").unwrap().trust_tier,
+            PeerTrustTier::Net
+        );
 
         // 2. Trusted authority issues ban -> MUST SUCCEED
         let valid_cert = BanCertificate::issue(
@@ -629,4 +656,3 @@ mod tests {
         assert_eq!(dir.ban_certificates.len(), 1);
     }
 }
-

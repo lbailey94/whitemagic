@@ -49,6 +49,14 @@ required-features = ["operator"]
 name = "gate11_causal_graph_battery"
 required-features = ["operator"]
 
+[[test]]
+name = "gate12_dream_cycle_compaction_battery"
+required-features = ["operator"]
+
+[[test]]
+name = "gate13_cryptographic_identity_battery"
+required-features = ["operator"]
+
 [dependencies]
 fastembed = "5.17.4"
 lmdb = "0.8"

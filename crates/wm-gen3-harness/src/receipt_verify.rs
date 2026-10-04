@@ -103,7 +103,10 @@ fn verify_profile(
                     let pubkey_bytes = key.to_bytes();
                     let expected_did = format!(
                         "did:key:{}",
-                        pubkey_bytes.iter().map(|b| format!("{:02x}", b)).collect::<String>()
+                        pubkey_bytes
+                            .iter()
+                            .map(|b| format!("{:02x}", b))
+                            .collect::<String>()
                     );
                     if receipt.issuer_did != expected_did {
                         return Err(format!(

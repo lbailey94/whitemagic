@@ -120,17 +120,26 @@ fn test_cyberbrain_baseline_benchmark_suite() {
             kind: ImportKind::Reported,
         };
         let res = substrate.remember_batch(&[item]);
-        assert!(!res.is_empty() && res[0].is_ok(), "Ingest must succeed: {:?}", res.first());
+        assert!(
+            !res.is_empty() && res[0].is_ok(),
+            "Ingest must succeed: {:?}",
+            res.first()
+        );
     }
     let ingest_elapsed = start_ingest.elapsed();
-    let ingest_ms_per_item =
-        (ingest_elapsed.as_micros() as f64 / num_records as f64) / 1000.0;
+    let ingest_ms_per_item = (ingest_elapsed.as_micros() as f64 / num_records as f64) / 1000.0;
     let ingest_items_per_sec = (num_records as f64 / ingest_elapsed.as_secs_f64()) as u64;
     let total_bytes = dir_size(temp_store.path());
 
-    println!("  Total Ingestion Time: {:.2} ms", ingest_elapsed.as_secs_f64() * 1000.0);
+    println!(
+        "  Total Ingestion Time: {:.2} ms",
+        ingest_elapsed.as_secs_f64() * 1000.0
+    );
     println!("  Latency per Record:   {:.3} ms", ingest_ms_per_item);
-    println!("  Ingestion Throughput: {} records/sec", ingest_items_per_sec);
+    println!(
+        "  Ingestion Throughput: {} records/sec",
+        ingest_items_per_sec
+    );
     println!(
         "  LMDB Store Size:      {} bytes ({:.2} KB)",
         total_bytes,
@@ -204,8 +213,16 @@ fn test_cyberbrain_baseline_benchmark_suite() {
     let r_at_5 = (hits_at_5 as f64 / recall_rounds as f64) * 100.0;
 
     println!("  Total Queries Tested: {}", recall_rounds);
-    println!("  Recall Latency p50:   {} µs ({:.3} ms)", p50_us, p50_us as f64 / 1000.0);
-    println!("  Recall Latency p95:   {} µs ({:.3} ms)", p95_us, p95_us as f64 / 1000.0);
+    println!(
+        "  Recall Latency p50:   {} µs ({:.3} ms)",
+        p50_us,
+        p50_us as f64 / 1000.0
+    );
+    println!(
+        "  Recall Latency p95:   {} µs ({:.3} ms)",
+        p95_us,
+        p95_us as f64 / 1000.0
+    );
     println!("  Precision@1:          {:.1}%", p_at_1);
     println!("  Recall@5:             {:.1}%", r_at_5);
     println!("  Mean Reciprocal Rank: {:.4}", mrr_5);
@@ -216,12 +233,17 @@ fn test_cyberbrain_baseline_benchmark_suite() {
     println!("\n--- [3] Temporal Fact Invalidation & Conflict Resolution ---");
     // T1: Insert older superseded fact
     let old_fact = RememberItem {
-        content: "Configuration fact: Target production gateway IP is 192.168.1.100:8080".to_string(),
+        content: "Configuration fact: Target production gateway IP is 192.168.1.100:8080"
+            .to_string(),
         source: "session_infra_old".to_string(),
         kind: ImportKind::Reported,
     };
     let res1 = substrate.remember_batch(&[old_fact]);
-    assert!(!res1.is_empty() && res1[0].is_ok(), "Ingest must succeed: {:?}", res1.first());
+    assert!(
+        !res1.is_empty() && res1[0].is_ok(),
+        "Ingest must succeed: {:?}",
+        res1.first()
+    );
 
     // T2: Insert newer corrective fact
     let new_fact = RememberItem {
@@ -230,16 +252,22 @@ fn test_cyberbrain_baseline_benchmark_suite() {
         kind: ImportKind::Reported,
     };
     let res2 = substrate.remember_batch(&[new_fact]);
-    assert!(!res2.is_empty() && res2[0].is_ok(), "Ingest must succeed: {:?}", res2.first());
+    assert!(
+        !res2.is_empty() && res2[0].is_ok(),
+        "Ingest must succeed: {:?}",
+        res2.first()
+    );
 
     let conflict_query = RecallQuery {
         query: "Target production gateway IP".to_string(),
         limit: 2,
         ..Default::default()
     };
-    let conflict_results = substrate.recall(&conflict_query).expect("Conflict recall must succeed");
-    let resolved_first = !conflict_results.is_empty()
-        && conflict_results[0].content.contains("10.0.0.250:9090");
+    let conflict_results = substrate
+        .recall(&conflict_query)
+        .expect("Conflict recall must succeed");
+    let resolved_first =
+        !conflict_results.is_empty() && conflict_results[0].content.contains("10.0.0.250:9090");
 
     println!(
         "  Temporal Invalidation Result: {}",

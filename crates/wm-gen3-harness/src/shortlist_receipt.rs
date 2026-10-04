@@ -232,7 +232,8 @@ mod tests {
             back.canonical_signing_bytes(),
             "canonical bytes must survive a JSON round trip"
         );
-        back.verify(&key.verifying_key()).expect("roundtrip verifies");
+        back.verify(&key.verifying_key())
+            .expect("roundtrip verifies");
     }
 
     #[test]

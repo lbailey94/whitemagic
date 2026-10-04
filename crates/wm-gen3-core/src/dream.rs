@@ -798,7 +798,7 @@ pub fn execute_nrem_compaction_phase(
 pub fn synthesize_skeleton_from_dream_insight(
     insight: &DreamInsight,
 ) -> Option<crate::bicameral::ActionSkeleton> {
-    if insight.utility_score < 0.85 || insight.confidence < 0.85 {
+    if insight.utility_score < 0.80 || insight.confidence < 0.70 {
         return None;
     }
 
