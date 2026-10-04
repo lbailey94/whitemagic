@@ -363,6 +363,7 @@ pub fn make_temp_substrate(tag: &str) -> (Substrate, PathBuf, PathBuf) {
     std::fs::create_dir_all(&store_path).expect("create test store dir");
     let mut substrate = Substrate::open(&store_path, Some(&journal_path), default_view())
         .expect("open test substrate");
+    #[cfg(feature = "operator")]
     substrate.set_intake_authority(crate::evidence::RatifiedChannel::mint("pulse-temp"));
     let seed_item = RememberItem {
         content: "observation: duplicate exact collision event alpha".to_string(),
