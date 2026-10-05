@@ -250,14 +250,19 @@ pub fn safe_intake(
     substrate: &mut Substrate,
     quarantine: &mut QuarantineManager,
     item: RememberItem,
-) -> Result<bool, String> {
+) -> Result<Option<String>, String> {
     if let Some(reason) = audit_intake_candidate(&item) {
-        quarantine.isolate(item, reason);
-        Ok(false) // Safely quarantined; not committed to primary store
+        // Safely quarantined; not committed to primary store. The exact
+        // quarantine id travels back to the caller — reading
+        // `records.keys().last()` instead is wrong: records is a BTreeMap
+        // keyed by a timestamp+counter string, so the lexicographic max is
+        // not the newest entry (it duplicated/missed ids and made the PEB-8
+        // reversibility check flaky).
+        Ok(Some(quarantine.isolate(item, reason)))
     } else {
         let res = substrate.remember_batch(&[item]);
         match res.first() {
-            Some(Ok(_)) => Ok(true),
+            Some(Ok(_)) => Ok(None),
             Some(Err(e)) => Err(format!("{:?}", e)),
             None => Err("No response from substrate".to_string()),
         }
@@ -333,14 +338,10 @@ pub fn run_peb8_quarantine_benchmark(seed: u64) -> Peb8BenchmarkReport {
         };
 
         match safe_intake(&mut substrate, &mut quarantine, item.clone()) {
-            Ok(committed) => {
-                if !committed {
-                    // Quarantined item
-                    if let Some(last_id) = quarantine.records.keys().last() {
-                        quarantined_ids.push(last_id.clone());
-                    }
-                }
-            }
+            // Committed to the primary store.
+            Ok(None) => {}
+            // Safely quarantined; keep the exact id for the reversibility pass.
+            Ok(Some(qid)) => quarantined_ids.push(qid),
             Err(e) => {
                 panic!("Unhandled intake error encountered: {}", e);
             }
