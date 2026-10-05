@@ -702,9 +702,11 @@ impl Substrate {
                 .ok_or_else(|| "projection: not enabled".to_string())?;
             let vectors = projection.embed(&batch)?;
             for (slot, vector) in misses.iter().zip(vectors.into_iter()) {
-                self.store
-                    .put_embedding_cache(&hashes[*slot], &vector)
-                    .map_err(|e| e.to_string())?;
+                if !self.store.is_readonly() {
+                    self.store
+                        .put_embedding_cache(&hashes[*slot], &vector)
+                        .map_err(|e| e.to_string())?;
+                }
                 out[*slot] = Some(vector);
             }
         }
@@ -2124,18 +2126,17 @@ impl Substrate {
 
     /// List all unique session IDs recorded in the substrate.
     pub fn session_list(&self) -> Result<Vec<String>, String> {
-        let n = self.store.record_count().unwrap_or(0);
-        let scan_depth = 500usize.min(n);
         let mut sessions = std::collections::BTreeSet::new();
-
-        for id in (n.saturating_sub(scan_depth)..=n).rev() {
-            if let Ok(Some(record)) = self.store.get_record(id as u64) {
-                if record.source().starts_with("session:") {
-                    let parts: Vec<&str> = record.source().split(':').collect();
-                    if let Some(id_part) = parts.get(1) {
-                        if !id_part.is_empty() {
-                            sessions.insert((*id_part).to_string());
-                        }
+        for record in self
+            .store
+            .iter_records()
+            .map_err(|e| format!("session list scan: {e}"))?
+        {
+            if record.source().starts_with("session:") {
+                let parts: Vec<&str> = record.source().split(':').collect();
+                if let Some(id_part) = parts.get(1) {
+                    if !id_part.is_empty() {
+                        sessions.insert((*id_part).to_string());
                     }
                 }
             }
@@ -3942,6 +3943,58 @@ mod cache_boundary_tests {
         assert_eq!(coactivations.get(&(0, 1)).copied(), Some(1));
 
         drop(substrate);
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    /// Session registry must span the whole store, not just the most recent
+    /// records: an early session must still be listed after 600 later writes.
+    #[test]
+    fn session_list_scans_beyond_recent_window() {
+        let mut substrate =
+            Substrate::open(&temp_store("session-list-window"), None, default_view())
+                .expect("open");
+        substrate
+            .session_record("ancient-session", "agent", "note", "early record")
+            .unwrap();
+        let filler: Vec<RememberItem> = (0..600)
+            .map(|i| item(&format!("filler record {i}")))
+            .collect();
+        substrate.remember_batch(&filler);
+
+        let sessions = substrate.session_list().unwrap();
+        assert!(
+            sessions.contains(&"ancient-session".to_string()),
+            "early session must survive beyond the recent-record window: {sessions:?}"
+        );
+    }
+
+    /// Read-only snapshot recall with projection: a query-vector cache miss must
+    /// not attempt a derived write (embed in memory, skip the cache put).
+    #[test]
+    fn readonly_projection_recall_skips_cache_writes() {
+        let dir = crate::embed_cache_dir_or_panic();
+        let path = temp_store("readonly-projection");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate
+            .set_projection_enabled(true, Some(&dir))
+            .expect("projection loads");
+        substrate.remember_batch(&[item("north bay loading area")]);
+        drop(substrate);
+
+        let mut ro = Substrate::open_readonly(&path, None, default_view()).expect("ro open");
+        ro.set_projection_enabled(true, Some(&dir))
+            .expect("projection loads readonly");
+        let hits = ro.recall_expect(&RecallQuery {
+            query: "north bay loading area".into(),
+            limit: 10,
+            candidate_limit: 100,
+            include_historical: false,
+            min_score: 0.0,
+            min_coverage: 0.0,
+            scope: None,
+        });
+        assert!(!hits.is_empty(), "read-only projection recall must answer");
+
         let _ = std::fs::remove_dir_all(&path);
     }
 }

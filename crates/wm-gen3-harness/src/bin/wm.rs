@@ -107,6 +107,9 @@ enum Commands {
         /// Optional recall scope view filter
         #[arg(long)]
         scope: Option<String>,
+        /// Enable dense projection during recall (or set WM_GEN3_PROJECTION=1)
+        #[arg(long)]
+        projection: bool,
     },
     /// Run an explicit cognitive think sweep pass
     Sweep,
@@ -1017,6 +1020,7 @@ fn main() {
             candidate_limit,
             historical,
             scope,
+            projection,
         } => {
             let journal_path = store_path.join("journal.jsonl");
             let mut substrate =
@@ -1027,6 +1031,43 @@ fn main() {
                         std::process::exit(1);
                     }
                 };
+
+            let projection_requested = projection
+                || std::env::var("WM_GEN3_PROJECTION")
+                    .map(|v| matches!(v.as_str(), "1" | "true" | "TRUE" | "True"))
+                    .unwrap_or(false);
+            let mut recall_mode = "lexical";
+            if projection_requested {
+                let cache_dir = std::env::var("WM_GEN3_EMBED_CACHE")
+                    .ok()
+                    .map(PathBuf::from)
+                    .filter(|p| p.exists())
+                    .or_else(|| {
+                        let d = PathBuf::from(".fastembed_cache");
+                        d.exists().then_some(d)
+                    });
+                match cache_dir {
+                    Some(dir) => match substrate.set_projection_enabled(true, Some(&dir)) {
+                        Ok(()) => {
+                            let gated = std::env::var("WM_GEN3_PROJECTION_GATED")
+                                .map(|v| v == "1")
+                                .unwrap_or(false);
+                            substrate.set_projection_gated(gated);
+                            recall_mode = if gated {
+                                "lexical+projection (gated)"
+                            } else {
+                                "lexical+projection"
+                            };
+                        }
+                        Err(e) => eprintln!(
+                            "recall: projection requested but unavailable ({e}); using lexical"
+                        ),
+                    },
+                    None => eprintln!(
+                        "recall: projection requested but no embed cache found (set WM_GEN3_EMBED_CACHE or run from the repo root); using lexical"
+                    ),
+                }
+            }
 
             let q = RecallQuery {
                 query: query.clone(),
@@ -1040,7 +1081,12 @@ fn main() {
 
             match substrate.recall(&q) {
                 Ok(hits) => {
-                    println!("Query: \"{}\" ({} results)", query, hits.len());
+                    println!(
+                        "Query: \"{}\" ({} results, mode: {})",
+                        query,
+                        hits.len(),
+                        recall_mode
+                    );
                     for (i, hit) in hits.iter().enumerate() {
                         let superseded = hit
                             .superseded_by
@@ -4207,10 +4253,13 @@ fn run_ingest(
     println!("==================================================");
 
     let mut batch: Vec<RememberItem> = Vec::with_capacity(batch_size);
+    let mut batch_meta: Vec<Option<IngestMeta>> = Vec::with_capacity(batch_size);
+    let meta_path = store_path.join("record_meta.jsonl");
     let mut total_read: usize = 0;
     let mut total_committed: usize = 0;
     let mut total_duplicates: usize = 0;
     let mut total_other_refusals: usize = 0;
+    let mut total_meta_entries: usize = 0;
     let start_time = std::time::Instant::now();
 
     for line in reader.lines() {
@@ -4227,7 +4276,8 @@ fn run_ingest(
         }
         total_read += 1;
 
-        let item = if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(trimmed) {
+        let (item, meta) = if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(trimmed)
+        {
             let content = json_val
                 .get("content")
                 .and_then(|v| v.as_str())
@@ -4245,38 +4295,42 @@ fn run_ingest(
                     _ => kind,
                 })
                 .unwrap_or(kind);
-            RememberItem {
-                content: content.to_string(),
-                source: source.to_string(),
-                kind: item_kind,
-            }
+            let meta = parse_ingest_meta(&json_val);
+            (
+                RememberItem {
+                    content: content.to_string(),
+                    source: source.to_string(),
+                    kind: item_kind,
+                },
+                meta,
+            )
         } else {
-            RememberItem {
-                content: trimmed.to_string(),
-                source: default_source.to_string(),
-                kind,
-            }
+            (
+                RememberItem {
+                    content: trimmed.to_string(),
+                    source: default_source.to_string(),
+                    kind,
+                },
+                None,
+            )
         };
 
         batch.push(item);
+        batch_meta.push(meta);
 
         if batch.len() >= batch_size {
-            let res = substrate.remember_batch(&batch);
-            for committed_res in res {
-                match committed_res {
-                    Ok(_) => total_committed += 1,
-                    Err(ref e) if e == "duplicate_exact" || e.contains("duplicate") => {
-                        total_duplicates += 1
-                    }
-                    Err(ref e) => {
-                        total_other_refusals += 1;
-                        if total_other_refusals <= 5 || total_other_refusals % 1000 == 0 {
-                            eprintln!("Refusal reason: {e}");
-                        }
-                    }
-                }
-            }
+            write_ingest_batch(
+                &mut substrate,
+                &batch,
+                &batch_meta,
+                &meta_path,
+                &mut total_committed,
+                &mut total_duplicates,
+                &mut total_other_refusals,
+                &mut total_meta_entries,
+            );
             batch.clear();
+            batch_meta.clear();
             if total_read % 10000 == 0 || total_committed % 5000 == 0 {
                 let elapsed = start_time.elapsed().as_secs_f64();
                 let rate = if elapsed > 0.0 {
@@ -4292,21 +4346,16 @@ fn run_ingest(
     }
 
     if !batch.is_empty() {
-        let res = substrate.remember_batch(&batch);
-        for committed_res in res {
-            match committed_res {
-                Ok(_) => total_committed += 1,
-                Err(ref e) if e == "duplicate_exact" || e.contains("duplicate") => {
-                    total_duplicates += 1
-                }
-                Err(ref e) => {
-                    total_other_refusals += 1;
-                    if total_other_refusals <= 5 || total_other_refusals % 1000 == 0 {
-                        eprintln!("Refusal reason: {e}");
-                    }
-                }
-            }
-        }
+        write_ingest_batch(
+            &mut substrate,
+            &batch,
+            &batch_meta,
+            &meta_path,
+            &mut total_committed,
+            &mut total_duplicates,
+            &mut total_other_refusals,
+            &mut total_meta_entries,
+        );
         batch.clear();
     }
 
@@ -4321,9 +4370,93 @@ fn run_ingest(
     if total_other_refusals > 0 {
         println!("Other Refusals:        {}", total_other_refusals);
     }
+    if total_meta_entries > 0 {
+        println!("Metadata Entries:      {}", total_meta_entries);
+        println!("Metadata Sidecar:      {}", meta_path.display());
+    }
     println!("Current Store Epoch:   {}", epoch);
     println!("==================================================");
 }
+
+struct IngestMeta {
+    tags: Vec<String>,
+    importance: f64,
+}
+
+fn parse_ingest_meta(json_val: &serde_json::Value) -> Option<IngestMeta> {
+    let tags: Vec<String> = json_val
+        .get("tags")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|t| t.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+    let importance = json_val.get("importance").and_then(|v| v.as_f64());
+    if tags.is_empty() && importance.is_none() {
+        return None;
+    }
+    Some(IngestMeta {
+        tags,
+        importance: importance.unwrap_or(0.0),
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn write_ingest_batch(
+    substrate: &mut Substrate,
+    batch: &[RememberItem],
+    batch_meta: &[Option<IngestMeta>],
+    meta_path: &Path,
+    total_committed: &mut usize,
+    total_duplicates: &mut usize,
+    total_other_refusals: &mut usize,
+    total_meta_entries: &mut usize,
+) {
+    let res = substrate.remember_batch(batch);
+    for (idx, committed_res) in res.into_iter().enumerate() {
+        match committed_res {
+            Ok(id) => {
+                *total_committed += 1;
+                if let Some(meta) = batch_meta.get(idx).and_then(|m| m.as_ref())
+                    && append_record_meta(meta_path, id, meta).is_ok()
+                {
+                    *total_meta_entries += 1;
+                }
+            }
+            Err(ref e) if e == "duplicate_exact" || e.contains("duplicate") => {
+                *total_duplicates += 1;
+            }
+            Err(ref e) => {
+                *total_other_refusals += 1;
+                if *total_other_refusals <= 5 || *total_other_refusals % 1000 == 0 {
+                    eprintln!("Refusal reason: {e}");
+                }
+            }
+        }
+    }
+}
+
+fn append_record_meta(path: &Path, record_id: u64, meta: &IngestMeta) -> std::io::Result<()> {
+    use std::io::Write;
+    let ingested_at_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+    let entry = serde_json::json!({
+        "record_id": record_id,
+        "tags": meta.tags,
+        "importance": meta.importance,
+        "ingested_at_ms": ingested_at_ms,
+    });
+    let mut f = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?;
+    writeln!(f, "{entry}")
+}
+
 
 fn run_migration(
     source: &Path,
@@ -5949,4 +6082,35 @@ fn run_evolve_command(
     println!("Forks Minted Total:  {}", vault.total_forks_minted);
     println!("Vault File Synced:   {}", vault_path.display());
     println!("==================================================");
+}
+
+#[cfg(test)]
+mod ingest_meta_tests {
+    use super::*;
+
+    #[test]
+    fn parse_ingest_meta_extracts_tags_and_importance() {
+        let value = serde_json::json!({
+            "content": "hello",
+            "tags": ["galaxy:research", "session_042"],
+            "importance": 0.87
+        });
+        let meta = parse_ingest_meta(&value).expect("meta present");
+        assert_eq!(meta.tags, vec!["galaxy:research", "session_042"]);
+        assert!((meta.importance - 0.87).abs() < 1e-9);
+    }
+
+    #[test]
+    fn parse_ingest_meta_absent_when_no_metadata() {
+        let value = serde_json::json!({ "content": "plain" });
+        assert!(parse_ingest_meta(&value).is_none());
+    }
+
+    #[test]
+    fn parse_ingest_meta_tags_only_defaults_importance_zero() {
+        let value = serde_json::json!({ "content": "x", "tags": ["a"] });
+        let meta = parse_ingest_meta(&value).expect("meta present");
+        assert_eq!(meta.tags, vec!["a"]);
+        assert_eq!(meta.importance, 0.0);
+    }
 }
