@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 
 import {
+  assetCandidates,
   assetFor,
   cacheIsValid,
   cachedBinaryPath,
@@ -60,6 +61,12 @@ test("assetFor maps supported platforms and refuses the rest", () => {
   assert.equal(assetFor("win32", "x64"), "wm-windows-x86_64.exe");
   assert.equal(assetFor("linux", "arm64"), "wm-linux-aarch64-musl");
   assert.equal(assetFor("freebsd", "x64"), null);
+  assert.deepEqual(assetCandidates("linux", "x64"), ["wm-linux-x86_64-musl", "wm-linux-x86_64"]);
+  assert.deepEqual(assetCandidates("linux", "arm64"), [
+    "wm-linux-aarch64-musl",
+    "wm-linux-aarch64",
+  ]);
+  assert.deepEqual(assetCandidates("freebsd", "x64"), []);
 });
 
 test("releaseTag honors WHITEMAGIC_RELEASE override", () => {
@@ -226,6 +233,38 @@ test("ensureBinary falls back to the raw binary when the .gz is absent", async (
     assert.deepEqual(readFileSync(bin), BINARY);
     assert.equal(urls.length, 3, "gz probe (404) + raw binary + raw checksum");
     assert.ok(urls[0].endsWith(`/${ASSET}.gz`), "the probe happens first");
+  } finally {
+    rmSync(cache, { recursive: true, force: true });
+  }
+});
+
+test("linux falls back to the glibc asset when the musl build is absent", async () => {
+  const cache = tempCache();
+  const glibc = "wm-linux-x86_64";
+  try {
+    const urls = [];
+    const glibcFetch = okFetch((url) => {
+      if (url.includes("musl")) return null; // v10 releases are glibc-only
+      if (url.endsWith(`/${glibc}.gz.sha256`)) return Buffer.from(`${GZ_DIGEST}  ${glibc}.gz\n`);
+      if (url.endsWith(`/${glibc}.gz`)) return GZ;
+      return null;
+    });
+    const fetchImpl = async (url) => {
+      urls.push(url);
+      return glibcFetch(url);
+    };
+    const bin = await ensureBinary({
+      fetchImpl,
+      cacheRoot: cache,
+      tag: TAG,
+      p: "linux",
+      a: "x64",
+      log: () => {},
+    });
+    assert.equal(bin, cachedBinaryPath(glibc, TAG, cache));
+    assert.deepEqual(readFileSync(bin), BINARY, "glibc compressed binary restored byte-exact");
+    assert.ok(urls.some((u) => u.includes("musl")), "musl candidate is tried first");
+    assert.ok(urls.some((u) => u.endsWith(`/${glibc}.gz`)), "falls through to the glibc .gz");
   } finally {
     rmSync(cache, { recursive: true, force: true });
   }

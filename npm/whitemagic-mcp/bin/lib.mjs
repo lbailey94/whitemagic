@@ -55,13 +55,23 @@ export function childEnvironment(env = process.env) {
   return { ...env, WM_INSTALL_CHANNEL: ref ? `npm:${ref}` : "npm" };
 }
 
+/**
+ * Release assets to try, most-specific first. Linux lists the static musl
+ * build then the glibc build: the v10 line is glibc-only (the ONNX runtime
+ * the binary loads has no musl build), while older releases published musl,
+ * so the launcher stays correct across both.
+ */
+export function assetCandidates(p = platform(), a = arch()) {
+  if (p === "linux" && a === "x64") return ["wm-linux-x86_64-musl", "wm-linux-x86_64"];
+  if (p === "linux" && a === "arm64") return ["wm-linux-aarch64-musl", "wm-linux-aarch64"];
+  if (p === "darwin" && a === "arm64") return ["wm-macos-aarch64"];
+  if (p === "darwin" && a === "x64") return ["wm-macos-x86_64"];
+  if (p === "win32" && a === "x64") return ["wm-windows-x86_64.exe"];
+  return [];
+}
+
 export function assetFor(p = platform(), a = arch()) {
-  if (p === "linux" && a === "x64") return "wm-linux-x86_64-musl";
-  if (p === "linux" && a === "arm64") return "wm-linux-aarch64-musl";
-  if (p === "darwin" && a === "arm64") return "wm-macos-aarch64";
-  if (p === "darwin" && a === "x64") return "wm-macos-x86_64";
-  if (p === "win32" && a === "x64") return "wm-windows-x86_64.exe";
-  return null;
+  return assetCandidates(p, a)[0] ?? null;
 }
 
 export function defaultCacheRoot(env = process.env) {
@@ -158,69 +168,77 @@ export async function ensureBinary({
   log = console.error,
 } = {}) {
   const resolvedTag = tag ?? releaseTag(pkgVersion);
-  const asset = assetFor(p, a);
-  if (!asset) {
+  const candidates = assetCandidates(p, a);
+  if (candidates.length === 0) {
     throw new Error(
       `no release asset for ${p}/${a} yet — install from source: https://github.com/${REPO}#install`,
     );
   }
-  const cached = cachedBinaryPath(asset, resolvedTag, cacheRoot);
-  if (cacheIsValid(cached)) return cached;
-  if (existsSync(cached)) {
-    log("whitemagic-mcp: cached binary failed verification — re-downloading.");
-  }
 
-  log(`whitemagic-mcp: fetching ${resolvedTag}/${asset} ...`);
   const binDir = join(cacheRoot, "whitemagic", "bin", resolvedTag);
-  mkdirSync(binDir, { recursive: true });
-  // Stage INSIDE the cache dir so the final rename is atomic (a /tmp staging
-  // dir can live on another filesystem, where rename fails with EXDEV).
-  const tmp = mkdtempSync(join(binDir, ".download-"));
-  try {
-    const tmpBin = join(tmp, asset);
-    let compressed = false;
-    if (!asset.endsWith(".exe")) {
-      try {
-        await fetchTo(`${BASE_URL(resolvedTag)}/${asset}.gz`, join(tmp, `${asset}.gz`), fetchImpl);
+  let notFound = null;
+  for (const asset of candidates) {
+    const cached = cachedBinaryPath(asset, resolvedTag, cacheRoot);
+    if (cacheIsValid(cached)) return cached;
+    if (existsSync(cached)) {
+      log("whitemagic-mcp: cached binary failed verification — re-downloading.");
+    }
+
+    log(`whitemagic-mcp: fetching ${resolvedTag}/${asset} ...`);
+    mkdirSync(binDir, { recursive: true });
+    // Stage INSIDE the cache dir so the final rename is atomic (a /tmp staging
+    // dir can live on another filesystem, where rename fails with EXDEV).
+    const tmp = mkdtempSync(join(binDir, ".download-"));
+    try {
+      const tmpBin = join(tmp, asset);
+      let compressed = false;
+      if (!asset.endsWith(".exe")) {
+        try {
+          await fetchTo(`${BASE_URL(resolvedTag)}/${asset}.gz`, join(tmp, `${asset}.gz`), fetchImpl);
+          await fetchTo(
+            `${BASE_URL(resolvedTag)}/${asset}.gz.sha256`,
+            join(tmp, `${asset}.gz.sha256`),
+            fetchImpl,
+          );
+          compressed = true;
+        } catch (err) {
+          if (!String(err?.message ?? "").includes("HTTP 404")) throw err;
+        }
+      }
+      if (compressed) {
+        const gzPath = join(tmp, `${asset}.gz`);
+        const expectedGz = parseDigestFile(join(tmp, `${asset}.gz.sha256`), `${asset}.gz`);
+        const actualGz = digestFile(gzPath);
+        if (actualGz !== expectedGz) {
+          throw checksumMismatch(`${asset}.gz`, expectedGz, actualGz);
+        }
+        writeFileSync(tmpBin, gunzipSync(readFileSync(gzPath)));
+        log(`whitemagic-mcp: using the compressed distributable (${asset}.gz)`);
+      } else {
+        await fetchTo(`${BASE_URL(resolvedTag)}/${asset}`, tmpBin, fetchImpl);
         await fetchTo(
-          `${BASE_URL(resolvedTag)}/${asset}.gz.sha256`,
-          join(tmp, `${asset}.gz.sha256`),
+          `${BASE_URL(resolvedTag)}/${asset}.sha256`,
+          join(tmp, `${asset}.sha256`),
           fetchImpl,
         );
-        compressed = true;
-      } catch (err) {
-        if (!String(err?.message ?? "").includes("HTTP 404")) throw err;
+        const expected = parseDigestFile(join(tmp, `${asset}.sha256`), asset);
+        const actual = digestFile(tmpBin);
+        if (actual !== expected) {
+          throw checksumMismatch(asset, expected, actual);
+        }
       }
+      chmodSync(tmpBin, 0o755);
+      renameSync(tmpBin, cached);
+      writeFileSync(sidecarFor(cached), `${digestFile(cached)}\n`);
+      return cached;
+    } catch (err) {
+      if (!String(err?.message ?? "").includes("HTTP 404")) throw err;
+      notFound = err; // asset absent from this release — try the next candidate
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
     }
-    if (compressed) {
-      const gzPath = join(tmp, `${asset}.gz`);
-      const expectedGz = parseDigestFile(join(tmp, `${asset}.gz.sha256`), `${asset}.gz`);
-      const actualGz = digestFile(gzPath);
-      if (actualGz !== expectedGz) {
-        throw checksumMismatch(`${asset}.gz`, expectedGz, actualGz);
-      }
-      writeFileSync(tmpBin, gunzipSync(readFileSync(gzPath)));
-      log(`whitemagic-mcp: using the compressed distributable (${asset}.gz)`);
-    } else {
-      await fetchTo(`${BASE_URL(resolvedTag)}/${asset}`, tmpBin, fetchImpl);
-      await fetchTo(
-        `${BASE_URL(resolvedTag)}/${asset}.sha256`,
-        join(tmp, `${asset}.sha256`),
-        fetchImpl,
-      );
-      const expected = parseDigestFile(join(tmp, `${asset}.sha256`), asset);
-      const actual = digestFile(tmpBin);
-      if (actual !== expected) {
-        throw checksumMismatch(asset, expected, actual);
-      }
-    }
-    chmodSync(tmpBin, 0o755);
-    renameSync(tmpBin, cached);
-    writeFileSync(sidecarFor(cached), `${digestFile(cached)}\n`);
-    return cached;
-  } finally {
-    rmSync(tmp, { recursive: true, force: true });
   }
+  throw notFound;
 }
 
 export function BASE_URL(tag) {

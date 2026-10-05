@@ -344,7 +344,7 @@ pub fn run_grimoire(
     }
 
     let report = GrimoireReport {
-        version: "10.0.0-alpha",
+        version: env!("CARGO_PKG_VERSION"),
         ready,
         store_path: store_path.display().to_string(),
         active_galaxies: galaxies,

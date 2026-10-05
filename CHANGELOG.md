@@ -5,6 +5,26 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.2.0-alpha.3] — 2026-10-05
+
+### Fixed
+- **npm launcher falls back to the glibc asset** — the launcher requested
+  `wm-linux-*-musl` first; the v10 line is glibc-only (the ONNX runtime the
+  binary loads has no musl build), so `npx whitemagic-mcp` 404'd on Linux.
+  It now walks asset candidates (musl → glibc); the launcher test suite
+  covers the fallback and runs the real release path.
+- **Binary version truth** — `wm --version`, the `selftest --json` payload,
+  status headers, the contract manifest, and the grimoire report read
+  `CARGO_PKG_VERSION` instead of hardcoded `10.0.0-alpha*` strings (a
+  10.2.0-alpha.2 binary reported 10.0.0-alpha.1 from selftest).
+- **crates.io fan-out** — `wm-gen3-core` consumes `wm-gen3-shm` through the
+  versioned workspace dependency; the bare path dep made `cargo publish`
+  refuse the crate (alpha.2's fan-out stopped after three crates; the
+  remaining three were published from the fixed tree).
+- **release-health certification merge** — an empty selftest JSON from a
+  failed certify step records `fail` with a note instead of crashing the
+  merge step (which had hidden the npm launcher 404 behind a JSON error).
+
 ## [10.2.0-alpha.2] — 2026-10-05
 
 ### Changed

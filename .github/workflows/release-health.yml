@@ -204,9 +204,23 @@ jobs:
           certs = {}
           for name in ("npm", "docker"):
               p = pathlib.Path(f"{name}-selftest.json")
+              data = None
               if p.exists():
-                  data = json.loads(p.read_text())
+                  try:
+                      data = json.loads(p.read_text())
+                  except ValueError:
+                      data = None
+              if data is not None:
                   certs[name] = {"status": "pass" if data.get("passed") else "fail", "selftest": data}
+              elif p.exists():
+                  # The certify step ran but produced no JSON (it failed and
+                  # continue-on-error swallowed it). Record the fail honestly;
+                  # an empty file must not crash this merge step.
+                  certs[name] = {
+                      "status": "fail",
+                      "selftest": None,
+                      "note": "certification produced no JSON (step failed; see job log)",
+                  }
               else:
                   certs[name] = {"status": "not-run"}
           rec["install_certification"] = certs

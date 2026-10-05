@@ -1,4 +1,4 @@
-//! WhiteMagic Gen3 — Production `wm` CLI binary (v10.0.0-alpha).
+//! WhiteMagic Gen3 — Production `wm` CLI binary (the v10 line).
 //!
 //! Milestone 9 Gate 9B Production Shell.
 //!
@@ -34,10 +34,14 @@ use wm_gen3_harness::bridge::{
     McpProfile, build_contract_manifest, execute_hybrid_tool_call, get_tools_list_for_profile,
 };
 
+/// Build version — single source of truth is the workspace Cargo.toml
+/// (`CARGO_PKG_VERSION`); never hardcode a version string in this binary.
+const WM_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[derive(Parser)]
 #[command(
     name = "wm",
-    version = "10.2.0-alpha",
+    version = WM_VERSION,
     about = "WhiteMagic Gen3 — sovereign cognitive kernel and local-first memory",
     after_help = "Gate 9B Compatibility Shell — all mutations dispatch as sovereign pulses."
 )]
@@ -890,7 +894,7 @@ fn main() {
 
             if !store_path.exists() {
                 println!("==================================================");
-                println!("       WhiteMagic Gen3 Kernel Status (v10.0.0-alpha)");
+                println!("       WhiteMagic Gen3 Kernel Status (v{WM_VERSION})");
                 println!("==================================================");
                 println!("Store Path:       {} (uninitialized)", store_path.display());
                 println!("Status:           Ready (Run 'wm grimoire' or 'wm init' to provision)");
@@ -916,7 +920,7 @@ fn main() {
                         wm_gen3_harness::starter_galaxy::list_galaxies(&substrate)
                             .unwrap_or_default();
                     println!("==================================================");
-                    println!("       WhiteMagic Gen3 Kernel Status (v10.0.0-alpha)");
+                    println!("       WhiteMagic Gen3 Kernel Status (v{WM_VERSION})");
                     println!("==================================================");
                     println!("Store Path:       {}", store_path.display());
                     println!("Mode:             ReadOnly (Inspection)");
@@ -1981,7 +1985,7 @@ fn main() {
             println!("==================================================");
         }
         Commands::Contract { json } => {
-            let manifest = build_contract_manifest("10.0.0-alpha");
+            let manifest = build_contract_manifest(WM_VERSION);
             if json {
                 println!(
                     "{}",
@@ -1989,7 +1993,7 @@ fn main() {
                 );
             } else {
                 println!("==================================================");
-                println!("WhiteMagic Hybrid Route & Schema Manifest (v10.0.0-alpha)");
+                println!("WhiteMagic Hybrid Route & Schema Manifest (v{WM_VERSION})");
                 println!("--------------------------------------------------");
                 println!("  Routes in Manifest:    {}", manifest["counts"]["routes"]);
                 println!(
@@ -2142,11 +2146,11 @@ fn main() {
         Commands::Selftest { json } => {
             if json {
                 println!(
-                    r#"{{"status":"ok","invariants":"pass","engine":"gen3","version":"10.0.0-alpha.1"}}"#
+                    r#"{{"status":"ok","invariants":"pass","engine":"gen3","version":"{WM_VERSION}"}}"#
                 );
             } else {
                 println!(
-                    "WhiteMagic Gen3 Substrate Invariants: PASS (status: ok, version: 10.0.0-alpha.1)"
+                    "WhiteMagic Gen3 Substrate Invariants: PASS (status: ok, version: {WM_VERSION})"
                 );
             }
         }
@@ -4531,7 +4535,7 @@ fn run_serve_loop(
                         },
                         "serverInfo": {
                             "name": "whitemagic-gen3",
-                            "version": "10.0.0-alpha",
+                            "version": WM_VERSION,
                             "profile": match profile { McpProfile::Cyberbrain => "cyberbrain", McpProfile::Full => "full" }
                         }
                     }
