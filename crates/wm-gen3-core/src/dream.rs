@@ -406,8 +406,8 @@ pub fn execute_incubation_epoch(
                     .next()
                     .unwrap_or("term")
                     .to_string();
-                let summary = if first_line.len() > 60 {
-                    format!("{}...", &first_line[..60])
+                let summary = if first_line.chars().count() > 60 {
+                    format!("{}...", truncate_chars(first_line, 60))
                 } else if !first_line.is_empty() {
                     first_line.to_string()
                 } else {
@@ -795,6 +795,14 @@ pub fn execute_nrem_compaction_phase(
 
 /// Synthesizes an evolvable ActionSkeleton from a high-utility DreamInsight.
 /// Connects offline sleep discoveries directly into the Geneseed Vault.
+/// Truncate to at most `max_chars` characters, never splitting a UTF-8
+/// sequence. Regression: byte-index slicing (`&s[..60]`) panicked when the
+/// byte landed inside a multi-byte character in the post-session dream pass
+/// (observed 2026-10-05 during a checkpoint with non-ASCII summary text).
+fn truncate_chars(text: &str, max_chars: usize) -> String {
+    text.chars().take(max_chars).collect()
+}
+
 pub fn synthesize_skeleton_from_dream_insight(
     insight: &DreamInsight,
 ) -> Option<crate::bicameral::ActionSkeleton> {
@@ -802,7 +810,7 @@ pub fn synthesize_skeleton_from_dream_insight(
         return None;
     }
 
-    let skeleton_id = format!("skel-dream-{}", &insight.id[..insight.id.len().min(16)]);
+    let skeleton_id = format!("skel-dream-{}", truncate_chars(&insight.id, 16));
     let skeleton_name = format!("Dream_{}_{}", insight.relation_type, insight.source_concept);
 
     let (tier, action_steps) = match insight.relation_type.as_str() {
@@ -1395,5 +1403,30 @@ mod tests {
         assert!(reason_nom.contains("Nominal"));
         assert!(rv_nom.temperature > 0.80);
         assert_eq!(rv_nom.associative_radius, 4);
+    }
+
+    #[test]
+    fn test_truncate_chars_is_char_boundary_safe() {
+        // Regression: `&first_line[..60]` panicked when byte 60 landed inside
+        // a multi-byte character (checkpoint summaries with non-ASCII text).
+        let mut sample = "a".repeat(59);
+        sample.push('–'); // 3-byte en dash spans bytes 59..62
+        sample.push_str("tail");
+        assert!(sample.len() > 60);
+
+        let truncated = truncate_chars(&sample, 60);
+        assert_eq!(truncated.chars().count(), 60);
+        assert!(truncated.starts_with(&"a".repeat(59)));
+        assert!(truncated.ends_with('–'));
+
+        // Multi-byte content beyond the limit is dropped whole, not split.
+        let wide = "é".repeat(80);
+        let out = truncate_chars(&wide, 60);
+        assert_eq!(out.chars().count(), 60);
+        assert!(out.chars().all(|c| c == 'é'));
+
+        // ASCII behaves exactly like the old byte slice.
+        let ascii = "x".repeat(100);
+        assert_eq!(truncate_chars(&ascii, 60), "x".repeat(60));
     }
 }
