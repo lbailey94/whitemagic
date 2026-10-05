@@ -310,16 +310,19 @@ impl SentinelLeaseGuard {
                 if f.read_to_string(&mut buf).is_ok() {
                     if let Ok(existing_pid) = buf.trim().parse::<u32>() {
                         #[cfg(target_os = "linux")]
-                        {
-                            let proc_path = PathBuf::from(format!("/proc/{existing_pid}"));
-                            if proc_path.exists() {
-                                return Err(io::Error::new(
-                                    io::ErrorKind::AlreadyExists,
-                                    format!(
-                                        "sentinel lease already held by active PID {existing_pid}"
-                                    ),
-                                ));
-                            }
+                        let alive = PathBuf::from(format!("/proc/{existing_pid}")).exists();
+                        #[cfg(not(target_os = "linux"))]
+                        let alive = std::process::Command::new("kill")
+                            .arg("-0")
+                            .arg(existing_pid.to_string())
+                            .status()
+                            .map(|s| s.success())
+                            .unwrap_or(false);
+                        if alive {
+                            return Err(io::Error::new(
+                                io::ErrorKind::AlreadyExists,
+                                format!("sentinel lease already held by active PID {existing_pid}"),
+                            ));
                         }
                     }
                 }

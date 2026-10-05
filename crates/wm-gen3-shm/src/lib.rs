@@ -28,6 +28,10 @@ use std::sync::atomic::Ordering;
 use std::time::SystemTime;
 use uuid::Uuid;
 
+/// Longest portable POSIX shared-memory name, including the leading `/`.
+/// macOS `PSHMNAMLEN` is 32, so 31 bytes is the cross-platform ceiling.
+pub const PORTABLE_SHM_NAME_MAX: usize = 31;
+
 /// Zero-Copy Shared Memory Substrate.
 pub struct ShmSubstrate {
     mmap: memmap2::MmapMut,
@@ -49,6 +53,30 @@ impl ShmSubstrate {
         } else {
             format!("/{}", shm_name)
         };
+
+        if normalized_name.len() < 2 {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "shm name must have at least one character after the leading '/'",
+            ));
+        }
+        if normalized_name.len() > PORTABLE_SHM_NAME_MAX {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!(
+                    "shm name {normalized_name:?} is {} bytes; the portable limit is {PORTABLE_SHM_NAME_MAX} (macOS PSHMNAMLEN)",
+                    normalized_name.len()
+                ),
+            ));
+        }
+        if normalized_name[1..].contains('/') {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!(
+                    "shm name {normalized_name:?} must not contain '/' after the leading character"
+                ),
+            ));
+        }
 
         let c_name = CString::new(normalized_name.as_str())
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;

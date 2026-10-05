@@ -153,7 +153,17 @@ impl PhysicalFrameCodec {
         assembly_timeout: Duration,
     ) -> Result<Vec<u8>, TransportError> {
         let mut len_buf = [0u8; 4];
-        reader.read_exact(&mut len_buf)?;
+        let mut prefix_read = 0usize;
+        while prefix_read < len_buf.len() {
+            let n = reader.read(&mut len_buf[prefix_read..])?;
+            if n == 0 {
+                return Err(TransportError::UnexpectedEof {
+                    expected: len_buf.len() as u32,
+                    received: prefix_read as u32,
+                });
+            }
+            prefix_read += n;
+        }
         let len = u32::from_be_bytes(len_buf);
 
         // Pre-allocation bounds check (Zero payload memory allocated if invalid)
@@ -652,6 +662,7 @@ impl PhysicalSanghaNode {
                         let b = Arc::clone(&boundary_ref);
 
                         std::thread::spawn(move || {
+                            let _ = stream.set_nonblocking(false);
                             let _ = stream.set_read_timeout(Some(DEFAULT_FRAME_ASSEMBLY_TIMEOUT));
                             let start = Instant::now();
 

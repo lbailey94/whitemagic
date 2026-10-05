@@ -227,6 +227,7 @@ fn test_landlock_subprocess_confinement() {
     );
 }
 
+#[cfg(target_os = "linux")]
 #[test]
 fn test_delegated_token_landlock_confinement() {
     let (authority_sk, authority_vk) = test_keys();
@@ -317,7 +318,7 @@ fn test_delegated_token_landlock_confinement() {
 
 #[test]
 fn test_landlock_inherited_shm_fd() {
-    let test_shm_name = format!("/wm_test_landlock_shm_{}", uuid::Uuid::new_v4().simple());
+    let test_shm_name = format!("/wm_l_{}", &uuid::Uuid::new_v4().simple().to_string()[..8]);
     let mut substrate = wm_gen3_shm::ShmSubstrate::open_or_create(&test_shm_name)
         .expect("Create shared memory segment");
     let raw_fd = substrate.raw_fd().expect("Raw FD exists");

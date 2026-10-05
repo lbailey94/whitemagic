@@ -739,6 +739,7 @@ impl MeshServer {
                         let signing_key_inner = Arc::clone(&signing_key);
 
                         std::thread::spawn(move || {
+                            let _ = stream.set_nonblocking(false);
                             let _ = stream.set_read_timeout(Some(DEFAULT_FRAME_ASSEMBLY_TIMEOUT));
                             let _ = stream.set_write_timeout(Some(DEFAULT_FRAME_ASSEMBLY_TIMEOUT));
 

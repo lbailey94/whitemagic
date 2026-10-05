@@ -248,7 +248,7 @@ fn test_stigmergy_conflict_detection_and_decay() {
 
 #[test]
 fn test_named_shm_create_and_attach() {
-    let test_name = format!("/wm_test_shm_{}", Uuid::new_v4().simple());
+    let test_name = format!("/wm_t_{}", &Uuid::new_v4().simple().to_string()[..8]);
 
     // 1. Creator creates named segment
     let creator = ShmSubstrate::open_or_create(&test_name).expect("Create named");
@@ -285,4 +285,24 @@ fn test_named_shm_create_and_attach() {
     // Cleanup: unlink segment
     let mut cleaner = ShmSubstrate::open_or_create(&test_name).expect("Cleaner");
     cleaner.unlink().expect("Unlink test segment");
+}
+
+#[test]
+fn test_portable_shm_name_validation() {
+    let too_long = format!("/wm_{}", "a".repeat(32));
+    let err = ShmSubstrate::open_or_create(&too_long)
+        .err()
+        .expect("long name refused");
+    assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput);
+    assert!(err.to_string().contains("portable limit"), "{err}");
+
+    let interior = ShmSubstrate::open_or_create("/wm/a")
+        .err()
+        .expect("interior slash refused");
+    assert_eq!(interior.kind(), std::io::ErrorKind::InvalidInput);
+
+    let empty = ShmSubstrate::open_or_create("/")
+        .err()
+        .expect("empty name refused");
+    assert_eq!(empty.kind(), std::io::ErrorKind::InvalidInput);
 }

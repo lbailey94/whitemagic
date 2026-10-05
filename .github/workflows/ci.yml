@@ -62,6 +62,25 @@ jobs:
       - name: Run workspace tests
         run: cargo test --workspace
 
+  test-macos:
+    timeout-minutes: 30
+    name: Tests (macOS, advisory)
+    runs-on: macos-14
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Cache fastembed model
+        uses: actions/cache@v4
+        with:
+          path: .fastembed_cache
+          key: fastembed-${{ runner.os }}-bge-small-en-v1.5-onnx-q-v1
+      - name: Warm fastembed cache
+        run: cargo run -p wm-gen3-core --example warm_embed_cache
+      - name: Run workspace tests
+        run: cargo test --workspace --no-fail-fast
+
   build-release:
     timeout-minutes: 20
     name: Build Release Binary
