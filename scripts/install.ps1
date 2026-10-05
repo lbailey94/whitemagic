@@ -17,7 +17,8 @@
 
 [CmdletBinding()]
 param(
-    # Release tag to install (default: the most recent release, prereleases included).
+    # Release tag to install (default: the newest release that ships the
+    # Windows binary; alphas can be POSIX-only).
     [string]$Version = "",
     # Install directory (default: %LOCALAPPDATA%\WhiteMagic\bin).
     [string]$Dir = "",
@@ -53,12 +54,17 @@ $Ref = Sanitize-Ref $Ref
 
 if (-not $File) {
     if (-not $Version) {
-        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases?per_page=1" -Headers @{ "User-Agent" = "whitemagic-installer" }
-        if (-not $release -or -not $release[0].tag_name) {
-            Write-Error "Could not determine the latest release version. Pass -Version explicitly."
+        # Newest release that actually ships the Windows binary. Alphas may be
+        # POSIX-only (Windows is out of the alpha matrix until the ONNX
+        # Runtime link/DLL work lands), so "newest" alone is not good enough —
+        # this falls back to the stable v9.3.4 line while the alpha is open.
+        $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases?per_page=10" -Headers @{ "User-Agent" = "whitemagic-installer" }
+        $match = $releases | Where-Object { $_.assets.name -contains $Artifact } | Select-Object -First 1
+        if (-not $match -or -not $match.tag_name) {
+            Write-Error "No release ships $Artifact. Pass -Version explicitly."
             exit 1
         }
-        $Version = $release[0].tag_name
+        $Version = $match.tag_name
     }
     Write-Host "Installing WhiteMagic $Version for Windows (x86_64)..."
 } else {

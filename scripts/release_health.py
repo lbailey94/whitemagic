@@ -48,11 +48,13 @@ TARGETS = [
     "wm-linux-x86_64",
     "wm-linux-aarch64",
     "wm-macos-aarch64",
-    "wm-windows-x86_64.exe",
 ]
-# Linux/macOS distributables are published gzip'd alongside the raw binary
-# (2026-09-21, slow-link accessibility); Windows is raw only.
-COMPRESSED_TARGETS = [t for t in TARGETS if t != "wm-windows-x86_64.exe"]
+# Windows is out of the alpha matrix until the ONNX Runtime link/DLL work
+# lands (2026-10-05, see release.yml); its asset must not be listed here or
+# every probe would report a guaranteed false LAGGING.
+# Distributables are published gzip'd alongside the raw binary
+# (2026-09-21, slow-link accessibility).
+COMPRESSED_TARGETS = list(TARGETS)
 REQUIRED_RELEASE_ASSETS = (
     [
         asset

@@ -39,9 +39,14 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact: wm-macos-aarch64
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact: wm-windows-x86_64.exe
+          # Windows is temporarily out of the alpha matrix (2026-10-05):
+          # the Rust side now compiles, but the final link mixes ONNX
+          # Runtime's static MSVC runtime with Rust's dynamic CRT
+          # (LNK2005/LNK1169) and the exe would still need onnxruntime.dll
+          # shipped beside it for the fastembed path. Re-enable only with
+          # both fixed (crt-static or a dynamic-loading ort + DLL packaging)
+          # and the required-assets list in scripts/release_health.py
+          # restored. Stable v9.3.4 still ships the Windows installer.
 
     steps:
       - uses: actions/checkout@v4
@@ -293,27 +298,10 @@ jobs:
           "${RUNNER_TEMP}/wm-bin/wm" selftest --json > /dev/null
           echo "install.sh certification PASSED: ${{ matrix.arch }} ${GITHUB_REF_NAME}"
 
-  certify-install-windows:
-    name: Certify install.ps1 (x86_64)
-    needs: [publish]
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      # Same claim as certify-install: install.ps1 must install the PUBLISHED
-      # release (download mode, checksum-verified) and the installed binary
-      # must pass its own invariants. Tamper refusal is covered by ci.yml.
-      - name: Install the published release through install.ps1
-        shell: pwsh
-        run: |
-          ./scripts/install.ps1 -Version "$env:GITHUB_REF_NAME" `
-            -Dir "$env:RUNNER_TEMP\wm-bin" -Ref ci-certify
-      - name: Smoke the installed binary
-        shell: pwsh
-        run: |
-          & "$env:RUNNER_TEMP\wm-bin\wm.exe" --version
-          & "$env:RUNNER_TEMP\wm-bin\wm.exe" selftest --json | Out-Null
-          Write-Host "install.ps1 certification PASSED: x86_64 $env:GITHUB_REF_NAME"
+  # Windows install.ps1 certification is parked with the Windows matrix
+  # entry (2026-10-05): there is no wm-windows asset in the alpha release to
+  # certify. Restore this job together with the matrix entry. Stable v9.3.4
+  # keeps shipping the Windows installer and stays certified historically.
 
   registries:
     name: Publish registries
