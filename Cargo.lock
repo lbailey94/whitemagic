@@ -4827,7 +4827,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "wm-gen3-core"
-version = "10.2.0-alpha"
+version = "10.2.0-alpha.1"
 dependencies = [
  "chrono",
  "ed25519-dalek",
@@ -4849,7 +4849,7 @@ dependencies = [
 
 [[package]]
 name = "wm-gen3-harness"
-version = "10.2.0-alpha"
+version = "10.2.0-alpha.1"
 dependencies = [
  "chrono",
  "clap",
@@ -4867,7 +4867,7 @@ dependencies = [
 
 [[package]]
 name = "wm-gen3-shm"
-version = "10.2.0-alpha"
+version = "10.2.0-alpha.1"
 dependencies = [
  "bytemuck",
  "criterion",
@@ -4880,7 +4880,7 @@ dependencies = [
 
 [[package]]
 name = "wm-gen3-systemone"
-version = "10.2.0-alpha"
+version = "10.2.0-alpha.1"
 dependencies = [
  "laya",
  "serde_json",
@@ -4888,7 +4888,7 @@ dependencies = [
 
 [[package]]
 name = "wm-gen3-vault"
-version = "10.2.0-alpha"
+version = "10.2.0-alpha.1"
 dependencies = [
  "chrono",
  "libc",
@@ -4909,7 +4909,7 @@ dependencies = [
 
 [[package]]
 name = "wm-gen3-zeropointfive"
-version = "10.2.0-alpha"
+version = "10.2.0-alpha.1"
 dependencies = [
  "model2vec-rs",
  "serde_json",

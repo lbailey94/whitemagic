@@ -581,6 +581,7 @@ impl TupleSpace {
     }
 
     /// Attach to an inherited shared memory file descriptor (for Landlock sandboxes).
+    #[cfg(unix)]
     pub fn attach_shm_fd(fd: std::os::unix::io::RawFd, is_owner: bool) -> std::io::Result<wm_gen3_shm::ShmTupleSpace> {
         let substrate = wm_gen3_shm::ShmSubstrate::from_raw_fd(fd, is_owner)?;
         Ok(wm_gen3_shm::ShmTupleSpace::new(std::sync::Arc::new(substrate)))

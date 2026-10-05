@@ -5,6 +5,29 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.2.0-alpha.1] — 2026-10-05
+
+### Fixed
+- **Windows release build unblocked** — `wm-gen3-shm`'s named POSIX
+  shared-memory entry points (`open_or_create`, `from_raw_fd`, `unlink`) and
+  the inherited-fd helpers in `wm-gen3-core` are now Unix-gated; off-Unix
+  builds get an honest `Unsupported` error and keep the in-process
+  `ShmSubstrate::anonymous()` substrate. The v10.2.0-alpha Windows job failed
+  on `shm_open`/`ftruncate`/`FromRawFd`, which skipped the entire publish job
+  (binary assets and the signed `release-manifest.json` never attached).
+- **Model-dependent vault tests skip cleanly when the System05 checkpoint is
+  absent** — CI runners carry no potion weights; the tacit-vault battery no
+  longer panics on `ModelDirNotFound` and stays live on machines with the
+  canonical model dir.
+- **Scheduled gitleaks pinned to 8.30.1** — the action's bundled default
+  (8.24.3) predates the `[[allowlists]]` config form, ignored the allowlist,
+  and re-reported all 33 historical fixture shapes; the schedule now matches
+  the version the config was written for.
+- **release-health version resolution hardened** — the schedule probes the
+  newest release *including prereleases* (`releases/latest` hides the alpha
+  channel) and validates the resolved version so a `gh` error body can never
+  be executed as a shell command (the wmgen3 split repo's exit-127 crash).
+
 ## [10.2.0-alpha] — 2026-10-03
 
 ## [10.0.0-alpha] — 2026-10-03

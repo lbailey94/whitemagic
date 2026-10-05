@@ -15,9 +15,14 @@ pub use ring::{MpmcQueueHeader, ShmMpmcQueue};
 pub use stigmergy_matrix::{RawPheromone, ShmConflict, ShmStigmergyMatrix};
 pub use tuple_table::{RawTuple, ShmTupleTable};
 
+#[cfg(unix)]
 use std::ffi::CString;
+#[cfg(unix)]
 use std::fs::File;
-use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd};
+#[cfg(unix)]
+use std::os::fd::{FromRawFd, IntoRawFd, RawFd};
+#[cfg(not(unix))]
+type RawFd = i32;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -28,6 +33,7 @@ pub struct ShmSubstrate {
     mmap: memmap2::MmapMut,
     raw_fd: Option<RawFd>,
     is_owner: bool,
+    #[cfg_attr(not(unix), allow(dead_code))]
     shm_name: Option<String>,
 }
 
@@ -36,6 +42,7 @@ unsafe impl Sync for ShmSubstrate {}
 
 impl ShmSubstrate {
     /// Create or attach to a named POSIX shared memory segment (e.g. "/wm_substrate_v1").
+    #[cfg(unix)]
     pub fn open_or_create(shm_name: &str) -> std::io::Result<Self> {
         let normalized_name = if shm_name.starts_with('/') {
             shm_name.to_string()
@@ -118,6 +125,16 @@ impl ShmSubstrate {
         }
     }
 
+    /// Named POSIX shared memory is unavailable off-Unix; Windows builds use
+    /// the in-process [`ShmSubstrate::anonymous`] substrate instead.
+    #[cfg(not(unix))]
+    pub fn open_or_create(_shm_name: &str) -> std::io::Result<Self> {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "named POSIX shared memory is unavailable on this platform; use ShmSubstrate::anonymous()",
+        ))
+    }
+
     /// Allocate an anonymous, in-process shared memory substrate (ideal for unit testing).
     pub fn anonymous() -> std::io::Result<Self> {
         let mut mmap = memmap2::MmapMut::map_anon(SHM_TOTAL_SIZE)?;
@@ -133,6 +150,7 @@ impl ShmSubstrate {
     }
 
     /// Attach directly from an inherited file descriptor (critical for Landlocked sandboxes).
+    #[cfg(unix)]
     pub fn from_raw_fd(fd: RawFd, is_owner: bool) -> std::io::Result<Self> {
         let file = unsafe { File::from_raw_fd(fd) };
         let mmap = unsafe { memmap2::MmapMut::map_mut(&file)? };
@@ -153,6 +171,15 @@ impl ShmSubstrate {
         }
 
         Ok(substrate)
+    }
+
+    /// Inherited POSIX descriptors do not exist off-Unix.
+    #[cfg(not(unix))]
+    pub fn from_raw_fd(_fd: RawFd, _is_owner: bool) -> std::io::Result<Self> {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "inherited shared-memory descriptors are unavailable on this platform",
+        ))
     }
 
     /// Returns the underlying raw file descriptor if backed by POSIX shm.
@@ -230,6 +257,7 @@ impl ShmSubstrate {
     }
 
     /// Explicitly unlink the shared memory segment from `/dev/shm`.
+    #[cfg(unix)]
     pub fn unlink(&mut self) -> std::io::Result<()> {
         if let Some(name) = &self.shm_name {
             let c_name = CString::new(name.as_str())
@@ -240,6 +268,12 @@ impl ShmSubstrate {
             }
             self.shm_name = None;
         }
+        Ok(())
+    }
+
+    /// Named segments never exist off-Unix, so there is nothing to unlink.
+    #[cfg(not(unix))]
+    pub fn unlink(&mut self) -> std::io::Result<()> {
         Ok(())
     }
 
@@ -292,6 +326,7 @@ impl ShmSubstrate {
 
 impl Drop for ShmSubstrate {
     fn drop(&mut self) {
+        #[cfg(unix)]
         if let Some(fd) = self.raw_fd {
             unsafe {
                 libc::close(fd);

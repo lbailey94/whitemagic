@@ -132,7 +132,7 @@ grew without any website CTA — the memory layer chooses its own doors.
 Verify the installation, activate it, and see the product work end to end:
 
 ```bash
-wm --version    # wm 10.2.0-alpha
+wm --version    # wm 10.2.0-alpha.1
 wm status       # display substrate status, epoch, record counts, and store health
 ```
 

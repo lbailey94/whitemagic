@@ -33,6 +33,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -eu
           V="${{ github.event.inputs.version }}"
           if [ -z "$V" ] && [ "${{ github.event_name }}" = "workflow_run" ]; then
             # A prerelease never appears in releases/latest, so the tag that
@@ -41,9 +42,20 @@ jobs:
             V="${V#v}"
           fi
           if [ -z "$V" ]; then
-            V="$(gh api "repos/${{ github.repository }}/releases/latest" --jq .tag_name | sed 's/^v//')"
+            # Newest release, prereleases included (the alpha channel is the
+            # normal release here; releases/latest excludes prereleases and
+            # would leave the monitor probing a stale stable). Newest first
+            # by created_at. A gh failure must never leak its JSON error body
+            # into later steps — that exact bug fed `{"message":"Not Found"}`
+            # into `git fetch` and exited 127 (2026-10-05).
+            V="$(gh api "repos/${{ github.repository }}/releases?per_page=1" \
+              --jq '.[0].tag_name // empty' 2>/dev/null || true)"
+            V="${V#v}"
           fi
-          [ -n "$V" ] || { echo "could not resolve a version"; exit 1; }
+          if ! [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::could not resolve a release version (got: '${V}')"
+            exit 1
+          fi
           echo "version=$V" >> "$GITHUB_OUTPUT"
           echo "probing v$V"
 
