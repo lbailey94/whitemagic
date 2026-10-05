@@ -111,6 +111,11 @@ enum Commands {
         #[arg(long)]
         projection: bool,
     },
+    /// Consult the local System Two generative model (opt-in, loopback by default)
+    System2 {
+        #[command(subcommand)]
+        command: SystemTwoCommands,
+    },
     /// Run an explicit cognitive think sweep pass
     Sweep,
     /// Run a passive cognitive dream incubation cycle (associative consolidation)
@@ -696,6 +701,27 @@ enum MeshCommands {
 }
 
 #[derive(Subcommand)]
+enum SystemTwoCommands {
+    /// Ask System Two a grounded question through a local OpenAI-compatible endpoint
+    Ask {
+        /// Question to ask
+        question: String,
+        /// Grounding context (literal text, or @path to read a file)
+        #[arg(long)]
+        context: Option<String>,
+        /// Emit machine-readable JSON
+        #[arg(long)]
+        json: bool,
+        /// Override the model (default: WM_SYSTEM2_MODEL or gemma4:e2b)
+        #[arg(long)]
+        model: Option<String>,
+        /// Override the endpoint (default: WM_SYSTEM2_ENDPOINT or http://127.0.0.1:11434/v1)
+        #[arg(long)]
+        endpoint: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
 enum MandalaCommands {
     /// Verify an Ed25519-signed MandalaPass token against the replay ledger
     VerifyPass {
@@ -1108,6 +1134,9 @@ fn main() {
                     std::process::exit(1);
                 }
             }
+        }
+        Commands::System2 { command } => {
+            run_system2_command(command, &store_path);
         }
         Commands::Sweep => {
             let journal_path = store_path.join("journal.jsonl");
@@ -4457,6 +4486,90 @@ fn append_record_meta(path: &Path, record_id: u64, meta: &IngestMeta) -> std::io
     writeln!(f, "{entry}")
 }
 
+fn run_system2_command(command: SystemTwoCommands, store_path: &Path) {
+    match command {
+        SystemTwoCommands::Ask {
+            question,
+            context,
+            json,
+            model,
+            endpoint,
+        } => {
+            let mut config = match wm_gen3_harness::systemtwo::SystemTwoConfig::from_env() {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                }
+            };
+            if let Some(model) = model {
+                config.model = model;
+            }
+            if let Some(endpoint) = endpoint {
+                config.endpoint = endpoint;
+            }
+            let context = match context {
+                Some(raw) if raw.starts_with('@') => {
+                    let path = &raw[1..];
+                    match std::fs::read_to_string(path) {
+                        Ok(text) => Some(text),
+                        Err(e) => {
+                            eprintln!("system2: cannot read context file {path}: {e}");
+                            std::process::exit(1);
+                        }
+                    }
+                }
+                other => other,
+            };
+
+            let answer =
+                match wm_gen3_harness::systemtwo::ask(&config, &question, context.as_deref()) {
+                    Ok(answer) => answer,
+                    Err(e) => {
+                        eprintln!("{e}");
+                        std::process::exit(1);
+                    }
+                };
+
+            let gate_key =
+                match wm_gen3_core::mandala::resolve_or_create_mandala_gate_key(store_path) {
+                    Ok((key, _)) => key,
+                    Err(e) => {
+                        eprintln!("system2: gate key resolution failed: {e}");
+                        std::process::exit(1);
+                    }
+                };
+            let receipt = wm_gen3_harness::systemtwo::ConsultationReceipt::sign(
+                &gate_key, &question, &answer,
+            );
+            let receipt_path = receipt.persist(store_path).ok();
+
+            if json {
+                let out = serde_json::json!({
+                    "status": "success",
+                    "content": answer.content,
+                    "model": answer.model,
+                    "endpoint": answer.endpoint,
+                    "latency_ms": answer.latency_ms,
+                    "max_tokens": answer.max_tokens,
+                    "completion_tokens": answer.completion_tokens,
+                    "receipt": receipt,
+                    "receipt_path": receipt_path.map(|p| p.display().to_string()),
+                });
+                println!("{}", serde_json::to_string_pretty(&out).unwrap_or_default());
+            } else {
+                println!("{}", answer.content);
+                println!(
+                    "-- model: {} · {:.0} ms · max_tokens: {}",
+                    answer.model, answer.latency_ms, answer.max_tokens
+                );
+                if let Some(path) = receipt_path {
+                    eprintln!("receipt: {}", path.display());
+                }
+            }
+        }
+    }
+}
 
 fn run_migration(
     source: &Path,
