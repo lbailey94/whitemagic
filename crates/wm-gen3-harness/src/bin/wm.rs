@@ -2381,31 +2381,48 @@ fn run_shortlist_command(
                     }
                 }
                 let deliberator = wm_gen3_harness::deliberation::Deliberator::default();
-                if let Ok((chosen, conf, lat)) = deliberator.deliberate(&state_text, &candidates) {
-                    let cand_names: Vec<String> =
-                        candidates.iter().map(|c| c.name.clone()).collect();
-                    if let Ok((signing_key, _)) =
+                if let Ok(delib) = deliberator.deliberate(&state_text, &candidates) {
+                    let strict =
+                        std::env::var(wm_gen3_harness::deliberation::ENV_DELIBERATION_STRICT)
+                            .is_ok();
+                    if delib.degraded && strict {
+                        outcome["deliberation_refused"] = serde_json::json!("degraded_strict");
+                    } else if let Ok((signing_key, _)) =
                         wm_gen3_core::mandala::resolve_or_create_mandala_gate_key(store_path)
                     {
+                        let cand_names: Vec<String> =
+                            candidates.iter().map(|c| c.name.clone()).collect();
                         let receipt = wm_gen3_harness::deliberation::DeliberationReceipt::sign(
                             &signing_key,
                             &state_text,
                             &cand_names,
-                            &chosen,
+                            &delib.chosen_route,
                             margin,
                             margin_threshold,
-                            conf,
-                            lat,
+                            delib.confidence,
+                            delib.latency_ms,
+                            delib.degraded,
+                            &delib.slm_model_sha256,
+                            &delib.prompt_version,
                         );
                         let _ = receipt.persist(store_path);
                         outcome["deliberation"] = serde_json::json!({
-                            "chosen_route": chosen,
-                            "confidence": conf,
-                            "latency_ms": lat,
+                            "chosen_route": delib.chosen_route.clone(),
+                            "confidence": delib.confidence,
+                            "latency_ms": delib.latency_ms,
+                            "degraded": delib.degraded,
+                            "slm_model_sha256": delib.slm_model_sha256.clone(),
+                            "prompt_version": delib.prompt_version.clone(),
                             "receipt_id": receipt.receipt_id,
                             "spec": receipt.spec,
                         });
-                        deliberated_info = Some((chosen, conf, lat, receipt.receipt_id));
+                        outcome["dispatched_route"] = serde_json::json!(delib.chosen_route);
+                        deliberated_info = Some((
+                            delib.chosen_route,
+                            delib.confidence,
+                            delib.latency_ms,
+                            receipt.receipt_id,
+                        ));
                     }
                 }
             }
@@ -2606,27 +2623,42 @@ fn run_deliberate_command(
     let tau = gate.calibrate_tau(store_path);
 
     match deliberator.deliberate(intent, &candidate_routes) {
-        Ok((chosen_route, confidence, latency_ms)) => {
+        Ok(outcome) => {
+            if outcome.degraded
+                && std::env::var(wm_gen3_harness::deliberation::ENV_DELIBERATION_STRICT).is_ok()
+            {
+                eprintln!(
+                    "Deliberation degraded (SLM unavailable or unparsable) and {} is set; refusing to sign a receipt",
+                    wm_gen3_harness::deliberation::ENV_DELIBERATION_STRICT
+                );
+                std::process::exit(1);
+            }
             let candidate_names: Vec<String> =
                 candidate_routes.iter().map(|c| c.name.clone()).collect();
             let receipt = wm_gen3_harness::deliberation::DeliberationReceipt::sign(
                 &gate_key,
                 intent,
                 &candidate_names,
-                &chosen_route,
+                &outcome.chosen_route,
                 0.0,
                 tau,
-                confidence,
-                latency_ms,
+                outcome.confidence,
+                outcome.latency_ms,
+                outcome.degraded,
+                &outcome.slm_model_sha256,
+                &outcome.prompt_version,
             );
             let _ = receipt.persist(store_path);
 
             if json_output {
                 let out = serde_json::json!({
                     "status": "success",
-                    "chosen_route": chosen_route,
-                    "confidence": confidence,
-                    "latency_ms": latency_ms,
+                    "chosen_route": outcome.chosen_route,
+                    "confidence": outcome.confidence,
+                    "latency_ms": outcome.latency_ms,
+                    "degraded": outcome.degraded,
+                    "slm_model_sha256": outcome.slm_model_sha256,
+                    "prompt_version": outcome.prompt_version,
                     "candidates": candidate_names,
                     "receipt": receipt,
                 });
@@ -2637,9 +2669,12 @@ fn run_deliberate_command(
                 println!("==================================================");
                 println!("Intent:       {}", intent);
                 println!("Candidates:   {}", candidate_names.join(", "));
-                println!("Chosen:       {}", chosen_route);
-                println!("Confidence:   {:.4}", confidence);
-                println!("Latency:      {:.1} ms", latency_ms);
+                println!("Chosen:       {}", outcome.chosen_route);
+                println!("Confidence:   {:.4}", outcome.confidence);
+                println!("Latency:      {:.1} ms", outcome.latency_ms);
+                println!("Degraded:     {}", outcome.degraded);
+                println!("Model SHA256: {}", outcome.slm_model_sha256);
+                println!("Prompt:       {}", outcome.prompt_version);
                 println!("Receipt ID:   {}", receipt.receipt_id);
                 println!("==================================================");
             }

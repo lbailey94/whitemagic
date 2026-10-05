@@ -2346,30 +2346,40 @@ fn handle_decision_shortlist(
             }
         }
         let deliberator = crate::deliberation::Deliberator::default();
-        if let Ok((chosen, conf, lat)) = deliberator.deliberate(&state_text, &candidate_routes) {
-            let cand_names: Vec<String> = candidate_routes.iter().map(|c| c.name.clone()).collect();
-            if let Ok((signing_key, _)) = resolve_or_create_mandala_gate_key(store_path) {
+        if let Ok(delib) = deliberator.deliberate(&state_text, &candidate_routes) {
+            let strict = std::env::var(crate::deliberation::ENV_DELIBERATION_STRICT).is_ok();
+            if delib.degraded && strict {
+                outcome["deliberation_refused"] = json!("degraded_strict");
+            } else if let Ok((signing_key, _)) = resolve_or_create_mandala_gate_key(store_path) {
+                let cand_names: Vec<String> =
+                    candidate_routes.iter().map(|c| c.name.clone()).collect();
                 let receipt = crate::deliberation::DeliberationReceipt::sign(
                     &signing_key,
                     &state_text,
                     &cand_names,
-                    &chosen,
+                    &delib.chosen_route,
                     margin,
                     tau,
-                    conf,
-                    lat,
+                    delib.confidence,
+                    delib.latency_ms,
+                    delib.degraded,
+                    &delib.slm_model_sha256,
+                    &delib.prompt_version,
                 );
                 if !readonly {
                     let _ = receipt.persist(store_path);
                 }
                 outcome["deliberation"] = json!({
-                    "chosen_route": chosen,
-                    "confidence": conf,
-                    "latency_ms": lat,
+                    "chosen_route": delib.chosen_route,
+                    "confidence": delib.confidence,
+                    "latency_ms": delib.latency_ms,
+                    "degraded": delib.degraded,
+                    "slm_model_sha256": delib.slm_model_sha256,
+                    "prompt_version": delib.prompt_version,
                     "receipt_id": receipt.receipt_id,
                     "spec": receipt.spec,
                 });
-                outcome["dispatched_route"] = json!(chosen);
+                outcome["dispatched_route"] = json!(delib.chosen_route);
             }
         }
     }
@@ -2485,8 +2495,13 @@ fn handle_decision_deliberate(
     }
 
     let deliberator = crate::deliberation::Deliberator::default();
-    let (chosen_route, confidence, latency_ms) =
-        deliberator.deliberate(intent, &candidate_routes)?;
+    let delib = deliberator.deliberate(intent, &candidate_routes)?;
+    if delib.degraded && std::env::var(crate::deliberation::ENV_DELIBERATION_STRICT).is_ok() {
+        return Err(format!(
+            "deliberation degraded (SLM unavailable or unparsable) and {} is set; refusing to sign a receipt",
+            crate::deliberation::ENV_DELIBERATION_STRICT
+        ));
+    }
 
     let gate = crate::deliberation::ConformalGate::default();
     let tau = gate.calibrate_tau(store_path);
@@ -2499,11 +2514,14 @@ fn handle_decision_deliberate(
         &signing_key,
         intent,
         &candidate_names,
-        &chosen_route,
+        &delib.chosen_route,
         0.0,
         tau,
-        confidence,
-        latency_ms,
+        delib.confidence,
+        delib.latency_ms,
+        delib.degraded,
+        &delib.slm_model_sha256,
+        &delib.prompt_version,
     );
 
     let emit_receipt = args
@@ -2516,9 +2534,12 @@ fn handle_decision_deliberate(
 
     Ok(json!({
         "status": "success",
-        "chosen_route": chosen_route,
-        "confidence": confidence,
-        "latency_ms": latency_ms,
+        "chosen_route": delib.chosen_route,
+        "confidence": delib.confidence,
+        "latency_ms": delib.latency_ms,
+        "degraded": delib.degraded,
+        "slm_model_sha256": delib.slm_model_sha256,
+        "prompt_version": delib.prompt_version,
         "candidates": candidate_names,
         "receipt": receipt,
         "receipt_id": receipt.receipt_id,
