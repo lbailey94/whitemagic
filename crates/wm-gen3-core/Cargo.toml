@@ -73,7 +73,7 @@ ed25519-dalek = "3.0.0"
 getrandom = "0.3"
 uuid = { version = "1", features = ["serde", "v4", "v5"] }
 chrono = { version = "0.4", features = ["serde"] }
-wm-gen3-shm = { path = "../wm-gen3-shm" }
+wm-gen3-shm = { workspace = true }
 memchr = "2.8"
 
 [target.'cfg(unix)'.dependencies]
