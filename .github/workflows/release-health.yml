@@ -211,7 +211,13 @@ jobs:
                   except ValueError:
                       data = None
               if data is not None:
-                  certs[name] = {"status": "pass" if data.get("passed") else "fail", "selftest": data}
+                  # The binary's selftest JSON reports {"status":"ok",
+                  # "invariants":"pass"}; accept the legacy `passed` boolean
+                  # too. (Checking only `passed` marked two good installs as
+                  # fail on 2026-10-05 — alpha.3's record showed status ok,
+                  # invariants pass, certification fail.)
+                  passed = bool(data.get("passed")) or data.get("status") == "ok"
+                  certs[name] = {"status": "pass" if passed else "fail", "selftest": data}
               elif p.exists():
                   # The certify step ran but produced no JSON (it failed and
                   # continue-on-error swallowed it). Record the fail honestly;
