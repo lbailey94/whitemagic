@@ -339,7 +339,10 @@ fn test_landlock_inherited_shm_fd() {
     };
 
     // Sandboxed subagent attaches to inherited shm without touching /dev/shm filesystem
-    let attached = claim.attach_shm().expect("attach_shm Some").expect("Attached cleanly");
+    let attached = claim
+        .attach_shm()
+        .expect("attach_shm Some")
+        .expect("Attached cleanly");
     assert_eq!(attached.superblock().magic, wm_gen3_shm::SHM_MAGIC);
 
     // Verify Linda tuple write via inherited FD
@@ -366,4 +369,3 @@ fn test_landlock_inherited_shm_fd() {
     // Cleanup
     let _ = substrate.unlink();
 }
-

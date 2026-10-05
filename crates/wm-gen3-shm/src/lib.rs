@@ -23,8 +23,8 @@ use std::fs::File;
 use std::os::fd::{FromRawFd, IntoRawFd, RawFd};
 #[cfg(not(unix))]
 type RawFd = i32;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use std::time::SystemTime;
 use uuid::Uuid;
 
@@ -214,11 +214,8 @@ impl ShmSubstrate {
         let offset = ring_offsets[idx];
 
         let header_ptr = unsafe { self.mmap.as_ptr().add(offset) as *mut MpmcQueueHeader };
-        let cells_ptr = unsafe {
-            self.mmap
-                .as_ptr()
-                .add(offset + RING_HEADER_SIZE) as *mut RingCell
-        };
+        let cells_ptr =
+            unsafe { self.mmap.as_ptr().add(offset + RING_HEADER_SIZE) as *mut RingCell };
         Some(ShmMpmcQueue::new(header_ptr, cells_ptr))
     }
 
@@ -241,7 +238,9 @@ impl ShmSubstrate {
 
     /// Futex primitive: wake threads waiting on tuple changes.
     pub fn futex_wake_tuple(&self, count: i32) -> i32 {
-        self.superblock().tuple_futex.fetch_add(1, Ordering::Relaxed);
+        self.superblock()
+            .tuple_futex
+            .fetch_add(1, Ordering::Relaxed);
         futex_wake(&self.superblock().tuple_futex, count)
     }
 
@@ -252,7 +251,9 @@ impl ShmSubstrate {
 
     /// Futex primitive: wake threads waiting on stigmergy changes.
     pub fn futex_wake_stigmergy(&self, count: i32) -> i32 {
-        self.superblock().stigmergy_futex.fetch_add(1, Ordering::Relaxed);
+        self.superblock()
+            .stigmergy_futex
+            .fetch_add(1, Ordering::Relaxed);
         futex_wake(&self.superblock().stigmergy_futex, count)
     }
 
@@ -354,15 +355,31 @@ impl ShmTupleSpace {
     }
 
     /// Read and take matching tuple.
-    pub fn in_matching(&self, kind: Option<u32>, resource_hash: Option<u64>, now_ms: u64) -> Option<RawTuple> {
-        let tuple = self.substrate.tuple_table().in_matching(kind, resource_hash, now_ms)?;
+    pub fn in_matching(
+        &self,
+        kind: Option<u32>,
+        resource_hash: Option<u64>,
+        now_ms: u64,
+    ) -> Option<RawTuple> {
+        let tuple = self
+            .substrate
+            .tuple_table()
+            .in_matching(kind, resource_hash, now_ms)?;
         self.substrate.futex_wake_tuple(1);
         Some(tuple)
     }
 
     /// Read matching tuples without taking.
-    pub fn rd_matching(&self, kind: Option<u32>, resource_hash: Option<u64>, max_results: usize, now_ms: u64) -> Vec<RawTuple> {
-        self.substrate.tuple_table().rd_matching(kind, resource_hash, max_results, now_ms)
+    pub fn rd_matching(
+        &self,
+        kind: Option<u32>,
+        resource_hash: Option<u64>,
+        max_results: usize,
+        now_ms: u64,
+    ) -> Vec<RawTuple> {
+        self.substrate
+            .tuple_table()
+            .rd_matching(kind, resource_hash, max_results, now_ms)
     }
 }
 

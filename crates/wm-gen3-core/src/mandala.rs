@@ -955,7 +955,8 @@ pub struct WorkspaceClaim {
 impl WorkspaceClaim {
     /// Attaches to the inherited shared memory substrate without requiring /dev/shm filesystem access.
     pub fn attach_shm(&self) -> Option<std::io::Result<wm_gen3_shm::ShmSubstrate>> {
-        self.inherited_shm_fd.map(|fd| wm_gen3_shm::ShmSubstrate::from_raw_fd(fd, false))
+        self.inherited_shm_fd
+            .map(|fd| wm_gen3_shm::ShmSubstrate::from_raw_fd(fd, false))
     }
     /// Computes the canonical SHA-256 digest of this workspace claim.
     #[must_use]

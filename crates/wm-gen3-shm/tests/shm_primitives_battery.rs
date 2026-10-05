@@ -7,8 +7,8 @@
 //! 4. Digital stigmergic pheromone conflict detection and decay.
 //! 5. Named SHM cross-instance synchronization and unlinking.
 
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use std::thread;
 use uuid::Uuid;
 use wm_gen3_shm::*;
@@ -48,7 +48,10 @@ fn test_mpmc_ring_single_thread_push_pop() {
 
     let mut buf = [0u8; 64];
     for (i, expected_msg) in messages.iter().enumerate() {
-        let (len, flags) = ring.pop(&mut buf).expect("Pop failed").expect("Item exists");
+        let (len, flags) = ring
+            .pop(&mut buf)
+            .expect("Pop failed")
+            .expect("Item exists");
         assert_eq!(&buf[..len], expected_msg.as_bytes());
         assert_eq!(flags, i as u32);
     }
@@ -161,7 +164,9 @@ fn test_linda_tuple_operations() {
     assert_eq!(claims[0].payload, b"claim payload data");
 
     // 3. Take matching (in)
-    let taken = space.in_matching(Some(2), Some(0x87654321), 1500).expect("In t2");
+    let taken = space
+        .in_matching(Some(2), Some(0x87654321), 1500)
+        .expect("In t2");
     assert_eq!(taken.id, t2.id);
     assert_eq!(taken.resource_path, "/src/net/port.rs");
 
@@ -198,14 +203,8 @@ fn test_stigmergy_conflict_detection_and_decay() {
     field.emit(&p1).expect("Emit p1");
 
     // 1. Conflict on overlapping range (lines 60..70) at t=10_000
-    let conflicts = field.sense_conflicts(
-        "crates/wm-gen3-core/src/lib.rs",
-        60,
-        70,
-        0.5,
-        10_000,
-        None,
-    );
+    let conflicts =
+        field.sense_conflicts("crates/wm-gen3-core/src/lib.rs", 60, 70, 0.5, 10_000, None);
     assert_eq!(conflicts.len(), 1);
     assert_eq!(conflicts[0].active_issuer, "subagent-alpha");
     assert!((conflicts[0].intensity - 1.0).abs() < 1e-4);
@@ -233,14 +232,8 @@ fn test_stigmergy_conflict_detection_and_decay() {
     assert!(ignored.is_empty());
 
     // 4. Decay after 1 half-life (1000ms later -> t=11_000)
-    let half_decay = field.sense_conflicts(
-        "crates/wm-gen3-core/src/lib.rs",
-        60,
-        70,
-        0.1,
-        11_000,
-        None,
-    );
+    let half_decay =
+        field.sense_conflicts("crates/wm-gen3-core/src/lib.rs", 60, 70, 0.1, 11_000, None);
     assert_eq!(half_decay.len(), 1);
     assert!((half_decay[0].intensity - 0.5).abs() < 1e-3);
 
@@ -248,14 +241,8 @@ fn test_stigmergy_conflict_detection_and_decay() {
     let purged = field.evaporate(14_000, 0.2);
     assert_eq!(purged, 1);
 
-    let after_evap = field.sense_conflicts(
-        "crates/wm-gen3-core/src/lib.rs",
-        60,
-        70,
-        0.01,
-        14_000,
-        None,
-    );
+    let after_evap =
+        field.sense_conflicts("crates/wm-gen3-core/src/lib.rs", 60, 70, 0.01, 14_000, None);
     assert!(after_evap.is_empty());
 }
 

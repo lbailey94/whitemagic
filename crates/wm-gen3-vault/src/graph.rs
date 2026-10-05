@@ -1,6 +1,6 @@
-use rusqlite::{Connection, params, Result};
-use serde::{Deserialize, Serialize};
 use crate::extractor::NormalizedTurn;
+use rusqlite::{Connection, Result, params};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VaultNode {
@@ -46,14 +46,14 @@ impl CausalGraphBuilder {
             let lower = turn.clean_text.to_lowercase();
 
             // 1. Directives (Lucas's interventions and architectural goals)
-            if turn.role == "user" && (
-                lower.contains("let's") ||
-                lower.contains("we need to") ||
-                lower.contains("directive") ||
-                lower.contains("implement") ||
-                lower.contains("build") ||
-                lower.contains("grand strategy")
-            ) {
+            if turn.role == "user"
+                && (lower.contains("let's")
+                    || lower.contains("we need to")
+                    || lower.contains("directive")
+                    || lower.contains("implement")
+                    || lower.contains("build")
+                    || lower.contains("grand strategy"))
+            {
                 let node_id = format!("dir-{}-{}", session_id, turn.seq);
                 let label = extract_directive_title(&turn.clean_text);
                 let summary = turn.clean_text.chars().take(280).collect();
@@ -72,7 +72,11 @@ impl CausalGraphBuilder {
             }
 
             // 2. Problems (Errors, deadlocks, blocks)
-            if turn.turn_type == "error" || lower.contains("deadlock") || lower.contains("panic") || lower.contains("failing") {
+            if turn.turn_type == "error"
+                || lower.contains("deadlock")
+                || lower.contains("panic")
+                || lower.contains("failing")
+            {
                 let node_id = format!("prob-{}-{}", session_id, turn.seq);
                 let label = extract_problem_title(&turn.clean_text);
                 let summary = turn.clean_text.chars().take(280).collect();
@@ -107,7 +111,11 @@ impl CausalGraphBuilder {
             }
 
             // 3. Breakthroughs (Passing tests, resolutions, ratifications)
-            if turn.turn_type == "breakthrough" || lower.contains("test result: ok") || lower.contains("tests pass") || lower.contains("ratified") {
+            if turn.turn_type == "breakthrough"
+                || lower.contains("test result: ok")
+                || lower.contains("tests pass")
+                || lower.contains("ratified")
+            {
                 let node_id = format!("bt-{}-{}", session_id, turn.seq);
                 let label = extract_breakthrough_title(&turn.clean_text);
                 let summary = turn.clean_text.chars().take(280).collect();
@@ -165,7 +173,11 @@ impl CausalGraphBuilder {
     }
 
     /// Insert nodes and edges into the vault database in a transaction
-    pub fn persist_graph(conn: &mut Connection, nodes: &[VaultNode], edges: &[VaultEdge]) -> Result<()> {
+    pub fn persist_graph(
+        conn: &mut Connection,
+        nodes: &[VaultNode],
+        edges: &[VaultEdge],
+    ) -> Result<()> {
         let tx = conn.transaction()?;
 
         {
@@ -240,7 +252,8 @@ fn extract_problem_title(text: &str) -> String {
 
 fn extract_breakthrough_title(text: &str) -> String {
     for line in text.lines() {
-        if line.contains("test result: ok") || line.contains("passed") || line.contains("ratified") {
+        if line.contains("test result: ok") || line.contains("passed") || line.contains("ratified")
+        {
             return line.trim().chars().take(60).collect();
         }
     }
@@ -254,11 +267,31 @@ fn mine_concept_associations(
 ) {
     let lower = turn.clean_text.to_lowercase();
     let concepts = [
-        ("c_landlock", "kernel_and_sandboxing", &["landlock", "sandbox", "kekkai", "containment"][..]),
-        ("c_shm", "substrate_and_tuples", &["shm", "posix", "linda", "tuple", "shared memory"][..]),
-        ("c_covenant", "epistemology_and_philosophy", &["covenant", "charter", "kadag", "lhun-grub"][..]),
-        ("c_mesh", "mesh_and_p2p", &["mesh", "ganying", "port 7369", "p2p"][..]),
-        ("c_continuity", "memory_and_continuity", &["continuity", "vault", "opencode.db", "gestalt"][..]),
+        (
+            "c_landlock",
+            "kernel_and_sandboxing",
+            &["landlock", "sandbox", "kekkai", "containment"][..],
+        ),
+        (
+            "c_shm",
+            "substrate_and_tuples",
+            &["shm", "posix", "linda", "tuple", "shared memory"][..],
+        ),
+        (
+            "c_covenant",
+            "epistemology_and_philosophy",
+            &["covenant", "charter", "kadag", "lhun-grub"][..],
+        ),
+        (
+            "c_mesh",
+            "mesh_and_p2p",
+            &["mesh", "ganying", "port 7369", "p2p"][..],
+        ),
+        (
+            "c_continuity",
+            "memory_and_continuity",
+            &["continuity", "vault", "opencode.db", "gestalt"][..],
+        ),
     ];
 
     for (cid, cname, patterns) in &concepts {

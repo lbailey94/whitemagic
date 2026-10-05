@@ -1,5 +1,5 @@
-use sha2::{Digest, Sha256};
 use crate::extractor::NormalizedTurn;
+use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone)]
 pub struct VaultChunk {
@@ -18,7 +18,11 @@ pub struct Chunker;
 
 impl Chunker {
     /// Process normalized turns into 4-tier multi-resolution chunks
-    pub fn chunk_session(session_id: &str, session_title: &str, turns: &[NormalizedTurn]) -> Vec<VaultChunk> {
+    pub fn chunk_session(
+        session_id: &str,
+        session_title: &str,
+        turns: &[NormalizedTurn],
+    ) -> Vec<VaultChunk> {
         let mut chunks = Vec::new();
         if turns.is_empty() {
             return chunks;
@@ -36,7 +40,10 @@ impl Chunker {
                 end_seq: turn.seq,
                 token_count,
                 content_hash: hash,
-                chunk_text: format!("[Turn {}:{}] {}", turn.role, turn.turn_type, turn.clean_text),
+                chunk_text: format!(
+                    "[Turn {}:{}] {}",
+                    turn.role, turn.turn_type, turn.clean_text
+                ),
                 time_created: turn.time_created,
             });
         }
@@ -142,10 +149,19 @@ impl Chunker {
         }
 
         // Tier 3: Session Gestalt Digest
-        let mut digest = format!("Session: {}\nTitle: {}\nTurns: {}\nKey Points:\n", session_id, session_title, turns.len());
+        let mut digest = format!(
+            "Session: {}\nTitle: {}\nTurns: {}\nKey Points:\n",
+            session_id,
+            session_title,
+            turns.len()
+        );
         for turn in turns {
             if turn.importance >= 0.75 {
-                digest.push_str(&format!("- [{}] {}\n", turn.turn_type, summarize_turn(&turn.clean_text, 140)));
+                digest.push_str(&format!(
+                    "- [{}] {}\n",
+                    turn.turn_type,
+                    summarize_turn(&turn.clean_text, 140)
+                ));
             }
         }
         let digest_tokens = count_tokens(&digest);

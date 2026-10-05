@@ -1,10 +1,10 @@
+use rusqlite::{Connection, params};
+use sha2::{Digest, Sha256};
 use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
-use rusqlite::{Connection, params};
-use sha2::{Digest, Sha256};
 use tar::Archive as TarArchive;
 use zstd::stream::Decoder as ZstdDecoder;
 
@@ -53,7 +53,10 @@ pub struct ColdStorageEngine {
 
 impl ColdStorageEngine {
     /// Initialize or open the cold storage catalog database
-    pub fn new<P: AsRef<Path>>(catalog_db_path: P, cache_dir: Option<PathBuf>) -> Result<Self, String> {
+    pub fn new<P: AsRef<Path>>(
+        catalog_db_path: P,
+        cache_dir: Option<PathBuf>,
+    ) -> Result<Self, String> {
         let conn = Connection::open(catalog_db_path)
             .map_err(|e| format!("Failed to open cold catalog db: {e}"))?;
 
@@ -100,7 +103,8 @@ impl ColdStorageEngine {
                 tokenize='unicode61 remove_diacritics 2'
             );
             "#,
-        ).map_err(|e| format!("Catalog schema init error: {e}"))?;
+        )
+        .map_err(|e| format!("Catalog schema init error: {e}"))?;
 
         let cache_path = cache_dir.unwrap_or_else(|| PathBuf::from(DEFAULT_SHM_CACHE_DIR));
         let _ = fs::create_dir_all(&cache_path);
@@ -122,14 +126,14 @@ impl ColdStorageEngine {
             return Err(format!("Archive path does not exist: {}", path.display()));
         }
 
-        let archive_name = path.file_name()
+        let archive_name = path
+            .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("unknown_archive")
             .to_string();
 
         let archive_id = format!("arc_{}", compute_fnv1a(archive_name.as_bytes()));
-        let file_meta = fs::metadata(path)
-            .map_err(|e| format!("Failed to read metadata: {e}"))?;
+        let file_meta = fs::metadata(path).map_err(|e| format!("Failed to read metadata: {e}"))?;
         let size_bytes = file_meta.len();
 
         let is_zstd = archive_name.ends_with(".zst") || archive_name.ends_with(".tar.zst");
@@ -140,10 +144,11 @@ impl ColdStorageEngine {
             .map(|d| d.as_secs() as i64)
             .unwrap_or(0);
 
-        let file = File::open(path)
-            .map_err(|e| format!("Failed to open archive file: {e}"))?;
+        let file = File::open(path).map_err(|e| format!("Failed to open archive file: {e}"))?;
 
-        let mut conn = self.catalog_conn.lock()
+        let mut conn = self
+            .catalog_conn
+            .lock()
             .map_err(|e| format!("Catalog lock failed: {e}"))?;
 
         conn.execute(
@@ -155,8 +160,8 @@ impl ColdStorageEngine {
         ).map_err(|e| format!("Insert archive record failed: {e}"))?;
 
         let count = if is_zstd {
-            let decoder = ZstdDecoder::new(file)
-                .map_err(|e| format!("Zstd decoder init failed: {e}"))?;
+            let decoder =
+                ZstdDecoder::new(file).map_err(|e| format!("Zstd decoder init failed: {e}"))?;
             let mut tar = TarArchive::new(decoder);
             self.process_tar_entries(&mut tar, &archive_id, &mut conn, max_entries)?
         } else {
@@ -174,12 +179,12 @@ impl ColdStorageEngine {
         conn: &mut Connection,
         max_entries: Option<usize>,
     ) -> Result<usize, String> {
-        let entries = tar.entries()
+        let entries = tar
+            .entries()
             .map_err(|e| format!("Failed to read TAR entries: {e}"))?;
 
         let mut indexed_count = 0;
-        let tx = conn.transaction()
-            .map_err(|e| format!("TX error: {e}"))?;
+        let tx = conn.transaction().map_err(|e| format!("TX error: {e}"))?;
 
         {
             let mut entry_stmt = tx.prepare_cached(
@@ -191,12 +196,14 @@ impl ColdStorageEngine {
                 "#,
             ).map_err(|e| format!("Prepare entry stmt failed: {e}"))?;
 
-            let mut fts_stmt = tx.prepare_cached(
-                r#"
+            let mut fts_stmt = tx
+                .prepare_cached(
+                    r#"
                 INSERT INTO cold_fts (entry_id, archive_id, path_in_archive, content_text)
                 VALUES (?1, ?2, ?3, ?4)
                 "#,
-            ).map_err(|e| format!("Prepare fts stmt failed: {e}"))?;
+                )
+                .map_err(|e| format!("Prepare fts stmt failed: {e}"))?;
 
             for entry_res in entries {
                 if let Some(limit) = max_entries {
@@ -241,7 +248,11 @@ impl ColdStorageEngine {
                         }
                     } else {
                         content_hash = format!("{:x}", Sha256::digest(path_str.as_bytes()));
-                        coords = compute_6d_coords(&Sha256::digest(path_str.as_bytes()), mtime, &path_str);
+                        coords = compute_6d_coords(
+                            &Sha256::digest(path_str.as_bytes()),
+                            mtime,
+                            &path_str,
+                        );
                     }
                 } else {
                     // Binary or bulk payload: derive coordinate from path + size + mtime
@@ -255,16 +266,23 @@ impl ColdStorageEngine {
 
                 let entry_id = format!("{}_{}", archive_id, compute_fnv1a(path_str.as_bytes()));
 
-                entry_stmt.execute(params![
-                    entry_id,
-                    archive_id,
-                    path_str,
-                    size as i64,
-                    mtime,
-                    if is_cognitive { 1 } else { 0 },
-                    content_hash,
-                    coords[0], coords[1], coords[2], coords[3], coords[4], coords[5],
-                ]).map_err(|e| format!("Execute entry insert: {e}"))?;
+                entry_stmt
+                    .execute(params![
+                        entry_id,
+                        archive_id,
+                        path_str,
+                        size as i64,
+                        mtime,
+                        if is_cognitive { 1 } else { 0 },
+                        content_hash,
+                        coords[0],
+                        coords[1],
+                        coords[2],
+                        coords[3],
+                        coords[4],
+                        coords[5],
+                    ])
+                    .map_err(|e| format!("Execute entry insert: {e}"))?;
 
                 if let Some(ref text) = content_text {
                     let preview = crate::safe_truncate(text, 8000);
@@ -280,8 +298,14 @@ impl ColdStorageEngine {
     }
 
     /// Search cold catalog using FTS5 cognitive text match
-    pub fn search_cognitive_text(&self, query: &str, limit: usize) -> Result<Vec<ColdSearchResult>, String> {
-        let conn = self.catalog_conn.lock()
+    pub fn search_cognitive_text(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<ColdSearchResult>, String> {
+        let conn = self
+            .catalog_conn
+            .lock()
             .map_err(|e| format!("Catalog lock failed: {e}"))?;
 
         let sanitized: String = query
@@ -294,8 +318,9 @@ impl ColdStorageEngine {
         }
         let fts_query = terms.join(" OR ");
 
-        let mut stmt = conn.prepare_cached(
-            r#"
+        let mut stmt = conn
+            .prepare_cached(
+                r#"
             SELECT c.entry_id, c.archive_id, c.path_in_archive, c.size_bytes,
                    f.rank, snippet(cold_fts, 3, '[', ']', '...', 16),
                    c.bin_x, c.bin_y, c.bin_z, c.bin_tau, c.bin_sigma, c.bin_omega
@@ -305,30 +330,37 @@ impl ColdStorageEngine {
             ORDER BY f.rank
             LIMIT ?2
             "#,
-        ).map_err(|e| format!("Prepare cold search failed: {e}"))?;
+            )
+            .map_err(|e| format!("Prepare cold search failed: {e}"))?;
 
-        let rows = stmt.query_map(params![fts_query, limit as i64], |row| {
-            let entry_id: String = row.get(0)?;
-            let archive_id: String = row.get(1)?;
-            let path_in_archive: String = row.get(2)?;
-            let size_bytes: i64 = row.get(3)?;
-            let rank: f64 = row.get(4)?;
-            let snippet: String = row.get(5)?;
-            let coords = [
-                row.get(6)?, row.get(7)?, row.get(8)?,
-                row.get(9)?, row.get(10)?, row.get(11)?
-            ];
+        let rows = stmt
+            .query_map(params![fts_query, limit as i64], |row| {
+                let entry_id: String = row.get(0)?;
+                let archive_id: String = row.get(1)?;
+                let path_in_archive: String = row.get(2)?;
+                let size_bytes: i64 = row.get(3)?;
+                let rank: f64 = row.get(4)?;
+                let snippet: String = row.get(5)?;
+                let coords = [
+                    row.get(6)?,
+                    row.get(7)?,
+                    row.get(8)?,
+                    row.get(9)?,
+                    row.get(10)?,
+                    row.get(11)?,
+                ];
 
-            Ok(ColdSearchResult {
-                entry_id,
-                archive_id,
-                path_in_archive,
-                size_bytes: size_bytes as u64,
-                score: (-rank) as f32,
-                snippet,
-                coords_6d: coords,
+                Ok(ColdSearchResult {
+                    entry_id,
+                    archive_id,
+                    path_in_archive,
+                    size_bytes: size_bytes as u64,
+                    score: (-rank) as f32,
+                    snippet,
+                    coords_6d: coords,
+                })
             })
-        }).map_err(|e| format!("Query cold search failed: {e}"))?;
+            .map_err(|e| format!("Query cold search failed: {e}"))?;
 
         let mut out = Vec::new();
         for r in rows {
@@ -355,22 +387,23 @@ impl ColdStorageEngine {
 
         // 2. Cache miss: stream decompressed archive until matching entry is found
         let path = archive_path.as_ref();
-        let file = File::open(path)
-            .map_err(|e| format!("Failed to open archive: {e}"))?;
+        let file = File::open(path).map_err(|e| format!("Failed to open archive: {e}"))?;
 
         let is_zstd = path.to_string_lossy().ends_with(".zst");
         let mut target_bytes = None;
 
         if is_zstd {
-            let decoder = ZstdDecoder::new(file)
-                .map_err(|e| format!("Zstd decoder init failed: {e}"))?;
+            let decoder =
+                ZstdDecoder::new(file).map_err(|e| format!("Zstd decoder init failed: {e}"))?;
             let mut tar = TarArchive::new(decoder);
             for entry_res in tar.entries().map_err(|e| format!("Tar error: {e}"))? {
                 if let Ok(mut entry) = entry_res {
                     if let Ok(p) = entry.path() {
                         if p.display().to_string() == path_in_archive {
                             let mut buf = Vec::new();
-                            entry.read_to_end(&mut buf).map_err(|e| format!("Read entry: {e}"))?;
+                            entry
+                                .read_to_end(&mut buf)
+                                .map_err(|e| format!("Read entry: {e}"))?;
                             target_bytes = Some(buf);
                             break;
                         }
@@ -384,7 +417,9 @@ impl ColdStorageEngine {
                     if let Ok(p) = entry.path() {
                         if p.display().to_string() == path_in_archive {
                             let mut buf = Vec::new();
-                            entry.read_to_end(&mut buf).map_err(|e| format!("Read entry: {e}"))?;
+                            entry
+                                .read_to_end(&mut buf)
+                                .map_err(|e| format!("Read entry: {e}"))?;
                             target_bytes = Some(buf);
                             break;
                         }
@@ -394,7 +429,10 @@ impl ColdStorageEngine {
         }
 
         let bytes = target_bytes.ok_or_else(|| {
-            format!("Path '{path_in_archive}' not found in archive {}", path.display())
+            format!(
+                "Path '{path_in_archive}' not found in archive {}",
+                path.display()
+            )
         })?;
 
         // 3. Write into /dev/shm LRU cache (RAM tmpfs, never touches host NVMe!)
@@ -471,15 +509,16 @@ fn compute_6d_coords(hash_bytes: &[u8], mtime: i64, path: &str) -> [i64; 6] {
 
     // 3. Epistemic Salience sigma
     let lower = path.to_lowercase();
-    let sigma = if lower.contains("receipt") || lower.contains("covenant") || lower.contains("charter") {
-        0.98
-    } else if lower.ends_with(".rs") || lower.ends_with(".md") {
-        0.85
-    } else if lower.ends_with(".json") || lower.ends_with(".toml") {
-        0.75
-    } else {
-        0.50
-    };
+    let sigma =
+        if lower.contains("receipt") || lower.contains("covenant") || lower.contains("charter") {
+            0.98
+        } else if lower.ends_with(".rs") || lower.ends_with(".md") {
+            0.85
+        } else if lower.ends_with(".json") || lower.ends_with(".toml") {
+            0.75
+        } else {
+            0.50
+        };
 
     // 4. Harmonic cluster omega (28 Ganas / Lunar Mansions)
     let omega = (hash_bytes[3] % 28) as f64;

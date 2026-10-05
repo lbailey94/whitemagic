@@ -1,6 +1,6 @@
-use std::path::{Path, PathBuf};
-use serde::{Deserialize, Serialize};
 use rusqlite::params;
+use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 
 use crate::chunker::Chunker;
 use crate::embedder::VaultEmbedder;
@@ -81,7 +81,8 @@ impl VaultDaemon {
         let mut vault_conn = crate::schema::open_vault_db(&self.vault_db_path)
             .map_err(|e| format!("Failed to open vault db: {e}"))?;
 
-        let all_sessions = extractor.list_sessions()
+        let all_sessions = extractor
+            .list_sessions()
             .map_err(|e| format!("Failed to list sessions: {e}"))?;
 
         // Filter sessions newer than last_synced_session_time
@@ -97,7 +98,8 @@ impl VaultDaemon {
         let mut all_new_chunks = Vec::new();
 
         for raw_sess in &pending_sessions {
-            let turns = extractor.extract_session_turns(&raw_sess.id)
+            let turns = extractor
+                .extract_session_turns(&raw_sess.id)
                 .unwrap_or_default();
 
             if turns.is_empty() {
@@ -135,7 +137,8 @@ impl VaultDaemon {
             state.total_edges_indexed += edges.len();
 
             // Insert chunks & FTS5
-            let tx = vault_conn.transaction()
+            let tx = vault_conn
+                .transaction()
                 .map_err(|e| format!("TX error: {e}"))?;
             {
                 let mut chunk_stmt = tx.prepare_cached(
@@ -146,32 +149,38 @@ impl VaultDaemon {
                     "#,
                 ).map_err(|e| format!("Prepare chunk error: {e}"))?;
 
-                let mut fts_stmt = tx.prepare_cached(
-                    r#"
+                let mut fts_stmt = tx
+                    .prepare_cached(
+                        r#"
                     INSERT INTO vault_fts (chunk_id, session_id, tier, chunk_text)
                     VALUES (?1, ?2, ?3, ?4)
                     "#,
-                ).map_err(|e| format!("Prepare fts error: {e}"))?;
+                    )
+                    .map_err(|e| format!("Prepare fts error: {e}"))?;
 
                 for chunk in &chunks {
-                    chunk_stmt.execute(params![
-                        chunk.chunk_id,
-                        chunk.session_id,
-                        chunk.tier as i64,
-                        chunk.start_seq,
-                        chunk.end_seq,
-                        chunk.token_count as i64,
-                        chunk.content_hash,
-                        chunk.chunk_text,
-                        chunk.time_created
-                    ]).map_err(|e| format!("Exec chunk: {e}"))?;
+                    chunk_stmt
+                        .execute(params![
+                            chunk.chunk_id,
+                            chunk.session_id,
+                            chunk.tier as i64,
+                            chunk.start_seq,
+                            chunk.end_seq,
+                            chunk.token_count as i64,
+                            chunk.content_hash,
+                            chunk.chunk_text,
+                            chunk.time_created
+                        ])
+                        .map_err(|e| format!("Exec chunk: {e}"))?;
 
-                    fts_stmt.execute(params![
-                        chunk.chunk_id,
-                        chunk.session_id,
-                        chunk.tier as i64,
-                        chunk.chunk_text
-                    ]).map_err(|e| format!("Exec fts: {e}"))?;
+                    fts_stmt
+                        .execute(params![
+                            chunk.chunk_id,
+                            chunk.session_id,
+                            chunk.tier as i64,
+                            chunk.chunk_text
+                        ])
+                        .map_err(|e| format!("Exec fts: {e}"))?;
                 }
             }
             tx.commit().map_err(|e| format!("Commit error: {e}"))?;
@@ -186,7 +195,10 @@ impl VaultDaemon {
         // Batch encode vectors if embedder is available
         if let Some(ref embedder) = self.embedder {
             if !all_new_chunks.is_empty() {
-                let texts: Vec<String> = all_new_chunks.iter().map(|c| c.chunk_text.clone()).collect();
+                let texts: Vec<String> = all_new_chunks
+                    .iter()
+                    .map(|c| c.chunk_text.clone())
+                    .collect();
                 if let Ok(vectors) = embedder.encode_batch(&texts) {
                     let _ = VaultEmbedder::write_vector_file(
                         &self.vector_file_path,

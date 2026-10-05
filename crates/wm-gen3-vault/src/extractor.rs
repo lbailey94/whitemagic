@@ -114,7 +114,8 @@ impl OpencodeExtractor {
 
             // Parse message role
             let msg_data: Value = serde_json::from_str(&msg_data_str).unwrap_or(Value::Null);
-            let role = msg_data.get("role")
+            let role = msg_data
+                .get("role")
                 .and_then(|r| r.as_str())
                 .unwrap_or("user")
                 .to_string();
@@ -122,7 +123,11 @@ impl OpencodeExtractor {
             // Extract content from part if present, else message
             let (raw_text, part_type) = if let Some(p_str) = part_data_str {
                 let p_data: Value = serde_json::from_str(&p_str).unwrap_or(Value::Null);
-                let p_type = p_data.get("type").and_then(|t| t.as_str()).unwrap_or("text").to_string();
+                let p_type = p_data
+                    .get("type")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("text")
+                    .to_string();
                 let text = if let Some(t) = p_data.get("text").and_then(|t| t.as_str()) {
                     t.to_string()
                 } else if let Some(content) = p_data.get("content").and_then(|c| c.as_str()) {
@@ -132,7 +137,8 @@ impl OpencodeExtractor {
                 };
                 (text, p_type)
             } else {
-                let text = msg_data.get("content")
+                let text = msg_data
+                    .get("content")
                     .and_then(|c| c.as_str())
                     .unwrap_or("")
                     .to_string();
@@ -217,7 +223,9 @@ fn regex_redact(text: &str, _pattern: &str, replacement: &str) -> String {
             _ => (*word, None),
         };
 
-        if (core.starts_with("sk-") && core.len() > 20) || (core.starts_with("AIza") && core.len() > 30) {
+        if (core.starts_with("sk-") && core.len() > 20)
+            || (core.starts_with("AIza") && core.len() > 30)
+        {
             result.push_str(replacement);
             if let Some(c) = trailing {
                 result.push(c);
@@ -302,9 +310,23 @@ pub fn calculate_importance(turn_type: &str, text: &str) -> f64 {
     let lower = text.to_lowercase();
     // Keywords indicating foundational architectural relevance
     let keywords = [
-        "covenant", "charter", "mandala", "landlock", "shm", "geth",
-        "stigmergy", "linda", "tuple", "sub-symbolic", "lucas",
-        "kadag", "lhun-grub", "citta", "dream", "ganying", "scitt",
+        "covenant",
+        "charter",
+        "mandala",
+        "landlock",
+        "shm",
+        "geth",
+        "stigmergy",
+        "linda",
+        "tuple",
+        "sub-symbolic",
+        "lucas",
+        "kadag",
+        "lhun-grub",
+        "citta",
+        "dream",
+        "ganying",
+        "scitt",
     ];
 
     for kw in &keywords {
@@ -319,9 +341,17 @@ pub fn calculate_importance(turn_type: &str, text: &str) -> f64 {
 /// Heuristic affective valence score (-1.0 to 1.0)
 pub fn calculate_valence(turn_type: &str, text: &str) -> f64 {
     let lower = text.to_lowercase();
-    if turn_type == "breakthrough" || lower.contains("success") || lower.contains("triumph") || lower.contains("incredible") {
+    if turn_type == "breakthrough"
+        || lower.contains("success")
+        || lower.contains("triumph")
+        || lower.contains("incredible")
+    {
         0.8
-    } else if turn_type == "error" || lower.contains("panic") || lower.contains("deadlock") || lower.contains("failed") {
+    } else if turn_type == "error"
+        || lower.contains("panic")
+        || lower.contains("deadlock")
+        || lower.contains("failed")
+    {
         -0.7
     } else {
         0.0

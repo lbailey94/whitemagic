@@ -5,8 +5,8 @@
 
 #![forbid(unsafe_code)]
 
-use std::collections::{BTreeMap, BTreeSet};
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
 use wm_gen3_core::evidence::RatifiedChannel;
 use wm_gen3_core::ops::{ImportKind, RememberItem, Substrate};
 
@@ -204,7 +204,10 @@ pub fn list_galaxies(substrate: &Substrate) -> Result<Vec<GalaxySummary>, String
             let mut codex_tags = BTreeSet::new();
             codex_tags.insert("codex".to_string());
             codex_tags.insert("primary".to_string());
-            map.insert("codex".to_string(), (codex_count, codex_tags, sample_preview));
+            map.insert(
+                "codex".to_string(),
+                (codex_count, codex_tags, sample_preview),
+            );
         }
     } else {
         // Small/starter database: direct sequential iteration
@@ -288,7 +291,9 @@ pub fn fork_galaxy(
     }
 
     if candidates.is_empty() {
-        return Err(format!("Source galaxy '{source_galaxy}' has no records to fork."));
+        return Err(format!(
+            "Source galaxy '{source_galaxy}' has no records to fork."
+        ));
     }
 
     let authority = RatifiedChannel::mint(&format!("wm-fork-{target_galaxy}"));
@@ -318,7 +323,9 @@ pub fn create_galaxy(
 ) -> Result<u64, String> {
     let clean_name = name.trim().to_lowercase();
     if clean_name.is_empty() || clean_name.contains(':') || clean_name.contains(' ') {
-        return Err("Galaxy name must be non-empty and cannot contain colons or spaces".to_string());
+        return Err(
+            "Galaxy name must be non-empty and cannot contain colons or spaces".to_string(),
+        );
     }
 
     let desc = description.unwrap_or("Galaxy genesis anchor.");

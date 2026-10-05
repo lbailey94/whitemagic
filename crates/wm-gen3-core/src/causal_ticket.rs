@@ -11,7 +11,7 @@ use std::fmt;
 use std::path::PathBuf;
 use uuid::Uuid;
 
-use crate::mandala::{MandalaError, SandboxRuleset, WorkspaceClaim, LandlockSandbox};
+use crate::mandala::{LandlockSandbox, MandalaError, SandboxRuleset, WorkspaceClaim};
 
 /// Errors relating to causal capability tickets.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,7 +26,10 @@ impl fmt::Display for CausalTicketError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Expired { now_ms, expires_ms } => {
-                write!(f, "Ticket has expired (now: {now_ms}, expires: {expires_ms})")
+                write!(
+                    f,
+                    "Ticket has expired (now: {now_ms}, expires: {expires_ms})"
+                )
             }
             Self::InvalidSignature => write!(f, "Cryptographic signature verification failed"),
             Self::InvalidPublicKey => write!(f, "Invalid public key encoding"),
@@ -106,7 +109,9 @@ mod serde_pubkey {
         if d.is_human_readable() {
             let s = String::deserialize(d)?;
             if s.len() != 64 {
-                return Err(serde::de::Error::custom("expected 64 hex characters for public key"));
+                return Err(serde::de::Error::custom(
+                    "expected 64 hex characters for public key",
+                ));
             }
             let mut arr = [0u8; 32];
             for i in 0..32 {
@@ -151,7 +156,9 @@ mod serde_sig {
         if d.is_human_readable() {
             let s = String::deserialize(d)?;
             if s.len() != 128 {
-                return Err(serde::de::Error::custom("expected 128 hex characters for signature"));
+                return Err(serde::de::Error::custom(
+                    "expected 128 hex characters for signature",
+                ));
             }
             let mut arr = [0u8; 64];
             for i in 0..64 {
@@ -201,7 +208,11 @@ impl CausalCapabilityTicket {
             hasher.update(b",");
         }
         hasher.update(b":");
-        hasher.update(if self.network_allowed { b"net_ok" } else { b"no_net" });
+        hasher.update(if self.network_allowed {
+            b"net_ok"
+        } else {
+            b"no_net"
+        });
         hasher.update(b":");
         hasher.update(self.issued_at_ms.to_le_bytes());
         hasher.update(b":");
@@ -295,7 +306,10 @@ impl CausalCapabilityTicket {
 
     /// Builds a native Landlock sandbox ruleset from this ticket's authorized paths.
     #[cfg(target_os = "linux")]
-    pub fn enforce_landlock(&self, workspace_root: impl Into<PathBuf>) -> Result<SandboxRuleset, MandalaError> {
+    pub fn enforce_landlock(
+        &self,
+        workspace_root: impl Into<PathBuf>,
+    ) -> Result<SandboxRuleset, MandalaError> {
         let claim = self.to_workspace_claim(workspace_root);
         LandlockSandbox::build_ruleset(&claim)
     }
@@ -316,9 +330,9 @@ mod tests {
             "patch_bridge",
             "RouteChoice",
             1.0,
-            0.42,  // causal lift
-            0.03,  // counterfactual risk (3%)
-            0.89,  // JEV score
+            0.42, // causal lift
+            0.03, // counterfactual risk (3%)
+            0.89, // JEV score
             vec![PathBuf::from("/etc/ssl")],
             vec![PathBuf::from("/home/lucas/SharedWorkspace/bridge.py")],
             false, // no network allowed

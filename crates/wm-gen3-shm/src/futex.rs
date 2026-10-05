@@ -17,7 +17,9 @@ pub fn futex_wait(addr: &AtomicU32, expected: u32, timeout_ms: Option<u64>) {
             tv_sec: (ms / 1000) as libc::time_t,
             tv_nsec: ((ms % 1000) * 1_000_000) as libc::c_long,
         });
-        let timeout_ptr = timespec.as_ref().map_or(std::ptr::null(), |ts| ts as *const _);
+        let timeout_ptr = timespec
+            .as_ref()
+            .map_or(std::ptr::null(), |ts| ts as *const _);
 
         unsafe {
             libc::syscall(

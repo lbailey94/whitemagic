@@ -110,8 +110,13 @@ impl ActionSkeleton {
 
         for delta in &self.deltas {
             // 1. Basic signature check
-            if delta.signature_delta.trim().is_empty() && delta.action_type != AstActionType::AddImport {
-                conflicts.push(format!("Delta for symbol '{}' has empty signature", delta.target_symbol));
+            if delta.signature_delta.trim().is_empty()
+                && delta.action_type != AstActionType::AddImport
+            {
+                conflicts.push(format!(
+                    "Delta for symbol '{}' has empty signature",
+                    delta.target_symbol
+                ));
             }
 
             // 2. Pre-invariant verification against existing source
@@ -127,15 +132,22 @@ impl ActionSkeleton {
             // 3. Import duplication warnings
             for import_stmt in &delta.new_imports {
                 if existing.contains(import_stmt) {
-                    warnings.push(format!("Import '{}' already present in target file", import_stmt));
+                    warnings.push(format!(
+                        "Import '{}' already present in target file",
+                        import_stmt
+                    ));
                 }
             }
 
             // 4. Language-specific signature heuristics
             match self.language {
                 SkeletonLanguage::Python => {
-                    if delta.action_type == AstActionType::AddFunction || delta.action_type == AstActionType::ModifySignature {
-                        if !delta.signature_delta.contains("def ") && !delta.signature_delta.contains("class ") {
+                    if delta.action_type == AstActionType::AddFunction
+                        || delta.action_type == AstActionType::ModifySignature
+                    {
+                        if !delta.signature_delta.contains("def ")
+                            && !delta.signature_delta.contains("class ")
+                        {
                             conflicts.push(format!(
                                 "Python signature for '{}' must contain 'def' or 'class': '{}'",
                                 delta.target_symbol, delta.signature_delta
@@ -144,8 +156,12 @@ impl ActionSkeleton {
                     }
                 }
                 SkeletonLanguage::Rust => {
-                    if delta.action_type == AstActionType::AddFunction || delta.action_type == AstActionType::ModifySignature {
-                        if !delta.signature_delta.contains("fn ") && !delta.signature_delta.contains("pub fn ") {
+                    if delta.action_type == AstActionType::AddFunction
+                        || delta.action_type == AstActionType::ModifySignature
+                    {
+                        if !delta.signature_delta.contains("fn ")
+                            && !delta.signature_delta.contains("pub fn ")
+                        {
                             conflicts.push(format!(
                                 "Rust signature for '{}' must contain 'fn': '{}'",
                                 delta.target_symbol, delta.signature_delta

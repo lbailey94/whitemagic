@@ -835,7 +835,10 @@ fn main() {
             }
         }
         Commands::Init { force } => {
-            println!("Initializing WhiteMagic substrate at: {}", store_path.display());
+            println!(
+                "Initializing WhiteMagic substrate at: {}",
+                store_path.display()
+            );
             let existed = store_path.exists();
             if !existed {
                 if let Err(e) = std::fs::create_dir_all(&store_path) {
@@ -844,24 +847,31 @@ fn main() {
                 }
             }
             let journal_path = store_path.join("journal.jsonl");
-            let mut substrate = match Substrate::open(&store_path, Some(&journal_path), default_view()) {
-                Ok(s) => s,
-                Err(e) => {
-                    eprintln!("Store init error: {e}");
-                    std::process::exit(1);
-                }
-            };
+            let mut substrate =
+                match Substrate::open(&store_path, Some(&journal_path), default_view()) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("Store init error: {e}");
+                        std::process::exit(1);
+                    }
+                };
 
             let count = substrate.store().record_count().unwrap_or(0);
             if count == 0 || force {
                 match wm_gen3_harness::starter_galaxy::seed_starter_guide_force(&mut substrate) {
-                    Ok(seeded) => println!("✓ Initialized and seeded starter guide galaxy ({} records committed).", seeded),
+                    Ok(seeded) => println!(
+                        "✓ Initialized and seeded starter guide galaxy ({} records committed).",
+                        seeded
+                    ),
                     Err(e) => {
                         eprintln!("Warning: failed seeding starter guide: {e}");
                     }
                 }
             } else {
-                println!("✓ Store already initialized ({} records present). Starter guide preserved.", count);
+                println!(
+                    "✓ Store already initialized ({} records present). Starter guide preserved.",
+                    count
+                );
             }
             println!("✓ Status: Ready. Run 'wm grimoire' for full diagnostic pass.");
         }
@@ -902,7 +912,9 @@ fn main() {
                         .map(|r| r.len())
                         .unwrap_or(0);
                     let epoch = substrate.store().epoch().unwrap_or(0);
-                    let active_galaxies = wm_gen3_harness::starter_galaxy::list_galaxies(&substrate).unwrap_or_default();
+                    let active_galaxies =
+                        wm_gen3_harness::starter_galaxy::list_galaxies(&substrate)
+                            .unwrap_or_default();
                     println!("==================================================");
                     println!("       WhiteMagic Gen3 Kernel Status (v10.0.0-alpha)");
                     println!("==================================================");
@@ -910,7 +922,10 @@ fn main() {
                     println!("Mode:             ReadOnly (Inspection)");
                     println!("Epoch:            {}", epoch);
                     println!("Records Count:    {}", records_count);
-                    println!("Galaxies Active:  {} (Run 'wm galaxy' to inspect)", active_galaxies.len());
+                    println!(
+                        "Galaxies Active:  {} (Run 'wm galaxy' to inspect)",
+                        active_galaxies.len()
+                    );
                     println!("Relations Count:  {}", relations_count);
                     println!("Budget RPM:       {}", substrate.budget());
                     println!(
@@ -1579,15 +1594,23 @@ fn main() {
             let journal_path = store_path.join("journal.jsonl");
             match action {
                 Some(GalaxyAction::Fork { source, target }) => {
-                    let mut substrate = match Substrate::open(&store_path, Some(&journal_path), default_view()) {
-                        Ok(s) => s,
-                        Err(e) => {
-                            eprintln!("Error opening store for fork: {e}");
-                            std::process::exit(1);
-                        }
-                    };
-                    match wm_gen3_harness::starter_galaxy::fork_galaxy(&mut substrate, &source, &target) {
-                        Ok(n) => println!("✓ Forked {} records from galaxy '{}' into '{}'.", n, source, target),
+                    let mut substrate =
+                        match Substrate::open(&store_path, Some(&journal_path), default_view()) {
+                            Ok(s) => s,
+                            Err(e) => {
+                                eprintln!("Error opening store for fork: {e}");
+                                std::process::exit(1);
+                            }
+                        };
+                    match wm_gen3_harness::starter_galaxy::fork_galaxy(
+                        &mut substrate,
+                        &source,
+                        &target,
+                    ) {
+                        Ok(n) => println!(
+                            "✓ Forked {} records from galaxy '{}' into '{}'.",
+                            n, source, target
+                        ),
                         Err(e) => {
                             eprintln!("Galaxy fork failed: {e}");
                             std::process::exit(1);
@@ -1595,23 +1618,37 @@ fn main() {
                     }
                 }
                 Some(GalaxyAction::Create { name, description }) => {
-                    let mut substrate = match Substrate::open(&store_path, Some(&journal_path), default_view()) {
-                        Ok(s) => s,
-                        Err(e) => {
-                            eprintln!("Error opening store: {e}");
-                            std::process::exit(1);
-                        }
-                    };
-                    match wm_gen3_harness::starter_galaxy::create_galaxy(&mut substrate, &name, description.as_deref()) {
-                        Ok(id) => println!("✓ Galaxy '{}' created (genesis beacon record: {}).", name, id),
+                    let mut substrate =
+                        match Substrate::open(&store_path, Some(&journal_path), default_view()) {
+                            Ok(s) => s,
+                            Err(e) => {
+                                eprintln!("Error opening store: {e}");
+                                std::process::exit(1);
+                            }
+                        };
+                    match wm_gen3_harness::starter_galaxy::create_galaxy(
+                        &mut substrate,
+                        &name,
+                        description.as_deref(),
+                    ) {
+                        Ok(id) => println!(
+                            "✓ Galaxy '{}' created (genesis beacon record: {}).",
+                            name, id
+                        ),
                         Err(e) => {
                             eprintln!("Galaxy creation failed: {e}");
                             std::process::exit(1);
                         }
                     }
                 }
-                Some(GalaxyAction::List) | None if output_html.is_none() && output_json.is_none() => {
-                    let substrate = match Substrate::open_readonly(&store_path, Some(&journal_path), default_view()) {
+                Some(GalaxyAction::List) | None
+                    if output_html.is_none() && output_json.is_none() =>
+                {
+                    let substrate = match Substrate::open_readonly(
+                        &store_path,
+                        Some(&journal_path),
+                        default_view(),
+                    ) {
                         Ok(s) => s,
                         Err(e) => {
                             eprintln!("Error opening store at {}: {e}", store_path.display());
@@ -1625,12 +1662,20 @@ fn main() {
                     println!("==================================================");
                     println!("Store: {}", store_path.display());
                     println!("Total Active Galaxies: {}", galaxies.len());
-                    println!("{:<18} | {:<8} | {:<32}", "Galaxy", "Records", "Sample Tags");
+                    println!(
+                        "{:<18} | {:<8} | {:<32}",
+                        "Galaxy", "Records", "Sample Tags"
+                    );
                     println!("--------------------------------------------------");
                     for g in &galaxies {
                         let marker = if g.is_starter { " (starter)" } else { "" };
                         let name_display = format!("{}{}", g.name, marker);
-                        println!("{:<18} | {:<8} | {:<32}", name_display, g.record_count, g.tags.join(", "));
+                        println!(
+                            "{:<18} | {:<8} | {:<32}",
+                            name_display,
+                            g.record_count,
+                            g.tags.join(", ")
+                        );
                     }
                     println!("==================================================");
                     println!("Branching: 'wm galaxy fork <src> <tgt>', 'wm galaxy create <name>'");
@@ -1653,14 +1698,17 @@ fn main() {
                         limit
                     };
 
-                    let substrate =
-                        match Substrate::open_readonly(&store_path, Some(&journal_path), default_view()) {
-                            Ok(s) => s,
-                            Err(e) => {
-                                eprintln!("Error opening store at {}: {e}", store_path.display());
-                                std::process::exit(1);
-                            }
-                        };
+                    let substrate = match Substrate::open_readonly(
+                        &store_path,
+                        Some(&journal_path),
+                        default_view(),
+                    ) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!("Error opening store at {}: {e}", store_path.display());
+                            std::process::exit(1);
+                        }
+                    };
 
                     let total_records = substrate.store().record_count().unwrap_or(0);
                     let epoch = substrate.store().epoch().unwrap_or(0);
@@ -1733,7 +1781,9 @@ fn main() {
                         eprintln!("Error writing galaxy HTML: {e}");
                     } else {
                         println!("Saved 3D Galaxy HTML:  {}", html_path.display());
-                        println!("Visualizer ready. Open in browser to view the Sangha Galaxy in 3D.");
+                        println!(
+                            "Visualizer ready. Open in browser to view the Sangha Galaxy in 3D."
+                        );
                     }
                 }
             }

@@ -1,8 +1,8 @@
-use std::sync::Arc;
+use crate::retrieval::{RecallResult, TacitVaultEngine};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 use wm_gen3_shm::{RawTuple, ShmTupleSpace};
-use crate::retrieval::{RecallResult, TacitVaultEngine};
 
 pub const VAULT_REQUEST_KIND: u32 = 107;
 pub const VAULT_RESPONSE_KIND: u32 = 108;
@@ -27,7 +27,10 @@ pub struct VaultShmBridge {
 
 impl VaultShmBridge {
     pub fn new(tuple_space: ShmTupleSpace, engine: Arc<TacitVaultEngine>) -> Self {
-        Self { tuple_space, engine }
+        Self {
+            tuple_space,
+            engine,
+        }
     }
 
     /// Process a single incoming query tuple from /dev/shm if present
@@ -38,7 +41,10 @@ impl VaultShmBridge {
             .unwrap_or(0);
 
         // Attempt to take a matching request tuple
-        if let Some(req_tuple) = self.tuple_space.in_matching(Some(VAULT_REQUEST_KIND), None, now_ms) {
+        if let Some(req_tuple) =
+            self.tuple_space
+                .in_matching(Some(VAULT_REQUEST_KIND), None, now_ms)
+        {
             let req: VaultShmRequest = serde_json::from_slice(&req_tuple.payload)
                 .map_err(|e| format!("Failed to parse request payload: {e}"))?;
 
@@ -69,7 +75,8 @@ impl VaultShmBridge {
                 capability_mask: 0xFFFF,
             };
 
-            self.tuple_space.out(&resp_tuple)
+            self.tuple_space
+                .out(&resp_tuple)
                 .map_err(|e| format!("Failed to deposit response tuple: {e}"))?;
 
             Ok(true)

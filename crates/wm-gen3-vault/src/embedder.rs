@@ -1,8 +1,8 @@
+use memmap2::Mmap;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use memmap2::Mmap;
 use wm_gen3_zeropointfive::System05;
 
 pub const VECTOR_FILE_MAGIC: u32 = 0x5641554C; // "VAUL"
@@ -18,15 +18,19 @@ impl VaultEmbedder {
         let dir = System05::resolve_model_dir(model_dir)
             .map_err(|e| format!("Failed to resolve System05 model dir: {e}"))?;
         let organ = Arc::new(System05::new(&dir));
-        organ.ensure_loaded().map_err(|e| format!("Failed to load model: {e}"))?;
+        organ
+            .ensure_loaded()
+            .map_err(|e| format!("Failed to load model: {e}"))?;
 
-        let model_name = dir.file_name()
+        let model_name = dir
+            .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("potion-base-8M")
             .to_string();
 
         // Detect dimension with a test probe
-        let probe = organ.encode_single("probe")
+        let probe = organ
+            .encode_single("probe")
             .map_err(|e| format!("Probe encoding failed: {e}"))?;
         let dimension = probe.len();
 
@@ -146,10 +150,30 @@ fn fast_dot_product(query: &[f32], raw_bytes: &[u8], dim: usize) -> f32 {
 
     for i in 0..chunks {
         let idx = i * 16;
-        let v0 = f32::from_le_bytes([raw_bytes[idx], raw_bytes[idx+1], raw_bytes[idx+2], raw_bytes[idx+3]]);
-        let v1 = f32::from_le_bytes([raw_bytes[idx+4], raw_bytes[idx+5], raw_bytes[idx+6], raw_bytes[idx+7]]);
-        let v2 = f32::from_le_bytes([raw_bytes[idx+8], raw_bytes[idx+9], raw_bytes[idx+10], raw_bytes[idx+11]]);
-        let v3 = f32::from_le_bytes([raw_bytes[idx+12], raw_bytes[idx+13], raw_bytes[idx+14], raw_bytes[idx+15]]);
+        let v0 = f32::from_le_bytes([
+            raw_bytes[idx],
+            raw_bytes[idx + 1],
+            raw_bytes[idx + 2],
+            raw_bytes[idx + 3],
+        ]);
+        let v1 = f32::from_le_bytes([
+            raw_bytes[idx + 4],
+            raw_bytes[idx + 5],
+            raw_bytes[idx + 6],
+            raw_bytes[idx + 7],
+        ]);
+        let v2 = f32::from_le_bytes([
+            raw_bytes[idx + 8],
+            raw_bytes[idx + 9],
+            raw_bytes[idx + 10],
+            raw_bytes[idx + 11],
+        ]);
+        let v3 = f32::from_le_bytes([
+            raw_bytes[idx + 12],
+            raw_bytes[idx + 13],
+            raw_bytes[idx + 14],
+            raw_bytes[idx + 15],
+        ]);
 
         sum0 += query[i * 4] * v0;
         sum1 += query[i * 4 + 1] * v1;
@@ -161,7 +185,12 @@ fn fast_dot_product(query: &[f32], raw_bytes: &[u8], dim: usize) -> f32 {
     let base_idx = chunks * 4;
     for r in 0..remainder {
         let idx = (base_idx + r) * 4;
-        let v = f32::from_le_bytes([raw_bytes[idx], raw_bytes[idx+1], raw_bytes[idx+2], raw_bytes[idx+3]]);
+        let v = f32::from_le_bytes([
+            raw_bytes[idx],
+            raw_bytes[idx + 1],
+            raw_bytes[idx + 2],
+            raw_bytes[idx + 3],
+        ]);
         total += query[base_idx + r] * v;
     }
 

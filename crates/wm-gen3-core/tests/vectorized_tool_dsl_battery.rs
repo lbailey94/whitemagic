@@ -41,7 +41,10 @@ fn test_glyph_parser_pipeline() {
     assert_eq!(pipeline.len(), 2);
 
     assert_eq!(pipeline[0].verb, '⊞');
-    assert_eq!(pipeline[0].target_ident.as_deref(), Some("SharedWorkspace/bridge.py:py"));
+    assert_eq!(
+        pipeline[0].target_ident.as_deref(),
+        Some("SharedWorkspace/bridge.py:py")
+    );
 
     assert_eq!(pipeline[1].verb, '⊕');
     assert_eq!(pipeline[1].params.len(), 4);
@@ -52,8 +55,8 @@ fn test_skeleton_bridge_roundtrip() {
     let input = "⊞[@SharedWorkspace/bridge.py:py] ⊕[fn:get_rooms,σ=\"def get_rooms(self) -> dict:\",+imp=\"import re\",∈=\"class WhiteboardHandler\",∋=\"/api/rooms\"]";
     let pipeline = GlyphParser::parse_pipeline(input).expect("Parse pipeline");
 
-    let skeleton = compile_glyph_to_skeleton(&pipeline[0], &pipeline[1])
-        .expect("Compile to ActionSkeleton");
+    let skeleton =
+        compile_glyph_to_skeleton(&pipeline[0], &pipeline[1]).expect("Compile to ActionSkeleton");
 
     assert_eq!(skeleton.target_file, "SharedWorkspace/bridge.py");
     assert_eq!(skeleton.language, SkeletonLanguage::Python);
@@ -77,7 +80,8 @@ fn test_skeleton_bridge_roundtrip() {
 
 #[test]
 fn test_fast_ast_validator_sub_microsecond() {
-    let source_code = b"import os\n\nclass WhiteboardHandler:\n    def do_GET(self):\n        pass\n";
+    let source_code =
+        b"import os\n\nclass WhiteboardHandler:\n    def do_GET(self):\n        pass\n";
     let source_index = SourceBufferIndex::new(source_code);
 
     let input = "⊞[@SharedWorkspace/bridge.py:py] ⊕[fn:get_rooms,σ=\"def get_rooms(self) -> dict:\",+imp=\"import re\",∈=\"class WhiteboardHandler\",∋=\"/api/rooms\"]";
@@ -86,13 +90,18 @@ fn test_fast_ast_validator_sub_microsecond() {
 
     // 1. Valid execution test
     let res = validate_speculative_fast(&skeleton, &source_index);
-    assert!(res.is_valid, "Validation should succeed: {:?}", res.conflicts);
+    assert!(
+        res.is_valid,
+        "Validation should succeed: {:?}",
+        res.conflicts
+    );
     assert!(res.conflicts.is_empty());
 
     // 2. Conflict test: invariant missing in source code
     let bad_input = "⊞[@SharedWorkspace/bridge.py:py] ⊕[fn:bad,σ=\"def bad():\",∈=\"class NonExistentHandler\"]";
     let bad_pipeline = GlyphParser::parse_pipeline(bad_input).expect("Parse bad pipeline");
-    let bad_skeleton = compile_glyph_to_skeleton(&bad_pipeline[0], &bad_pipeline[1]).expect("Compile");
+    let bad_skeleton =
+        compile_glyph_to_skeleton(&bad_pipeline[0], &bad_pipeline[1]).expect("Compile");
     let bad_res = validate_speculative_fast(&bad_skeleton, &source_index);
     assert!(!bad_res.is_valid);
     assert_eq!(bad_res.conflicts.len(), 1);
@@ -121,7 +130,10 @@ fn test_lwf_wire_encoder_decoder() {
     assert_eq!(decoded.params.len(), original.params.len());
 
     assert_eq!(decoded.params[0].0, 0x43);
-    assert_eq!(decoded.params[0].1, LwfValue::Text("consciousness".to_string()));
+    assert_eq!(
+        decoded.params[0].1,
+        LwfValue::Text("consciousness".to_string())
+    );
 
     assert_eq!(decoded.params[1].0, 0x42);
     if let LwfValue::Score(s) = decoded.params[1].1 {

@@ -9,15 +9,13 @@
 
 #![forbid(unsafe_code)]
 
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
-use serde::{Deserialize, Serialize};
 use wm_gen3_core::constitution::default_view;
 use wm_gen3_core::ops::Substrate;
 
-use crate::starter_galaxy::{
-    GalaxySummary, list_galaxies, seed_starter_guide_if_empty,
-};
+use crate::starter_galaxy::{GalaxySummary, list_galaxies, seed_starter_guide_if_empty};
 
 /// Step execution status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -168,7 +166,9 @@ pub fn run_grimoire(
                 } else {
                     drop(ro_sub);
                     let rw = Substrate::open(store_path, Some(&journal_path), default_view())
-                        .map_err(|e| format!("Failed to open substrate store for initialization: {e}"))?;
+                        .map_err(|e| {
+                            format!("Failed to open substrate store for initialization: {e}")
+                        })?;
                     (rw, false)
                 }
             }
@@ -194,7 +194,11 @@ pub fn run_grimoire(
             store_path.display(),
             substrate.store().epoch().unwrap_or(0),
             initial_count,
-            if was_readonly { "ReadOnly/Shared" } else { "ReadWrite" }
+            if was_readonly {
+                "ReadOnly/Shared"
+            } else {
+                "ReadWrite"
+            }
         ),
         elapsed_ms: t1.elapsed().as_millis(),
     });
@@ -217,9 +221,15 @@ pub fn run_grimoire(
             StepStatus::Ok,
             format!("Starter 'guide' galaxy active ({} records)", g.record_count),
             if seeded > 0 {
-                format!("Genesis seed initialized with {} foundational guide records.", seeded)
+                format!(
+                    "Genesis seed initialized with {} foundational guide records.",
+                    seeded
+                )
             } else {
-                format!("Existing guide galaxy verified with {} records.", g.record_count)
+                format!(
+                    "Existing guide galaxy verified with {} records.",
+                    g.record_count
+                )
             },
         )
     } else {
@@ -258,13 +268,20 @@ pub fn run_grimoire(
     let agent_detail = if detected_names.is_empty() {
         "No standard AI agent IDE directories detected in user home.".to_string()
     } else {
-        format!("Detected {} clients: {}", detected_names.len(), detected_names.join(", "))
+        format!(
+            "Detected {} clients: {}",
+            detected_names.len(),
+            detected_names.join(", ")
+        )
     };
 
     steps.push(GrimoireStep {
         name: "agent_clients",
         status: StepStatus::Ok,
-        summary: format!("Agent detection: {} environments found", detected_names.len()),
+        summary: format!(
+            "Agent detection: {} environments found",
+            detected_names.len()
+        ),
         detail: agent_detail,
         elapsed_ms: t3.elapsed().as_millis(),
     });
@@ -291,7 +308,11 @@ pub fn run_grimoire(
         (
             StepStatus::Ok,
             format!("Retrieval hot-path verified in {verify_us} µs"),
-            format!("Query 'WhiteMagic' yielded {} hits; top rank: '{}'", hits.len(), hits[0].source),
+            format!(
+                "Query 'WhiteMagic' yielded {} hits; top rank: '{}'",
+                hits.len(),
+                hits[0].source
+            ),
         )
     } else if initial_count > 0 || seeded > 0 {
         (
@@ -351,7 +372,14 @@ fn print_grimoire_terminal(report: &GrimoireReport) {
     println!("Kernel Version:   v{}", report.version);
     println!("Store Path:       {}", report.store_path);
     println!("Total Elapsed:    {} ms", report.total_ms);
-    println!("Readiness:        {}", if report.ready { "READY (All systems verified)" } else { "DEGRADED" });
+    println!(
+        "Readiness:        {}",
+        if report.ready {
+            "READY (All systems verified)"
+        } else {
+            "DEGRADED"
+        }
+    );
     println!("--------------------------------------------------");
 
     for s in &report.steps {
@@ -376,7 +404,9 @@ fn print_grimoire_terminal(report: &GrimoireReport) {
     println!("==================================================");
     println!("Next Steps for Your AI Agent:");
     println!("1. To connect via MCP in Claude Code, Cursor, or OpenCode:");
-    println!("   \"mcpServers\": {{ \"whitemagic\": {{ \"command\": \"wm\", \"args\": [\"mcp\"] }} }}");
+    println!(
+        "   \"mcpServers\": {{ \"whitemagic\": {{ \"command\": \"wm\", \"args\": [\"mcp\"] }} }}"
+    );
     println!("2. Hand this starter prompt to your AI:");
     println!("   \"Check our WhiteMagic memory in the 'guide' galaxy, introduce yourself,");
     println!("    and fork a dedicated galaxy for our project.\"");

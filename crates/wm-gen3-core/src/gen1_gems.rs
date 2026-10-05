@@ -58,7 +58,10 @@ impl Gen1Arsenal {
 
     /// Retrieve all gems assigned to a specific plugin pack.
     pub fn gems_for_pack(pack_id: &str) -> Vec<&'static Gen1Gem> {
-        GEN1_50_GEMS.iter().filter(|g| g.pack_id == pack_id).collect()
+        GEN1_50_GEMS
+            .iter()
+            .filter(|g| g.pack_id == pack_id)
+            .collect()
     }
 }
 
@@ -154,7 +157,6 @@ pub const GEN1_50_GEMS: [Gen1Gem; 50] = [
         pack_id: "pack_spectroscopy",
         is_direct_revival: true,
     },
-
     // Cluster B: Code Intelligence & Deep Archaeology
     Gen1Gem {
         id: 11,
@@ -228,7 +230,6 @@ pub const GEN1_50_GEMS: [Gen1Gem; 50] = [
         pack_id: "pack_code_archaeology",
         is_direct_revival: true,
     },
-
     // Cluster C: Divination Archetypes & Non-Linear Intuition
     Gen1Gem {
         id: 19,
@@ -302,7 +303,6 @@ pub const GEN1_50_GEMS: [Gen1Gem; 50] = [
         pack_id: "pack_divination_archetypes",
         is_direct_revival: true,
     },
-
     // Cluster D: Swarm Intelligence & Concurrency Pipelines
     Gen1Gem {
         id: 27,
@@ -376,7 +376,6 @@ pub const GEN1_50_GEMS: [Gen1Gem; 50] = [
         pack_id: "pack_epistemic_prescience",
         is_direct_revival: true,
     },
-
     // Cluster E: Resilience, Governance & Security
     Gen1Gem {
         id: 35,
@@ -450,7 +449,6 @@ pub const GEN1_50_GEMS: [Gen1Gem; 50] = [
         pack_id: "pack_violet_security",
         is_direct_revival: true,
     },
-
     // Cluster F: Continuous Self-Improvement & Meta-Learning
     Gen1Gem {
         id: 43,

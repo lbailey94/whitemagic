@@ -2,13 +2,13 @@
 //!
 //! Sub-microsecond conflict detection with exponential half-life decay.
 
+use crate::layout::{
+    MAX_PHEROMONES, PHEROMONE_STATE_ACTIVE, PHEROMONE_STATE_EMPTY, PHEROMONE_STATE_EVAPORATED,
+    ShmPheromoneSlot,
+};
 use std::marker::PhantomData;
 use std::sync::atomic::Ordering;
 use uuid::Uuid;
-use crate::layout::{
-    ShmPheromoneSlot, MAX_PHEROMONES, PHEROMONE_STATE_ACTIVE,
-    PHEROMONE_STATE_EMPTY, PHEROMONE_STATE_EVAPORATED,
-};
 
 #[derive(Debug, Clone)]
 pub struct RawPheromone {
@@ -47,7 +47,9 @@ impl<'a> ShmStigmergyMatrix<'a> {
         unsafe {
             for i in 0..count {
                 let slot = slots.add(i);
-                (*slot).state_ver.store(PHEROMONE_STATE_EMPTY, Ordering::Relaxed);
+                (*slot)
+                    .state_ver
+                    .store(PHEROMONE_STATE_EMPTY, Ordering::Relaxed);
             }
         }
     }
@@ -71,12 +73,16 @@ impl<'a> ShmStigmergyMatrix<'a> {
 
             let curr = slot.state_ver.load(Ordering::Acquire);
             if curr == PHEROMONE_STATE_EMPTY || curr == PHEROMONE_STATE_EVAPORATED {
-                if slot.state_ver.compare_exchange(
-                    curr,
-                    PHEROMONE_STATE_ACTIVE,
-                    Ordering::AcqRel,
-                    Ordering::Relaxed,
-                ).is_ok() {
+                if slot
+                    .state_ver
+                    .compare_exchange(
+                        curr,
+                        PHEROMONE_STATE_ACTIVE,
+                        Ordering::AcqRel,
+                        Ordering::Relaxed,
+                    )
+                    .is_ok()
+                {
                     unsafe {
                         let slot_ref = &mut *self.base_ptr.add(idx);
                         slot_ref.kind = p.kind;
@@ -180,7 +186,8 @@ impl<'a> ShmStigmergyMatrix<'a> {
                 let current_intensity = slot.initial_intensity * factor;
 
                 if current_intensity < threshold {
-                    slot.state_ver.store(PHEROMONE_STATE_EVAPORATED, Ordering::Release);
+                    slot.state_ver
+                        .store(PHEROMONE_STATE_EVAPORATED, Ordering::Release);
                     purged += 1;
                 }
             }

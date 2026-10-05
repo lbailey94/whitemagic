@@ -167,7 +167,12 @@ impl Pheromone {
 
     /// Checks if this pheromone overlaps with a candidate target and AST scope.
     #[must_use]
-    pub fn overlaps(&self, target_path: &str, candidate_ast_scope: &[String], candidate_lines: Option<(u32, u32)>) -> bool {
+    pub fn overlaps(
+        &self,
+        target_path: &str,
+        candidate_ast_scope: &[String],
+        candidate_lines: Option<(u32, u32)>,
+    ) -> bool {
         if self.target_path != target_path {
             return false;
         }
@@ -178,7 +183,10 @@ impl Pheromone {
         }
 
         // Check AST scope intersection
-        let ast_match = self.ast_scope.iter().any(|node| candidate_ast_scope.iter().any(|c| c == node));
+        let ast_match = self
+            .ast_scope
+            .iter()
+            .any(|node| candidate_ast_scope.iter().any(|c| c == node));
         if ast_match {
             return true;
         }
@@ -216,7 +224,8 @@ impl StigmergicField {
     /// Returns the number of evaporated pheromones purged from the field.
     pub fn evaporate(&mut self, now_ms: u64, threshold: f64) -> usize {
         let before = self.pheromones.len();
-        self.pheromones.retain(|p| !p.is_evaporated(now_ms, threshold));
+        self.pheromones
+            .retain(|p| !p.is_evaporated(now_ms, threshold));
         before - self.pheromones.len()
     }
 
@@ -293,7 +302,9 @@ impl StigmergicField {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let json = self.to_json().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        let json = self
+            .to_json()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
         let tmp_path = PathBuf::from(format!("{}.tmp.{}", path.display(), Uuid::new_v4()));
         std::fs::write(&tmp_path, json)?;
         std::fs::rename(tmp_path, path)?;
@@ -303,14 +314,21 @@ impl StigmergicField {
     /// Connect to a named zero-copy POSIX shared memory substrate.
     pub fn open_shm(name: &str) -> std::io::Result<wm_gen3_shm::ShmStigmergyField> {
         let substrate = wm_gen3_shm::ShmSubstrate::open_or_create(name)?;
-        Ok(wm_gen3_shm::ShmStigmergyField::new(std::sync::Arc::new(substrate)))
+        Ok(wm_gen3_shm::ShmStigmergyField::new(std::sync::Arc::new(
+            substrate,
+        )))
     }
 
     /// Attach to an inherited shared memory file descriptor (for Landlock sandboxes).
     #[cfg(unix)]
-    pub fn attach_shm_fd(fd: std::os::unix::io::RawFd, is_owner: bool) -> std::io::Result<wm_gen3_shm::ShmStigmergyField> {
+    pub fn attach_shm_fd(
+        fd: std::os::unix::io::RawFd,
+        is_owner: bool,
+    ) -> std::io::Result<wm_gen3_shm::ShmStigmergyField> {
         let substrate = wm_gen3_shm::ShmSubstrate::from_raw_fd(fd, is_owner)?;
-        Ok(wm_gen3_shm::ShmStigmergyField::new(std::sync::Arc::new(substrate)))
+        Ok(wm_gen3_shm::ShmStigmergyField::new(std::sync::Arc::new(
+            substrate,
+        )))
     }
 }
 
@@ -360,7 +378,8 @@ mod tests {
             0.9,
             30_000,
             "opencode",
-        ).with_line_range(180, 260);
+        )
+        .with_line_range(180, 260);
         p1.emitted_at_ms = now;
         field.emit(p1);
 

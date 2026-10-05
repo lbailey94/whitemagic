@@ -145,7 +145,9 @@ impl<'a> GlyphParser<'a> {
         let mut in_quote = false;
         let mut end = start;
 
-        for (idx, ch) in std::iter::once((start, self.input[start..].chars().next().unwrap())).chain(iter) {
+        for (idx, ch) in
+            std::iter::once((start, self.input[start..].chars().next().unwrap())).chain(iter)
+        {
             if ch == '"' {
                 in_quote = !in_quote;
             } else if !in_quote && (ch == ',' || ch == ']') {
@@ -236,7 +238,15 @@ impl<'a> GlyphParser<'a> {
         }
         let mut end = start;
         while let Some((idx, ch)) = self.peek_char() {
-            if ch == '=' || ch == '>' || ch == '<' || ch == '≈' || ch == '≡' || ch == ']' || ch == ',' || ch.is_whitespace() {
+            if ch == '='
+                || ch == '>'
+                || ch == '<'
+                || ch == '≈'
+                || ch == '≡'
+                || ch == ']'
+                || ch == ','
+                || ch.is_whitespace()
+            {
                 break;
             }
             self.next_char();
@@ -290,7 +300,22 @@ impl<'a> GlyphParser<'a> {
 pub fn is_verb_glyph(ch: char) -> bool {
     matches!(
         ch,
-        '🔍' | '⊕' | '⊖' | '⊗' | '⊙' | '↻' | '⇄' | '⇉' | '⊳' | '⊲' | '⊣' | '⊢' | '⚡' | '🔒' | '⟲' | '⟳' | '⊞'
+        '🔍' | '⊕'
+            | '⊖'
+            | '⊗'
+            | '⊙'
+            | '↻'
+            | '⇄'
+            | '⇉'
+            | '⊳'
+            | '⊲'
+            | '⊣'
+            | '⊢'
+            | '⚡'
+            | '🔒'
+            | '⟲'
+            | '⟳'
+            | '⊞'
     )
 }
 
@@ -298,7 +323,21 @@ pub fn is_verb_glyph(ch: char) -> bool {
 pub fn is_domain_glyph(ch: char) -> bool {
     matches!(
         ch,
-        '◆' | '◇' | '◈' | '◉' | '◊' | '⬡' | '⬢' | '⬣' | '⬭' | '⊞' | '⌗' | '🪪' | '📜' | '📡' | '📦' | '⚖'
+        '◆' | '◇'
+            | '◈'
+            | '◉'
+            | '◊'
+            | '⬡'
+            | '⬢'
+            | '⬣'
+            | '⬭'
+            | '⊞'
+            | '⌗'
+            | '🪪'
+            | '📜'
+            | '📡'
+            | '📦'
+            | '⚖'
     )
 }
 

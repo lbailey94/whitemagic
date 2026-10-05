@@ -4,13 +4,15 @@ use tempfile::tempdir;
 use uuid::Uuid;
 
 use wm_gen3_shm::{RawTuple, ShmSubstrate, ShmTupleSpace};
-use wm_gen3_zeropointfive::System05;
 use wm_gen3_vault::chunker::Chunker;
-use wm_gen3_vault::extractor::{OpencodeExtractor, NormalizedTurn};
+use wm_gen3_vault::extractor::{NormalizedTurn, OpencodeExtractor};
 use wm_gen3_vault::graph::CausalGraphBuilder;
 use wm_gen3_vault::retrieval::TacitVaultEngine;
 use wm_gen3_vault::schema::open_vault_db;
-use wm_gen3_vault::shm_bridge::{VaultShmBridge, VaultShmRequest, VaultShmResponse, VAULT_REQUEST_KIND, VAULT_RESPONSE_KIND};
+use wm_gen3_vault::shm_bridge::{
+    VAULT_REQUEST_KIND, VAULT_RESPONSE_KIND, VaultShmBridge, VaultShmRequest, VaultShmResponse,
+};
+use wm_gen3_zeropointfive::System05;
 
 /// Resolve the System05 potion checkpoint, or `None` when it is absent.
 /// CI runners carry no model weights; model-dependent tests skip there and
@@ -41,11 +43,13 @@ fn test_schema_initialization_and_tables() {
     assert_eq!(count, 6, "Expected 6 core relational tables");
 
     // Verify FTS5 virtual table exists
-    let fts_count: i64 = conn.query_row(
-        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='vault_fts'",
-        [],
-        |row| row.get(0),
-    ).expect("query fts");
+    let fts_count: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='vault_fts'",
+            [],
+            |row| row.get(0),
+        )
+        .expect("query fts");
     assert_eq!(fts_count, 1, "Expected vault_fts virtual table");
 }
 
@@ -82,7 +86,8 @@ fn test_extractor_normalization_and_redaction() {
             data text NOT NULL
         );
         "#,
-    ).expect("init mock schema");
+    )
+    .expect("init mock schema");
 
     // Insert mock session
     conn.execute(
@@ -125,14 +130,20 @@ fn test_extractor_normalization_and_redaction() {
     assert_eq!(sessions.len(), 1);
     assert_eq!(sessions[0].title, "Mandala Landlock Implementation");
 
-    let turns = extractor.extract_session_turns("sess_01").expect("extract turns");
+    let turns = extractor
+        .extract_session_turns("sess_01")
+        .expect("extract turns");
     assert_eq!(turns.len(), 3);
 
     // Verify Turn 0: User question with secret redaction
     assert_eq!(turns[0].role, "user");
     assert_eq!(turns[0].turn_type, "question");
     assert!(turns[0].clean_text.contains("[REDACTED_API_KEY]"));
-    assert!(!turns[0].clean_text.contains("sk-abcdef12345678901234567890"));
+    assert!(
+        !turns[0]
+            .clean_text
+            .contains("sk-abcdef12345678901234567890")
+    );
     assert!(turns[0].importance >= 0.7);
 
     // Verify Turn 1: Error
@@ -166,7 +177,8 @@ fn test_4_tier_semantic_chunking() {
             seq: 1,
             role: "assistant".to_string(),
             turn_type: "decision".to_string(),
-            clean_text: "We should use POSIX shared memory /dev/shm and Linda tuple spaces.".to_string(),
+            clean_text: "We should use POSIX shared memory /dev/shm and Linda tuple spaces."
+                .to_string(),
             importance: 0.9,
             valence: 0.5,
             time_created: 1050,
@@ -178,7 +190,8 @@ fn test_4_tier_semantic_chunking() {
             seq: 2,
             role: "assistant".to_string(),
             turn_type: "breakthrough".to_string(),
-            clean_text: "test result: ok. 6 passed in 0.15s. Ratified 340,000x speedup!".to_string(),
+            clean_text: "test result: ok. 6 passed in 0.15s. Ratified 340,000x speedup!"
+                .to_string(),
             importance: 0.95,
             valence: 0.9,
             time_created: 1100,
@@ -187,7 +200,10 @@ fn test_4_tier_semantic_chunking() {
     ];
 
     let chunks = Chunker::chunk_session("s1", "Sub-Symbolic Genesis", &turns);
-    assert!(chunks.len() >= 4, "Should have Tier 0, Tier 1, Tier 2, and Tier 3 chunks");
+    assert!(
+        chunks.len() >= 4,
+        "Should have Tier 0, Tier 1, Tier 2, and Tier 3 chunks"
+    );
 
     let t0 = chunks.iter().filter(|c| c.tier == 0).count();
     let t1 = chunks.iter().filter(|c| c.tier == 1).count();
@@ -238,7 +254,8 @@ fn test_causal_graph_mining() {
             seq: 2,
             role: "assistant".to_string(),
             turn_type: "breakthrough".to_string(),
-            clean_text: "SO_REUSEADDR and SO_REUSEPORT configured. test result: ok. 10 passed.".to_string(),
+            clean_text: "SO_REUSEADDR and SO_REUSEPORT configured. test result: ok. 10 passed."
+                .to_string(),
             importance: 0.95,
             valence: 0.9,
             time_created: 1100,
@@ -262,7 +279,10 @@ fn test_causal_graph_mining() {
 
     let has_supersedes = edges.iter().any(|e| e.relation_kind == "supersedes");
     let has_causal = edges.iter().any(|e| e.relation_kind == "causal");
-    assert!(has_supersedes, "Must link Breakthrough -> Problem via supersedes");
+    assert!(
+        has_supersedes,
+        "Must link Breakthrough -> Problem via supersedes"
+    );
     assert!(has_causal, "Must link Directive -> Breakthrough via causal");
 
     // Verify persistence into SQLite
@@ -274,7 +294,9 @@ fn test_causal_graph_mining() {
     ).unwrap();
     CausalGraphBuilder::persist_graph(&mut conn, &nodes, &edges).expect("persist graph");
 
-    let node_count: i64 = conn.query_row("SELECT count(*) FROM vault_nodes", [], |r| r.get(0)).unwrap();
+    let node_count: i64 = conn
+        .query_row("SELECT count(*) FROM vault_nodes", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(node_count as usize, nodes.len());
 }
 
@@ -336,11 +358,17 @@ fn test_hybrid_retrieval_and_rrf() {
 
     let engine = TacitVaultEngine::new(organ, conn, None, Vec::new()).expect("create engine");
 
-    let results = engine.recall_associative("Landlock kernel isolation", 5).expect("recall");
+    let results = engine
+        .recall_associative("Landlock kernel isolation", 5)
+        .expect("recall");
     assert!(!results.is_empty(), "Should recall matching chunk");
     assert_eq!(results[0].chunk_id, "c_landlock");
     assert!(results[0].text.contains("Landlock LSM"));
-    assert!(results[0].linked_directives.contains(&"DIR-02: Mandala Landlock LSM".to_string()));
+    assert!(
+        results[0]
+            .linked_directives
+            .contains(&"DIR-02: Mandala Landlock LSM".to_string())
+    );
 }
 
 #[test]
@@ -395,11 +423,13 @@ fn test_shm_bridge_roundtrip() {
         .map(|d| d.as_millis() as u64)
         .unwrap_or(0);
 
-    let resp_tuple = tuple_space.in_matching(Some(VAULT_RESPONSE_KIND), None, now_ms)
+    let resp_tuple = tuple_space
+        .in_matching(Some(VAULT_RESPONSE_KIND), None, now_ms)
         .expect("should find response tuple");
     assert_eq!(resp_tuple.resource_path, "req_test_123");
 
-    let resp: VaultShmResponse = serde_json::from_slice(&resp_tuple.payload).expect("parse response");
+    let resp: VaultShmResponse =
+        serde_json::from_slice(&resp_tuple.payload).expect("parse response");
     assert_eq!(resp.req_id, "req_test_123");
 
     let _ = substrate.clone();

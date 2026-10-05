@@ -33,14 +33,15 @@ pub mod cladistics;
 pub mod compat;
 pub mod conformal;
 pub mod constitution;
-pub mod covenant;
 pub mod contract;
+pub mod covenant;
 pub mod dream;
 pub mod dsl;
 pub mod evidence;
 pub mod factory;
 pub mod field;
 pub mod ganying;
+pub mod gen1_gems;
 pub mod geometry;
 pub mod hologram;
 pub mod homeostasis;
@@ -62,14 +63,15 @@ pub mod stigmergy;
 pub mod store;
 pub mod sweep;
 pub(crate) mod sweep_planner;
-pub mod gen1_gems;
 pub mod transport;
 pub mod tuple_space;
 
 pub use action_skeleton::{ActionSkeleton, AstActionType, AstDelta, SkeletonValidationResult};
 pub use causal_ticket::CausalCapabilityTicket;
-pub use covenant::{CovenantView, GroundAspect, MandalaKosha, PrimordialCovenant, RSI_LAWS, SUBSTRATE_ARTICLES};
-pub use gen1_gems::{Gen1Arsenal, Gen1Gem, GemCluster, PluginPack};
+pub use covenant::{
+    CovenantView, GroundAspect, MandalaKosha, PrimordialCovenant, RSI_LAWS, SUBSTRATE_ARTICLES,
+};
+pub use gen1_gems::{GemCluster, Gen1Arsenal, Gen1Gem, PluginPack};
 pub use stigmergy::{Pheromone, PheromoneKind, StigmergicField};
 pub use tuple_space::{Tuple, TupleKind, TuplePattern, TupleSpace};
 

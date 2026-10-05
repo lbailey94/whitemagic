@@ -48,10 +48,7 @@ pub enum TupleKind {
         issuer: String,
     },
     /// Generic string-tagged tuple.
-    Generic {
-        tag: String,
-        payload: String,
-    },
+    Generic { tag: String, payload: String },
 }
 
 mod serde_bytes_vec {
@@ -105,7 +102,9 @@ mod serde_token_32 {
             let s = String::deserialize(d)?;
             let vec = hex::decode(&s).map_err(serde::de::Error::custom)?;
             if vec.len() != 32 {
-                return Err(serde::de::Error::custom("expected 32 bytes for landlock_token"));
+                return Err(serde::de::Error::custom(
+                    "expected 32 bytes for landlock_token",
+                ));
             }
             let mut arr = [0u8; 32];
             arr.copy_from_slice(&vec);
@@ -174,29 +173,98 @@ impl Tuple {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
 
-        let (kind_discriminator, resource_path, tag, payload, landlock_token, capability_mask, holder_issuer) =
-            match &self.kind {
-                TupleKind::Claim { resource, holder, .. } => {
-                    (1, resource.clone(), "claim:exclusive".to_string(), Vec::new(), [0u8; 32], 0, holder.clone())
-                }
-                TupleKind::Task { task_id: _, action, target, payload } => {
-                    (2, target.clone(), format!("task:{action}"), payload.clone(), [0u8; 32], 0, String::new())
-                }
-                TupleKind::AuthorityGrant { task_id: _, granter, capability_mask, landlock_token } => {
-                    (3, String::new(), "authority:grant".to_string(), Vec::new(), *landlock_token, *capability_mask, granter.clone())
-                }
-                TupleKind::ResultNotice { task_id: _, success, output_summary, duration_ms } => {
-                    let payload_bytes = serde_json::to_vec(&(success, duration_ms, output_summary)).unwrap_or_default();
-                    (4, String::new(), "result:notice".to_string(), payload_bytes, [0u8; 32], 0, String::new())
-                }
-                TupleKind::PheromoneSync { resource, intensity, issuer } => {
-                    let payload_bytes = intensity.to_le_bytes().to_vec();
-                    (5, resource.clone(), "pheromone:sync".to_string(), payload_bytes, [0u8; 32], 0, issuer.clone())
-                }
-                TupleKind::Generic { tag, payload } => {
-                    (6, String::new(), tag.clone(), payload.as_bytes().to_vec(), [0u8; 32], 0, String::new())
-                }
-            };
+        let (
+            kind_discriminator,
+            resource_path,
+            tag,
+            payload,
+            landlock_token,
+            capability_mask,
+            holder_issuer,
+        ) = match &self.kind {
+            TupleKind::Claim {
+                resource, holder, ..
+            } => (
+                1,
+                resource.clone(),
+                "claim:exclusive".to_string(),
+                Vec::new(),
+                [0u8; 32],
+                0,
+                holder.clone(),
+            ),
+            TupleKind::Task {
+                task_id: _,
+                action,
+                target,
+                payload,
+            } => (
+                2,
+                target.clone(),
+                format!("task:{action}"),
+                payload.clone(),
+                [0u8; 32],
+                0,
+                String::new(),
+            ),
+            TupleKind::AuthorityGrant {
+                task_id: _,
+                granter,
+                capability_mask,
+                landlock_token,
+            } => (
+                3,
+                String::new(),
+                "authority:grant".to_string(),
+                Vec::new(),
+                *landlock_token,
+                *capability_mask,
+                granter.clone(),
+            ),
+            TupleKind::ResultNotice {
+                task_id: _,
+                success,
+                output_summary,
+                duration_ms,
+            } => {
+                let payload_bytes =
+                    serde_json::to_vec(&(success, duration_ms, output_summary)).unwrap_or_default();
+                (
+                    4,
+                    String::new(),
+                    "result:notice".to_string(),
+                    payload_bytes,
+                    [0u8; 32],
+                    0,
+                    String::new(),
+                )
+            }
+            TupleKind::PheromoneSync {
+                resource,
+                intensity,
+                issuer,
+            } => {
+                let payload_bytes = intensity.to_le_bytes().to_vec();
+                (
+                    5,
+                    resource.clone(),
+                    "pheromone:sync".to_string(),
+                    payload_bytes,
+                    [0u8; 32],
+                    0,
+                    issuer.clone(),
+                )
+            }
+            TupleKind::Generic { tag, payload } => (
+                6,
+                String::new(),
+                tag.clone(),
+                payload.as_bytes().to_vec(),
+                [0u8; 32],
+                0,
+                String::new(),
+            ),
+        };
 
         let mut r_hasher = DefaultHasher::new();
         resource_path.hash(&mut r_hasher);
@@ -230,7 +298,11 @@ impl Tuple {
                 ttl_ms: raw.expires_at_ms.saturating_sub(raw.created_at_ms),
             },
             2 => {
-                let action = raw.tag.strip_prefix("task:").unwrap_or(&raw.tag).to_string();
+                let action = raw
+                    .tag
+                    .strip_prefix("task:")
+                    .unwrap_or(&raw.tag)
+                    .to_string();
                 TupleKind::Task {
                     task_id: raw.id,
                     action,
@@ -356,7 +428,9 @@ impl TuplePattern {
     #[must_use]
     pub fn matches(&self, tuple: &Tuple) -> bool {
         match &tuple.kind {
-            TupleKind::Claim { resource, holder, .. } => {
+            TupleKind::Claim {
+                resource, holder, ..
+            } => {
                 if let Some(kf) = &self.kind_filter {
                     if kf != "Claim" {
                         return false;
@@ -374,7 +448,9 @@ impl TuplePattern {
                 }
                 true
             }
-            TupleKind::Task { task_id, target, .. } => {
+            TupleKind::Task {
+                task_id, target, ..
+            } => {
                 if let Some(kf) = &self.kind_filter {
                     if kf != "Task" {
                         return false;
@@ -392,7 +468,9 @@ impl TuplePattern {
                 }
                 true
             }
-            TupleKind::AuthorityGrant { task_id, granter, .. } => {
+            TupleKind::AuthorityGrant {
+                task_id, granter, ..
+            } => {
                 if let Some(kf) = &self.kind_filter {
                     if kf != "AuthorityGrant" {
                         return false;
@@ -423,7 +501,9 @@ impl TuplePattern {
                 }
                 true
             }
-            TupleKind::PheromoneSync { resource, issuer, .. } => {
+            TupleKind::PheromoneSync {
+                resource, issuer, ..
+            } => {
                 if let Some(kf) = &self.kind_filter {
                     if kf != "PheromoneSync" {
                         return false;
@@ -479,7 +559,10 @@ impl TupleSpace {
 
     /// Linda `in(pattern)`: Atomically extracts and removes the first matching unexpired tuple.
     pub fn in_matching(&mut self, pattern: &TuplePattern, now_ms: u64) -> Option<Tuple> {
-        let idx = self.tuples.iter().position(|t| !t.is_expired(now_ms) && pattern.matches(t))?;
+        let idx = self
+            .tuples
+            .iter()
+            .position(|t| !t.is_expired(now_ms) && pattern.matches(t))?;
         Some(self.tuples.remove(idx))
     }
 
@@ -548,14 +631,22 @@ impl TupleSpace {
         if let Ok(space) = Self::from_msgpack(&data) {
             Ok(space)
         } else if let Ok(json) = std::str::from_utf8(&data) {
-            Self::from_json(json).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+            Self::from_json(json)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized tuple space format"))
+            Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "unrecognized tuple space format",
+            ))
         }
     }
 
     /// Atomically persists the tuple space to a shared memory path or disk file.
-    pub fn save_to_path(&self, path: impl AsRef<Path>, binary_msgpack: bool) -> std::io::Result<()> {
+    pub fn save_to_path(
+        &self,
+        path: impl AsRef<Path>,
+        binary_msgpack: bool,
+    ) -> std::io::Result<()> {
         let path = path.as_ref();
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
@@ -577,14 +668,21 @@ impl TupleSpace {
     /// Connect to a named zero-copy POSIX shared memory substrate.
     pub fn open_shm(name: &str) -> std::io::Result<wm_gen3_shm::ShmTupleSpace> {
         let substrate = wm_gen3_shm::ShmSubstrate::open_or_create(name)?;
-        Ok(wm_gen3_shm::ShmTupleSpace::new(std::sync::Arc::new(substrate)))
+        Ok(wm_gen3_shm::ShmTupleSpace::new(std::sync::Arc::new(
+            substrate,
+        )))
     }
 
     /// Attach to an inherited shared memory file descriptor (for Landlock sandboxes).
     #[cfg(unix)]
-    pub fn attach_shm_fd(fd: std::os::unix::io::RawFd, is_owner: bool) -> std::io::Result<wm_gen3_shm::ShmTupleSpace> {
+    pub fn attach_shm_fd(
+        fd: std::os::unix::io::RawFd,
+        is_owner: bool,
+    ) -> std::io::Result<wm_gen3_shm::ShmTupleSpace> {
         let substrate = wm_gen3_shm::ShmSubstrate::from_raw_fd(fd, is_owner)?;
-        Ok(wm_gen3_shm::ShmTupleSpace::new(std::sync::Arc::new(substrate)))
+        Ok(wm_gen3_shm::ShmTupleSpace::new(std::sync::Arc::new(
+            substrate,
+        )))
     }
 }
 
@@ -612,7 +710,8 @@ mod tests {
 
         // 2. Querying claims
         assert_eq!(space.count(&TuplePattern::any_claim(), now), 1);
-        let rd_claims = space.rd_matching(&TuplePattern::claim_for("SharedWorkspace/bridge.py"), now);
+        let rd_claims =
+            space.rd_matching(&TuplePattern::claim_for("SharedWorkspace/bridge.py"), now);
         assert_eq!(rd_claims.len(), 1);
 
         // 3. Agent B dispatches a Task
@@ -634,7 +733,12 @@ mod tests {
         let taken = space.in_matching(&TuplePattern::task_for("SharedWorkspace/bridge.py"), now);
         assert!(taken.is_some());
         let taken_tuple = taken.unwrap();
-        if let TupleKind::Task { task_id: tid, action, .. } = taken_tuple.kind {
+        if let TupleKind::Task {
+            task_id: tid,
+            action,
+            ..
+        } = taken_tuple.kind
+        {
             assert_eq!(tid, task_id);
             assert_eq!(action, "verify_endpoint");
         } else {
@@ -642,7 +746,10 @@ mod tests {
         }
 
         // Now task is gone from the space
-        assert_eq!(space.count(&TuplePattern::task_for("SharedWorkspace/bridge.py"), now), 0);
+        assert_eq!(
+            space.count(&TuplePattern::task_for("SharedWorkspace/bridge.py"), now),
+            0
+        );
 
         // 5. Expiration purge
         assert_eq!(space.len(), 1); // claim is still there

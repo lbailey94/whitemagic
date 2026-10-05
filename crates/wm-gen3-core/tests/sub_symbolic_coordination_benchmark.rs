@@ -60,8 +60,17 @@ fn test_sub_symbolic_coordination_benchmarks() {
     let sense_us = sense_dur.as_secs_f64() * 1_000_000.0 / (n_stig as f64);
 
     println!("[1. Digital Stigmergy]");
-    println!("  Emission throughput:     {:.2} µs/op ({:.0} ops/sec)", emit_us, (n_stig as f64) / emit_dur.as_secs_f64());
-    println!("  Conflict sensing:        {:.2} µs/op ({:.0} ops/sec, {} hits)", sense_us, (n_stig as f64) / sense_dur.as_secs_f64(), conflict_hits);
+    println!(
+        "  Emission throughput:     {:.2} µs/op ({:.0} ops/sec)",
+        emit_us,
+        (n_stig as f64) / emit_dur.as_secs_f64()
+    );
+    println!(
+        "  Conflict sensing:        {:.2} µs/op ({:.0} ops/sec, {} hits)",
+        sense_us,
+        (n_stig as f64) / sense_dur.as_secs_f64(),
+        conflict_hits
+    );
     assert!(emit_us < 10.0, "Emission must be < 10 µs in memory");
 
     // -------------------------------------------------------------------------
@@ -104,9 +113,23 @@ fn test_sub_symbolic_coordination_benchmarks() {
     let in_us = in_dur.as_secs_f64() * 1_000_000.0 / (consumed as f64);
 
     println!("\n[2. Associative Tuple Space (Linda)]");
-    println!("  Tuple out() deposit:     {:.2} µs/op ({:.0} ops/sec)", out_us, (n_tuple as f64) / out_dur.as_secs_f64());
-    println!("  Tuple rd() match:        {:.2} µs/op ({:.0} ops/sec, {} matches)", rd_us, (n_tuple as f64) / rd_dur.as_secs_f64(), rd_matches);
-    println!("  Tuple in() extract:      {:.2} µs/op ({:.0} ops/sec, consumed: {})", in_us, (consumed as f64) / in_dur.as_secs_f64(), consumed);
+    println!(
+        "  Tuple out() deposit:     {:.2} µs/op ({:.0} ops/sec)",
+        out_us,
+        (n_tuple as f64) / out_dur.as_secs_f64()
+    );
+    println!(
+        "  Tuple rd() match:        {:.2} µs/op ({:.0} ops/sec, {} matches)",
+        rd_us,
+        (n_tuple as f64) / rd_dur.as_secs_f64(),
+        rd_matches
+    );
+    println!(
+        "  Tuple in() extract:      {:.2} µs/op ({:.0} ops/sec, consumed: {})",
+        in_us,
+        (consumed as f64) / in_dur.as_secs_f64(),
+        consumed
+    );
     assert_eq!(space.len(), 0);
 
     // -------------------------------------------------------------------------
@@ -146,8 +169,16 @@ fn test_sub_symbolic_coordination_benchmarks() {
     let verify_us = verify_dur.as_secs_f64() * 1_000_000.0 / (n_ticket as f64);
 
     println!("\n[3. Causal Capability & JEV Tickets]");
-    println!("  Mint & Ed25519 Sign:     {:.2} µs/ticket ({:.0} tickets/sec)", mint_us, (n_ticket as f64) / mint_dur.as_secs_f64());
-    println!("  Cryptographic Verify:    {:.2} µs/ticket ({:.0} verifications/sec)", verify_us, (n_ticket as f64) / verify_dur.as_secs_f64());
+    println!(
+        "  Mint & Ed25519 Sign:     {:.2} µs/ticket ({:.0} tickets/sec)",
+        mint_us,
+        (n_ticket as f64) / mint_dur.as_secs_f64()
+    );
+    println!(
+        "  Cryptographic Verify:    {:.2} µs/ticket ({:.0} verifications/sec)",
+        verify_us,
+        (n_ticket as f64) / verify_dur.as_secs_f64()
+    );
 
     // -------------------------------------------------------------------------
     // 4. Action Skeleton Speculative AST Streaming (10,000 validations)
@@ -184,7 +215,11 @@ class WhiteboardHandler(SimpleHTTPRequestHandler):
     let skel_us = skel_dur.as_secs_f64() * 1_000_000.0 / (n_skel as f64);
 
     println!("\n[4. Action Skeleton Speculative AST Streaming]");
-    println!("  AST Validation avg:      {:.2} µs/op ({:.0} validations/sec)", skel_us, (n_skel as f64) / skel_dur.as_secs_f64());
+    println!(
+        "  AST Validation avg:      {:.2} µs/op ({:.0} validations/sec)",
+        skel_us,
+        (n_skel as f64) / skel_dur.as_secs_f64()
+    );
     println!("  Rejection latency:       < 1 µs");
 
     // -------------------------------------------------------------------------
@@ -196,10 +231,19 @@ class WhiteboardHandler(SimpleHTTPRequestHandler):
     let speedup = (llm_chat_ms / total_sub_ms) as u64;
 
     println!("\n================================================================================");
-    println!("TOTAL SUBSTRATE 4-HOP ROUND TRIP: {:.4} ms (vs 40,000.0 ms Chat)", total_sub_ms);
-    println!("PERFORMANCE SPEEDUP:              {}x FASTER THAN ANTHROPOCENTRIC CHAT", speedup);
+    println!(
+        "TOTAL SUBSTRATE 4-HOP ROUND TRIP: {:.4} ms (vs 40,000.0 ms Chat)",
+        total_sub_ms
+    );
+    println!(
+        "PERFORMANCE SPEEDUP:              {}x FASTER THAN ANTHROPOCENTRIC CHAT",
+        speedup
+    );
     println!("TOKEN CONSUMPTION:                0 TOKENS (100% SAVED)");
     println!("================================================================================\n");
 
-    assert!(total_sub_ms < 25.0, "Total 4-hop sub-symbolic cycle must be under 25 milliseconds in debug mode!");
+    assert!(
+        total_sub_ms < 25.0,
+        "Total 4-hop sub-symbolic cycle must be under 25 milliseconds in debug mode!"
+    );
 }

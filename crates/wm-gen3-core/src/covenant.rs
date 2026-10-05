@@ -13,10 +13,10 @@
 
 #![forbid(unsafe_code)]
 
+use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use serde::{Deserialize, Serialize};
-use ed25519_dalek::{VerifyingKey, Signature, Verifier};
 
 use crate::constitution::{ConstitutionView, INVARIANTS};
 
@@ -55,11 +55,11 @@ pub enum GroundAspect {
 /// The Five Kosha layers of MandalaOS.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum MandalaKosha {
-    Annamaya = 1,   // Hardware, POSIX shm, Landlock sandboxing
-    Pranamaya = 2,  // Flow, Linda tuple space, IPC
-    Manomaya = 3,   // Core Ganas (Vayu, Akasha, Prithvi, IndraNet, Yama, Lakshmi)
-    Vijnanamaya = 4,// Action Skeletons, Epistemic Substrate, Citta Dream Compiler
-    Anandamaya = 5, // Operator Sovereign Interface, Gnosis Introspection
+    Annamaya = 1,    // Hardware, POSIX shm, Landlock sandboxing
+    Pranamaya = 2,   // Flow, Linda tuple space, IPC
+    Manomaya = 3,    // Core Ganas (Vayu, Akasha, Prithvi, IndraNet, Yama, Lakshmi)
+    Vijnanamaya = 4, // Action Skeletons, Epistemic Substrate, Citta Dream Compiler
+    Anandamaya = 5,  // Operator Sovereign Interface, Gnosis Introspection
 }
 
 /// Immutable, owned snapshot view of the Primordial Covenant.
@@ -78,32 +78,52 @@ pub struct CovenantView {
 
 impl CovenantView {
     #[must_use]
-    pub fn kadag_hash(&self) -> u64 { self.kadag_hash }
+    pub fn kadag_hash(&self) -> u64 {
+        self.kadag_hash
+    }
 
     #[must_use]
-    pub fn articles_hash(&self) -> u64 { self.articles_hash }
+    pub fn articles_hash(&self) -> u64 {
+        self.articles_hash
+    }
 
     #[must_use]
-    pub fn rsi_laws_hash(&self) -> u64 { self.rsi_laws_hash }
+    pub fn rsi_laws_hash(&self) -> u64 {
+        self.rsi_laws_hash
+    }
 
     #[must_use]
-    pub fn operator_did(&self) -> &str { &self.operator_did }
+    pub fn operator_did(&self) -> &str {
+        &self.operator_did
+    }
 
     #[must_use]
-    pub fn operator_key_bytes(&self) -> &[u8; 32] { &self.operator_key_bytes }
+    pub fn operator_key_bytes(&self) -> &[u8; 32] {
+        &self.operator_key_bytes
+    }
 
     #[must_use]
-    pub fn covenant_version(&self) -> u32 { self.covenant_version }
+    pub fn covenant_version(&self) -> u32 {
+        self.covenant_version
+    }
 
     #[must_use]
-    pub fn epoch_timestamp_ns(&self) -> u64 { self.epoch_timestamp_ns }
+    pub fn epoch_timestamp_ns(&self) -> u64 {
+        self.epoch_timestamp_ns
+    }
 
     #[must_use]
-    pub fn constitution(&self) -> &ConstitutionView { &self.constitution_view }
+    pub fn constitution(&self) -> &ConstitutionView {
+        &self.constitution_view
+    }
 
     /// Gnosis Portal inspection: verifies that an operation respects the Kadag boundaries.
     #[must_use]
-    pub fn inspect_boundary(&self, target_kosha: MandalaKosha, requested_write_to_law: bool) -> bool {
+    pub fn inspect_boundary(
+        &self,
+        target_kosha: MandalaKosha,
+        requested_write_to_law: bool,
+    ) -> bool {
         if requested_write_to_law {
             // Under Kadag, NO adaptive write may reach constitutional state.
             return false;
@@ -119,7 +139,9 @@ impl CovenantView {
     #[must_use]
     pub fn verify_rsi_witness(&self, proposer_id: &str, verifier_id: &str) -> bool {
         // Law I: Maker != Checker. An organ cannot witness its own improvement.
-        !proposer_id.trim().is_empty() && !verifier_id.trim().is_empty() && proposer_id != verifier_id
+        !proposer_id.trim().is_empty()
+            && !verifier_id.trim().is_empty()
+            && proposer_id != verifier_id
     }
 }
 
@@ -185,11 +207,8 @@ impl PrimordialCovenant {
             .map_err(|_| "Covenant Amendment Failed: Invalid Operator Signature")?;
 
         self.covenant_version += 1;
-        let receipt = Self::calculate_hash(&(
-            self.receipt_secret,
-            self.covenant_version,
-            amendment_bytes,
-        ));
+        let receipt =
+            Self::calculate_hash(&(self.receipt_secret, self.covenant_version, amendment_bytes));
         Ok(receipt)
     }
 

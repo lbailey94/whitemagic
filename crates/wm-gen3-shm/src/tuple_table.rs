@@ -1,12 +1,12 @@
 //! Atomic associative Linda Tuple Table over shared memory slot array.
 
+use crate::layout::{
+    MAX_TUPLES, ShmTupleSlot, TUPLE_STATE_COMMITTED, TUPLE_STATE_EMPTY, TUPLE_STATE_EXPIRED,
+    TUPLE_STATE_TAKEN, TUPLE_STATE_WRITING,
+};
 use std::marker::PhantomData;
 use std::sync::atomic::Ordering;
 use uuid::Uuid;
-use crate::layout::{
-    ShmTupleSlot, MAX_TUPLES, TUPLE_STATE_COMMITTED, TUPLE_STATE_EMPTY,
-    TUPLE_STATE_EXPIRED, TUPLE_STATE_TAKEN, TUPLE_STATE_WRITING,
-};
 
 #[derive(Debug, Clone)]
 pub struct RawTuple {
@@ -37,7 +37,9 @@ impl<'a> ShmTupleTable<'a> {
         unsafe {
             for i in 0..count {
                 let slot = slots.add(i);
-                (*slot).state_ver.store(TUPLE_STATE_EMPTY, Ordering::Relaxed);
+                (*slot)
+                    .state_ver
+                    .store(TUPLE_STATE_EMPTY, Ordering::Relaxed);
                 (*slot).kind_discriminator = 0;
                 (*slot).expires_at_ms = 0;
                 (*slot).payload_len = 0;
@@ -62,14 +64,19 @@ impl<'a> ShmTupleTable<'a> {
             let slot = unsafe { &*self.base_ptr.add(idx) };
 
             let curr = slot.state_ver.load(Ordering::Acquire);
-            if curr == TUPLE_STATE_EMPTY || curr == TUPLE_STATE_EXPIRED || curr == TUPLE_STATE_TAKEN {
+            if curr == TUPLE_STATE_EMPTY || curr == TUPLE_STATE_EXPIRED || curr == TUPLE_STATE_TAKEN
+            {
                 // Attempt to claim slot for writing
-                if slot.state_ver.compare_exchange(
-                    curr,
-                    TUPLE_STATE_WRITING,
-                    Ordering::AcqRel,
-                    Ordering::Relaxed,
-                ).is_ok() {
+                if slot
+                    .state_ver
+                    .compare_exchange(
+                        curr,
+                        TUPLE_STATE_WRITING,
+                        Ordering::AcqRel,
+                        Ordering::Relaxed,
+                    )
+                    .is_ok()
+                {
                     // Claimed! Write slot fields using raw pointer
                     unsafe {
                         let slot_ref = &mut *self.base_ptr.add(idx);
@@ -99,7 +106,9 @@ impl<'a> ShmTupleTable<'a> {
                         slot_ref.inline_payload[..pl_len].copy_from_slice(&tuple.payload[..pl_len]);
 
                         // Publish committed state
-                        slot_ref.state_ver.store(TUPLE_STATE_COMMITTED, Ordering::Release);
+                        slot_ref
+                            .state_ver
+                            .store(TUPLE_STATE_COMMITTED, Ordering::Release);
                     }
                     return Ok(tuple.id);
                 }
@@ -144,12 +153,16 @@ impl<'a> ShmTupleTable<'a> {
                 }
 
                 // Try to take
-                if slot.state_ver.compare_exchange(
-                    TUPLE_STATE_COMMITTED,
-                    TUPLE_STATE_TAKEN,
-                    Ordering::AcqRel,
-                    Ordering::Relaxed,
-                ).is_ok() {
+                if slot
+                    .state_ver
+                    .compare_exchange(
+                        TUPLE_STATE_COMMITTED,
+                        TUPLE_STATE_TAKEN,
+                        Ordering::AcqRel,
+                        Ordering::Relaxed,
+                    )
+                    .is_ok()
+                {
                     return Some(self.read_slot(slot));
                 }
             }
@@ -198,8 +211,13 @@ impl<'a> ShmTupleTable<'a> {
         let p_len = (slot.payload_len as usize).min(384);
         let payload = slot.inline_payload[..p_len].to_vec();
 
-        let path_nul = slot.resource_path_str.iter().position(|&b| b == 0).unwrap_or(128);
-        let resource_path = String::from_utf8_lossy(&slot.resource_path_str[..path_nul]).into_owned();
+        let path_nul = slot
+            .resource_path_str
+            .iter()
+            .position(|&b| b == 0)
+            .unwrap_or(128);
+        let resource_path =
+            String::from_utf8_lossy(&slot.resource_path_str[..path_nul]).into_owned();
 
         let tag_nul = slot.tag_str.iter().position(|&b| b == 0).unwrap_or(64);
         let tag = String::from_utf8_lossy(&slot.tag_str[..tag_nul]).into_owned();

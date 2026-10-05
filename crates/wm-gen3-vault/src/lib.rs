@@ -3,18 +3,18 @@
 //! Sub-symbolic cyberbrain indexing 1,389 sessions, 132,090 messages from opencode.db
 //! into an associative query graph and System 0.5 Model2Vec static vector index.
 
-pub mod schema;
-pub mod extractor;
 pub mod chunker;
+pub mod cold_storage;
+pub mod daemon;
 pub mod embedder;
+pub mod extractor;
 pub mod graph;
 pub mod retrieval;
+pub mod schema;
 pub mod shm_bridge;
-pub mod daemon;
-pub mod cold_storage;
 
-pub use retrieval::TacitVaultEngine;
 pub use cold_storage::ColdStorageEngine;
+pub use retrieval::TacitVaultEngine;
 
 /// Truncate a UTF-8 string safely at or before `max_bytes` without slicing inside a multi-byte code point
 pub fn safe_truncate(s: &str, max_bytes: usize) -> &str {

@@ -80,12 +80,18 @@ fn test_operator_sovereign_amendment_success_and_tamper_rejection() {
     let forged_sig = imposter_sk.sign(forged_amendment);
 
     let err = covenant.apply_operator_amendment(forged_amendment, &forged_sig);
-    assert!(err.is_err(), "Imposter amendment must be rejected fail-closed");
+    assert!(
+        err.is_err(),
+        "Imposter amendment must be rejected fail-closed"
+    );
 
     // 3. Tampered payload with operator signature is rejected
     let tampered_payload = b"AMENDMENT_01: Tampered text";
     let err_tamper = covenant.apply_operator_amendment(tampered_payload, &valid_sig);
-    assert!(err_tamper.is_err(), "Tampered payload must fail signature verification");
+    assert!(
+        err_tamper.is_err(),
+        "Tampered payload must fail signature verification"
+    );
 }
 
 #[test]

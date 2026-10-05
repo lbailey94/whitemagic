@@ -7,13 +7,13 @@ pub mod parser;
 pub mod skeleton_bridge;
 pub mod wire;
 
-pub use fast_ast_validator::{validate_speculative_fast, SourceBufferIndex};
+pub use fast_ast_validator::{SourceBufferIndex, validate_speculative_fast};
 pub use parser::{
-    is_chain_op, is_domain_glyph, is_special_key, is_verb_glyph, GlyphInstruction, GlyphParam,
-    GlyphParser,
+    GlyphInstruction, GlyphParam, GlyphParser, is_chain_op, is_domain_glyph, is_special_key,
+    is_verb_glyph,
 };
 pub use skeleton_bridge::{compile_glyph_to_skeleton, compile_skeleton_to_glyph};
 pub use wire::{
-    LwfInstruction, LwfValue, FLAG_DRY_RUN, FLAG_HIGH_PRIORITY, FLAG_PIPELINED,
-    FLAG_SPECULATIVE, LWF_MAGIC, LWF_VERSION,
+    FLAG_DRY_RUN, FLAG_HIGH_PRIORITY, FLAG_PIPELINED, FLAG_SPECULATIVE, LWF_MAGIC, LWF_VERSION,
+    LwfInstruction, LwfValue,
 };

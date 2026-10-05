@@ -2,9 +2,9 @@
 //!
 //! Sub-microsecond (< 250ns) transfer latency across multi-core workers.
 
+use crate::layout::RingCell;
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicU64, Ordering};
-use crate::layout::RingCell;
 
 #[repr(C, align(64))]
 pub struct MpmcQueueHeader {
@@ -64,12 +64,11 @@ impl<'a> ShmMpmcQueue<'a> {
 
             if dif == 0 {
                 // Try to claim the cell
-                if header.head.compare_exchange_weak(
-                    pos,
-                    pos + 1,
-                    Ordering::Relaxed,
-                    Ordering::Relaxed,
-                ).is_ok() {
+                if header
+                    .head
+                    .compare_exchange_weak(pos, pos + 1, Ordering::Relaxed, Ordering::Relaxed)
+                    .is_ok()
+                {
                     // Cell claimed! Copy data
                     let len = payload.len().min(cell.payload.len());
                     unsafe {
@@ -109,12 +108,11 @@ impl<'a> ShmMpmcQueue<'a> {
 
             if dif == 0 {
                 // Try to claim the cell for consumer
-                if header.tail.compare_exchange_weak(
-                    pos,
-                    pos + 1,
-                    Ordering::Relaxed,
-                    Ordering::Relaxed,
-                ).is_ok() {
+                if header
+                    .tail
+                    .compare_exchange_weak(pos, pos + 1, Ordering::Relaxed, Ordering::Relaxed)
+                    .is_ok()
+                {
                     // Cell claimed! Read data
                     let len = (cell.payload_len as usize).min(out_buf.len());
                     let flags = cell.flags;

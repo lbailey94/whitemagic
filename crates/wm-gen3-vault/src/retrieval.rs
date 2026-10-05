@@ -1,12 +1,12 @@
+use memmap2::Mmap;
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use memmap2::Mmap;
 
-use wm_gen3_zeropointfive::System05;
 use crate::embedder::VaultEmbedder;
+use wm_gen3_zeropointfive::System05;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecallResult {
@@ -64,18 +64,15 @@ impl TacitVaultEngine {
         let t0 = Instant::now();
 
         // 1. Vectorize query (< 0.2ms)
-        let q_vec = self.organ.encode_single(query)
+        let q_vec = self
+            .organ
+            .encode_single(query)
             .map_err(|e| format!("Query vectorization failed: {e}"))?;
 
         // 2. Dense Vector Scan (< 1.3ms)
         let dense_candidates = if let Some(ref mmap) = self.vectors_mmap {
-            let scanned = VaultEmbedder::scan_top_k(
-                &q_vec,
-                mmap,
-                self.vector_count,
-                self.vector_dim,
-                k * 2,
-            );
+            let scanned =
+                VaultEmbedder::scan_top_k(&q_vec, mmap, self.vector_count, self.vector_dim, k * 2);
             scanned
                 .into_iter()
                 .filter_map(|(idx, score)| {
@@ -87,8 +84,7 @@ impl TacitVaultEngine {
         };
 
         // 3. Sparse FTS5 BM25 Scan (< 0.9ms)
-        let sparse_candidates = self.search_fts5(query, k * 2)
-            .unwrap_or_default();
+        let sparse_candidates = self.search_fts5(query, k * 2).unwrap_or_default();
 
         // 4. Reciprocal Rank Fusion (RRF with k=60)
         let fused_chunk_ids = rrf_merge(&dense_candidates, &sparse_candidates, k);
@@ -99,7 +95,10 @@ impl TacitVaultEngine {
         let elapsed_ms = t0.elapsed().as_secs_f64() * 1000.0;
         // In high load or tests, allow modest overhead, but print telemetry if debugging
         if std::env::var("WM_VAULT_BENCHMARK").is_ok() {
-            eprintln!("[DIR-08 Vault] Recall completed in {elapsed_ms:.2}ms (candidates: {})", results.len());
+            eprintln!(
+                "[DIR-08 Vault] Recall completed in {elapsed_ms:.2}ms (candidates: {})",
+                results.len()
+            );
         }
 
         Ok(results)
@@ -107,7 +106,10 @@ impl TacitVaultEngine {
 
     /// Query SQLite FTS5 table
     fn search_fts5(&self, query: &str, limit: usize) -> rusqlite::Result<Vec<(String, f32)>> {
-        let conn = self.conn.lock().map_err(|_| rusqlite::Error::ExecuteReturnedResults)?;
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| rusqlite::Error::ExecuteReturnedResults)?;
         // Sanitize query for FTS5 syntax
         let sanitized: String = query
             .chars()
@@ -145,26 +147,33 @@ impl TacitVaultEngine {
     }
 
     /// Hydrate chunk texts from database and pull associated graph nodes
-    fn hydrate_and_expand_graph(&self, ranked: &[(String, f32)]) -> Result<Vec<RecallResult>, String> {
+    fn hydrate_and_expand_graph(
+        &self,
+        ranked: &[(String, f32)],
+    ) -> Result<Vec<RecallResult>, String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock failed: {e}"))?;
         let mut results = Vec::new();
 
-        let mut chunk_stmt = conn.prepare_cached(
-            r#"
+        let mut chunk_stmt = conn
+            .prepare_cached(
+                r#"
             SELECT session_id, tier, chunk_text
             FROM vault_chunks
             WHERE chunk_id = ?1
             "#,
-        ).map_err(|e| format!("Prepare chunk failed: {e}"))?;
+            )
+            .map_err(|e| format!("Prepare chunk failed: {e}"))?;
 
-        let mut graph_stmt = conn.prepare_cached(
-            r#"
+        let mut graph_stmt = conn
+            .prepare_cached(
+                r#"
             SELECT n.node_type, n.label
             FROM vault_nodes n
             WHERE n.session_id = ?1
             LIMIT 5
             "#,
-        ).map_err(|e| format!("Prepare graph failed: {e}"))?;
+            )
+            .map_err(|e| format!("Prepare graph failed: {e}"))?;
 
         for (chunk_id, score) in ranked {
             let chunk_info = chunk_stmt.query_row(params![chunk_id], |row| {
@@ -179,7 +188,8 @@ impl TacitVaultEngine {
                 let mut directives = Vec::new();
                 let mut breakthroughs = Vec::new();
 
-                let mut node_rows = graph_stmt.query(params![session_id])
+                let mut node_rows = graph_stmt
+                    .query(params![session_id])
                     .map_err(|e| format!("Query graph failed: {e}"))?;
 
                 while let Ok(Some(row)) = node_rows.next() {

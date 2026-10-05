@@ -1,7 +1,7 @@
 //! Bi-directional compilation bridge between Vectorized Tool DSL and ActionSkeleton.
 
-use crate::action_skeleton::{ActionSkeleton, AstActionType, AstDelta, SkeletonLanguage};
 use super::parser::GlyphInstruction;
+use crate::action_skeleton::{ActionSkeleton, AstActionType, AstDelta, SkeletonLanguage};
 use uuid::Uuid;
 
 /// Compiles a target instruction (⊞) and delta instruction (⊕/⊗/⊖) into a typed ActionSkeleton.
@@ -10,7 +10,10 @@ pub fn compile_glyph_to_skeleton(
     delta_spec: &GlyphInstruction,
 ) -> Result<ActionSkeleton, String> {
     // 1. Resolve Target File and Language from ⊞[@path:lang]
-    let path_and_lang = target_spec.target_ident.as_ref().ok_or("Missing target in ⊞")?;
+    let path_and_lang = target_spec
+        .target_ident
+        .as_ref()
+        .ok_or("Missing target in ⊞")?;
     let (target_file, lang_str) = match path_and_lang.split_once(':') {
         Some((p, l)) => (p.trim_start_matches('@'), l),
         None => (path_and_lang.trim_start_matches('@'), "py"),
