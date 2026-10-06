@@ -237,6 +237,18 @@ enum Commands {
         #[arg(long, default_value_t = 20)]
         limit: usize,
     },
+    /// Ingest migrated v9 session turns into Gen3 substrate evidence (resumable)
+    BackfillSessionEvidence {
+        /// Legacy Gen2 store directory containing data.mdb
+        #[arg(long)]
+        source: PathBuf,
+        /// Ingest batch size
+        #[arg(long, default_value_t = 250)]
+        batch_size: usize,
+        /// Stop after this many turns (0 = all)
+        #[arg(long, default_value_t = 0)]
+        limit: usize,
+    },
     /// Output machine-checked route and schema contract manifest
     Contract {
         /// Output formatted JSON manifest
@@ -2252,6 +2264,13 @@ fn main() {
         }
         Commands::Quarantine { file, limit } => {
             run_quarantine_review(&file, limit);
+        }
+        Commands::BackfillSessionEvidence {
+            source,
+            batch_size,
+            limit,
+        } => {
+            run_backfill_session_evidence(&source, &store_path, batch_size, limit);
         }
         Commands::Mesh { command } => {
             run_mesh_command(command, &store_path);
@@ -5155,6 +5174,173 @@ fn run_quarantine_review(file: &Path, limit: usize) {
                 record.get("reason").and_then(|v| v.as_str()).unwrap_or("")
             );
         }
+    }
+}
+
+fn run_backfill_session_evidence(
+    source: &Path,
+    store_path: &Path,
+    batch_size: usize,
+    limit: usize,
+) {
+    use std::io::Write;
+
+    println!("==================================================");
+    println!("   Gen3 Session Evidence Backfill (resumable)      ");
+    println!("==================================================");
+    println!("Source (Gen2): {}", source.display());
+    println!("Target (Gen3): {}", store_path.display());
+    println!("Batch size:    {}", batch_size.max(1));
+    println!(
+        "Limit:         {}",
+        if limit == 0 {
+            "all".to_string()
+        } else {
+            limit.to_string()
+        }
+    );
+    println!("==================================================");
+
+    let reader = match Gen2Reader::open(source) {
+        Ok(reader) => reader,
+        Err(e) => {
+            eprintln!(
+                "Failed to open legacy Gen2 store at {}: {e}",
+                source.display()
+            );
+            std::process::exit(1);
+        }
+    };
+    let (turns, decode_skipped) = match reader.session_turns() {
+        Ok(turns) => turns,
+        Err(e) => {
+            eprintln!("Failed to scan legacy session turns: {e}");
+            std::process::exit(1);
+        }
+    };
+    let total = if limit > 0 {
+        turns.len().min(limit)
+    } else {
+        turns.len()
+    };
+    println!(
+        "Turns found: {} (decode/non-turn skipped: {})",
+        turns.len(),
+        decode_skipped
+    );
+    if total == 0 {
+        println!("Nothing to ingest.");
+        return;
+    }
+
+    let journal = store_path.join("journal.jsonl");
+    let mut substrate = match Substrate::open(store_path, Some(&journal), default_view()) {
+        Ok(substrate) => substrate,
+        Err(e) => {
+            eprintln!(
+                "Failed to open target Gen3 store at {}: {e}",
+                store_path.display()
+            );
+            std::process::exit(1);
+        }
+    };
+
+    let old_noise = substrate.noise_enabled();
+    substrate.set_noise_enabled(false);
+    let old_budget = substrate.budget();
+    substrate.set_budget(0);
+    substrate.set_intake_authority(RatifiedChannel::mint("wm-session-evidence"));
+
+    let batch = batch_size.max(1);
+    let started = std::time::Instant::now();
+    let mut processed = 0usize;
+    let mut ingested = 0usize;
+    let mut duplicates = 0usize;
+    let mut failed = 0usize;
+    let mut last_mark = 0usize;
+
+    for chunk in turns[..total].chunks(batch) {
+        let items: Vec<RememberItem> = chunk
+            .iter()
+            .map(|turn| {
+                let content_text = match &turn.content {
+                    serde_json::Value::String(s) => s.clone(),
+                    other => other.to_string(),
+                };
+                RememberItem {
+                    content: format!(
+                        "[session:{}] {}: {}",
+                        turn.session_id, turn.role, content_text
+                    ),
+                    source: format!("session:{}", turn.session_id),
+                    kind: ImportKind::Reported,
+                }
+            })
+            .collect();
+
+        for outcome in substrate.remember_batch(&items) {
+            match outcome {
+                Ok(_) => ingested += 1,
+                Err(err) if err == "duplicate_exact" => duplicates += 1,
+                Err(err) => {
+                    if failed < 5 {
+                        eprintln!("  ingest refusal: {err}");
+                    }
+                    failed += 1;
+                }
+            }
+        }
+
+        processed += chunk.len();
+        let mark = processed / 2000;
+        if mark > last_mark {
+            last_mark = mark;
+            let elapsed = started.elapsed().as_secs_f64().max(0.001);
+            let rate = processed as f64 / elapsed;
+            let eta = (total.saturating_sub(processed)) as f64 / rate.max(0.001);
+            println!(
+                "progress {processed}/{total} ingested={ingested} duplicates={duplicates} failed={failed} rate={rate:.0}/s eta={eta:.0}s"
+            );
+            let _ = std::io::stdout().flush();
+        }
+    }
+
+    substrate.set_budget(old_budget);
+    substrate.set_noise_enabled(old_noise);
+
+    let elapsed = started.elapsed().as_secs_f64();
+    let unix_ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let receipt = serde_json::json!({
+        "kind": "wm-gen3-session-evidence-backfill",
+        "version": WM_VERSION,
+        "source": source.display().to_string(),
+        "target": store_path.display().to_string(),
+        "total_turns": turns.len(),
+        "processed": processed,
+        "ingested": ingested,
+        "duplicates": duplicates,
+        "failed": failed,
+        "decode_skipped": decode_skipped,
+        "elapsed_secs": elapsed,
+        "unix_ts": unix_ts
+    });
+    let out = store_path.join("evidence_backfill_receipt.json");
+    match serde_json::to_string_pretty(&receipt) {
+        Ok(serialized) => match std::fs::write(&out, serialized) {
+            Ok(()) => println!("Receipt: {}", out.display()),
+            Err(e) => eprintln!("failed to write receipt: {e}"),
+        },
+        Err(e) => eprintln!("failed to serialize receipt: {e}"),
+    }
+    println!("==================================================");
+    println!(
+        "Processed: {processed}/{total}  ingested: {ingested}  duplicates: {duplicates}  failed: {failed}  in {elapsed:.1}s"
+    );
+    if failed > 0 {
+        std::process::exit(1);
     }
 }
 
