@@ -5,6 +5,29 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.2.0-alpha.4] — 2026-10-06
+
+### Added
+- **`wm selftest` is now a real host diagnostic.** The command CI, install
+  certification, and users run first previously printed `{"status":"ok"}`
+  without reading a single host metric — a machine can thrash on zram swap
+  while selftest reports success. It now reports disk headroom on `/`,
+  available memory, kernel pressure-stall (`/proc/pressure/memory|io`),
+  swap/zram saturation, crash-looping systemd user units (`auto-restart`
+  state), and the top memory processes, each with an actionable hint.
+  `--strict` exits non-zero on critical findings; `--json` keeps the install
+  contract stable (`status: ok` + invariants) and carries the host verdict
+  separately as `host_status` + `host_health` (Linux; every probe is
+  best-effort and degrades to no check, never to an error).
+
+### Changed
+- **Misconfigured units fail loudly instead of restarting forever.**
+  WhiteMagic's systemd templates gained `StartLimitIntervalSec=120` /
+  `StartLimitBurst=5`; a unit with drifted arguments now surfaces as
+  `failed` instead of accumulating five-figure restart counters (field
+  observation, 2026-10-06: 6.5k–6.7k restarts across three misconfigured
+  user units while the host thrashed on zram swap).
+
 ## [10.2.0-alpha.3] — 2026-10-05
 
 ### Fixed

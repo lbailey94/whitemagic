@@ -448,6 +448,9 @@ enum Commands {
         /// Output results as JSON
         #[arg(long)]
         json: bool,
+        /// Exit non-zero when host health is critical (script/guard use)
+        #[arg(long)]
+        strict: bool,
     },
 }
 
@@ -2358,31 +2361,63 @@ fn main() {
         Commands::Organ { command } => run_organ_command(command, &store_path),
         Commands::Peer { command } => run_peer_command(command, &store_path),
         Commands::Sentinel { command } => run_sentinel_command(command, &store_path),
-        Commands::Selftest { json } => match run_persistence_selftest() {
-            Ok(report) if json => println!(
-                "{}",
-                serde_json::to_string(&report).expect("serializing a JSON Value cannot fail")
-            ),
-            Ok(report) => println!(
-                "WhiteMagic Gen3 persistence selftest: PASS ({} durable record, {} journal events, isolated scratch store, version {})",
-                report["records"], report["journal_events"], WM_VERSION
-            ),
-            Err(error) => {
-                if json {
+        Commands::Selftest { json, strict } => {
+            // Install invariants are the persistence probe; host health rides
+            // alongside it. The install contract (`status`) stays driven by
+            // persistence so release-health certification is unaffected; the
+            // host verdict is exposed separately as host_status/host_health
+            // (2026-10-06 incident: the old stub reported ok while the host
+            // thrashed on zram swap).
+            let health = wm_gen3_harness::host_health::collect();
+            let host_verdict = health.status;
+            match run_persistence_selftest() {
+                Ok(report) if json => {
+                    let mut report = report;
+                    if let Some(object) = report.as_object_mut() {
+                        object.insert(
+                            "host_status".to_string(),
+                            serde_json::json!(host_verdict.as_str()),
+                        );
+                        object.insert(
+                            "host_health".to_string(),
+                            serde_json::to_value(&health).unwrap_or(serde_json::Value::Null),
+                        );
+                    }
                     println!(
                         "{}",
-                        serde_json::json!({
-                            "status": "error",
-                            "persistence": "failed",
-                            "error": error
-                        })
+                        serde_json::to_string(&report)
+                            .expect("serializing a JSON Value cannot fail")
                     );
-                } else {
-                    eprintln!("WhiteMagic Gen3 persistence selftest: FAIL: {error}");
                 }
+                Ok(report) => {
+                    println!(
+                        "WhiteMagic Gen3 persistence selftest: PASS ({} durable record, {} journal events, isolated scratch store, version {})",
+                        report["records"], report["journal_events"], WM_VERSION
+                    );
+                    for line in health.render_lines() {
+                        println!("{line}");
+                    }
+                }
+                Err(error) => {
+                    if json {
+                        println!(
+                            "{}",
+                            serde_json::json!({
+                                "status": "error",
+                                "persistence": "failed",
+                                "error": error
+                            })
+                        );
+                    } else {
+                        eprintln!("WhiteMagic Gen3 persistence selftest: FAIL: {error}");
+                    }
+                    std::process::exit(1);
+                }
+            }
+            if strict && host_verdict == wm_gen3_harness::host_health::Verdict::Critical {
                 std::process::exit(1);
             }
-        },
+        }
     }
 }
 
