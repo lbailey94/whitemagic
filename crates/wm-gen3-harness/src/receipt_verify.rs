@@ -1180,7 +1180,7 @@ mod tests {
         assert!(
             verify_receipt_value(&value, &store)
                 .unwrap_err()
-                .contains("candidate 0")
+                .contains("candidate 1")
         );
         std::fs::remove_dir_all(store).expect("cleanup fixture store");
     }

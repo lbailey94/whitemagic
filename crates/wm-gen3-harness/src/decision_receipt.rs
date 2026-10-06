@@ -99,9 +99,18 @@ impl DecisionReceipt {
             candidate_set_version: arg_str(args, "candidate_set_version"),
             task_class: arg_str(args, "task_class"),
             decision_digest: sha256_hex(&Value::Array(decisions)),
-            chosen: first.get("chosen").cloned(),
-            confidence: first.get("confidence").cloned(),
-            act_probability: first.get("act_probability").cloned(),
+            chosen: first
+                .get("chosen")
+                .cloned()
+                .filter(|value| !value.is_null()),
+            confidence: first
+                .get("confidence")
+                .cloned()
+                .filter(|value| !value.is_null()),
+            act_probability: first
+                .get("act_probability")
+                .cloned()
+                .filter(|value| !value.is_null()),
             model_id: outcome
                 .get("model")
                 .and_then(Value::as_str)
@@ -362,9 +371,49 @@ mod tests {
         receipt
             .verify(&key.verifying_key())
             .expect("signature verifies");
+        let serialized = serde_json::to_string(&receipt).expect("serialize receipt");
+        let deserialized: DecisionReceipt =
+            serde_json::from_str(&serialized).expect("deserialize receipt");
+        deserialized
+            .verify(&key.verifying_key())
+            .expect("populated receipt survives JSON roundtrip");
 
         let wrong = SigningKey::from_bytes(&[9u8; 32]);
         assert!(receipt.verify(&wrong.verifying_key()).is_err());
+    }
+
+    #[test]
+    fn absent_optional_projections_keep_json_shape_and_verify_after_roundtrip() {
+        let outcome = json!({
+            "answers": { "question": { "type": "choice" } }
+        });
+        let state = json!("state");
+        let questions = json!({"question": {"type": "choice"}});
+        let args = json!({});
+        let mut receipt = DecisionReceipt::from_outcome(
+            &outcome,
+            &state,
+            &questions,
+            &args,
+            "did:key:fixture".to_string(),
+        );
+        assert!(receipt.chosen.is_none());
+        assert!(receipt.confidence.is_none());
+        assert!(receipt.act_probability.is_none());
+        let key = SigningKey::from_bytes(&[17u8; 32]);
+        receipt.sign(&key);
+        let serialized = serde_json::to_value(&receipt).expect("serialize receipt");
+        assert!(serialized["chosen"].is_null());
+        assert!(serialized["confidence"].is_null());
+        assert!(serialized["act_probability"].is_null());
+        let deserialized: DecisionReceipt =
+            serde_json::from_value(serialized).expect("deserialize receipt");
+        assert!(deserialized.chosen.is_none());
+        assert!(deserialized.confidence.is_none());
+        assert!(deserialized.act_probability.is_none());
+        deserialized
+            .verify(&key.verifying_key())
+            .expect("absent optional projections verify after JSON roundtrip");
     }
 
     #[test]
