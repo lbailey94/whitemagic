@@ -1052,7 +1052,7 @@ pub fn execute_hybrid_tool_call(
         "session.checkpoint" | "session_checkpoint" => {
             handle_session_checkpoint(args, substrate, readonly)
         }
-        "session.start" => handle_session_start(args),
+        "session.start" => handle_session_start(args, store_path),
         "session.list" | "session_list" => handle_session_list(substrate, store_path),
         "session.recall" | "session.replay" => handle_session_recall(args, store_path),
 
@@ -1849,7 +1849,9 @@ fn handle_session_record(
     let session_id = args
         .get("session_id")
         .and_then(Value::as_str)
-        .unwrap_or("default");
+        .map(str::to_string)
+        .or_else(|| last_session_lane(store_path))
+        .unwrap_or_else(|| "default".to_string());
     let role = args.get("role").and_then(Value::as_str).unwrap_or("user");
     let turn_type = args
         .get("turn_type")
@@ -2004,12 +2006,36 @@ fn handle_session_checkpoint(
     }))
 }
 
-fn handle_session_start(args: &Value) -> Result<Value, String> {
+fn handle_session_start(args: &Value, store_path: &Path) -> Result<Value, String> {
     let session_id = Uuid::new_v4().to_string();
     let title = args
         .get("title")
         .and_then(Value::as_str)
         .unwrap_or("Active Session");
+
+    // Persist a start marker so subsequent `session.record` calls without an
+    // explicit `session_id` continue this lane (matching v9 semantics).
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let marker = json!({
+        "type": "session_start",
+        "session_id": session_id,
+        "title": title,
+        "role": "system",
+        "turn_type": "session_start",
+        "content": format!("session started: {title}"),
+        "timestamp": now
+    });
+    let session_log = store_path.join("session_log.jsonl");
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&session_log)
+    {
+        let _ = writeln!(file, "{marker}");
+    }
 
     Ok(json!({
         "status": "success",
@@ -2017,6 +2043,22 @@ fn handle_session_start(args: &Value) -> Result<Value, String> {
         "title": title,
         "state": "active"
     }))
+}
+
+/// Most recent session lane recorded in `session_log.jsonl`.
+///
+/// Used as the fallback lane for `session.record` when the caller does not
+/// pass an explicit `session_id`, so records continue the active lane instead
+/// of pooling every client into "default".
+fn last_session_lane(store_path: &Path) -> Option<String> {
+    let content = std::fs::read_to_string(store_path.join("session_log.jsonl")).ok()?;
+    content.lines().rev().find_map(|line| {
+        let value: Value = serde_json::from_str(line).ok()?;
+        value
+            .get("session_id")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+    })
 }
 
 fn handle_session_list(substrate: &Substrate, store_path: &Path) -> Result<Value, String> {
@@ -3767,5 +3809,44 @@ mod legacy_tests {
                 "search for '{word}' should hit at least one record"
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod session_lane_tests {
+    use super::*;
+
+    #[test]
+    fn last_session_lane_reads_tail() {
+        let dir = std::env::temp_dir().join(format!("wm-lane-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let log = dir.join("session_log.jsonl");
+        std::fs::write(
+            &log,
+            "{\"session_id\":\"lane-a\",\"content\":\"a\"}\n{\"session_id\":\"lane-b\",\"content\":\"b\"}\n",
+        )
+        .expect("write log");
+        assert_eq!(last_session_lane(&dir).as_deref(), Some("lane-b"));
+
+        std::fs::write(&log, "").expect("empty log");
+        assert_eq!(last_session_lane(&dir), None);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn session_start_appends_lane_marker() {
+        let dir = std::env::temp_dir().join(format!("wm-lane-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let result =
+            handle_session_start(&json!({"title": "lane test"}), &dir).expect("session start");
+        let lane = result["session_id"]
+            .as_str()
+            .expect("session id")
+            .to_string();
+        assert_eq!(last_session_lane(&dir).as_deref(), Some(lane.as_str()));
+
+        let log = std::fs::read_to_string(dir.join("session_log.jsonl")).expect("read log");
+        assert!(log.contains("\"type\":\"session_start\""));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
