@@ -12,7 +12,9 @@ use clap::{Parser, Subcommand};
 use std::io::BufRead;
 use std::path::{Path, PathBuf};
 
-use wm_gen3_core::compat::{Gen2Census, Gen2Reader, MigrationOptions, migrate_gen2_to_gen3};
+use wm_gen3_core::compat::{
+    Gen2Census, Gen2Reader, MigrationOptions, migrate_gen2_sessions_to_gen3, migrate_gen2_to_gen3,
+};
 use wm_gen3_core::constitution::default_view;
 use wm_gen3_core::evidence::RatifiedChannel;
 use wm_gen3_core::mandala::{
@@ -4791,6 +4793,29 @@ fn run_migration(
             if receipt.quarantined_count > 0 {
                 println!("Quarantine Log At:     {}", q_path.display());
             }
+
+            let session_log = target.join("session_log.jsonl");
+            match migrate_gen2_sessions_to_gen3(&reader, &session_log) {
+                Ok(sreceipt) => {
+                    println!("Session Turns Migrated: {}", sreceipt.migrated);
+                    println!(
+                        "Session Turns Skipped:  {} (duplicates {} / quarantined {} / decode-skipped {})",
+                        sreceipt.duplicates_skipped
+                            + sreceipt.quarantined
+                            + sreceipt.decode_skipped,
+                        sreceipt.duplicates_skipped,
+                        sreceipt.quarantined,
+                        sreceipt.decode_skipped
+                    );
+                    println!("Sessions Covered:       {}", sreceipt.sessions);
+                    if let Ok(serialized) = serde_json::to_string_pretty(&sreceipt) {
+                        let path = target.join("session_migration_receipt.json");
+                        let _ = std::fs::write(&path, serialized);
+                        println!("Session Receipt:        {}", path.display());
+                    }
+                }
+                Err(e) => eprintln!("session-turn migration failed: {e}"),
+            }
         }
         Err(e) => {
             eprintln!("Migration halted with error: {e}");
@@ -4871,6 +4896,9 @@ fn run_migrate_all(
     let mut total_migrated = 0usize;
     let mut total_duplicates = 0usize;
     let mut total_quarantined = 0usize;
+    let mut total_session_turns = 0usize;
+    let mut total_session_migrated = 0usize;
+    let mut total_session_duplicates = 0usize;
     let mut failed = 0usize;
 
     for (name, lmdb) in &stores {
@@ -4895,6 +4923,17 @@ fn run_migrate_all(
                     );
                     total_scanned += census.total_records as usize;
                     total_migrated += census.valid_hashes as usize;
+                    let (turn_count, turn_skipped) = match reader.session_turns() {
+                        Ok((turns, skipped)) => (turns.len(), skipped),
+                        Err(e) => {
+                            eprintln!("[{name}] session scan failed: {e}");
+                            (0, 0)
+                        }
+                    };
+                    println!(
+                        "{name:<18} session_turns={turn_count:<7} session_decode_skipped={turn_skipped}"
+                    );
+                    total_session_turns += turn_count;
                     store_entries.push(serde_json::json!({
                         "name": name,
                         "source": lmdb.display().to_string(),
@@ -4902,6 +4941,8 @@ fn run_migrate_all(
                         "valid_hashes": census.valid_hashes,
                         "hash_mismatches": census.hash_mismatches,
                         "integrity_ratio": census.integrity_ratio(),
+                        "session_turns": turn_count,
+                        "session_decode_skipped": turn_skipped,
                         "would_migrate": census.valid_hashes,
                         "mode": "dry_run"
                     }));
@@ -4949,6 +4990,39 @@ fn run_migrate_all(
                 total_migrated += receipt.migrated_count;
                 total_duplicates += receipt.duplicate_skipped;
                 total_quarantined += receipt.quarantined_count;
+
+                let session_log = target.join("session_log.jsonl");
+                let (session_total, session_migrated, session_duplicates) =
+                    match migrate_gen2_sessions_to_gen3(&reader, &session_log) {
+                        Ok(sreceipt) => {
+                            if let Ok(serialized) = serde_json::to_string_pretty(&sreceipt) {
+                                let _ = std::fs::write(
+                                    target.join("session_migration_receipt.json"),
+                                    serialized,
+                                );
+                            }
+                            println!(
+                                "{name:<18} session_turns={:<7} migrated={:<6} duplicates={:<6} sessions={}",
+                                sreceipt.total_turns,
+                                sreceipt.migrated,
+                                sreceipt.duplicates_skipped,
+                                sreceipt.sessions
+                            );
+                            (
+                                sreceipt.total_turns,
+                                sreceipt.migrated,
+                                sreceipt.duplicates_skipped,
+                            )
+                        }
+                        Err(e) => {
+                            eprintln!("[{name}] session migration failed: {e}");
+                            (0, 0, 0)
+                        }
+                    };
+                total_session_turns += session_total;
+                total_session_migrated += session_migrated;
+                total_session_duplicates += session_duplicates;
+
                 store_entries.push(serde_json::json!({
                     "name": name,
                     "source": lmdb.display().to_string(),
@@ -4959,6 +5033,9 @@ fn run_migrate_all(
                     "quarantined": receipt.quarantined_count,
                     "target_epoch": receipt.target_epoch,
                     "receipt_digest": receipt.receipt_digest,
+                    "session_turns": session_total,
+                    "session_turns_migrated": session_migrated,
+                    "session_turns_duplicates": session_duplicates,
                     "mode": "live"
                 }));
             }
@@ -4987,7 +5064,10 @@ fn run_migrate_all(
             "scanned": total_scanned,
             "migrated": total_migrated,
             "duplicates": total_duplicates,
-            "quarantined": total_quarantined
+            "quarantined": total_quarantined,
+            "session_turns": total_session_turns,
+            "session_turns_migrated": total_session_migrated,
+            "session_turns_duplicates": total_session_duplicates
         }
     });
 
@@ -4996,6 +5076,10 @@ fn run_migrate_all(
     println!(
         "Scanned: {}  Migrated: {}  Duplicates: {}  Quarantined: {}",
         total_scanned, total_migrated, total_duplicates, total_quarantined
+    );
+    println!(
+        "Session turns: {}  migrated: {}  duplicates: {}",
+        total_session_turns, total_session_migrated, total_session_duplicates
     );
     if !dry_run {
         let out = target_root.join("migration_batch_receipt.json");

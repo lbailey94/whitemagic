@@ -732,6 +732,489 @@ pub fn migrate_gen2_to_gen3_with_authority(
     })
 }
 
+/// Known v9-era galaxy LMDB sub-databases (`Galaxy::db_name()` vocabulary).
+pub const GEN2_GALAXY_DBS: &[&str] = &[
+    "aria",
+    "citta",
+    "codex",
+    "journals",
+    "dreams",
+    "research",
+    "sessions",
+    "substrate",
+    "tutorial",
+    "universal",
+    "karma",
+    "dharma",
+    "associations",
+    "embeddings",
+    "valkyrie",
+    "telemetry",
+    "receipts",
+];
+
+/// Minimal decode target for v9 `Memory` records. Unknown fields — including
+/// binary coordinate/embedding blobs that a JSON value cannot represent — are
+/// skipped by serde, so no v9 crate dependency is needed.
+#[derive(Debug, Default, Deserialize)]
+struct V9MemoryLite {
+    #[serde(default)]
+    metadata: V9MetadataLite,
+    #[serde(default)]
+    content: String,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct V9MetadataLite {
+    #[serde(default, deserialize_with = "deserialize_uuid_lenient")]
+    id: Option<Uuid>,
+    #[serde(default)]
+    tags: Vec<String>,
+    #[serde(default)]
+    importance: f32,
+    #[serde(default)]
+    created_at: Option<String>,
+    #[serde(default)]
+    model_exclude: bool,
+    #[serde(default)]
+    is_private: bool,
+}
+
+/// Accept a UUID encoded either as msgpack bytes (non-human-readable v9
+/// encoding) or as a hyphenated string.
+fn deserialize_uuid_lenient<'de, D>(deserializer: D) -> Result<Option<Uuid>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum UuidOrString {
+        Uuid(Uuid),
+        String(String),
+    }
+    let value = Option::<UuidOrString>::deserialize(deserializer)?;
+    Ok(match value {
+        Some(UuidOrString::Uuid(id)) => Some(id),
+        Some(UuidOrString::String(s)) => Uuid::parse_str(&s).ok(),
+        None => None,
+    })
+}
+
+/// Frozen pre-`70495ef` positional schema (30-field metadata array), ported
+/// from the v9 codec's `LegacyMemory`. Unneeded positions decode as
+/// `IgnoredAny` so binary encodings cannot poison extraction; the exact order
+/// is load-bearing and must not be edited.
+#[derive(Deserialize)]
+struct V9LegacyMemory {
+    metadata: V9LegacyMetadata,
+    content: String,
+    #[serde(default)]
+    _embedding: Option<serde::de::IgnoredAny>,
+}
+
+#[derive(Deserialize)]
+#[allow(dead_code)]
+struct V9LegacyMetadata {
+    id: Uuid,
+    _galaxy: serde::de::IgnoredAny,
+    _content_hash: serde::de::IgnoredAny,
+    tags: Vec<String>,
+    _importance: serde::de::IgnoredAny,
+    _created_at: serde::de::IgnoredAny,
+    _accessed_at: serde::de::IgnoredAny,
+    _access_count: serde::de::IgnoredAny,
+    _coords: serde::de::IgnoredAny,
+    _coord5d: serde::de::IgnoredAny,
+    _memory_type: serde::de::IgnoredAny,
+    _neuro_score: serde::de::IgnoredAny,
+    _novelty_score: serde::de::IgnoredAny,
+    _emotional_valence: serde::de::IgnoredAny,
+    _emotional_weight: serde::de::IgnoredAny,
+    _is_protected: serde::de::IgnoredAny,
+    is_private: bool,
+    model_exclude: bool,
+    _source: serde::de::IgnoredAny,
+    _source_trust: serde::de::IgnoredAny,
+    _half_life_days: serde::de::IgnoredAny,
+    _recall_count: serde::de::IgnoredAny,
+    _version: serde::de::IgnoredAny,
+    _agent_id: serde::de::IgnoredAny,
+    _title: serde::de::IgnoredAny,
+    _topic: serde::de::IgnoredAny,
+    _tier: serde::de::IgnoredAny,
+    _class: serde::de::IgnoredAny,
+    _dup_count: serde::de::IgnoredAny,
+    _revision_count: serde::de::IgnoredAny,
+}
+
+/// One decoded v9 galaxy record (extracted fields; unknown v9 fields skipped).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Gen2GalaxyRecord {
+    pub db: String,
+    pub id: Uuid,
+    pub content: String,
+    pub created_at: DateTime<Utc>,
+    pub tags: Vec<String>,
+    pub importance: f32,
+    pub is_private: bool,
+    pub model_exclude: bool,
+}
+
+/// A galaxy scan: decoded records plus the count of undecodable records
+/// (legacy positional encodings outside the named-field schema).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Gen2GalaxyScan {
+    pub records: Vec<Gen2GalaxyRecord>,
+    pub decode_skipped: usize,
+}
+
+/// One v9 `session_turn` record (parsed from a Sessions-galaxy record body).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Gen2SessionTurn {
+    #[serde(default)]
+    pub session_id: String,
+    #[serde(default)]
+    pub sequence: u64,
+    #[serde(default = "default_turn_role")]
+    pub role: String,
+    #[serde(default)]
+    pub turn_type: String,
+    #[serde(default)]
+    pub content: serde_json::Value,
+    #[serde(default)]
+    pub importance: f64,
+    #[serde(default)]
+    pub timestamp: u64,
+    #[serde(default)]
+    pub track: Option<String>,
+    #[serde(default)]
+    pub turn_id: Option<String>,
+    #[serde(default, rename = "type")]
+    pub record_type: String,
+}
+
+fn default_turn_role() -> String {
+    "user".to_string()
+}
+
+/// Receipt for a v9 session-turn migration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionMigrationReceipt {
+    pub source_store: PathBuf,
+    pub target_session_log: PathBuf,
+    pub total_turns: usize,
+    pub migrated: usize,
+    pub duplicates_skipped: usize,
+    pub quarantined: usize,
+    pub decode_skipped: usize,
+    pub sessions: usize,
+    pub timestamp: DateTime<Utc>,
+    pub receipt_digest: String,
+}
+
+impl SessionMigrationReceipt {
+    #[must_use]
+    pub fn compute_digest(
+        source: &Path,
+        target: &Path,
+        total: usize,
+        migrated: usize,
+        skipped: usize,
+        quarantined: usize,
+        decode_skipped: usize,
+        ts: &DateTime<Utc>,
+    ) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(source.to_string_lossy().as_bytes());
+        hasher.update(b":");
+        hasher.update(target.to_string_lossy().as_bytes());
+        hasher.update(b":");
+        hasher.update(total.to_string().as_bytes());
+        hasher.update(b":");
+        hasher.update(migrated.to_string().as_bytes());
+        hasher.update(b":");
+        hasher.update(skipped.to_string().as_bytes());
+        hasher.update(b":");
+        hasher.update(quarantined.to_string().as_bytes());
+        hasher.update(b":");
+        hasher.update(decode_skipped.to_string().as_bytes());
+        hasher.update(b":");
+        hasher.update(ts.to_rfc3339().as_bytes());
+        format!("{:x}", hasher.finalize())
+    }
+}
+
+impl Gen2Reader {
+    /// Scan one v9 galaxy sub-database. Absent DBIs yield an empty scan.
+    ///
+    /// At-rest sealed records (`WMEN` magic) are refused loudly rather than
+    /// mis-parsed; records outside the named-field schema are counted in
+    /// `decode_skipped` instead of aborting the scan.
+    pub fn scan_galaxy_db(
+        &self,
+        db_name: &str,
+        limit: Option<usize>,
+    ) -> Result<Gen2GalaxyScan, CompatError> {
+        let db = match self.env.open_db(Some(db_name)) {
+            Ok(db) => db,
+            Err(lmdb::Error::NotFound) => {
+                return Ok(Gen2GalaxyScan {
+                    records: Vec::new(),
+                    decode_skipped: 0,
+                });
+            }
+            Err(e) => return Err(CompatError::Lmdb(e)),
+        };
+
+        let tx = self.env.begin_ro_txn()?;
+        let mut records = Vec::new();
+        let mut decode_skipped = 0usize;
+        let mut sealed = false;
+        let max = limit.unwrap_or(usize::MAX);
+        {
+            let mut cursor = tx.open_ro_cursor(db)?;
+            for (key, val) in cursor.iter() {
+                if records.len() >= max {
+                    break;
+                }
+                if val.starts_with(b"WMEN") {
+                    sealed = true;
+                    break;
+                }
+                match decode_galaxy_record(db_name, key, val) {
+                    Ok(record) => records.push(record),
+                    Err(_) => decode_skipped += 1,
+                }
+            }
+        }
+        tx.commit()?;
+
+        if sealed {
+            return Err(CompatError::Msg(format!(
+                "sealed (at-rest) records present in '{db_name}'; the store's                  WM_AT_REST key material is required to read them"
+            )));
+        }
+        Ok(Gen2GalaxyScan {
+            records,
+            decode_skipped,
+        })
+    }
+
+    /// Scan every known v9 galaxy sub-database.
+    pub fn scan_all_galaxy_dbs(
+        &self,
+        limit_per_db: Option<usize>,
+    ) -> Result<Gen2GalaxyScan, CompatError> {
+        let mut all = Gen2GalaxyScan {
+            records: Vec::new(),
+            decode_skipped: 0,
+        };
+        for db in GEN2_GALAXY_DBS {
+            let scan = self.scan_galaxy_db(db, limit_per_db)?;
+            all.records.extend(scan.records);
+            all.decode_skipped += scan.decode_skipped;
+        }
+        Ok(all)
+    }
+
+    /// Parse all v9 `session_turn` records from the Sessions galaxy.
+    ///
+    /// Returns `(turns, decode_skipped)`; turns sort by
+    /// (timestamp, session_id, sequence) so replay order is stable even when
+    /// records were written concurrently.
+    pub fn session_turns(&self) -> Result<(Vec<Gen2SessionTurn>, usize), CompatError> {
+        let scan = self.scan_galaxy_db("sessions", None)?;
+        let mut skipped = scan.decode_skipped;
+        let mut turns = Vec::new();
+        for record in scan.records {
+            match serde_json::from_str::<Gen2SessionTurn>(&record.content) {
+                Ok(turn) => {
+                    if turn.record_type != "session_turn" || turn.session_id.is_empty() {
+                        skipped += 1;
+                        continue;
+                    }
+                    turns.push(turn);
+                }
+                Err(_) => skipped += 1,
+            }
+        }
+        turns.sort_by(|a, b| {
+            a.timestamp
+                .cmp(&b.timestamp)
+                .then_with(|| a.session_id.cmp(&b.session_id))
+                .then_with(|| a.sequence.cmp(&b.sequence))
+        });
+        Ok((turns, skipped))
+    }
+}
+
+fn decode_galaxy_record(
+    db_name: &str,
+    key: &[u8],
+    value: &[u8],
+) -> Result<Gen2GalaxyRecord, CompatError> {
+    // Legacy positional layout: fixarray(3), array16(30) — the exact prefix the
+    // v9 codec's fallback keys on. Modern writes are named maps.
+    if value.starts_with(&[0x93, 0xdc, 0, 30]) {
+        let legacy: V9LegacyMemory = rmp_serde::from_slice(value)?;
+        return Ok(Gen2GalaxyRecord {
+            db: db_name.to_string(),
+            id: legacy.metadata.id,
+            content: legacy.content,
+            created_at: Utc::now(),
+            tags: legacy.metadata.tags,
+            importance: 0.5,
+            is_private: legacy.metadata.is_private,
+            model_exclude: legacy.metadata.model_exclude,
+        });
+    }
+
+    let lite: V9MemoryLite = rmp_serde::from_slice(value)?;
+    let id = lite
+        .metadata
+        .id
+        .or_else(|| {
+            (key.len() == 16)
+                .then(|| Uuid::from_slice(key).ok())
+                .flatten()
+        })
+        .ok_or_else(|| {
+            CompatError::Msg(format!(
+                "galaxy record in '{db_name}' has no usable id (metadata.id / 16-byte key)"
+            ))
+        })?;
+
+    let created_at = lite
+        .metadata
+        .created_at
+        .as_deref()
+        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+        .map_or_else(Utc::now, |d| d.with_timezone(&Utc));
+
+    Ok(Gen2GalaxyRecord {
+        db: db_name.to_string(),
+        id,
+        content: lite.content,
+        created_at,
+        tags: lite.metadata.tags,
+        importance: lite.metadata.importance,
+        is_private: lite.metadata.is_private,
+        model_exclude: lite.metadata.model_exclude,
+    })
+}
+
+/// Migrate v9 session turns into a Gen3 store's `session_log.jsonl` — the
+/// source of truth for Gen3 `session.continuity` and `session.recall`.
+///
+/// Read-only over the legacy store; idempotent via (turn_id) and
+/// (session_id, sequence) keys. Substrate evidence ingestion of migrated
+/// turns is intentionally not part of this path: continuity/recall read the
+/// log directly, and ingesting tens of thousands of evidence records is a
+/// separate, resumable batch job (exact-content dedupe makes it re-runnable).
+pub fn migrate_gen2_sessions_to_gen3(
+    reader: &Gen2Reader,
+    session_log_path: &Path,
+) -> Result<SessionMigrationReceipt, CompatError> {
+    use std::collections::{BTreeSet, HashSet};
+
+    let (turns, decode_skipped) = reader.session_turns()?;
+
+    let mut existing: HashSet<String> = HashSet::new();
+    if let Ok(content) = std::fs::read_to_string(session_log_path) {
+        for line in content.lines() {
+            if let Ok(value) = serde_json::from_str::<serde_json::Value>(line) {
+                let sid = value
+                    .get("session_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let seq = value.get("sequence").and_then(|v| v.as_u64()).unwrap_or(0);
+                let tid = value.get("turn_id").and_then(|v| v.as_str()).unwrap_or("");
+                existing.insert(format!("id:{tid}"));
+                existing.insert(format!("seq:{sid}:{seq}"));
+            }
+        }
+    }
+
+    let mut entries = String::new();
+    let mut migrated = 0usize;
+    let mut duplicates_skipped = 0usize;
+    let mut quarantined = 0usize;
+    let mut sessions: BTreeSet<String> = BTreeSet::new();
+
+    for turn in &turns {
+        if turn.session_id.is_empty() {
+            quarantined += 1;
+            continue;
+        }
+        let turn_id = turn
+            .turn_id
+            .clone()
+            .unwrap_or_else(|| format!("{}:{}", turn.session_id, turn.sequence));
+        if existing.contains(&format!("id:{turn_id}"))
+            || existing.contains(&format!("seq:{}:{}", turn.session_id, turn.sequence))
+        {
+            duplicates_skipped += 1;
+            continue;
+        }
+
+        let entry = serde_json::json!({
+            "turn_id": turn_id,
+            "session_id": turn.session_id,
+            "role": turn.role,
+            "turn_type": turn.turn_type,
+            "content": turn.content,
+            "importance": turn.importance,
+            "timestamp": turn.timestamp,
+            "sequence": turn.sequence,
+            "track": turn.track,
+            "migrated_from": "gen2"
+        });
+        entries.push_str(&entry.to_string());
+        entries.push('\n');
+        sessions.insert(turn.session_id.clone());
+        migrated += 1;
+    }
+
+    if migrated > 0 {
+        if let Some(parent) = session_log_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(session_log_path)
+            .map_err(|e| CompatError::Msg(format!("session log open failed: {e}")))?;
+        use std::io::Write;
+        file.write_all(entries.as_bytes())
+            .map_err(|e| CompatError::Msg(format!("session log append failed: {e}")))?;
+    }
+
+    let ts = Utc::now();
+    let receipt_digest = SessionMigrationReceipt::compute_digest(
+        reader.path(),
+        session_log_path,
+        turns.len(),
+        migrated,
+        duplicates_skipped,
+        quarantined,
+        decode_skipped,
+        &ts,
+    );
+
+    Ok(SessionMigrationReceipt {
+        source_store: reader.path().to_path_buf(),
+        target_session_log: session_log_path.to_path_buf(),
+        total_turns: turns.len(),
+        migrated,
+        duplicates_skipped,
+        quarantined,
+        decode_skipped,
+        sessions: sessions.len(),
+        timestamp: ts,
+        receipt_digest,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -797,69 +1280,118 @@ mod tests {
         assert_eq!(original, decoded);
     }
 
-    #[test]
-    fn test_real_gen2_store_census() {
-        let path = Path::new("/home/lucas/Desktop/WHITEMAGIC/data/WMdata/projects/planning/lmdb");
-        if !path.join("data.mdb").is_file() {
-            eprintln!("skipping test_real_gen2_store_census: test store not found on this host");
-            return;
+    /// Build a synthetic named-field v9 store (no host fixture dependency).
+    fn write_synthetic_gen2_store(
+        dir: &Path,
+        episodic: &[Gen2EpisodicRecord],
+        turns: &[serde_json::Value],
+    ) {
+        std::fs::create_dir_all(dir).expect("create synthetic store dir");
+        let env = lmdb::Environment::new()
+            .set_max_dbs(32)
+            .open(dir)
+            .expect("open synthetic lmdb env");
+
+        let episodic_db = env
+            .create_db(Some("episodic_records"), lmdb::DatabaseFlags::default())
+            .expect("create episodic db");
+        if !episodic.is_empty() {
+            let mut tx = env.begin_rw_txn().expect("rw txn");
+            for record in episodic {
+                let value = rmp_serde::to_vec(record).expect("encode episodic");
+                tx.put(
+                    episodic_db,
+                    record.id.as_bytes(),
+                    &value,
+                    lmdb::WriteFlags::default(),
+                )
+                .expect("put episodic");
+            }
+            tx.commit().expect("commit episodic");
         }
 
-        let reader = Gen2Reader::open(path).expect("open gen2 reader");
-        let census = reader.census().expect("run census");
-
-        println!("=== GEN2 REAL STORE CENSUS ===");
-        println!("Store: {}", census.store_path.display());
-        println!("Total Records: {}", census.total_records);
-        println!("Valid Hashes: {}", census.valid_hashes);
-        println!("Hash Mismatches: {}", census.hash_mismatches);
-        println!("Integrity Ratio: {:.4}", census.integrity_ratio());
-        println!("Distinct Sessions: {}", census.distinct_sessions);
-        println!("Kinds breakdown: {:?}", census.kinds);
-        println!("Sources breakdown: {:?}", census.sources);
-        println!("Validity breakdown: {:?}", census.validity);
-        println!("Earliest record: {:?}", census.earliest_record);
-        println!("Latest record: {:?}", census.latest_record);
-
-        assert!(census.total_records > 0, "store should have records");
-        assert_eq!(census.hash_mismatches, 0, "zero hash corruption permitted");
-        assert_eq!(
-            census.integrity_ratio(),
-            1.0,
-            "100% hash integrity required"
-        );
-
-        // Scan 5 sample records and verify conversion to Gen3 RememberItem
-        let samples = reader.scan_records(Some(5)).expect("scan 5 records");
-        assert_eq!(samples.len(), 5);
-        for record in &samples {
-            assert!(record.validate_hash());
-            let remember = record.to_remember_item();
-            assert!(!remember.content.is_empty());
+        if !turns.is_empty() {
+            let db = env
+                .create_db(Some("sessions"), lmdb::DatabaseFlags::default())
+                .expect("create sessions db");
+            let mut tx = env.begin_rw_txn().expect("rw txn");
+            for turn in turns {
+                let id = Uuid::new_v4();
+                let memory = serde_json::json!({
+                    "metadata": {
+                        "id": id.to_string(),
+                        "galaxy": "sessions",
+                        "content_hash": "",
+                        "tags": ["synthetic"],
+                        "importance": 0.8,
+                        "created_at": Utc::now().to_rfc3339(),
+                        "model_exclude": false,
+                        "is_private": false
+                    },
+                    "content": turn.to_string(),
+                });
+                let value = rmp_serde::to_vec_named(&memory).expect("encode turn");
+                tx.put(db, id.as_bytes(), &value, lmdb::WriteFlags::default())
+                    .expect("put turn");
+            }
+            tx.commit().expect("commit turns");
         }
+
+        // Drop the env before any compat reader opens the same path (LMDB
+        // allows one environment per path per process).
+        drop(env);
+    }
+
+    fn synthetic_episodic(content: &str, sequence: u64) -> Gen2EpisodicRecord {
+        Gen2EpisodicRecord {
+            schema_version: 1,
+            id: Uuid::new_v4(),
+            session_id: Some(Uuid::new_v4()),
+            sequence,
+            kind: Gen2EpisodicKind::SystemEvent,
+            content: content.to_string(),
+            content_hash: Gen2EpisodicRecord::compute_content_hash(content),
+            provenance: Gen2Provenance {
+                source: Gen2ProvenanceSource::System,
+                actor: Some("synthetic".to_string()),
+                source_id: None,
+                confidence: 0.9,
+            },
+            validity: Gen2ValidityState::Active,
+            is_private: false,
+            model_exclude: false,
+            evidence: Vec::new(),
+            created_at: Utc::now(),
+        }
+    }
+
+    fn synthetic_turn(session: &str, sequence: u64, content: &str) -> serde_json::Value {
+        serde_json::json!({
+            "type": "session_turn",
+            "session_id": session,
+            "sequence": sequence,
+            "role": "user",
+            "turn_type": "summary",
+            "content": content,
+            "importance": 0.8,
+            "timestamp": 1_700_000_000u64 + sequence,
+            "track": "synthetic"
+        })
     }
 
     #[test]
     fn migration_rerun_is_idempotent() {
-        let src = Path::new(
-            "/home/lucas/Desktop/front burner/WHITEMAGIC/data/WMdata/projects/planning/lmdb",
-        );
-        if !src.join("data.mdb").is_file() {
-            eprintln!(
-                "skipping migration_rerun_is_idempotent: source store not found on this host"
-            );
-            return;
-        }
-
         let tmp = std::env::temp_dir().join(format!("wm-gen3-migrate-{}", Uuid::new_v4()));
         let src_copy = tmp.join("gen2");
         std::fs::create_dir_all(&src_copy).expect("create temp gen2 dir");
-        std::fs::copy(src.join("data.mdb"), src_copy.join("data.mdb")).expect("copy data.mdb");
-        if src.join("lock.mdb").is_file() {
-            let _ = std::fs::copy(src.join("lock.mdb"), src_copy.join("lock.mdb"));
-        }
+        let episodic = vec![
+            synthetic_episodic("first synthetic record", 1),
+            synthetic_episodic("second synthetic record", 2),
+            synthetic_episodic("third synthetic record", 3),
+        ];
+        write_synthetic_gen2_store(&src_copy, &episodic, &[]);
 
-        let reader = Gen2Reader::open(&src_copy).expect("open copied gen2 store");
+        let reader = Gen2Reader::open(&src_copy).expect("open synthetic gen2 store");
         let target = tmp.join("gen3");
         let journal = target.join("journal.jsonl");
         let options = MigrationOptions {
@@ -880,10 +1412,7 @@ mod tests {
             crate::evidence::RatifiedChannel::stub("wm-migration-test"),
         )
         .expect("first migration");
-        assert!(
-            first.migrated_count > 0,
-            "first run must migrate at least one record"
-        );
+        assert_eq!(first.migrated_count, 3, "all synthetic records migrate");
         drop(substrate);
 
         let mut substrate = crate::ops::Substrate::open(
@@ -907,9 +1436,48 @@ mod tests {
             second.duplicate_skipped, first.migrated_count,
             "rerun must classify exactly the previously migrated records as duplicates"
         );
-        assert!(second.total_scanned >= first.migrated_count);
 
         drop(substrate);
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn session_turn_migration_is_idempotent() {
+        let tmp = std::env::temp_dir().join(format!("wm-gen3-sessions-{}", Uuid::new_v4()));
+        let src_copy = tmp.join("gen2");
+        std::fs::create_dir_all(&src_copy).expect("create temp gen2 dir");
+        let turns = vec![
+            synthetic_turn("sess-a", 1, "first turn"),
+            synthetic_turn("sess-b", 1, "other session turn"),
+            synthetic_turn("sess-a", 2, "second turn"),
+        ];
+        write_synthetic_gen2_store(&src_copy, &[], &turns);
+
+        let reader = Gen2Reader::open(&src_copy).expect("open synthetic gen2 store");
+        let (parsed, decode_skipped) = reader.session_turns().expect("scan session turns");
+        assert_eq!(parsed.len(), 3, "all synthetic turns decode");
+        assert_eq!(decode_skipped, 0);
+
+        let log = tmp.join("session_log.jsonl");
+
+        let first = migrate_gen2_sessions_to_gen3(&reader, &log).expect("first session migration");
+        assert_eq!(first.migrated, 3, "first run migrates every turn");
+        assert_eq!(first.sessions, 2, "two distinct sessions");
+        assert_eq!(first.quarantined, 0);
+
+        let second =
+            migrate_gen2_sessions_to_gen3(&reader, &log).expect("second session migration");
+        assert_eq!(second.migrated, 0, "rerun must not append duplicate turns");
+        assert_eq!(second.duplicates_skipped, first.migrated);
+        let lines = std::fs::read_to_string(&log)
+            .expect("read session log")
+            .lines()
+            .count();
+        assert_eq!(
+            lines, first.migrated,
+            "session log holds exactly the migrated turns"
+        );
+
         let _ = std::fs::remove_dir_all(&tmp);
     }
 }
