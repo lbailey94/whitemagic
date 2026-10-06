@@ -5714,8 +5714,8 @@ fn print_dream_report(log_path: &Path, insights_path: &Path, substrate: Option<&
             println!("  (No dream_consolidation records found in recent store history)");
         } else {
             for (id, content) in previews {
-                let preview = if content.len() > 60 {
-                    format!("{}...", &content[..57])
+                let preview = if content.chars().count() > 60 {
+                    format!("{}...", content.chars().take(57).collect::<String>())
                 } else {
                     content
                 };
