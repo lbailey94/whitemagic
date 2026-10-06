@@ -777,7 +777,11 @@ fn hex_decode(hex: &str) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "systemone")]
+    use crate::decision_receipt::DecisionReceipt;
     use crate::deliberation::DeliberationReceipt;
+    #[cfg(feature = "system05")]
+    use crate::shortlist_receipt::ShortlistReceipt;
     use crate::systemtwo::{ConsultationReceipt, SystemTwoAnswer};
     use serde_json::json;
 
@@ -825,6 +829,76 @@ mod tests {
         assert!(record.verify(&key.verifying_key()).is_err());
         record.signature = Some("g".repeat(128));
         assert!(record.verify(&key.verifying_key()).is_err());
+    }
+
+    #[test]
+    fn healthy_outcome_producer_verifies_through_shared_profile_dispatch() {
+        let key = SigningKey::from_bytes(&[18u8; 32]);
+        let store = fixture_store(&key);
+        let args = json!({"outcome":"success", "note":"observed locally"});
+        let issuer_did = format!("did:key:{}", hex_encode(&key.verifying_key().to_bytes()));
+        let mut record = OutcomeRecord::new(
+            "subject-id".into(),
+            "continuity-receipt/0.5#decision".into(),
+            true,
+            &args,
+            issuer_did,
+        )
+        .expect("outcome receipt");
+        record.sign(&key);
+        assert_eq!(
+            verify_receipt_value(&serde_json::to_value(record).unwrap(), &store).unwrap()["profile"],
+            "outcome"
+        );
+        std::fs::remove_dir_all(store).expect("cleanup fixture store");
+    }
+
+    #[cfg(feature = "systemone")]
+    #[test]
+    fn healthy_decision_producer_verifies_through_shared_profile_dispatch() {
+        let key = SigningKey::from_bytes(&[19u8; 32]);
+        let store = fixture_store(&key);
+        let outcome = json!({"model":"local-policy", "latency_ms":1.25, "answers":{"q":{"type":"choice", "choice":"allow", "confidence":0.9}}});
+        let state = json!({"request":"read local note"});
+        let questions = json!({"q":{"type":"choice", "choices":["allow", "deny"]}});
+        let args = json!({"tenant_id":"tenant-test", "session_id":"session-test"});
+        let issuer_did = format!("did:key:{}", hex_encode(&key.verifying_key().to_bytes()));
+        let mut receipt =
+            DecisionReceipt::from_outcome(&outcome, &state, &questions, &args, issuer_did);
+        receipt.sign(&key);
+        let value = serde_json::to_value(&receipt).expect("serialize decision receipt");
+        assert_eq!(
+            verify_receipt_value(&value, &store).unwrap()["profile"],
+            "decision"
+        );
+        let mut tampered = value;
+        tampered["state_digest"] = json!("tampered");
+        assert!(verify_receipt_value(&tampered, &store).is_err());
+        std::fs::remove_dir_all(store).expect("cleanup fixture store");
+    }
+
+    #[cfg(feature = "system05")]
+    #[test]
+    fn healthy_shortlist_producer_verifies_through_shared_profile_dispatch() {
+        let key = SigningKey::from_bytes(&[20u8; 32]);
+        let store = fixture_store(&key);
+        let outcome = json!({"model":"local-ranker", "latency_ms":2.5, "ranked":[{"route":"memory.search", "score":0.8}], "top1":"memory.search", "confidence":0.8, "margin":0.4, "gate":"dispatch"});
+        let state = json!("find the red note");
+        let routes = json!({"memory.search":"Search memories"});
+        let args = json!({"tenant_id":"tenant-test", "session_id":"session-test"});
+        let issuer_did = format!("did:key:{}", hex_encode(&key.verifying_key().to_bytes()));
+        let mut receipt =
+            ShortlistReceipt::from_outcome(&outcome, &state, &routes, &args, issuer_did);
+        receipt.sign(&key);
+        let value = serde_json::to_value(&receipt).expect("serialize shortlist receipt");
+        assert_eq!(
+            verify_receipt_value(&value, &store).unwrap()["profile"],
+            "shortlist"
+        );
+        let mut tampered = value;
+        tampered["gate"] = json!("defer");
+        assert!(verify_receipt_value(&tampered, &store).is_err());
+        std::fs::remove_dir_all(store).expect("cleanup fixture store");
     }
 
     #[test]
