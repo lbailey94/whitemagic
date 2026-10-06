@@ -13,113 +13,194 @@ env:
 
 jobs:
   benchmark:
-    name: Run Benchmarks
+    name: PEB-0 release evidence
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    # The release upload remains tag-only below; keep the existing permission
+    # because softprops/action-gh-release needs contents: write on tag runs.
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Install criterion dependencies
+      - name: Run existing PEB-0 and PEB-0.1 release tests
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gnuplot
+          set -euo pipefail
+          mkdir -p benchmark-results
+          {
+            echo "kind=release-mode-library-tests"
+            echo "revision=$(git rev-parse HEAD)"
+            echo "event=${GITHUB_EVENT_NAME}"
+            echo "runner=${RUNNER_OS}/${RUNNER_ARCH}"
+            rustc -Vv
+            cargo -V
+          } 2>&1 | tee benchmark_results.txt
+          run_one_peb_test() {
+            local test_filter="$1"
+            local output_file="$2"
+            cargo test -p wm-gen3-core --features operator --release --lib "$test_filter" -- --exact --nocapture --color never 2>&1 | tee "$output_file"
+            local running_count
+            running_count="$(awk '$0 == "running 1 test" { count++ } END { print count + 0 }' "$output_file")"
+            local passing_test_count
+            passing_test_count="$(awk -v filter="$test_filter" 'index($0, "test " filter) == 1 && $0 ~ /[.][.][.] ok$/ { count++ } END { print count + 0 }' "$output_file")"
+            local passing_summary_count
+            passing_summary_count="$(awk '$0 ~ /^test result: ok[.] 1 passed; 0 failed;/ { count++ } END { print count + 0 }' "$output_file")"
+            if [[ "$running_count" != "1" || "$passing_test_count" != "1" || "$passing_summary_count" != "1" ]]; then
+              echo "expected exactly one passing test for $test_filter; found running=$running_count, named_passes=$passing_test_count, passing_summaries=$passing_summary_count" >&2
+              return 1
+            fi
+            return 0
+          }
+          run_one_peb_test pulse::tests::test_peb0_minimality_benchmark_execution benchmark-results/peb0.log
+          run_one_peb_test pulse::tests::test_peb0_1_intelligent_merger_benchmark_execution benchmark-results/peb0.1.log
+          cat benchmark-results/peb0.log benchmark-results/peb0.1.log >> benchmark_results.txt
+          cp benchmark_results.txt benchmark-results/benchmark_results.txt
 
-      - name: Run benchmarks (release)
-        run: |
-          # No --output-format bencher: criterion benches reject libtest-only
-          # flags, and one bad crate fails the whole workspace run.
-          cargo bench --workspace 2>&1 | tee benchmark_results.txt
-
-      - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
+      - name: Upload release-mode benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v6
         with:
           name: benchmark-results
           path: |
             benchmark_results.txt
-            target/criterion/
+            benchmark-results/
+          if-no-files-found: warn
 
-      - name: Upload benchmark results on release tag
+      - name: Attach benchmark evidence to release tag
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
-          files: |
-            benchmark_results.txt
-          body: "## Benchmark Results\n\nSee attached benchmark_results.txt for full details."
+          files: benchmark_results.txt
+          body: |
+            ## PEB-0 Release-Mode Evidence
+
+            Raw output from the existing release-mode PEB-0 and PEB-0.1 library tests. This is not a Criterion regression comparison.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Compare with baseline (PR only)
-        if: github.event_name == 'pull_request'
-        run: |
-          echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          cat benchmark_results.txt >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-
   bench-regression-check:
-    name: Benchmark Regression Check
+    name: PEB-0 PR/base raw comparison (advisory)
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Run PR benchmarks
-        # Criterion benches only (crates/*/Cargo.toml `harness = false`):
-        # the `--` args are criterion flags and the libtest-harness
-        # targets compiled by `cargo bench --workspace` reject them
-        # (2026-09-02 CI reds, classified in local triage notes).
-        run: >-
-          cargo bench -p wm-bicameral -p wm-cognitive -p wm-core -p wm-dispatch -p wm-memory -p wm-tools --bench router_bench --bench self_play_bench --bench dream_bench --bench reflex_bench --bench mutable_bench --bench pipeline_bench --bench embedder_bench --bench episodic_bench --bench store_bench --bench rsi_bench --bench transaction_bench
-          -- --save-baseline pr
+      - name: Run PR head PEB-0 tests in release mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p benchmark-comparison
+          expected_revision="${{ github.event.pull_request.head.sha }}"
+          actual_revision="$(git rev-parse HEAD)"
+          test "$actual_revision" = "$expected_revision"
+          {
+            echo "kind=release-mode-library-tests"
+            echo "expected_revision=$expected_revision"
+            echo "actual_revision=$actual_revision"
+            echo "runner=${RUNNER_OS}/${RUNNER_ARCH}"
+            rustc -Vv
+            cargo -V
+          } 2>&1 | tee benchmark-comparison/pr-metadata.txt
+          run_one_peb_test() {
+            local test_filter="$1"
+            local output_file="$2"
+            cargo test -p wm-gen3-core --features operator --release --lib "$test_filter" -- --exact --nocapture --color never 2>&1 | tee "$output_file"
+            local running_count
+            running_count="$(awk '$0 == "running 1 test" { count++ } END { print count + 0 }' "$output_file")"
+            local passing_test_count
+            passing_test_count="$(awk -v filter="$test_filter" 'index($0, "test " filter) == 1 && $0 ~ /[.][.][.] ok$/ { count++ } END { print count + 0 }' "$output_file")"
+            local passing_summary_count
+            passing_summary_count="$(awk '$0 ~ /^test result: ok[.] 1 passed; 0 failed;/ { count++ } END { print count + 0 }' "$output_file")"
+            if [[ "$running_count" != "1" || "$passing_test_count" != "1" || "$passing_summary_count" != "1" ]]; then
+              echo "expected exactly one passing test for $test_filter; found running=$running_count, named_passes=$passing_test_count, passing_summaries=$passing_summary_count" >&2
+              return 1
+            fi
+            return 0
+          }
+          run_one_peb_test pulse::tests::test_peb0_minimality_benchmark_execution benchmark-comparison/pr-peb0.log
+          run_one_peb_test pulse::tests::test_peb0_1_intelligent_merger_benchmark_execution benchmark-comparison/pr-peb0.1.log
 
-      - name: Checkout base branch
-        uses: actions/checkout@v4
+      - name: Checkout exact PR base commit
+        uses: actions/checkout@v6
         with:
-          ref: ${{ github.base_ref }}
+          ref: ${{ github.event.pull_request.base.sha }}
           path: base
 
-      - name: Run base benchmarks
+      - name: Run exact base PEB-0 tests in release mode
         working-directory: base
-        # Criterion benches only (crates/*/Cargo.toml `harness = false`):
-        # the `--` args are criterion flags and the libtest-harness
-        # targets compiled by `cargo bench --workspace` reject them
-        # (2026-09-02 CI reds, classified in local triage notes).
-        run: >-
-          cargo bench -p wm-bicameral -p wm-cognitive -p wm-core -p wm-dispatch -p wm-memory -p wm-tools --bench router_bench --bench self_play_bench --bench dream_bench --bench reflex_bench --bench mutable_bench --bench pipeline_bench --bench embedder_bench --bench episodic_bench --bench store_bench --bench rsi_bench --bench transaction_bench
-          -- --save-baseline base
-
-      - name: Import base baseline into PR checkout
+        shell: bash
         run: |
-          mkdir -p target/criterion
-          rm -rf target/criterion/base
-          cp -r base/target/criterion/base target/criterion/base
+          set -euo pipefail
+          mkdir -p ../benchmark-comparison
+          expected_revision="${{ github.event.pull_request.base.sha }}"
+          actual_revision="$(git rev-parse HEAD)"
+          test "$actual_revision" = "$expected_revision"
+          {
+            echo "kind=release-mode-library-tests"
+            echo "expected_revision=$expected_revision"
+            echo "actual_revision=$actual_revision"
+            echo "runner=${RUNNER_OS}/${RUNNER_ARCH}"
+            rustc -Vv
+            cargo -V
+          } 2>&1 | tee ../benchmark-comparison/base-metadata.txt
+          run_one_peb_test() {
+            local test_filter="$1"
+            local output_file="$2"
+            cargo test -p wm-gen3-core --features operator --release --lib "$test_filter" -- --exact --nocapture --color never 2>&1 | tee "$output_file"
+            local running_count
+            running_count="$(awk '$0 == "running 1 test" { count++ } END { print count + 0 }' "$output_file")"
+            local passing_test_count
+            passing_test_count="$(awk -v filter="$test_filter" 'index($0, "test " filter) == 1 && $0 ~ /[.][.][.] ok$/ { count++ } END { print count + 0 }' "$output_file")"
+            local passing_summary_count
+            passing_summary_count="$(awk '$0 ~ /^test result: ok[.] 1 passed; 0 failed;/ { count++ } END { print count + 0 }' "$output_file")"
+            if [[ "$running_count" != "1" || "$passing_test_count" != "1" || "$passing_summary_count" != "1" ]]; then
+              echo "expected exactly one passing test for $test_filter; found running=$running_count, named_passes=$passing_test_count, passing_summaries=$passing_summary_count" >&2
+              return 1
+            fi
+            return 0
+          }
+          run_one_peb_test pulse::tests::test_peb0_minimality_benchmark_execution ../benchmark-comparison/base-peb0.log
+          run_one_peb_test pulse::tests::test_peb0_1_intelligent_merger_benchmark_execution ../benchmark-comparison/base-peb0.1.log
 
-      - name: Compare PR against base
+      - name: Summarize raw PR/base outputs
+        if: always()
+        shell: bash
         run: |
-          # Advisory comparison (shared CI runners are noisy); results are
-          # posted to the step summary for review. The old step compared the
-          # base branch against its own baseline, which could never detect a
-          # PR regression.
-          cargo bench -p wm-bicameral -p wm-cognitive -p wm-core -p wm-dispatch -p wm-memory -p wm-tools --bench router_bench --bench self_play_bench --bench dream_bench --bench reflex_bench --bench mutable_bench --bench pipeline_bench --bench embedder_bench --bench episodic_bench --bench store_bench --bench rsi_bench --bench transaction_bench \
-            -- --baseline base --noplot 2>&1 | tee comparison.txt || true
+          set -euo pipefail
+          {
+            echo "# PEB-0 release-mode raw comparison (advisory)"
+            echo
+            echo "This job runs the existing PEB-0 and PEB-0.1 library tests once on the exact PR head and exact base SHA. It reports raw outputs only: shared-runner measurements are noisy, and this is not Criterion regression proof or a percentage gate."
+            echo
+            for file in benchmark-comparison/*; do
+              if [[ -f "$file" ]]; then
+                echo "## $file"
+                echo '```text'
+                cat "$file"
+                echo '```'
+              fi
+            done
+          } | tee comparison.txt >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Check for regressions
-        run: |
-          echo "## Benchmark Comparison (PR vs base)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          cat comparison.txt >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          if grep -qiE "regressed" comparison.txt; then
-            echo ":warning: Some benchmarks regressed vs base — review before merging." >> $GITHUB_STEP_SUMMARY
-          fi
+      - name: Upload PR/base raw benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: benchmark-comparison-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            benchmark-comparison/
+            comparison.txt
+          if-no-files-found: warn
