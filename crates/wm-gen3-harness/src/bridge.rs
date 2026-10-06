@@ -19,6 +19,7 @@ use std::path::Path;
 use std::str::FromStr;
 use uuid::Uuid;
 
+use wm_gen3_core::compat::{Gen2EpisodicRecord, Gen2Reader};
 use wm_gen3_core::evidence::RatifiedChannel;
 use wm_gen3_core::mandala::resolve_or_create_mandala_gate_key;
 use wm_gen3_core::mesh::{MeshClient, resolve_or_create_mesh_key};
@@ -3412,4 +3413,359 @@ pub fn build_contract_manifest(version: &str) -> Value {
             .collect::<Vec<_>>(),
         "tools": tool_manifests
     })
+}
+
+// ---------------------------------------------------------------------------
+// Legacy Gen2 read-through mount
+// ---------------------------------------------------------------------------
+//
+// `wm serve --legacy-store <dir>` exposes a Gen2 LMDB store through the same
+// JSON-RPC/MCP stdio loop as a Gen3 store, backed directly by the zero-copy
+// `wm_gen3_core::compat::Gen2Reader` (read-only, lock-free). This is the
+// inverse of `wm migrate`: nothing is copied, nothing is written; migration
+// stays available but becomes optional for read/recall use.
+
+/// Read-only MCP tool catalog for a mounted legacy Gen2 store.
+#[must_use]
+pub fn get_legacy_tools_list() -> Value {
+    json!([
+        {
+            "name": "memory.search",
+            "description": "Read-only lexical search over a mounted legacy Gen2 LMDB store (all terms must match, case-insensitive; model_exclude records omitted). No migration is performed.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "query": { "type": "string", "description": "Search terms; every whitespace-separated term must appear" },
+                    "limit": { "type": "integer", "description": "Maximum results to return (default: 10, max: 100)" }
+                },
+                "required": ["query"]
+            }
+        },
+        {
+            "name": "memory.list",
+            "description": "List records from the mounted legacy Gen2 store, newest first (model_exclude records omitted).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "limit": { "type": "integer", "description": "Maximum results to return (default: 20, max: 500)" },
+                    "offset": { "type": "integer", "description": "Skip this many records after sorting (default: 0)" },
+                    "session_id": { "type": "string", "description": "Only records from this Gen2 session UUID" },
+                    "kind": { "type": "string", "description": "Only records of this kind (e.g. user_statement, assistant_response, tool_call, decision)" }
+                }
+            }
+        },
+        {
+            "name": "memory.read",
+            "description": "Read one exact record by UUID from the mounted legacy Gen2 store (includes records omitted from search/list).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": "string", "description": "Gen2 record UUID" }
+                },
+                "required": ["id"]
+            }
+        },
+        {
+            "name": "memory.count",
+            "description": "Count records in the mounted legacy Gen2 store.",
+            "inputSchema": { "type": "object", "properties": {} }
+        },
+        {
+            "name": "memory.stats",
+            "description": "Census and SHA-256 integrity report for the mounted legacy Gen2 store.",
+            "inputSchema": { "type": "object", "properties": {} }
+        }
+    ])
+}
+
+/// Serialize one legacy record for tool output (lossless fields, no truncation).
+fn legacy_record_json(record: &Gen2EpisodicRecord) -> Value {
+    json!({
+        "id": record.id.to_string(),
+        "session_id": record.session_id.map(|s| s.to_string()),
+        "sequence": record.sequence,
+        "kind": record.kind.to_string(),
+        "content": &record.content,
+        "content_hash": &record.content_hash,
+        "content_hash_valid": record.validate_hash(),
+        "source": record.provenance.source.to_string(),
+        "actor": &record.provenance.actor,
+        "confidence": record.provenance.confidence,
+        "validity": record.validity.to_string(),
+        "is_private": record.is_private,
+        "model_exclude": record.model_exclude,
+        "created_at": record.created_at.to_rfc3339(),
+        "evidence_count": record.evidence.len(),
+    })
+}
+
+fn legacy_search(args: &Value, reader: &Gen2Reader) -> Result<Value, String> {
+    let query = args
+        .get("query")
+        .and_then(Value::as_str)
+        .ok_or("missing required argument 'query'")?;
+    let limit = args
+        .get("limit")
+        .and_then(Value::as_u64)
+        .unwrap_or(10)
+        .clamp(1, 100) as usize;
+    let terms: Vec<String> = query
+        .split_whitespace()
+        .map(|t| {
+            t.trim_matches(|c: char| !c.is_alphanumeric())
+                .to_lowercase()
+        })
+        .filter(|t| !t.is_empty())
+        .collect();
+    if terms.is_empty() {
+        return Err("query has no searchable terms".to_string());
+    }
+
+    let records = reader
+        .scan_records(None)
+        .map_err(|e| format!("legacy scan failed: {e}"))?;
+    let total = records.len();
+    let mut hits: Vec<(usize, &Gen2EpisodicRecord)> = records
+        .iter()
+        .filter(|r| !r.model_exclude)
+        .filter_map(|r| {
+            let content = r.content.to_lowercase();
+            let mut score = 0usize;
+            for term in &terms {
+                let n = content.matches(term.as_str()).count();
+                if n == 0 {
+                    return None;
+                }
+                score += n;
+            }
+            Some((score, r))
+        })
+        .collect();
+    hits.sort_by(|a, b| {
+        b.0.cmp(&a.0)
+            .then_with(|| b.1.created_at.cmp(&a.1.created_at))
+    });
+    let results: Vec<Value> = hits
+        .iter()
+        .take(limit)
+        .map(|(score, r)| {
+            let mut v = legacy_record_json(r);
+            v["score"] = json!(score);
+            v
+        })
+        .collect();
+
+    Ok(json!({
+        "status": "success",
+        "recall_mode": "legacy_gen2_scan",
+        "query": query,
+        "count": results.len(),
+        "total_scanned": total,
+        "results": results
+    }))
+}
+
+fn legacy_list(args: &Value, reader: &Gen2Reader) -> Result<Value, String> {
+    let limit = args
+        .get("limit")
+        .and_then(Value::as_u64)
+        .unwrap_or(20)
+        .clamp(1, 500) as usize;
+    let offset = args.get("offset").and_then(Value::as_u64).unwrap_or(0) as usize;
+    let session_filter = match args.get("session_id").and_then(Value::as_str) {
+        Some(s) => Some(Uuid::parse_str(s).map_err(|e| format!("invalid session_id '{s}': {e}"))?),
+        None => None,
+    };
+    let kind_filter = args
+        .get("kind")
+        .and_then(Value::as_str)
+        .map(str::to_lowercase);
+
+    let mut records = reader
+        .scan_records(None)
+        .map_err(|e| format!("legacy scan failed: {e}"))?;
+    records.retain(|r| !r.model_exclude);
+    if let Some(sid) = session_filter {
+        records.retain(|r| r.session_id == Some(sid));
+    }
+    if let Some(kind) = &kind_filter {
+        records.retain(|r| r.kind.to_string().to_lowercase() == *kind);
+    }
+    let total = records.len();
+    records.sort_by_key(|r| std::cmp::Reverse(r.created_at));
+    let results: Vec<Value> = records
+        .iter()
+        .skip(offset)
+        .take(limit)
+        .map(legacy_record_json)
+        .collect();
+
+    Ok(json!({
+        "status": "success",
+        "total": total,
+        "offset": offset,
+        "count": results.len(),
+        "results": results
+    }))
+}
+
+fn legacy_read(args: &Value, reader: &Gen2Reader) -> Result<Value, String> {
+    let id_str = args
+        .get("id")
+        .and_then(Value::as_str)
+        .ok_or("missing required argument 'id'")?;
+    let id = Uuid::parse_str(id_str).map_err(|e| format!("invalid UUID '{id_str}': {e}"))?;
+    match reader
+        .get_record(id)
+        .map_err(|e| format!("legacy read failed: {e}"))?
+    {
+        Some(record) => Ok(json!({
+            "status": "success",
+            "record": legacy_record_json(&record)
+        })),
+        None => Err(format!("record not found: {id_str}")),
+    }
+}
+
+fn legacy_count(reader: &Gen2Reader) -> Result<Value, String> {
+    let count = reader
+        .count()
+        .map_err(|e| format!("legacy count failed: {e}"))?;
+    Ok(json!({
+        "status": "success",
+        "count": count,
+        "store": reader.path().display().to_string(),
+        "recall_mode": "legacy_gen2_scan"
+    }))
+}
+
+fn legacy_stats(reader: &Gen2Reader) -> Result<Value, String> {
+    let census = reader
+        .census()
+        .map_err(|e| format!("legacy census failed: {e}"))?;
+    let census_json =
+        serde_json::to_value(&census).map_err(|e| format!("census serialize failed: {e}"))?;
+    Ok(json!({
+        "status": "success",
+        "integrity_ratio": census.integrity_ratio(),
+        "census": census_json
+    }))
+}
+
+/// Dispatch one tool call against a mounted legacy Gen2 store.
+///
+/// Only read-only memory tools are available; every other route fails closed
+/// with migration guidance so a mount can never be mistaken for a writable
+/// store.
+pub fn execute_legacy_tool_call(
+    name: &str,
+    args: &Value,
+    reader: &Gen2Reader,
+) -> Result<Value, String> {
+    match name {
+        "memory.search"
+        | "memory_search"
+        | "memory.recall"
+        | "memory_recall"
+        | "memory.hybrid.recall"
+        | "memory.hybrid_recall" => legacy_search(args, reader),
+        "memory.list" | "memory_list" => legacy_list(args, reader),
+        "memory.read" | "memory_read" | "memory.get" | "memory_get" => legacy_read(args, reader),
+        "memory.count" | "memory_count" => legacy_count(reader),
+        "memory.stats" | "memory_stats" | "stats" => legacy_stats(reader),
+        _ => Err(format!(
+            "tool '{name}' is not available on a read-only legacy Gen2 mount; \
+             write and session tools require a Gen3 store. \
+             Migrate with `wm migrate --source <legacy-dir> --store <gen3-dir>`."
+        )),
+    }
+}
+
+#[cfg(test)]
+mod legacy_tests {
+    use super::*;
+
+    // Host-local real store (same skip-guard pattern as
+    // wm-gen3-core::compat's `test_real_gen2_store_census`).
+    const REAL_STORE: &str = "/home/lucas/wm-data/WMdata/projects/planning/lmdb";
+
+    fn open_real() -> Option<Gen2Reader> {
+        if !Path::new(REAL_STORE).join("data.mdb").is_file() {
+            eprintln!("skipping legacy mount test: {REAL_STORE} not present on this host");
+            return None;
+        }
+        Some(Gen2Reader::open(REAL_STORE).expect("open legacy Gen2 store"))
+    }
+
+    #[test]
+    fn legacy_catalog_is_the_read_only_surface() {
+        let tools = get_legacy_tools_list();
+        let names: Vec<&str> = tools
+            .as_array()
+            .expect("array")
+            .iter()
+            .filter_map(|t| t["name"].as_str())
+            .collect();
+        assert_eq!(
+            names,
+            vec![
+                "memory.search",
+                "memory.list",
+                "memory.read",
+                "memory.count",
+                "memory.stats"
+            ]
+        );
+    }
+
+    #[test]
+    fn legacy_mount_reads_and_refuses_writes() {
+        let Some(reader) = open_real() else { return };
+
+        assert!(
+            execute_legacy_tool_call("memory.create", &json!({"content": "x"}), &reader).is_err(),
+            "writes must fail closed on a legacy mount"
+        );
+        assert!(
+            execute_legacy_tool_call("session.record", &json!({"content": "x"}), &reader).is_err(),
+            "session tools must fail closed on a legacy mount"
+        );
+
+        let count = execute_legacy_tool_call("memory.count", &json!({}), &reader).expect("count");
+        let total = count["count"].as_u64().expect("count value");
+        assert!(total > 0, "planning store should have records");
+
+        let stats = execute_legacy_tool_call("memory.stats", &json!({}), &reader).expect("stats");
+        assert_eq!(stats["census"]["total_records"].as_u64(), Some(total));
+
+        let listed =
+            execute_legacy_tool_call("memory.list", &json!({"limit": 3}), &reader).expect("list");
+        let results = listed["results"].as_array().expect("results array");
+        assert!(!results.is_empty() && results.len() <= 3);
+        let first = &results[0];
+        let id = first["id"].as_str().expect("record id");
+
+        let read =
+            execute_legacy_tool_call("memory.read", &json!({"id": id}), &reader).expect("read");
+        assert_eq!(read["record"]["id"].as_str(), Some(id));
+
+        if let Some(word) = first["content"]
+            .as_str()
+            .unwrap_or("")
+            .split_whitespace()
+            .map(|w| w.trim_matches(|c: char| !c.is_alphanumeric()))
+            .find(|w| w.len() >= 5)
+        {
+            let hits = execute_legacy_tool_call(
+                "memory.search",
+                &json!({"query": word.to_lowercase(), "limit": 5}),
+                &reader,
+            )
+            .expect("search");
+            assert!(
+                hits["count"].as_u64().unwrap_or(0) >= 1,
+                "search for '{word}' should hit at least one record"
+            );
+        }
+    }
 }

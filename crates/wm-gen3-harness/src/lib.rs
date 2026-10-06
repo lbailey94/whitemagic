@@ -4,6 +4,7 @@
 #![recursion_limit = "512"]
 
 pub mod bridge;
+pub mod mcp_server;
 
 #[cfg(feature = "systemone")]
 pub mod decision_receipt;

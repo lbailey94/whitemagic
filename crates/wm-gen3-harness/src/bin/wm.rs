@@ -9,7 +9,6 @@
 #![recursion_limit = "512"]
 
 use clap::{Parser, Subcommand};
-use serde_json::json;
 use std::io::BufRead;
 use std::path::{Path, PathBuf};
 
@@ -29,10 +28,8 @@ use wm_gen3_core::peer::{BanCertificate, PeerDirectory, PeerIdentity, PeerTrustT
 use wm_gen3_core::sentinel::{
     SentinelCircuitBreaker, SentinelLeaseGuard, SentinelReport, SentinelStatus,
 };
-use wm_gen3_core::{ContextCacheToken, ToolSchemaDefinition};
-use wm_gen3_harness::bridge::{
-    McpProfile, build_contract_manifest, execute_hybrid_tool_call, get_tools_list_for_profile,
-};
+use wm_gen3_harness::bridge::{McpProfile, build_contract_manifest};
+use wm_gen3_harness::mcp_server::{McpBackend, NetworkTransport, serve_network};
 
 /// Build version — single source of truth is the workspace Cargo.toml
 /// (`CARGO_PKG_VERSION`); never hardcode a version string in this binary.
@@ -212,6 +209,32 @@ enum Commands {
         #[arg(long)]
         receipt_file: Option<PathBuf>,
     },
+    /// Migrate every Gen2 store under a projects root into per-project Gen3 targets
+    MigrateAll {
+        /// Root containing <project>/lmdb/data.mdb Gen2 stores
+        #[arg(long)]
+        source_root: PathBuf,
+        /// Root receiving one Gen3 store per project (<root>/<project>)
+        #[arg(long)]
+        target_root: PathBuf,
+        /// Comma-separated subset of project names to migrate
+        #[arg(long)]
+        only: Option<String>,
+        /// Ingestion batch size
+        #[arg(long, default_value_t = 100)]
+        batch_size: usize,
+        /// Census only; never opens or creates target stores
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Review a migration quarantine log (JSONL) with reason grouping
+    Quarantine {
+        /// Path to the quarantine JSONL file written by a migration
+        file: PathBuf,
+        /// Maximum entries to list in the sample
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+    },
     /// Output machine-checked route and schema contract manifest
     Contract {
         /// Output formatted JSON manifest
@@ -242,6 +265,16 @@ enum Commands {
         /// Enable noise filtration
         #[arg(long, default_value_t = true)]
         noise: bool,
+        /// Mount a legacy Gen2 LMDB store read-only (directory containing data.mdb)
+        /// instead of a Gen3 store; exposes memory.search/list/read/count/stats
+        #[arg(long)]
+        legacy_store: Option<PathBuf>,
+        /// Transport: 'stdio' (default), 'http' (streamable), or 'sse' (classic event stream)
+        #[arg(long, default_value = "stdio")]
+        transport: String,
+        /// Bind address for --transport http|sse (default: 127.0.0.1:18780)
+        #[arg(long, default_value = "127.0.0.1:18780")]
+        bind: String,
     },
     /// Mandala P2P Mesh & Sovereign Synchronization
     Mesh {
@@ -2091,20 +2124,94 @@ fn main() {
             embed_cache,
             dispersion,
             noise,
+            legacy_store,
+            transport,
+            bind,
         } => {
             let parsed_profile = profile
                 .parse::<McpProfile>()
                 .unwrap_or(McpProfile::Cyberbrain);
-            run_serve_loop(
-                &store_path,
-                parsed_profile,
-                readonly,
-                sweep,
-                projection,
-                embed_cache.as_deref(),
-                dispersion,
-                noise,
-            );
+
+            let backend = if let Some(legacy) = legacy_store.as_deref() {
+                match Gen2Reader::open(legacy) {
+                    Ok(reader) => {
+                        eprintln!(
+                            "gen3: serve legacy(Gen2) store={} profile={:?} mode=readonly (compat reader; no writes)",
+                            legacy.display(),
+                            parsed_profile
+                        );
+                        McpBackend::legacy(reader, legacy, parsed_profile)
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "gen3: cannot open legacy Gen2 store at {}: {e}",
+                            legacy.display()
+                        );
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                let journal_path = store_path.join("journal.jsonl");
+                let mut substrate = {
+                    let opened = if readonly {
+                        Substrate::open_readonly(&store_path, Some(&journal_path), default_view())
+                    } else {
+                        Substrate::open(&store_path, Some(&journal_path), default_view())
+                    };
+                    match opened {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!(
+                                "gen3: cannot open substrate at {}: {e}",
+                                store_path.display()
+                            );
+                            std::process::exit(1);
+                        }
+                    }
+                };
+
+                substrate.set_intake_authority(RatifiedChannel::mint("wm-gen3-serve"));
+                substrate.set_sweep_enabled(sweep);
+                if projection {
+                    if let Err(e) = substrate.set_projection_enabled(true, embed_cache.as_deref()) {
+                        eprintln!("gen3: projection enable failed: {e}");
+                        std::process::exit(1);
+                    }
+                }
+                substrate.set_dispersion(dispersion);
+                substrate.set_noise_enabled(noise);
+
+                eprintln!(
+                    "gen3: serve store={} profile={:?} mode={} sweep={} projection={}",
+                    store_path.display(),
+                    parsed_profile,
+                    if readonly { "readonly" } else { "readwrite" },
+                    if sweep { "on" } else { "off" },
+                    if projection { "on" } else { "off" }
+                );
+
+                McpBackend::gen3(substrate, &store_path, parsed_profile, readonly)
+            };
+
+            match transport.to_ascii_lowercase().as_str() {
+                "stdio" => run_stdio_loop(&backend),
+                kind @ ("http" | "sse") => {
+                    let addr = bind.parse::<std::net::SocketAddr>().unwrap_or_else(|e| {
+                        eprintln!("gen3: invalid --bind '{}': {e}", bind);
+                        std::process::exit(2);
+                    });
+                    let network = if kind == "http" {
+                        NetworkTransport::Http
+                    } else {
+                        NetworkTransport::Sse
+                    };
+                    serve_network(backend, addr, network);
+                }
+                other => {
+                    eprintln!("gen3: unknown --transport '{other}' (expected stdio|http|sse)");
+                    std::process::exit(2);
+                }
+            }
         }
         Commands::Migrate {
             source,
@@ -2125,6 +2232,24 @@ fn main() {
                 quarantine_file,
                 receipt_file,
             );
+        }
+        Commands::MigrateAll {
+            source_root,
+            target_root,
+            only,
+            batch_size,
+            dry_run,
+        } => {
+            run_migrate_all(
+                &source_root,
+                &target_root,
+                only.as_deref(),
+                batch_size,
+                dry_run,
+            );
+        }
+        Commands::Quarantine { file, limit } => {
+            run_quarantine_review(&file, limit);
         }
         Commands::Mesh { command } => {
             run_mesh_command(command, &store_path);
@@ -4674,6 +4799,281 @@ fn run_migration(
     }
 }
 
+fn run_migrate_all(
+    source_root: &Path,
+    target_root: &Path,
+    only: Option<&str>,
+    batch_size: usize,
+    dry_run: bool,
+) {
+    println!("==================================================");
+    println!("     WhiteMagic Gen3 Batch Migration (migrate-all) ");
+    println!("==================================================");
+    println!("Source root: {}", source_root.display());
+    println!("Target root: {}", target_root.display());
+    println!(
+        "Mode:        {}",
+        if dry_run {
+            "DRY RUN (census only; no writes)"
+        } else {
+            "LIVE SOVEREIGN COMMITS"
+        }
+    );
+    println!("==================================================");
+
+    let only_filter: Option<Vec<String>> = only.map(|raw| {
+        raw.split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect()
+    });
+
+    let mut stores: Vec<(String, PathBuf)> = Vec::new();
+    match std::fs::read_dir(source_root) {
+        Ok(entries) => {
+            for entry in entries.flatten() {
+                let name = entry.file_name().to_string_lossy().to_string();
+                let lmdb = entry.path().join("lmdb");
+                if !lmdb.join("data.mdb").is_file() {
+                    continue;
+                }
+                if let Some(filter) = &only_filter {
+                    if !filter.iter().any(|f| f == &name) {
+                        continue;
+                    }
+                }
+                stores.push((name, lmdb));
+            }
+        }
+        Err(e) => {
+            eprintln!("cannot read source root {}: {e}", source_root.display());
+            std::process::exit(1);
+        }
+    }
+    stores.sort();
+    if stores.is_empty() {
+        eprintln!(
+            "no Gen2 stores (<project>/lmdb/data.mdb) found under {}",
+            source_root.display()
+        );
+        std::process::exit(1);
+    }
+
+    if !dry_run {
+        if let Err(e) = std::fs::create_dir_all(target_root) {
+            eprintln!("cannot create target root {}: {e}", target_root.display());
+            std::process::exit(1);
+        }
+    }
+
+    let mut store_entries: Vec<serde_json::Value> = Vec::new();
+    let mut total_scanned = 0usize;
+    let mut total_migrated = 0usize;
+    let mut total_duplicates = 0usize;
+    let mut total_quarantined = 0usize;
+    let mut failed = 0usize;
+
+    for (name, lmdb) in &stores {
+        let reader = match Gen2Reader::open(lmdb) {
+            Ok(reader) => reader,
+            Err(e) => {
+                eprintln!("[{name}] cannot open legacy store: {e}");
+                failed += 1;
+                continue;
+            }
+        };
+
+        if dry_run {
+            match reader.census() {
+                Ok(census) => {
+                    println!(
+                        "{name:<18} records={:<7} valid={:<7} hash_mismatch={:<5} integrity={:.4}",
+                        census.total_records,
+                        census.valid_hashes,
+                        census.hash_mismatches,
+                        census.integrity_ratio()
+                    );
+                    total_scanned += census.total_records as usize;
+                    total_migrated += census.valid_hashes as usize;
+                    store_entries.push(serde_json::json!({
+                        "name": name,
+                        "source": lmdb.display().to_string(),
+                        "total_records": census.total_records,
+                        "valid_hashes": census.valid_hashes,
+                        "hash_mismatches": census.hash_mismatches,
+                        "integrity_ratio": census.integrity_ratio(),
+                        "would_migrate": census.valid_hashes,
+                        "mode": "dry_run"
+                    }));
+                }
+                Err(e) => {
+                    eprintln!("[{name}] census failed: {e}");
+                    failed += 1;
+                }
+            }
+            continue;
+        }
+
+        let target = target_root.join(name);
+        let journal = target.join("journal.jsonl");
+        let mut substrate = match Substrate::open(&target, Some(&journal), default_view()) {
+            Ok(substrate) => substrate,
+            Err(e) => {
+                eprintln!("[{name}] cannot open target {}: {e}", target.display());
+                failed += 1;
+                continue;
+            }
+        };
+        let options = MigrationOptions {
+            batch_size,
+            dry_run: false,
+            validate_hashes: true,
+            allow_noise: false,
+            quarantine_path: Some(target.join("quarantine.jsonl")),
+        };
+
+        match migrate_gen2_to_gen3(&reader, &mut substrate, &options) {
+            Ok(receipt) => {
+                if let Ok(serialized) = serde_json::to_string_pretty(&receipt) {
+                    let _ = std::fs::write(target.join("migration_receipt.json"), serialized);
+                }
+                println!(
+                    "{name:<18} scanned={:<7} migrated={:<7} duplicates={:<7} quarantined={:<5} epoch={}",
+                    receipt.total_scanned,
+                    receipt.migrated_count,
+                    receipt.duplicate_skipped,
+                    receipt.quarantined_count,
+                    receipt.target_epoch
+                );
+                total_scanned += receipt.total_scanned;
+                total_migrated += receipt.migrated_count;
+                total_duplicates += receipt.duplicate_skipped;
+                total_quarantined += receipt.quarantined_count;
+                store_entries.push(serde_json::json!({
+                    "name": name,
+                    "source": lmdb.display().to_string(),
+                    "target": target.display().to_string(),
+                    "total_scanned": receipt.total_scanned,
+                    "migrated": receipt.migrated_count,
+                    "duplicates": receipt.duplicate_skipped,
+                    "quarantined": receipt.quarantined_count,
+                    "target_epoch": receipt.target_epoch,
+                    "receipt_digest": receipt.receipt_digest,
+                    "mode": "live"
+                }));
+            }
+            Err(e) => {
+                eprintln!("[{name}] migration failed: {e}");
+                failed += 1;
+            }
+        }
+    }
+
+    let unix_ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let batch = serde_json::json!({
+        "kind": "wm-gen3-migration-batch",
+        "version": WM_VERSION,
+        "source_root": source_root.display().to_string(),
+        "target_root": target_root.display().to_string(),
+        "dry_run": dry_run,
+        "unix_ts": unix_ts,
+        "stores": store_entries,
+        "totals": {
+            "stores": stores.len(),
+            "failed": failed,
+            "scanned": total_scanned,
+            "migrated": total_migrated,
+            "duplicates": total_duplicates,
+            "quarantined": total_quarantined
+        }
+    });
+
+    println!("==================================================");
+    println!("Stores: {}  failed: {}", stores.len(), failed);
+    println!(
+        "Scanned: {}  Migrated: {}  Duplicates: {}  Quarantined: {}",
+        total_scanned, total_migrated, total_duplicates, total_quarantined
+    );
+    if !dry_run {
+        let out = target_root.join("migration_batch_receipt.json");
+        match serde_json::to_string_pretty(&batch) {
+            Ok(serialized) => match std::fs::write(&out, serialized) {
+                Ok(()) => println!("Batch receipt: {}", out.display()),
+                Err(e) => eprintln!("failed to write batch receipt: {e}"),
+            },
+            Err(e) => eprintln!("failed to serialize batch receipt: {e}"),
+        }
+    }
+    if failed > 0 {
+        std::process::exit(1);
+    }
+}
+
+fn run_quarantine_review(file: &Path, limit: usize) {
+    let content = match std::fs::read_to_string(file) {
+        Ok(content) => content,
+        Err(e) => {
+            eprintln!("cannot read {}: {e}", file.display());
+            std::process::exit(1);
+        }
+    };
+
+    let mut entries: Vec<serde_json::Value> = Vec::new();
+    for line in content.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        if let Ok(record) = serde_json::from_str::<serde_json::Value>(line) {
+            entries.push(record);
+        }
+    }
+
+    println!("Quarantine log: {}", file.display());
+    println!("Entries:        {}", entries.len());
+
+    let mut by_reason: std::collections::BTreeMap<String, usize> =
+        std::collections::BTreeMap::new();
+    for record in &entries {
+        let reason = record
+            .get("reason")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        let key = reason
+            .split(':')
+            .next()
+            .unwrap_or(reason)
+            .trim()
+            .to_string();
+        *by_reason.entry(key).or_insert(0) += 1;
+    }
+    println!("By reason:");
+    for (reason, count) in &by_reason {
+        println!("  {count:>5}  {reason}");
+    }
+
+    if limit > 0 {
+        println!("Sample (first {limit}):");
+        for record in entries.iter().take(limit) {
+            println!(
+                "  {}  {:>7}B  {}",
+                record
+                    .get("raw_key_hex")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("?"),
+                record
+                    .get("raw_val_len")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                record.get("reason").and_then(|v| v.as_str()).unwrap_or("")
+            );
+        }
+    }
+}
+
 fn legacy_store_detected(path: &Path) -> bool {
     if !path.is_dir() {
         return false;
@@ -4730,53 +5130,8 @@ fn print_census_report(census: &Gen2Census) {
     println!("Zero Gen2 dependencies invoked. 100% Law & Evidence Closure.");
 }
 
-fn run_serve_loop(
-    store: &Path,
-    profile: McpProfile,
-    readonly: bool,
-    sweep_enabled: bool,
-    projection_on: bool,
-    embed_cache: Option<&Path>,
-    dispersion_on: bool,
-    noise_enabled: bool,
-) {
+fn run_stdio_loop(backend: &McpBackend) {
     use std::io::{BufRead, Write};
-    let journal_path = store.join("journal.jsonl");
-
-    let mut substrate = {
-        let opened = if readonly {
-            Substrate::open_readonly(store, Some(&journal_path), default_view())
-        } else {
-            Substrate::open(store, Some(&journal_path), default_view())
-        };
-        match opened {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("gen3: cannot open substrate at {}: {e}", store.display());
-                std::process::exit(1);
-            }
-        }
-    };
-
-    substrate.set_intake_authority(RatifiedChannel::mint("wm-gen3-serve"));
-    substrate.set_sweep_enabled(sweep_enabled);
-    if projection_on {
-        if let Err(e) = substrate.set_projection_enabled(true, embed_cache) {
-            eprintln!("gen3: projection enable failed: {e}");
-            std::process::exit(1);
-        }
-    }
-    substrate.set_dispersion(dispersion_on);
-    substrate.set_noise_enabled(noise_enabled);
-
-    eprintln!(
-        "gen3: serve store={} profile={:?} mode={} sweep={} projection={}",
-        store.display(),
-        profile,
-        if readonly { "readonly" } else { "readwrite" },
-        if sweep_enabled { "on" } else { "off" },
-        if projection_on { "on" } else { "off" }
-    );
 
     let stdin = std::io::stdin();
     let mut stdout = std::io::stdout();
@@ -4789,148 +5144,9 @@ fn run_serve_loop(
         let Ok(request) = serde_json::from_str::<serde_json::Value>(line) else {
             continue;
         };
-        let is_notification = request.get("id").is_none();
-        let id = request
-            .get("id")
-            .cloned()
-            .unwrap_or(serde_json::Value::Null);
-        let method = request
-            .get("method")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("");
-
-        if is_notification {
-            // Notifications (e.g. notifications/initialized) must never receive a response per JSON-RPC 2.0
-            continue;
-        }
-
-        match method {
-            "initialize" => {
-                let envelope = json!({
-                    "jsonrpc": "2.0",
-                    "id": id,
-                    "result": {
-                        "protocolVersion": "2024-11-05",
-                        "capabilities": {
-                            "tools": {}
-                        },
-                        "serverInfo": {
-                            "name": "whitemagic-gen3",
-                            "version": WM_VERSION,
-                            "profile": match profile { McpProfile::Cyberbrain => "cyberbrain", McpProfile::Full => "full" }
-                        }
-                    }
-                });
-                let _ = writeln!(stdout, "{envelope}");
-                let _ = stdout.flush();
-            }
-            "ping" => {
-                let envelope = json!({
-                    "jsonrpc": "2.0",
-                    "id": id,
-                    "result": {}
-                });
-                let _ = writeln!(stdout, "{envelope}");
-                let _ = stdout.flush();
-            }
-            "tools/list" => {
-                let tools = get_tools_list_for_profile(profile, readonly);
-                let tool_schemas: Vec<ToolSchemaDefinition> = tools
-                    .as_array()
-                    .map(|arr| {
-                        arr.iter()
-                            .map(|t| ToolSchemaDefinition {
-                                name: t
-                                    .get("name")
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("")
-                                    .to_string(),
-                                description: t
-                                    .get("description")
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("")
-                                    .to_string(),
-                                parameters_schema: t
-                                    .get("inputSchema")
-                                    .map(|v| v.to_string())
-                                    .unwrap_or_default(),
-                            })
-                            .collect()
-                    })
-                    .unwrap_or_default();
-                let const_hash = [0u8; 32];
-                let epoch = substrate.store().epoch().unwrap_or(0);
-                let cache_token = ContextCacheToken::compute(&tool_schemas, &const_hash, epoch);
-
-                let envelope = json!({
-                    "jsonrpc": "2.0",
-                    "id": id,
-                    "result": {
-                        "tools": tools,
-                        "_meta": {
-                            "profile": match profile { McpProfile::Cyberbrain => "cyberbrain", McpProfile::Full => "full" },
-                            "context_cache_token": cache_token.cache_token,
-                            "canonical_prefix_bytes": cache_token.canonical_prefix_bytes,
-                            "estimated_prefix_tokens": cache_token.estimated_prefix_tokens,
-                            "epoch": epoch
-                        }
-                    }
-                });
-                let _ = writeln!(stdout, "{envelope}");
-                let _ = stdout.flush();
-            }
-            "tools/call" => {
-                let name = request
-                    .pointer("/params/name")
-                    .and_then(serde_json::Value::as_str)
-                    .unwrap_or("");
-                let empty_obj = serde_json::Value::Object(serde_json::Map::new());
-                let args = request
-                    .pointer("/params/arguments")
-                    .or_else(|| request.pointer("/params/input"))
-                    .unwrap_or(&empty_obj);
-
-                let res = execute_hybrid_tool_call(name, args, &mut substrate, store, readonly);
-                let envelope = match res {
-                    Ok(val) => json!({
-                        "jsonrpc": "2.0",
-                        "id": id,
-                        "result": {
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": serde_json::to_string_pretty(&val).unwrap_or_else(|_| val.to_string())
-                                }
-                            ],
-                            "isError": false
-                        }
-                    }),
-                    Err(err_msg) => json!({
-                        "jsonrpc": "2.0",
-                        "id": id,
-                        "result": {
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": format!("Error: {err_msg}")
-                                }
-                            ],
-                            "isError": true
-                        }
-                    }),
-                };
-                let _ = writeln!(stdout, "{envelope}");
-                let _ = stdout.flush();
-            }
-            _ => {
-                let err = json!({
-                    "jsonrpc": "2.0",
-                    "id": id,
-                    "error": { "code": -32601, "message": format!("unknown method: {method}") }
-                });
-                let _ = writeln!(stdout, "{err}");
-                let _ = stdout.flush();
-            }
+        if let Some(response) = backend.handle(&request) {
+            let _ = writeln!(stdout, "{response}");
+            let _ = stdout.flush();
         }
     }
 }

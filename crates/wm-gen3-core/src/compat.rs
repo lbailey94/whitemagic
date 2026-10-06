@@ -838,4 +838,78 @@ mod tests {
             assert!(!remember.content.is_empty());
         }
     }
+
+    #[test]
+    fn migration_rerun_is_idempotent() {
+        let src = Path::new(
+            "/home/lucas/Desktop/front burner/WHITEMAGIC/data/WMdata/projects/planning/lmdb",
+        );
+        if !src.join("data.mdb").is_file() {
+            eprintln!(
+                "skipping migration_rerun_is_idempotent: source store not found on this host"
+            );
+            return;
+        }
+
+        let tmp = std::env::temp_dir().join(format!("wm-gen3-migrate-{}", Uuid::new_v4()));
+        let src_copy = tmp.join("gen2");
+        std::fs::create_dir_all(&src_copy).expect("create temp gen2 dir");
+        std::fs::copy(src.join("data.mdb"), src_copy.join("data.mdb")).expect("copy data.mdb");
+        if src.join("lock.mdb").is_file() {
+            let _ = std::fs::copy(src.join("lock.mdb"), src_copy.join("lock.mdb"));
+        }
+
+        let reader = Gen2Reader::open(&src_copy).expect("open copied gen2 store");
+        let target = tmp.join("gen3");
+        let journal = target.join("journal.jsonl");
+        let options = MigrationOptions {
+            quarantine_path: Some(tmp.join("quarantine.jsonl")),
+            ..MigrationOptions::default()
+        };
+
+        let mut substrate = crate::ops::Substrate::open(
+            &target,
+            Some(&journal),
+            crate::constitution::default_view(),
+        )
+        .expect("open target gen3 store");
+        let first = migrate_gen2_to_gen3_with_authority(
+            &reader,
+            &mut substrate,
+            &options,
+            crate::evidence::RatifiedChannel::stub("wm-migration-test"),
+        )
+        .expect("first migration");
+        assert!(
+            first.migrated_count > 0,
+            "first run must migrate at least one record"
+        );
+        drop(substrate);
+
+        let mut substrate = crate::ops::Substrate::open(
+            &target,
+            Some(&journal),
+            crate::constitution::default_view(),
+        )
+        .expect("reopen target gen3 store");
+        let second = migrate_gen2_to_gen3_with_authority(
+            &reader,
+            &mut substrate,
+            &options,
+            crate::evidence::RatifiedChannel::stub("wm-migration-test"),
+        )
+        .expect("second migration");
+        assert_eq!(
+            second.migrated_count, 0,
+            "rerun must not migrate duplicates"
+        );
+        assert_eq!(
+            second.duplicate_skipped, first.migrated_count,
+            "rerun must classify exactly the previously migrated records as duplicates"
+        );
+        assert!(second.total_scanned >= first.migrated_count);
+
+        drop(substrate);
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
 }
