@@ -334,14 +334,21 @@ fn tool_call_envelope(id: Value, result: Result<Value, String>) -> Value {
 /// Dispatch one HTTP body: single request or batch. `None` = notifications only.
 #[must_use]
 pub fn dispatch_json(backend: &McpBackend, body: &[u8]) -> Option<String> {
-    let value: Value = match serde_json::from_slice(body) {
+    let parsed = if body.len() > MAX_HTTP_BODY {
+        Err(format!("request body exceeds {MAX_HTTP_BODY} byte limit"))
+    } else {
+        std::str::from_utf8(body)
+            .map_err(|error| format!("request is not UTF-8: {error}"))
+            .and_then(crate::receipt_verify::parse_strict_json)
+    };
+    let value: Value = match parsed {
         Ok(v) => v,
-        Err(_) => {
+        Err(error) => {
             return Some(
                 json!({
                     "jsonrpc": "2.0",
                     "id": null,
-                    "error": { "code": -32700, "message": "parse error" }
+                    "error": { "code": -32700, "message": format!("parse error: {error}") }
                 })
                 .to_string(),
             );
@@ -665,6 +672,30 @@ fn query_param(query: &str, key: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn network_dispatch_refuses_duplicate_malformed_and_oversized_raw_input() {
+        let store = std::env::temp_dir().join(format!("wm-network-input-{}", uuid::Uuid::new_v4()));
+        let substrate = Substrate::open(&store, None, wm_gen3_core::constitution::default_view())
+            .expect("open isolated network fixture");
+        let backend = McpBackend::gen3(substrate, &store, McpProfile::Full, false);
+        let duplicated_receipt = br#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"receipts.verify","arguments":{"bundle":{"spec":"first","spec":"second"}}}}"#;
+        let oversized = vec![b' '; MAX_HTTP_BODY + 1];
+        for raw in [duplicated_receipt.as_slice(), b"\xff", oversized.as_slice()] {
+            let response = dispatch_json(&backend, raw).expect("parse refusal");
+            let value: Value = serde_json::from_str(&response).expect("response JSON");
+            assert_eq!(value["id"], Value::Null);
+            assert_eq!(value["error"]["code"], json!(-32700));
+        }
+        let ping = dispatch_json(&backend, br#"{"jsonrpc":"2.0","id":2,"method":"ping"}"#)
+            .expect("next independent request succeeds");
+        let value: Value = serde_json::from_str(&ping).expect("ping response");
+        assert_eq!(value["id"], json!(2));
+        assert_eq!(value["result"], json!({}));
+        assert!(!store.join("mandala_gate_key.bin").exists());
+        drop(backend);
+        std::fs::remove_dir_all(store).expect("remove isolated network fixture");
+    }
 
     const REAL_STORE: &str = "/home/lucas/wm-data/WMdata/projects/planning/lmdb";
 

@@ -2451,7 +2451,7 @@ fn read_bounded_line<R: std::io::BufRead>(
 }
 
 fn write_jsonrpc_parse_error(output: &mut impl std::io::Write, message: &str) {
-    let envelope = json!({
+    let envelope = serde_json::json!({
         "jsonrpc": "2.0",
         "id": null,
         "error": { "code": -32700, "message": message }
