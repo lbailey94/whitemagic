@@ -396,8 +396,7 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
-    /// Verify a signed Gen3 receipt (#decision, #shortlist, #deliberation, #outcome) against the store gate key
-    #[cfg(any(feature = "systemone", feature = "system05"))]
+    /// Verify a supported signed WhiteMagic receipt against the existing store gate key
     VerifyReceipt {
         /// Path to the receipt JSON
         path: PathBuf,
@@ -977,7 +976,6 @@ fn main() {
                 println!("Mode:             Clean Environment");
                 println!("Architecture:     {}", std::env::consts::ARCH);
                 println!("Target OS:        {}", std::env::consts::OS);
-                println!("Closure Scans:    PASS");
                 println!("==================================================");
                 return;
             }
@@ -1016,9 +1014,6 @@ fn main() {
                             "DEGRADED"
                         }
                     );
-                    println!("Article 1:        CommitCapability Gated (100%)");
-                    println!("Article 4:        Authoritative Background Loops = 0");
-                    println!("Closure Scans:    PASS");
                     println!("==================================================");
                 }
                 Err(e) => {
@@ -2338,7 +2333,6 @@ fn main() {
             candidates_file,
             json,
         } => run_deliberate_command(&intent, candidates, candidates_file, &store_path, json),
-        #[cfg(any(feature = "systemone", feature = "system05"))]
         Commands::VerifyReceipt { path, json } => {
             run_verify_receipt_command(&path, &store_path, json);
         }
@@ -2364,17 +2358,296 @@ fn main() {
         Commands::Organ { command } => run_organ_command(command, &store_path),
         Commands::Peer { command } => run_peer_command(command, &store_path),
         Commands::Sentinel { command } => run_sentinel_command(command, &store_path),
-        Commands::Selftest { json } => {
-            if json {
-                println!(
-                    r#"{{"status":"ok","invariants":"pass","engine":"gen3","version":"{WM_VERSION}"}}"#
-                );
+        Commands::Selftest { json } => match run_persistence_selftest() {
+            Ok(report) if json => println!(
+                "{}",
+                serde_json::to_string(&report).expect("serializing a JSON Value cannot fail")
+            ),
+            Ok(report) => println!(
+                "WhiteMagic Gen3 persistence selftest: PASS ({} durable record, {} journal events, isolated scratch store, version {})",
+                report["records"], report["journal_events"], WM_VERSION
+            ),
+            Err(error) => {
+                if json {
+                    println!(
+                        "{}",
+                        serde_json::json!({
+                            "status": "error",
+                            "persistence": "failed",
+                            "error": error
+                        })
+                    );
+                } else {
+                    eprintln!("WhiteMagic Gen3 persistence selftest: FAIL: {error}");
+                }
+                std::process::exit(1);
+            }
+        },
+    }
+}
+
+struct ScratchStore(Option<PathBuf>);
+
+impl Drop for ScratchStore {
+    fn drop(&mut self) {
+        if let Some(path) = self.0.take() {
+            let _ = std::fs::remove_dir_all(path);
+        }
+    }
+}
+
+fn run_persistence_selftest() -> Result<serde_json::Value, String> {
+    let temp_root = std::env::temp_dir();
+    run_persistence_selftest_at(&temp_root)
+}
+
+const MAX_JSONRPC_LINE_BYTES: usize = 8 * 1024 * 1024;
+
+enum BoundedLine {
+    Data(Vec<u8>),
+    TooLong,
+}
+
+/// Read one newline-framed request while storing no more than `max_bytes`.
+/// Once oversized, drain through this line's newline so the next frame remains usable.
+fn read_bounded_line<R: std::io::BufRead>(
+    reader: &mut R,
+    max_bytes: usize,
+) -> std::io::Result<Option<BoundedLine>> {
+    let mut line = Vec::new();
+    let mut too_long = false;
+    loop {
+        let available = reader.fill_buf()?;
+        if available.is_empty() {
+            if line.is_empty() && !too_long {
+                return Ok(None);
+            }
+            return Ok(Some(if too_long {
+                BoundedLine::TooLong
             } else {
-                println!(
-                    "WhiteMagic Gen3 Substrate Invariants: PASS (status: ok, version: {WM_VERSION})"
-                );
+                BoundedLine::Data(line)
+            }));
+        }
+        let newline = available.iter().position(|byte| *byte == b'\n');
+        let consumed = newline.map_or(available.len(), |index| index + 1);
+        let payload_len = newline.unwrap_or(consumed);
+        if !too_long {
+            if payload_len > max_bytes.saturating_sub(line.len()) {
+                too_long = true;
+                line.clear();
+            } else {
+                line.extend_from_slice(&available[..payload_len]);
             }
         }
+        reader.consume(consumed);
+        if newline.is_some() {
+            return Ok(Some(if too_long {
+                BoundedLine::TooLong
+            } else {
+                BoundedLine::Data(line)
+            }));
+        }
+    }
+}
+
+fn write_jsonrpc_parse_error(output: &mut impl std::io::Write, message: &str) {
+    let envelope = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": null,
+        "error": { "code": -32700, "message": message }
+    });
+    let _ = writeln!(output, "{envelope}");
+    let _ = output.flush();
+}
+
+fn run_persistence_selftest_at(temp_root: &Path) -> Result<serde_json::Value, String> {
+    with_exclusive_scratch(temp_root, run_persistence_probe, |path| {
+        std::fs::remove_dir_all(path)
+    })
+}
+
+fn with_exclusive_scratch<T>(
+    temp_root: &Path,
+    probe: impl FnOnce(&Path) -> Result<T, String>,
+    cleanup: impl FnOnce(&Path) -> std::io::Result<()>,
+) -> Result<T, String> {
+    let scratch_path = temp_root.join(format!("wm-selftest-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir(&scratch_path).map_err(|e| {
+        format!(
+            "create exclusive scratch directory {}: {e}",
+            scratch_path.display()
+        )
+    })?;
+    let mut cleanup_guard = ScratchStore(Some(scratch_path.clone()));
+    let probe_result = probe(&scratch_path);
+    let cleanup_result = cleanup(&scratch_path).and_then(|()| {
+        if scratch_path.exists() {
+            Err(std::io::Error::other(
+                "cleanup completed but scratch directory still exists",
+            ))
+        } else {
+            Ok(())
+        }
+    });
+    if cleanup_result.is_ok() {
+        cleanup_guard.0 = None;
+    }
+    drop(cleanup_guard);
+    match (probe_result, cleanup_result) {
+        (Ok(value), Ok(())) => Ok(value),
+        (Err(probe_error), Ok(())) => Err(probe_error),
+        (Ok(_), Err(cleanup_error)) => {
+            Err(format!("selftest scratch cleanup failed: {cleanup_error}"))
+        }
+        (Err(probe_error), Err(cleanup_error)) => Err(format!(
+            "selftest probe failed: {probe_error}; selftest scratch cleanup also failed: {cleanup_error}"
+        )),
+    }
+}
+
+fn run_persistence_probe(scratch_path: &Path) -> Result<serde_json::Value, String> {
+    let store_path = scratch_path.join("store");
+    let journal_path = scratch_path.join("journal.jsonl");
+    let content = "WhiteMagic isolated persistence selftest canary";
+    {
+        let mut substrate = Substrate::open(&store_path, Some(&journal_path), default_view())?;
+        substrate.set_intake_authority(RatifiedChannel::mint("wm-selftest"));
+        let results = substrate.remember_batch(&[RememberItem {
+            content: content.to_string(),
+            source: "system:selftest".to_string(),
+            kind: ImportKind::System,
+        }]);
+        match results.first() {
+            Some(Ok(_)) => {}
+            Some(Err(error)) => return Err(format!("persistence write refused: {error}")),
+            None => return Err("persistence write returned no result".to_string()),
+        }
+        substrate.finish();
+    }
+    let journal = std::fs::read_to_string(&journal_path)
+        .map_err(|e| format!("read selftest journal: {e}"))?;
+    let journal_events = journal
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .count();
+    if journal_events == 0
+        || journal
+            .lines()
+            .any(|line| serde_json::from_str::<serde_json::Value>(line).is_err())
+    {
+        return Err("selftest journal is empty or contains malformed events".to_string());
+    }
+    let journal_rows: Vec<serde_json::Value> = journal
+        .lines()
+        .map(|line| serde_json::from_str(line).expect("JSON checked above"))
+        .collect();
+    let run_end = journal_rows
+        .iter()
+        .find(|event| event.get("type").and_then(serde_json::Value::as_str) == Some("run.end"))
+        .ok_or_else(|| "selftest journal has no run.end event".to_string())?;
+    if run_end
+        .get("journal_ok")
+        .and_then(serde_json::Value::as_bool)
+        != Some(true)
+    {
+        return Err("selftest run.end reports an unhealthy journal".to_string());
+    }
+    let reopened = Substrate::open_readonly(&store_path, None, default_view())?;
+    let records = reopened
+        .store()
+        .record_count()
+        .map_err(|e| format!("count reopened records: {e}"))?;
+    if records != 1 {
+        return Err(format!("reopened record count was {records}, expected 1"));
+    }
+    let found = reopened
+        .store()
+        .iter_records()
+        .map_err(|e| format!("read reopened records: {e}"))?
+        .iter()
+        .any(|record| record.content() == content);
+    if !found {
+        return Err("reopened store did not contain the written canary".to_string());
+    }
+    let journal_commits = journal
+        .lines()
+        .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+        .any(|event| {
+            event.get("type").and_then(serde_json::Value::as_str) == Some("ingest.batch")
+                && event.get("written").and_then(serde_json::Value::as_u64) == Some(1)
+        });
+    if !journal_commits {
+        return Err("selftest journal has no one-record ingest.batch event".to_string());
+    }
+    drop(reopened);
+    Ok(serde_json::json!({
+        "status": "ok", "engine": "gen3", "version": WM_VERSION,
+        "persistence": "durable_reopen", "records": records, "journal_events": journal_events,
+        "scratch_store": "isolated_and_cleaned"
+    }))
+}
+
+#[cfg(test)]
+mod runtime_truth_tests {
+    use super::*;
+
+    #[test]
+    fn bounded_jsonrpc_reader_drains_oversized_line_then_reads_next_frame() {
+        let input = b"0123456789012345\n{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\"}\n";
+        let mut reader = std::io::Cursor::new(input);
+        assert!(matches!(
+            read_bounded_line(&mut reader, 8).expect("read oversized line"),
+            Some(BoundedLine::TooLong)
+        ));
+        let Some(BoundedLine::Data(next)) =
+            read_bounded_line(&mut reader, 128).expect("read next frame")
+        else {
+            panic!("next JSON-RPC frame should remain available");
+        };
+        let request = wm_gen3_harness::receipt_verify::parse_strict_json(
+            std::str::from_utf8(&next).expect("valid utf8"),
+        )
+        .expect("parse next frame");
+        assert_eq!(request["id"], 7);
+        assert!(matches!(
+            read_bounded_line(&mut reader, 128).expect("eof"),
+            None
+        ));
+    }
+
+    #[test]
+    fn selftest_fails_closed_when_temp_root_cannot_create_scratch() {
+        let root =
+            std::env::temp_dir().join(format!("wm-selftest-blocker-{}", uuid::Uuid::new_v4()));
+        std::fs::write(&root, b"keep").expect("create non-directory temp root");
+        let result = run_persistence_selftest_at(&root);
+        assert!(result.is_err());
+        assert_eq!(std::fs::read(&root).expect("read blocker"), b"keep");
+        std::fs::remove_file(root).expect("cleanup blocker");
+    }
+
+    #[test]
+    fn selftest_reports_probe_and_cleanup_failures_and_guard_retries_cleanup() {
+        let root =
+            std::env::temp_dir().join(format!("wm-selftest-cleanup-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir(&root).expect("create temp root");
+        let mut acquired = None;
+        let result = with_exclusive_scratch(
+            &root,
+            |scratch| {
+                acquired = Some(scratch.to_path_buf());
+                Err::<(), _>("injected probe failure".to_string())
+            },
+            |_| Err(std::io::Error::other("injected cleanup failure")),
+        );
+        let error = result.unwrap_err();
+        assert!(error.contains("injected probe failure"));
+        assert!(error.contains("injected cleanup failure"));
+        assert!(
+            !acquired.expect("scratch was acquired").exists(),
+            "Drop guard retries cleanup"
+        );
+        std::fs::remove_dir(root).expect("cleanup temp root");
     }
 }
 
@@ -2907,7 +3180,6 @@ fn run_deliberate_command(
     }
 }
 
-#[cfg(any(feature = "systemone", feature = "system05"))]
 fn run_verify_receipt_command(path: &Path, store_path: &Path, json_output: bool) {
     match wm_gen3_harness::receipt_verify::verify_receipt_file(path, store_path) {
         Ok(report) => {
@@ -5401,18 +5673,44 @@ fn print_census_report(census: &Gen2Census) {
 }
 
 fn run_stdio_loop(backend: &McpBackend) {
-    use std::io::{BufRead, Write};
+    use std::io::Write;
 
     let stdin = std::io::stdin();
+    let mut input = stdin.lock();
     let mut stdout = std::io::stdout();
-    for line in stdin.lock().lines() {
-        let Ok(line) = line else { break };
+    loop {
+        let line = match read_bounded_line(&mut input, MAX_JSONRPC_LINE_BYTES) {
+            Ok(Some(BoundedLine::Data(line))) => line,
+            Ok(Some(BoundedLine::TooLong)) => {
+                write_jsonrpc_parse_error(
+                    &mut stdout,
+                    &format!("Request line exceeds {MAX_JSONRPC_LINE_BYTES} byte limit"),
+                );
+                continue;
+            }
+            Ok(None) => break,
+            Err(error) => {
+                eprintln!("gen3: MCP request read failed: {error}");
+                break;
+            }
+        };
+        let line = match std::str::from_utf8(&line) {
+            Ok(line) => line,
+            Err(error) => {
+                write_jsonrpc_parse_error(&mut stdout, &format!("Request is not UTF-8: {error}"));
+                continue;
+            }
+        };
         let line = line.trim();
         if line.is_empty() {
             continue;
         }
-        let Ok(request) = serde_json::from_str::<serde_json::Value>(line) else {
-            continue;
+        let request = match wm_gen3_harness::receipt_verify::parse_strict_json(line) {
+            Ok(request) => request,
+            Err(error) => {
+                write_jsonrpc_parse_error(&mut stdout, &format!("Parse error: {error}"));
+                continue;
+            }
         };
         if let Some(response) = backend.handle(&request) {
             let _ = writeln!(stdout, "{response}");

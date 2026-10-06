@@ -15,11 +15,14 @@ jobs:
   gitleaks:
     name: secret scan (gitleaks)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # full history so the scan covers every commit
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # The action reads the config from this env var (it declares no
@@ -33,12 +36,14 @@ jobs:
           # historical fixtures (2026-10-05). Pin the version the config was
           # written for; local 8.30.1 scans the same tree clean.
           GITLEAKS_VERSION: "8.30.1"
+          # Keep the PR scan read-only; finding comments require extra writes.
+          GITLEAKS_ENABLE_COMMENTS: "false"
 
   public-surface:
     name: public-surface guard
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: bash scripts/public_surface_check.sh
 
   # Ported concept from the v26 archives (og_whitemagic
@@ -50,5 +55,5 @@ jobs:
     name: dependency audit (cargo-deny)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: EmbarkStudios/cargo-deny-action@v2

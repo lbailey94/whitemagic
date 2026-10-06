@@ -655,7 +655,7 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
         {
             "name": "receipts.emit",
             "title": "Emit Continuity Receipt",
-            "description": "Emit an Ed25519-signed continuity receipt (Spec 0.5) verifying execution integrity offline.",
+            "description": "Refuses generic receipt emission. Use a supported typed receipt producer so the signed fields have defined semantics.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -668,16 +668,15 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
         },
         {
             "name": "receipts.verify",
-            "title": "Verify Continuity Receipt",
-            "description": "Verify a continuity receipt bundle offline fail-closed against Ed25519 signatures.",
+            "title": "Verify WhiteMagic Profile Receipt",
+            "description": "Verify one supported WhiteMagic receipt profile against the existing local gate key. This is not a Continuity Receipt bundle verifier.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "bundle": { "type": "object", "description": "Inline receipt bundle to verify" },
-                    "id": { "type": "string", "description": "Receipt task ID" },
-                    "require_anchor": { "type": "boolean", "description": "Fail-closed: without an anchor the verdict is PROVISIONAL" },
-                    "variant": { "type": "string", "description": "Receipt variant (default original)" }
-                }
+                    "bundle": { "type": "object", "description": "One supported signed WhiteMagic profile receipt object" }
+                },
+                "required": ["bundle"],
+                "additionalProperties": false
             }
         },
         {
@@ -2138,68 +2137,26 @@ fn handle_receipts_emit(args: &Value, store_path: &Path, readonly: bool) -> Resu
     if readonly {
         return Err("read-only mode: receipts.emit refused".to_string());
     }
-    let kind = args
-        .get("kind")
-        .and_then(Value::as_str)
-        .unwrap_or("session");
-    let session_id = args
-        .get("session_id")
-        .and_then(Value::as_str)
-        .unwrap_or("default");
-
-    let (signing_key, _) = resolve_or_create_mandala_gate_key(store_path)
-        .map_err(|e| format!("Gate key error: {e}"))?;
-    let verifying_bytes = signing_key.verifying_key().to_bytes();
-    let gate_did = format!(
-        "did:key:{}",
-        verifying_bytes
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect::<String>()
-    );
-
-    let receipt_id = Uuid::new_v4().to_string();
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-
-    let receipt = json!({
-        "receipt_id": receipt_id,
-        "kind": kind,
-        "session_id": session_id,
-        "gate_did": gate_did,
-        "spec_version": "continuity-receipt/0.5",
-        "emitted_at": now,
-        "verdict": "VERIFIED"
-    });
-
-    if let Some(out_path) = args.get("out").and_then(Value::as_str) {
-        let _ = std::fs::write(
-            out_path,
-            serde_json::to_string_pretty(&receipt).unwrap_or_default(),
-        );
-    }
-
-    Ok(json!({
-        "status": "success",
-        "receipt": receipt
-    }))
+    let _ = (args, store_path);
+    Err(
+        "receipts.emit refused: no generic signed receipt profile is defined; use a typed producer"
+            .to_string(),
+    )
 }
 
-fn handle_receipts_verify(args: &Value, _store_path: &Path) -> Result<Value, String> {
-    let receipt_id = args
-        .get("id")
-        .and_then(Value::as_str)
-        .unwrap_or("provisional");
-    Ok(json!({
-        "status": "success",
-        "receipt_id": receipt_id,
-        "valid": true,
-        "verdict": "VERIFIED",
-        "spec_version": "continuity-receipt/0.5",
-        "offline_verified": true
-    }))
+fn handle_receipts_verify(args: &Value, store_path: &Path) -> Result<Value, String> {
+    let object = args
+        .as_object()
+        .ok_or_else(|| "receipts.verify arguments must be an object".to_string())?;
+    if let Some(field) = object.keys().find(|field| field.as_str() != "bundle") {
+        return Err(format!(
+            "receipts.verify refuses unknown argument '{field}'"
+        ));
+    }
+    let bundle = args
+        .get("bundle")
+        .ok_or_else(|| "receipts.verify requires an inline 'bundle' receipt object".to_string())?;
+    crate::receipt_verify::verify_receipt_value(bundle, store_path)
 }
 
 // ── Mandala OS Handlers ────────────────────────────────────────────────────
@@ -3848,5 +3805,34 @@ mod session_lane_tests {
         let log = std::fs::read_to_string(dir.join("session_log.jsonl")).expect("read log");
         assert!(log.contains("\"type\":\"session_start\""));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod receipt_truth_tests {
+    use super::*;
+
+    #[test]
+    fn verify_refuses_unknown_rpc_arguments_without_creating_state() {
+        let store = std::env::temp_dir().join(format!("wm-mcp-verify-{}", Uuid::new_v4()));
+        let result = handle_receipts_verify(&json!({"bundle": {}, "require_anchor": true}), &store);
+        assert!(
+            result
+                .unwrap_err()
+                .contains("unknown argument 'require_anchor'")
+        );
+        assert!(!store.exists());
+    }
+
+    #[test]
+    fn generic_emit_refuses_without_writing_or_creating_store() {
+        let store = std::env::temp_dir().join(format!("wm-mcp-emit-{}", Uuid::new_v4()));
+        let result = handle_receipts_emit(&json!({"kind": "task"}), &store, false);
+        assert!(
+            result
+                .unwrap_err()
+                .contains("no generic signed receipt profile")
+        );
+        assert!(!store.exists());
     }
 }
