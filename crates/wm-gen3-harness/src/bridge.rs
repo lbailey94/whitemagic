@@ -24,6 +24,7 @@ use uuid::Uuid;
 
 use wm_gen3_core::compat::{Gen2EpisodicRecord, Gen2Reader};
 use wm_gen3_core::evidence::RatifiedChannel;
+use wm_gen3_core::firebreak::{Firebreak, FirebreakGate};
 use wm_gen3_core::mandala::{
     Signature, Signer, SigningKey, Verifier, VerifyingKey, resolve_or_create_mandala_gate_key,
 };
@@ -1408,6 +1409,46 @@ fn handle_wm_router(
                     }
                 }
                 _ => {}
+            }
+            // Firebreak NLU hook: the outer MCP seam only sees the `thought`
+            // prose, so the NLU-resolved route's args are scanned here before
+            // dispatch. Off-seam routes are skipped (gate() would pass them
+            // silently anyway).
+            if Firebreak::is_on_seam(predicted_route) {
+                let firebreak = Firebreak::promoted();
+                match firebreak.gate(predicted_route, &extracted_args) {
+                    FirebreakGate::Refuse {
+                        verdict,
+                        message,
+                        advisories: _,
+                    } => {
+                        return Err(format!("firebreak {verdict}: {message}"));
+                    }
+                    FirebreakGate::Pass {
+                        verdict,
+                        advisories,
+                    } => {
+                        let mut result = execute_hybrid_tool_call(
+                            predicted_route,
+                            &extracted_args,
+                            substrate,
+                            store_path,
+                            readonly,
+                            profile,
+                        )?;
+                        if let Value::Object(ref mut map) = result {
+                            map.insert(
+                                "firebreak".to_string(),
+                                json!({
+                                    "armed": firebreak.is_armed(),
+                                    "verdict": verdict,
+                                    "advisories": advisories,
+                                }),
+                            );
+                        }
+                        return Ok(result);
+                    }
+                }
             }
             return execute_hybrid_tool_call(
                 predicted_route,
@@ -6528,6 +6569,45 @@ mod honesty_behavior_tests {
         assert!(err.contains("requires string 'content'"), "{err}");
         let err = handle_memory_ingest(&json!({}), &mut substrate, false).expect_err("no input");
         assert!(err.contains("requires one of"), "{err}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn nlu_thought_route_is_firebreak_scanned() {
+        let (mut substrate, dir) = setup("firebreak");
+        // A benign thought resolving to the on-seam `mandala.evaluate` route
+        // passes the gate and carries the firebreak disclosure.
+        let benign = execute_hybrid_tool_call(
+            "wm",
+            &json!({
+                "thought": "evaluate candidate benchmark",
+                "args": {"candidate_id": "cand-firebreak", "actions": []}
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Full,
+        )
+        .expect("benign thought dispatches");
+        assert_eq!(benign["firebreak"]["armed"], true);
+        assert_eq!(benign["firebreak"]["verdict"], "allow");
+
+        // The same resolved route with a forbidden command arg is refused
+        // before the bridge dispatches it.
+        let err = execute_hybrid_tool_call(
+            "wm",
+            &json!({
+                "thought": "evaluate candidate benchmark",
+                "args": {"candidate_id": "cand-firebreak", "command": "rm -rf /"}
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Full,
+        )
+        .expect_err("forbidden command refused");
+        assert!(err.contains("FORBIDDEN"), "{err}");
+        assert!(err.contains("firebreak forbidden"), "{err}");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
