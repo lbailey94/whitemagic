@@ -45,7 +45,7 @@ pub struct GrimoireReport {
     pub store_path: String,
     pub active_galaxies: Vec<GalaxySummary>,
     pub detected_clients: Vec<String>,
-    pub configured_clients: Vec<String>,
+    pub planned_clients: Vec<String>,
     pub steps: Vec<GrimoireStep>,
     pub total_ms: u128,
 }
@@ -75,10 +75,15 @@ fn has_avx2() -> bool {
 
 /// Detects known AI coding agent configurations on the local machine.
 pub fn detect_coding_agents() -> Vec<(&'static str, PathBuf)> {
-    let mut detected = Vec::new();
     let home = std::env::var("HOME").ok().map(PathBuf::from);
+    detect_coding_agents_in(home.as_deref())
+}
 
-    if let Some(h) = &home {
+/// Detects known AI coding agent configurations under an explicit home directory.
+pub fn detect_coding_agents_in(home: Option<&Path>) -> Vec<(&'static str, PathBuf)> {
+    let mut detected = Vec::new();
+
+    if let Some(h) = home {
         // Claude Code
         let claude_cfg = h.join(".claude.json");
         let claude_dir = h.join(".claude");
@@ -114,11 +119,30 @@ pub fn detect_coding_agents() -> Vec<(&'static str, PathBuf)> {
     detected
 }
 
+/// Builds a dry-run plan for detected client config targets. Never writes files.
+pub fn plan_client_configs(agents: &[(&'static str, PathBuf)]) -> Vec<String> {
+    agents
+        .iter()
+        .map(|(name, path)| format!("{name} -> {} (plan only; no file modified)", path.display()))
+        .collect()
+}
+
 /// Executes the complete `wm grimoire` pass.
 pub fn run_grimoire(
     store_path: &Path,
     json_mode: bool,
-    write_configs: bool,
+    plan_configs: bool,
+) -> Result<GrimoireReport, String> {
+    let home = std::env::var("HOME").ok().map(PathBuf::from);
+    run_grimoire_with_home(store_path, json_mode, plan_configs, home.as_deref())
+}
+
+/// Executes the grimoire pass against an explicit home directory (testable core).
+pub fn run_grimoire_with_home(
+    store_path: &Path,
+    json_mode: bool,
+    plan_configs: bool,
+    home: Option<&Path>,
 ) -> Result<GrimoireReport, String> {
     let start_all = Instant::now();
     let mut steps = Vec::new();
@@ -252,18 +276,13 @@ pub fn run_grimoire(
     // Step 4: AI Coding Agent Client Detection
     // ----------------------------------------------------
     let t3 = Instant::now();
-    let agents = detect_coding_agents();
+    let agents = detect_coding_agents_in(home);
     let detected_names: Vec<String> = agents.iter().map(|(n, _)| (*n).to_string()).collect();
-    let mut configured_clients = Vec::new();
-
-    if write_configs {
-        // If write was requested, write standard config snippets
-        for (name, path) in &agents {
-            configured_clients.push((*name).to_string());
-            // Safe touch / merge could go here
-            let _ = path;
-        }
-    }
+    let planned_clients = if plan_configs {
+        plan_client_configs(&agents)
+    } else {
+        Vec::new()
+    };
 
     let agent_detail = if detected_names.is_empty() {
         "No standard AI agent IDE directories detected in user home.".to_string()
@@ -349,7 +368,7 @@ pub fn run_grimoire(
         store_path: store_path.display().to_string(),
         active_galaxies: galaxies,
         detected_clients: detected_names,
-        configured_clients,
+        planned_clients,
         steps,
         total_ms: start_all.elapsed().as_millis(),
     };
@@ -401,6 +420,14 @@ fn print_grimoire_terminal(report: &GrimoireReport) {
         println!("    Tags: {}", g.tags.join(", "));
     }
 
+    if !report.planned_clients.is_empty() {
+        println!("--------------------------------------------------");
+        println!("Planned MCP client configuration targets (no files written):");
+        for planned in &report.planned_clients {
+            println!("  * {planned}");
+        }
+    }
+
     println!("==================================================");
     println!("Next Steps for Your AI Agent:");
     println!("1. To connect via MCP in Claude Code, Cursor, or OpenCode:");
@@ -411,4 +438,51 @@ fn print_grimoire_terminal(report: &GrimoireReport) {
     println!("   \"Check our WhiteMagic memory in the 'guide' galaxy, introduce yourself,");
     println!("    and fork a dedicated galaxy for our project.\"");
     println!("==================================================");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn plan_mode_reports_targets_without_modifying_files() {
+        let root = std::env::temp_dir().join(format!("wm-grimoire-test-{}", uuid::Uuid::new_v4()));
+        let home = root.join("home");
+        let store = root.join("store");
+        std::fs::create_dir_all(home.join(".cursor")).expect("create cursor dir");
+        let cursor_cfg = home.join(".cursor").join("mcp.json");
+        let original = br#"{"mcpServers":{"other":{"command":"other"}}}"#;
+        std::fs::write(&cursor_cfg, original).expect("seed cursor config");
+
+        let report =
+            run_grimoire_with_home(&store, false, true, Some(&home)).expect("grimoire plan run");
+        assert!(
+            report.planned_clients.iter().any(|p| p.contains("Cursor")),
+            "plan should name detected Cursor config: {:?}",
+            report.planned_clients
+        );
+        assert!(
+            report
+                .planned_clients
+                .iter()
+                .all(|p| p.contains("no file modified"))
+        );
+        assert_eq!(
+            std::fs::read(&cursor_cfg).expect("read cursor config"),
+            original,
+            "plan mode must not modify existing client configs"
+        );
+        assert!(!store.join("galaxy.html").exists());
+
+        let no_plan =
+            run_grimoire_with_home(&store, false, false, Some(&home)).expect("grimoire plain run");
+        assert!(no_plan.planned_clients.is_empty());
+
+        std::fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn detect_agents_without_home_reports_nothing() {
+        assert!(detect_coding_agents_in(None).is_empty());
+    }
 }
