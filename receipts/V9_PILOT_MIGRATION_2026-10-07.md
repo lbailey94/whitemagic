@@ -71,15 +71,18 @@ Source `/tmp/wm-v9-pilot/neon-copy/lmdb`; target `/tmp/wm-v9-pilot/neon-gen3`.
 | `receipt_digest` | `c49ed828a2e319ad3f4c01ef986bcd208808615909e05d4adba3f233baada9bd` | `1440c27cb4ebcd04d17edfe3137f79907b748bb848342f268658a4acf4dcf868` | `d4ecf9a197bd5772…` |
 | `dry_run` | true | false | false |
 
-Session lane: 151 turns / 19 sessions migrated; rerun 0 migrated, 151
-duplicates. Post-rerun `wm10 status`: `Epoch 1898 · Records Count 1898`.
+Session lane (parallel, not part of the 1,898 records): 151 turns / 19
+sessions migrated; rerun 0 migrated, 151 duplicates. Post-rerun
+`wm10 status`: `Epoch 1898 · Records Count 1898`.
 
 Per-type (live receipt): episodic `system_event` 47/0 dup; galaxy
 `codex` 74, `dreams` 173 + 2 dup, `research` 1,425, `sessions` 151,
-`telemetry` 22; non-memory-lane skips `associations` 1,785,
+`telemetry` 22 (sums to `galaxy_migrated` 1,845 — the 151 `sessions` rows are
+already inside it); non-memory-lane skips `associations` 1,785,
 `embeddings` 1,560, `karma` 797. `wm10 galaxy list`: codex 143
 (74 + 47 episodic + 22 telemetry), dreams 173, research 1,425, sessions 151,
-guide 6.
+guide 6. The 151 `session_log.jsonl` turns are the session lane's projection
+of the same sessions DBI and are not added to the record count.
 
 ## Verification
 

@@ -7,15 +7,19 @@ store into a per-project Gen3 store. Evidence: `receipts/V9_PILOT_MIGRATION_2026
 ## 1. Outcome
 
 - `neon` migrated from a hash-guarded copy into a pilot Gen3 store:
-  47 episodic + 1,845 galaxy rows + 151 session turns ingested;
+  47 episodic records + 1,845 galaxy rows ingested (the galaxy rows include
+  the 151 session rows; the 151 session turns are a parallel lane in
+  `session_log.jsonl`, not part of the Gen3 record count).
   0 decode skips, 0 quarantine, 2 by-design exact-content duplicates.
-- Gen3 pilot holds 1,898 records (1,845 + 47 + 6 seeded starter-guide).
+- Gen3 pilot holds 1,898 records = 1,845 galaxy + 47 episodic + 6 seeded
+  starter-guide.
 - Per-galaxy counts reconcile exactly with the migration receipt.
 - Parity (hybrid v9 vs lexical Gen3): 3/10 top-1 exact, avg 2.8/10 content
   overlap; 5/5 sampled records byte-identical by exact `memory.read` vs
   Gen3 recall.
-- Idempotent rerun: 0 migrated, 1,847 + 47 + 151 duplicates, record count
-  unchanged at 1,898.
+- Idempotent rerun: 0 migrated; 1,847 galaxy and 47 episodic substrate
+  duplicates, plus 151 session-turn duplicates in the session lane; record
+  count unchanged at 1,898.
 
 ## 2. Invariants
 
@@ -161,6 +165,9 @@ sha256 `dbcbdece…` at copy time). Target: `/tmp/wm-v9-pilot/neon-gen3`.
 Gen3 galaxy reconciliation (`wm10 galaxy list`): codex 143 (= 74 migrated +
 47 episodic + 22 telemetry folded), dreams 173 (175 − 2 exact dupes),
 research 1,425, sessions 151, guide 6 → **1,898 records**, epoch 1,898.
+The 151 `sessions` galaxy rows count once, inside the 1,845 galaxy rows; the
+151 turns in `session_log.jsonl` are the session lane's projection of the same
+sessions DBI and are not added to 1,898.
 
 Non-memory lanes skipped by design (accounted, not migrated): associations
 1,785, embeddings 1,560, karma 797 (total 4,142).
