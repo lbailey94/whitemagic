@@ -1,0 +1,5 @@
+$ python3 scripts/version_truth.py --check
+  scripts/install.sh                          2 reference(s)  ok
+
+all surfaces agree on 10.2.0-alpha.6
+rc=0

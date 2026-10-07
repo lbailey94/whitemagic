@@ -1,0 +1,13 @@
+--- scripts/curated_smoke_test.py	2026-10-07 10:36:03.405580528 -0400
++++ /tmp/opencode/g9b/patched/curated_smoke_test.py	2026-10-07 10:46:04.415682633 -0400
+@@ -79,10 +79,6 @@
+             store,
+             "--profile",
+             "curated",
+-            "--max-requests",
+-            "100",
+-            "--rate-limit",
+-            "0",
+         ]
+         if extra_args:
+             args += extra_args

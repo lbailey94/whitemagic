@@ -1,0 +1,145 @@
+$ /home/lucas/.local/bin/wm10 remember 'gate9b cli pulse marker' --store /tmp/opencode/g9b/mcp-store
+Commit successful.
+Record ID:     7
+Epoch:         8
+Authority:     RatifiedChannel(wm-cli-operator)
+Contract:      Article 1 MVCC Transaction Verified
+rc=0
+
+$ /home/lucas/.local/bin/wm10 recall 'gate9b cli pulse marker' --store /tmp/opencode/g9b/mcp-store
+Query: "gate9b cli pulse marker" (2 results, mode: lexical)
+
+[1] Record #7 (score: 1.0000)
+    Source:  operator:cli
+    Content: gate9b cli pulse marker
+
+[2] Record #6 (score: 0.4467)
+    Source:  corpus:codex:gate9b
+    Content: gate9b packaged artifact probe marker
+rc=0
+
+$ /home/lucas/.local/bin/wm10 mandala status --store /tmp/opencode/g9b/mcp-store
+==================================================
+       Mandala Capability Subsystem Status        
+==================================================
+Store Path:          /tmp/opencode/g9b/mcp-store
+Ledger Path:         /tmp/opencode/g9b/mcp-store/mandala_ledger.jsonl
+Gate Authority DID:  did:key:679cd9a166d7954620cf761ab937fb5e68f6089ba1d69a090ed4d446d1d4f6cf
+Consumed JTIs:       0
+Revoked Tenants:     0
+Revoked Passes:      0
+Revoked JTIs:        0
+Article 1 Closure:   100% Gated by CommitCapability
+--------------------------------------------------
+Kernel Sandboxing:   Linux Landlock LSM (Auto ABI V1-V5)
+Network Isolation:   AccessNet (TCP Port Jail, Deny Default)
+Resource Limits:     POSIX rlimit (AS, CPU, NOFILE)
+PEB-15 Microsecond Benchmarks (recorded 2026-09 baseline; historical, not live):
+  JEV Pre-Triage:    26.70 ns / eval  (37.5M evals/sec)
+  Workspace Claim:   87.67 us / claim (11.4k claims/sec)
+  Landlock Ruleset:  142.55 us / ruleset (7.0k rulesets/sec)
+  Total Setup:       230.22 us (0.23 ms)
+  Spec 0.5 Receipt:  341.93 us / notarize (2.9k receipts/sec)
+  Factory Pipeline:  604.44 us / trial (1,654 trials/sec)
+Speedup vs MicroVM:  152.0x faster than Firecracker
+Speedup vs Container: 521.2x faster than Docker/runc
+Note:                recorded 2026-09 baseline; not re-measured by this command.
+==================================================
+rc=0
+
+$ /home/lucas/.local/bin/wm10 mandala triage --utility 0.9 --risk 0.1 --variance 0.05 --cost 0.02 --store /tmp/opencode/g9b/mcp-store
+==================================================
+   Mandala / JEV Non-Autoregressive Pre-Triage   
+==================================================
+Utility (U):         0.9000
+Risk (R):            0.1000
+Variance (V):        0.0500
+Cost (C):            0.0200
+Threshold:           0.1500
+--------------------------------------------------
+JEV Tensor Score:    0.788750
+Admission Decision:  ADMITTED (Passes to Factory)
+Evaluation Latency:  4569 ns (<30ns envelope)
+==================================================
+rc=0
+
+$ /home/lucas/.local/bin/wm10 mesh status --store /tmp/opencode/g9b/mcp-store
+==================================================
+       Mandala P2P Mesh Node Status               
+==================================================
+Store Path:       /tmp/opencode/g9b/mcp-store
+Node Public Key:  8b65be789cd7e24466f4d146076fe4c3e447ed32cf4a8b49b058e657e6e0a118
+Current Epoch:    8
+Record Count:     8
+Protocol Version: 1
+Default Port:     7369
+==================================================
+rc=0
+
+$ /home/lucas/.local/bin/wm10 peer list --json --store /tmp/opencode/g9b/mcp-store
+[
+  {
+    "node_id": "local-host",
+    "public_key": [
+      139,
+      101,
+      190,
+      120,
+      156,
+      215,
+      226,
+      68,
+      102,
+      244,
+      209,
+      70,
+      7,
+      111,
+      228,
+      195,
+      228,
+      71,
+      237,
+      50,
+      207,
+      74,
+      139,
+      73,
+      176,
+      88,
+      230,
+      87,
+      230,
+      224,
+      161,
+      24
+    ],
+    "public_key_hex": "8b65be789cd7e24466f4d146076fe4c3e447ed32cf4a8b49b058e657e6e0a118",
+    "trust_tier": "local",
+    "reputation": 1.0,
+    "last_seen": 0,
+    "endpoint": null,
+    "capabilities": [
+      "sync",
+      "dispatch",
+      "telemetry",
+      "triage"
+    ]
+  }
+]
+rc=0
+
+$ echo 'recall my last session' | /home/lucas/.local/bin/wm10 shortlist --store /tmp/opencode/g9b/mcp-store --k 3
+==================================================
+   WhiteMagic Gen3 System 0.5 Shortlist (static)   
+==================================================
+[ 1] session.recall                     score=0.8538
+[ 2] memory.chat                        score=0.6450
+[ 3] memory.list                        score=0.6068
+Model:       potion-base-32M
+Candidates:  68
+Margin:      0.2089  Gate: dispatch (tau=0.0200)
+Retrieval:   4.1 ms
+Receipt:     shortlist-557b6dc2-963b-49e7-86cd-2e33ced7f9d8.json
+==================================================
+rc=0

@@ -1,0 +1,59 @@
+{
+  "kind": "gate9b-packaged-artifact-evidence-summary",
+  "date": "2026-10-07",
+  "branch": "docs/gate9b-evidence",
+  "base_commit": "ef623fbd5e80d64a47c3335e99a34ea3b9bf7511",
+  "worktree": "/home/lucas/Desktop/front burner/WHITEMAGIC/worktrees/wt-gate9b",
+  "no_repo_code_edits": true,
+  "artifacts": {
+    "installed_wm10": {
+      "path": "/home/lucas/.local/bin/wm10",
+      "version": "10.2.0-alpha.6",
+      "sha256": "fcd7f5a0f0353a482c85ba04b0fe7cd0d7e3db599947f9182ccdce58575819aa",
+      "size_bytes": 48855880,
+      "published_release_match": false,
+      "note": "locally installed alpha.6; sha differs from the published linux-x86_64 asset"
+    },
+    "published_release_asset": {
+      "url": "https://github.com/lbailey94/whitemagic/releases/download/v10.2.0-alpha.6/wm-linux-x86_64",
+      "sha256": "05de780c2500fa39a6783dfb821c1f8fa960f830732552a9e6efcffaafe4a852",
+      "size_bytes": 48791336,
+      "manifest": "release-manifest-v10.2.0-alpha.6.json",
+      "manifest_sha256_match": true,
+      "supported_profile": "curated"
+    }
+  },
+  "checks_passing": [
+    {"id": "installed.version", "artifact": "installed_wm10", "command": "wm10 --version", "result": "wm 10.2.0-alpha.6", "log": "logs/01-init-status.txt"},
+    {"id": "installed.init_status", "artifact": "installed_wm10", "command": "wm10 init --store <tmp>; wm10 status --store <tmp>", "result": "init rc=0, 6 seed records; status rc=0 Epoch 6", "log": "logs/01-init-status.txt"},
+    {"id": "installed.selftest", "artifact": "installed_wm10", "command": "wm10 selftest --json --store <tmp>", "result": "status ok; persistence durable_reopen; host_status ok", "log": "logs/02-selftest-contract.txt"},
+    {"id": "installed.contract", "artifact": "installed_wm10", "command": "wm10 contract --json --store <tmp>", "result": "44 routes / 40 declared / 4 undeclared; rc=0", "log": "logs/02-selftest-contract.txt"},
+    {"id": "installed.apotheosis", "artifact": "installed_wm10", "command": "wm10 apotheosis --store <tmp>", "result": "9/9 invariants PASS; truth drift 0.000; 27/27 executables; rc=0", "log": "logs/06-apotheosis.txt"},
+    {"id": "installed.inspect_grimoire", "artifact": "installed_wm10", "command": "wm10 inspect --scope invariants; wm10 grimoire --json --plan", "result": "journal ok, 0 violations; grimoire ready=true rc=0", "log": "logs/07-inspect-grimoire.txt"},
+    {"id": "installed.mcp_probe", "artifact": "installed_wm10", "command": "wm10 serve --profile full (stdio JSON-RPC: initialize, tools/list, wm route memory.create/memory.search/session.continuity)", "result": "44 tools, wm at index 0; create+search round-trip found marker; server rc=0", "log": "logs/05-mcp-probe.txt"},
+    {"id": "installed.cli_surfaces", "artifact": "installed_wm10", "command": "wm10 remember/recall/mandala status/mandala triage/mesh status/peer list --json/shortlist", "result": "all rc=0; Record ID 7; JEV ADMITTED; peer local-host tier=local; shortlist gate=dispatch", "log": "logs/09-cli-surfaces.txt"},
+    {"id": "release.version", "artifact": "published_release_asset", "command": "wm-release --version", "result": "wm 10.2.0-alpha.6 (sha256 verified against release manifest)", "log": "logs/11-release-asset-checks.txt"},
+    {"id": "release.init_selftest_contract_apotheosis", "artifact": "published_release_asset", "command": "init; selftest --json; contract --json; apotheosis", "result": "identical to installed binary: selftest ok; 44/40/4 contract; 9/9 invariants; rc=0", "log": "logs/11-release-asset-checks.txt"},
+    {"id": "release.mcp_probe", "artifact": "published_release_asset", "command": "serve --profile full stdio probe", "result": "44 tools; create+search round-trip found marker; server rc=0", "log": "logs/12-release-mcp-probe.txt"}
+  ],
+  "checks_blocked": [
+    {"id": "m0_m8_drivers", "reason": "all 18 PEB drivers invoke `cargo test -p wm-gen3-core` against WMGEN3_ROOT (default /home/lucas/Desktop/WMgen3); no binary-path parameter exists; engine-internal assertions are not exposed over the CLI", "patch": "requires a Gen3-native packaged-battery driver or an H15-2 scope amendment (documented in the receipt)"},
+    {"id": "curated_smoke_test", "reason": "passes v9-era `serve --max-requests 100 --rate-limit 0` (rejected by wm10) and asserts the v9 MCP contract (serverInfo shape, curated description, JSON-in-text tools.list, `wm docs quickstart`)", "patch": "flags-only patch is insufficient; script needs a Gen3 port (see patched/curated_smoke_test.flags.patch and logs/04)"},
+    {"id": "longmemeval_memorastrict_eval_matrix", "reason": "longmemeval_bench.py:282-289 and memorastrict_bench.py:165-171 pass `serve --max-requests 0 --rate-limit 0`; eval_matrix.sh selects the binary via WM_BINARY but delegates to longmemeval_bench", "evidence": "logs/08-longmemeval-blocker.txt (BrokenPipeError after serve rejects flags)"},
+    {"id": "eval_all_tools", "reason": "no such file exists in the tree at ef623fb (git ls-files and content search return nothing)"},
+    {"id": "check_slice1_harness", "reason": "the 9-scenario process-boundary harness referenced by Gate 9A receipts is not tracked in this tree at ef623fb; only the receipts remain"}
+  ],
+  "h15_2": "partially evidenced -> substantially evidenced on CLI/MCP/invariant-audit surfaces for both installed and published artifacts; strict driver-form re-run against the packaged artifact remains impossible without a scope amendment or a new packaged battery",
+  "base_tree_findings": [
+    {
+      "id": "closure_scan_red_at_ef623fb",
+      "command": "bash scripts/check_closures.sh",
+      "result": "rc=1: rule 3 fails on crates/wm-gen3-harness/src/bin/wm_node.rs:1036 and :1159 (std::thread::spawn not in the transport allowlist)",
+      "classification": "scanner allowlist gap for the new Geth Phase 2 wm-node Unix-socket transport host; the 1036 spawn is an accept-loop physical-I/O site (Article 4-compliant in intent), but the tracked scanner and CI step are red at this base",
+      "log": "logs/13-closure-scan-base.txt",
+      "introduced_by_this_lane": false
+    }
+  ],
+  "version_truth": {"command": "python3 scripts/version_truth.py --check", "result": "all surfaces agree on 10.2.0-alpha.6", "log": "logs/14-version-truth.txt"},
+  "evidence_bundle": "receipts/gate9b_artifact_evidence_20261007/"
+}

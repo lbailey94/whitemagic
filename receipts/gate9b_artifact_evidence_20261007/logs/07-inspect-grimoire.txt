@@ -1,0 +1,140 @@
+$ /home/lucas/.local/bin/wm10 inspect --scope invariants --store /tmp/opencode/g9b/mcp-store
+{
+  "tiers": {
+    "tier1_constitution": {
+      "writers": "external admin only",
+      "readers": "ConstitutionView (immutable, typed)",
+      "invariants": [
+        "bounded-effects",
+        "no-silent-destruction",
+        "provenance",
+        "recoverability",
+        "governed-egress",
+        "truthful-surfaces",
+        "closure-law",
+        "closure-evidence",
+        "epistemic-separation",
+        "symbolic-neutrality"
+      ],
+      "version": 1,
+      "invariant_hash": 8198823149878709445
+    },
+    "tier2_statutes": {
+      "budget_writes_per_min": 120,
+      "policy": {
+        "supersede_penalty": 0.6000000238418579,
+        "recency_weight": 0.05000000074505806,
+        "rare_df_divisor": 20,
+        "rare_df_floor": 2,
+        "pair_budget": 200000,
+        "relevance_floor": 0.009999999776482582
+      }
+    },
+    "tier3_adaptive": {
+      "records": 7,
+      "relations": 0
+    }
+  },
+  "relations": [],
+  "journal": {
+    "configured": true,
+    "ok": true,
+    "violations": 0
+  },
+  "projection": {
+    "enabled": false,
+    "gated": false,
+    "gate_count": false,
+    "model": "Qdrant/bge-small-en-v1.5-onnx-Q",
+    "tau_gate": 0.6940000057220459,
+    "stats": null
+  },
+  "arbitration": "PenaltyMultiplier",
+  "dispersion": false,
+  "apotheosis_status": "Ascending"
+}
+rc=0
+
+$ /home/lucas/.local/bin/wm10 grimoire --json --plan --store /tmp/opencode/g9b/mcp-store
+{
+  "version": "10.2.0-alpha.6",
+  "ready": true,
+  "store_path": "/tmp/opencode/g9b/mcp-store",
+  "active_galaxies": [
+    {
+      "name": "codex",
+      "record_count": 1,
+      "tags": [
+        "gate9b"
+      ],
+      "sample_preview": "gate9b packaged artifact probe marker",
+      "is_starter": false
+    },
+    {
+      "name": "guide",
+      "record_count": 6,
+      "tags": [
+        "5d_coordinates",
+        "architecture",
+        "branching",
+        "consolidation",
+        "continuity",
+        "dreaming",
+        "fluidity",
+        "galaxies"
+      ],
+      "sample_preview": "Welcome to WhiteMagic Gen3: a sovereign, local-first memory and cognitive contin...",
+      "is_starter": true
+    }
+  ],
+  "detected_clients": [
+    "Claude Code",
+    "OpenCode",
+    "Google Antigravity"
+  ],
+  "planned_clients": [
+    "Claude Code -> /home/lucas/.claude.json (plan only; no file modified)",
+    "OpenCode -> /home/lucas/.config/opencode/opencode.jsonc (plan only; no file modified)",
+    "Google Antigravity -> /home/lucas/.gemini/antigravity-cli (plan only; no file modified)"
+  ],
+  "steps": [
+    {
+      "name": "host",
+      "status": "ok",
+      "summary": "Host environment supported",
+      "detail": "linux x86_64 · 8 cores · 15 GB RAM · AVX2: true",
+      "elapsed_ms": 0
+    },
+    {
+      "name": "substrate",
+      "status": "ok",
+      "summary": "Sovereign LMDB substrate active",
+      "detail": "Path: /tmp/opencode/g9b/mcp-store (Epoch 7, Records: 7, Mode: ReadOnly/Shared)",
+      "elapsed_ms": 0
+    },
+    {
+      "name": "starter_galaxy",
+      "status": "ok",
+      "summary": "Starter 'guide' galaxy active (6 records)",
+      "detail": "Existing guide galaxy verified with 6 records.",
+      "elapsed_ms": 0
+    },
+    {
+      "name": "agent_clients",
+      "status": "ok",
+      "summary": "Agent detection: 3 environments found",
+      "detail": "Detected 3 clients: Claude Code, OpenCode, Google Antigravity",
+      "elapsed_ms": 0
+    },
+    {
+      "name": "verification",
+      "status": "ok",
+      "summary": "Retrieval hot-path verified in 462 µs",
+      "detail": "Query 'WhiteMagic' yielded 3 hits; top rank: 'corpus:guide:continuity,sessions,handoff'",
+      "elapsed_ms": 0
+    }
+  ],
+  "total_ms": 0
+}
+
+rc=0

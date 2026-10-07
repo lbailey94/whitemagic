@@ -1,0 +1,34 @@
+$ /home/lucas/.local/bin/wm10 apotheosis --store /tmp/opencode/g9b/mcp-store
+==================================================
+   WhiteMagic Gen3 Apotheosis Meta-Learning Audit 
+==================================================
+Substrate Store:          /tmp/opencode/g9b/mcp-store
+Evolutionary Status:      Ascending
+Composite Index:          0.9625
+--------------------------------------------------
+Substrate Invariants:     9/9 Passed (100.0%)
+  Article 1 (Commit Cap): PASS
+  Article 2 (Pulse Comp): PASS
+  Article 3 (Provenance): PASS
+  Article 4 (Zero Loops): PASS
+  Article 5 (Bound Sed):  PASS
+  Article 6 (Maker!=Chk): PASS
+  Article 7 (DAG Acyclic):PASS
+  Article 8 (Neg Knowl):  PASS
+  Article 9 (Anti-Sim):   PASS
+--------------------------------------------------
+Geneseed Cladistics DAG:  3 total (3 active, 0 deprecated)
+  Forks Minted:           0
+  Max Lineage Depth:      0
+  Retired Failure Sigs:   0
+--------------------------------------------------
+Kaizen Convergence:       Mean Utility: 0.850
+  Mutation Velocity:      0.000 forks/epoch
+  Fitness Stability:      100.0%
+  Dream Bridge Cross-Corr:0.850
+--------------------------------------------------
+Doc-to-Code Truth Drift:  Score: 0.000 (0.0 = perfect isomorphism)
+  Verified Executables:   27/27 declared
+  Phantom Surfaces:       0
+==================================================
+rc=0

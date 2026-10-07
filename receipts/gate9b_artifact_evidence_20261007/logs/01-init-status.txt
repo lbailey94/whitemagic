@@ -1,0 +1,23 @@
+$ /home/lucas/.local/bin/wm10 --version
+wm 10.2.0-alpha.6
+$ sha256sum /home/lucas/.local/bin/wm10
+fcd7f5a0f0353a482c85ba04b0fe7cd0d7e3db599947f9182ccdce58575819aa  /home/lucas/.local/bin/wm10
+$ /home/lucas/.local/bin/wm10 init --store /tmp/opencode/g9b/store
+Initializing WhiteMagic substrate at: /tmp/opencode/g9b/store
+✓ Initialized and seeded starter guide galaxy (6 records committed).
+✓ Status: Ready. Run 'wm grimoire' for full diagnostic pass.
+rc=0
+$ /home/lucas/.local/bin/wm10 status --store /tmp/opencode/g9b/store
+==================================================
+       WhiteMagic Gen3 Kernel Status (v10.2.0-alpha.6)
+==================================================
+Store Path:       /tmp/opencode/g9b/store
+Mode:             ReadOnly (Inspection)
+Epoch:            6
+Records Count:    6
+Galaxies Active:  1 (Run 'wm galaxy' to inspect)
+Relations Count:  0
+Budget RPM:       120
+Journal Status:   OK
+==================================================
+rc=0

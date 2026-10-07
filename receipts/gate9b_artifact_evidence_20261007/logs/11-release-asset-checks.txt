@@ -1,0 +1,37 @@
+$ /tmp/opencode/g9b/wm-release --version
+wm 10.2.0-alpha.6
+$ sha256sum /tmp/opencode/g9b/wm-release
+05de780c2500fa39a6783dfb821c1f8fa960f830732552a9e6efcffaafe4a852  /tmp/opencode/g9b/wm-release
+
+$ /tmp/opencode/g9b/wm-release init --store /tmp/opencode/g9b/release-store
+Initializing WhiteMagic substrate at: /tmp/opencode/g9b/release-store
+✓ Initialized and seeded starter guide galaxy (6 records committed).
+✓ Status: Ready. Run 'wm grimoire' for full diagnostic pass.
+rc=0
+
+$ /tmp/opencode/g9b/wm-release selftest --json --store /tmp/opencode/g9b/release-store
+{"status":"ok","engine":"gen3","version":"10.2.0-alpha.6","persistence":"durable_reopen","records":1,"journal_events":2,"scratch_store":"isolated_and_cleaned","host_status":"ok","host_health":{"status":"ok","checks":[{"name":"memory","verdict":"ok","detail":"9.2 GiB available of 15.5 GiB (59%)"},{"name":"pressure","verdict":"ok","detail":"stall avg10 — memory full 0.0%, io full 1.7% (share of time all tasks were blocked on reclaim/io)"},{"name":"swap/zram","verdict":"ok","detail":"0.0 GiB of 23.7 GiB used (0%) — zram pages live in RAM"},{"name":"disk","verdict":"ok","detail":"/: 38.3 GiB free (83% used)"},{"name":"crash-loops","verdict":"ok","detail":"none detected"}],"top_memory_processes":[{"pid":2050,"name":"llama-server","rss_mib":4485},{"pid":2082,"name":"wm9","rss_mib":968},{"pid":5554,"name":"opencode","rss_mib":900},{"pid":2072,"name":"wm9","rss_mib":885},{"pid":5824,"name":"opencode","rss_mib":717}]}}
+rc=0
+
+$ /tmp/opencode/g9b/wm-release contract --json --store /tmp/opencode/g9b/release-store | jq '{version,source,counts}'
+{
+ "kind": "whitemagic-route-schema-manifest",
+ "format_version": 1,
+ "version": "10.2.0-alpha.6",
+ "source": "running binary registry (Gen3 hybrid contract bridge)",
+ "counts": {
+  "routes": 44,
+  "declared": 40,
+  "undeclared": 4
+ }
+}
+rc=0
+
+$ /tmp/opencode/g9b/wm-release apotheosis --store /tmp/opencode/g9b/release-store
+Evolutionary Status:      Ascending
+Composite Index:          0.9625
+Substrate Invariants:     9/9 Passed (100.0%)
+Doc-to-Code Truth Drift:  Score: 0.000 (0.0 = perfect isomorphism)
+  Verified Executables:   27/27 declared
+  Phantom Surfaces:       0
+rc=0

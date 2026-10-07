@@ -1,0 +1,1245 @@
+$ /home/lucas/.local/bin/wm10 selftest --json --store /tmp/opencode/g9b/store
+{"status":"ok","engine":"gen3","version":"10.2.0-alpha.6","persistence":"durable_reopen","records":1,"journal_events":2,"scratch_store":"isolated_and_cleaned","host_status":"ok","host_health":{"status":"ok","checks":[{"name":"memory","verdict":"ok","detail":"9.3 GiB available of 15.5 GiB (60%)"},{"name":"pressure","verdict":"ok","detail":"stall avg10 — memory full 0.0%, io full 2.8% (share of time all tasks were blocked on reclaim/io)"},{"name":"swap/zram","verdict":"ok","detail":"0.0 GiB of 23.7 GiB used (0%) — zram pages live in RAM"},{"name":"disk","verdict":"ok","detail":"/: 38.4 GiB free (83% used)"},{"name":"crash-loops","verdict":"ok","detail":"none detected"}],"top_memory_processes":[{"pid":2050,"name":"llama-server","rss_mib":4486},{"pid":2082,"name":"wm9","rss_mib":967},{"pid":5554,"name":"opencode","rss_mib":903},{"pid":2072,"name":"wm9","rss_mib":885},{"pid":5824,"name":"opencode","rss_mib":719}]}}
+rc=0
+
+$ /home/lucas/.local/bin/wm10 contract --json --store /tmp/opencode/g9b/store
+{
+  "kind": "whitemagic-route-schema-manifest",
+  "format_version": 1,
+  "generated_by": "wm contract --json",
+  "version": "10.2.0-alpha.6",
+  "source": "running binary registry (Gen3 hybrid contract bridge)",
+  "counts": {
+    "routes": 44,
+    "declared": 40,
+    "undeclared": 4
+  },
+  "known_unconditional_reads": [
+    {
+      "route": "kg.query",
+      "arg": "entity"
+    },
+    {
+      "route": "agent.register",
+      "arg": "name"
+    },
+    {
+      "route": "agent.trust",
+      "arg": "agent_id"
+    },
+    {
+      "route": "agent.descriptions",
+      "arg": "agent_id"
+    },
+    {
+      "route": "agent.capabilities",
+      "arg": "agent_id"
+    },
+    {
+      "route": "agent.heartbeat.history",
+      "arg": "agent_id"
+    },
+    {
+      "route": "agent.deregister",
+      "arg": "agent_id"
+    },
+    {
+      "route": "web.fetch",
+      "arg": "url"
+    },
+    {
+      "route": "web.deep_fetch",
+      "arg": "url"
+    },
+    {
+      "route": "web.search",
+      "arg": "query"
+    },
+    {
+      "route": "web.search_and_read",
+      "arg": "query"
+    },
+    {
+      "route": "code.graph",
+      "arg": "project_root"
+    },
+    {
+      "route": "code.query",
+      "arg": "query"
+    },
+    {
+      "route": "code.affected_by",
+      "arg": "symbol"
+    }
+  ],
+  "tools": [
+    {
+      "route": "decision.deliberate",
+      "declared": true,
+      "required": [
+        "intent",
+        "candidates"
+      ],
+      "properties": {
+        "intent": {
+          "type": "string",
+          "description": "User request or state description"
+        },
+        "candidates": {
+          "type": [
+            "array",
+            "object"
+          ],
+          "description": "Allowed candidate action names, objects, or map"
+        },
+        "emit_receipt": {
+          "type": "boolean",
+          "description": "Write signed deliberation receipt to <store>/receipts (default true)"
+        }
+      }
+    },
+    {
+      "route": "decision.outcome",
+      "declared": true,
+      "required": [
+        "receipt_path",
+        "outcome"
+      ],
+      "properties": {
+        "receipt_path": {
+          "type": "string",
+          "description": "Path to the subject receipt JSON under <store>/receipts"
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "success",
+            "failure",
+            "corrected",
+            "unknown"
+          ],
+          "description": "Observed outcome"
+        },
+        "corrected_route": {
+          "type": "string",
+          "description": "Correct route when the outcome is 'corrected'"
+        },
+        "note": {
+          "type": "string",
+          "description": "Free-form note"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "tenant_id": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "route": "decision.shortlist",
+      "declared": true,
+      "required": [
+        "state"
+      ],
+      "properties": {
+        "state": {
+          "type": [
+            "string",
+            "object"
+          ],
+          "description": "State to retrieve candidates for (text or JSON)"
+        },
+        "routes": {
+          "type": "object",
+          "description": "Candidate set: {name: description} or {name: [utterances...]}; multi-utterance routes score by best match"
+        },
+        "catalog_path": {
+          "type": "string",
+          "description": "Path to a JSON file with {name: description}; used when `routes` is absent"
+        },
+        "k": {
+          "type": "integer",
+          "description": "Shortlist size (default 5)"
+        },
+        "margin_threshold": {
+          "type": "number",
+          "description": "Below this top1-top2 margin the gate is 'ambiguous' (default 0.02)"
+        },
+        "cascade": {
+          "type": "boolean",
+          "description": "If ambiguous, cascade to System 1.5 Deliberator (default true)"
+        },
+        "session_id": {
+          "type": "string",
+          "description": "Session id for the shortlist receipt"
+        },
+        "tenant_id": {
+          "type": "string",
+          "description": "Tenant id for the shortlist receipt (default: local)"
+        },
+        "task_class": {
+          "type": "string",
+          "description": "Task class (e.g. route_dispatch)"
+        },
+        "emit_receipt": {
+          "type": "boolean",
+          "description": "Write a signed shortlist receipt to <store>/receipts (default true)"
+        }
+      }
+    },
+    {
+      "route": "galaxy.create",
+      "declared": true,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Galaxy name (lowercase, no colons/spaces)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description of the galaxy's purpose"
+        }
+      }
+    },
+    {
+      "route": "galaxy.fork",
+      "declared": true,
+      "required": [
+        "source",
+        "target"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "Source galaxy name to fork from (e.g. 'guide')"
+        },
+        "target": {
+          "type": "string",
+          "description": "Target galaxy name to establish (e.g. 'project-alpha')"
+        }
+      }
+    },
+    {
+      "route": "galaxy.list",
+      "declared": false,
+      "required": [],
+      "properties": {}
+    },
+    {
+      "route": "gnosis.explain",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "concept": {
+          "type": "string",
+          "description": "Concept to explain"
+        },
+        "tool_name": {
+          "type": "string",
+          "description": "Tool name to explain"
+        },
+        "args_hash": {
+          "type": "string",
+          "description": "Hash of the arguments under evaluation"
+        },
+        "is_write": {
+          "type": "boolean",
+          "description": "Claim: the invocation writes"
+        },
+        "is_spawn": {
+          "type": "boolean",
+          "description": "Claim: the invocation spawns a process"
+        },
+        "is_network": {
+          "type": "boolean",
+          "description": "Claim: the invocation uses the network"
+        },
+        "has_purpose": {
+          "type": "boolean",
+          "description": "Claim: the invocation carries a purpose"
+        }
+      }
+    },
+    {
+      "route": "gnosis.status",
+      "declared": false,
+      "required": [],
+      "properties": {}
+    },
+    {
+      "route": "mandala.evaluate",
+      "declared": true,
+      "required": [
+        "candidate_id"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "description": "Unique identifier for the mutation candidate"
+        },
+        "mutation_kind": {
+          "type": "string",
+          "enum": [
+            "vanguard",
+            "heavy",
+            "noop"
+          ],
+          "description": "Mutation category"
+        },
+        "command": {
+          "type": "string",
+          "description": "Optional command to execute within ephemeral sandbox"
+        }
+      }
+    },
+    {
+      "route": "mandala.status",
+      "declared": false,
+      "required": [],
+      "properties": {}
+    },
+    {
+      "route": "mandala.triage",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "inquiry": {
+          "type": "string",
+          "description": "Task or inquiry description to triage"
+        },
+        "utility": {
+          "type": "number",
+          "description": "Expected marginal utility threshold (default: 0.8)"
+        },
+        "risk": {
+          "type": "number",
+          "description": "Risk factor [0.0, 1.0]"
+        },
+        "variance": {
+          "type": "number",
+          "description": "Epistemic variance [0.0, 1.0]"
+        },
+        "cost": {
+          "type": "number",
+          "description": "Compute / token cost [0.0, 1.0]"
+        }
+      }
+    },
+    {
+      "route": "memory.aggregate",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Numeric: importance | created_at | epoch. Categorical (count only): source | domain | class | status | galaxy"
+        },
+        "op": {
+          "type": "string",
+          "enum": [
+            "count",
+            "sum",
+            "avg",
+            "min",
+            "max"
+          ],
+          "description": "Aggregation operator"
+        },
+        "query": {
+          "type": "string",
+          "description": "Full-text query selecting the memories to aggregate over"
+        },
+        "metric": {
+          "type": "string",
+          "enum": [
+            "count",
+            "session_count",
+            "session_span"
+          ],
+          "description": "Alternative metric over matched records: count | session_count | session_span"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum candidates considered (default 50; must be >= 1)"
+        }
+      }
+    },
+    {
+      "route": "memory.associations",
+      "declared": true,
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Source memory UUID or numeric record_id"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum neighbours to return (default: 10)"
+        },
+        "direction": {
+          "type": "string",
+          "description": "Direction: from | to | both (default: both)"
+        }
+      }
+    },
+    {
+      "route": "memory.batch_read",
+      "declared": true,
+      "required": [
+        "ids"
+      ],
+      "properties": {
+        "ids": {
+          "type": "array",
+          "description": "List of memory IDs (UUIDs or integers) to read"
+        },
+        "galaxy": {
+          "type": "string",
+          "description": "Galaxy (default: codex)"
+        }
+      }
+    },
+    {
+      "route": "memory.count",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "galaxy": {
+          "type": "string",
+          "description": "Galaxy to count, or 'all' (default)"
+        }
+      }
+    },
+    {
+      "route": "memory.create",
+      "declared": true,
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "content": {
+          "type": "string",
+          "description": "Memory text content to record"
+        },
+        "galaxy": {
+          "type": "string",
+          "description": "Target memory galaxy: codex, active, audit, sessions (default: codex)"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional categorization tags"
+        },
+        "importance": {
+          "type": "number",
+          "description": "Subjective salience/importance score (0.0 to 1.0)"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Optional topic or domain label"
+        },
+        "source": {
+          "type": "string",
+          "description": "Epistemic attribution (default: 'agent:mcp')"
+        },
+        "title": {
+          "type": "string",
+          "description": "Optional human-readable title (envelope v2)"
+        },
+        "event_time": {
+          "type": "string",
+          "description": "Optional event time: when the recorded event actually happened, as RFC 3339"
+        }
+      }
+    },
+    {
+      "route": "memory.filter",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Required tags"
+        },
+        "min_importance": {
+          "type": "number",
+          "description": "Minimum importance [0.0, 1.0]"
+        },
+        "max_importance": {
+          "type": "number",
+          "description": "Filter: maximum importance (0-1)"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum results"
+        },
+        "offset": {
+          "type": "integer",
+          "description": "Skip this many matching entries before returning (default 0)"
+        },
+        "galaxy": {
+          "type": "string",
+          "description": "Galaxy to filter (default codex)"
+        },
+        "query": {
+          "type": "string",
+          "description": "Filter: every whitespace-separated term must appear"
+        },
+        "exclude_tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Filter: drop memories carrying any of these tags"
+        },
+        "created_after": {
+          "type": "string",
+          "description": "Filter: only memories created at or after this RFC 3339 timestamp"
+        },
+        "created_before": {
+          "type": "string",
+          "description": "Filter: only memories created at or before this RFC 3339 timestamp"
+        }
+      }
+    },
+    {
+      "route": "memory.hybrid_recall",
+      "declared": true,
+      "required": [
+        "query"
+      ],
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Search query terms"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum results (default: 10)"
+        },
+        "galaxy": {
+          "type": "string",
+          "description": "Galaxy filter (default: all)"
+        },
+        "since": {
+          "type": "string",
+          "description": "Inclusive lower time bound: RFC3339 or epoch seconds"
+        },
+        "until": {
+          "type": "string",
+          "description": "Inclusive upper time bound: RFC3339 or epoch seconds"
+        },
+        "min_score": {
+          "type": "number",
+          "description": "Absolute BM25 score floor"
+        },
+        "min_score_ratio": {
+          "type": "number",
+          "description": "Relative floor: reject hits below this fraction of the top score"
+        },
+        "min_trust": {
+          "type": "number",
+          "description": "Minimum source_trust (0-1)"
+        },
+        "min_importance": {
+          "type": "number",
+          "description": "Minimum memory importance (0-1)"
+        },
+        "time_basis": {
+          "type": "string",
+          "description": "Time basis for since/until: 'recorded' or 'event'"
+        },
+        "include_cold": {
+          "type": "boolean",
+          "description": "Opt-in unranked cold recovery"
+        },
+        "cold_scan_limit": {
+          "type": "integer",
+          "description": "Maximum cold records to scan when include_cold is set (default 2048)"
+        }
+      }
+    },
+    {
+      "route": "memory.ingest",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "items": {
+          "type": "array",
+          "description": "Array of items: strings, or objects {content, source?, kind?, tags?, importance?}"
+        },
+        "items_jsonl": {
+          "type": "string",
+          "description": "Newline-delimited JSONL items, or plain non-empty text lines"
+        },
+        "text": {
+          "type": "string",
+          "description": "Single plain-text memory to ingest"
+        },
+        "source": {
+          "type": "string",
+          "description": "Optional path to a JSONL or text file (same line rules as items_jsonl)"
+        },
+        "dry_run": {
+          "type": "boolean",
+          "description": "Report without writing (default: true)"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum items to ingest"
+        },
+        "galaxy": {
+          "type": "string",
+          "description": "Galaxy for items without an explicit source (default: codex)"
+        },
+        "redact": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scrub credential-shaped tokens before storage (default true)."
+        }
+      }
+    },
+    {
+      "route": "memory.list",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "galaxy": {
+          "type": "string",
+          "description": "Galaxy to list, or omit for all galaxies"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum number of memories to return (default: 20)"
+        },
+        "offset": {
+          "type": "integer",
+          "description": "Pagination offset (default: 0)"
+        },
+        "exclude_tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Drop memories carrying any of these tags"
+        }
+      }
+    },
+    {
+      "route": "memory.pin",
+      "declared": true,
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Memory UUID or numeric record ID to pin"
+        },
+        "galaxy": {
+          "type": "string",
+          "description": "Optional galaxy this record must belong to (mismatch is refused)"
+        },
+        "pinned": {
+          "type": "boolean",
+          "description": "true (default) = protect; false = release"
+        }
+      }
+    },
+    {
+      "route": "memory.query",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Text query string"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum results (default: 10)"
+        },
+        "galaxy": {
+          "type": "string",
+          "description": "Galaxy to query (default codex)"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Filter: memories with all of these tags"
+        },
+        "min_importance": {
+          "type": "number",
+          "description": "Filter: minimum importance (0-1)"
+        },
+        "max_importance": {
+          "type": "number",
+          "description": "Filter: maximum importance (0-1)"
+        },
+        "created_after": {
+          "type": "string",
+          "description": "Filter: only memories created at or after this RFC 3339 timestamp"
+        },
+        "created_before": {
+          "type": "string",
+          "description": "Filter: only memories created at or before this RFC 3339 timestamp"
+        }
+      }
+    },
+    {
+      "route": "memory.read",
+      "declared": true,
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Unique identifier of the memory (UUID or numeric record_id)"
+        },
+        "galaxy": {
+          "type": "string",
+          "description": "Optional galaxy filter"
+        }
+      }
+    },
+    {
+      "route": "memory.revisions",
+      "declared": true,
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Memory UUID or record_id to inspect"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "list",
+            "verify"
+          ],
+          "description": "Action: 'list' (default) or 'verify'"
+        }
+      }
+    },
+    {
+      "route": "memory.search",
+      "declared": true,
+      "required": [
+        "query"
+      ],
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Search query or natural language question"
+        },
+        "galaxy": {
+          "type": "string",
+          "description": "Galaxy to search in, or 'all' for cross-galaxy discovery"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum number of memories to return (default: 10)"
+        },
+        "historical": {
+          "type": "boolean",
+          "description": "Include superseded or archived records (default: false)"
+        },
+        "since": {
+          "type": "string",
+          "description": "Inclusive lower time bound: RFC3339 or epoch seconds"
+        },
+        "until": {
+          "type": "string",
+          "description": "Inclusive upper time bound: RFC3339 or epoch seconds"
+        },
+        "min_score": {
+          "type": "number",
+          "description": "Absolute BM25 score floor"
+        },
+        "min_score_ratio": {
+          "type": "number",
+          "description": "Relative floor: reject hits below this fraction of the top score"
+        },
+        "min_trust": {
+          "type": "number",
+          "description": "Minimum source_trust (0-1)"
+        },
+        "min_importance": {
+          "type": "number",
+          "description": "Minimum memory importance (0-1)"
+        },
+        "time_basis": {
+          "type": "string",
+          "description": "Time basis for since/until: 'recorded' or 'event'"
+        },
+        "include_cold": {
+          "type": "boolean",
+          "description": "Opt-in unranked cold recovery"
+        },
+        "cold_scan_limit": {
+          "type": "integer",
+          "description": "Maximum cold records to scan when include_cold is set (default 2048)"
+        }
+      }
+    },
+    {
+      "route": "memory.search_batch",
+      "declared": true,
+      "required": [
+        "queries"
+      ],
+      "properties": {
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of query strings"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum results per query (default: 5)"
+        }
+      }
+    },
+    {
+      "route": "memory.stats",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "galaxy": {
+          "type": "string",
+          "description": "Galaxy to summarize (optional; default codex)"
+        }
+      }
+    },
+    {
+      "route": "memory.tags",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "description": "Maximum tags to return (default: 50)"
+        },
+        "galaxy": {
+          "type": "string",
+          "description": "Galaxy whose tags to list (optional; default codex)"
+        }
+      }
+    },
+    {
+      "route": "memory.update",
+      "declared": true,
+      "required": [
+        "id",
+        "content"
+      ],
+      "properties": {
+        "id": {
+          "description": "Memory UUID or numeric record_id to update"
+        },
+        "content": {
+          "type": "string",
+          "description": "New content for the superseding record"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Optional reason recorded in the revision entry"
+        }
+      }
+    },
+    {
+      "route": "mesh_sync",
+      "declared": true,
+      "required": [
+        "peer"
+      ],
+      "properties": {
+        "peer": {
+          "type": "string",
+          "description": "Remote peer address (e.g. '127.0.0.1:7369')"
+        },
+        "batch_size": {
+          "type": "integer",
+          "description": "Batch sync size (default: 100)"
+        }
+      }
+    },
+    {
+      "route": "receipts.emit",
+      "declared": true,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "session",
+            "state_transition"
+          ],
+          "description": "Receipt kind"
+        },
+        "session_id": {
+          "type": "string",
+          "description": "Optional session filter for kind 'session'"
+        },
+        "out": {
+          "type": "string",
+          "description": "Optional file path to additionally write the receipt JSON"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum turns covered (session kind; default 200)"
+        }
+      }
+    },
+    {
+      "route": "receipts.verify",
+      "declared": true,
+      "required": [
+        "bundle"
+      ],
+      "properties": {
+        "bundle": {
+          "type": "object",
+          "description": "One supported signed WhiteMagic profile receipt object"
+        }
+      }
+    },
+    {
+      "route": "sangha.inbox",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "agent": {
+          "type": "string",
+          "description": "Agent handle to query (e.g. 'antigravity', 'opencode', 'all')"
+        }
+      }
+    },
+    {
+      "route": "sangha.post",
+      "declared": true,
+      "required": [
+        "title",
+        "body"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Dispatch title"
+        },
+        "body": {
+          "type": "string",
+          "description": "Dispatch markdown content"
+        },
+        "target": {
+          "type": "string",
+          "description": "Target agent tag (e.g. '@all', '@opencode', '@mac')"
+        },
+        "type": {
+          "type": "string",
+          "description": "Post type (e.g. 'note', 'claim', 'handoff', 'done')"
+        },
+        "scope": {
+          "type": "string",
+          "description": "Optional task scope"
+        }
+      }
+    },
+    {
+      "route": "sangha.status",
+      "declared": false,
+      "required": [],
+      "properties": {}
+    },
+    {
+      "route": "session.checkpoint",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "description": "Target session ID"
+        },
+        "summary": {
+          "type": "string",
+          "description": "High-density summary of decisions, state, and findings"
+        },
+        "next_queue": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ordered next steps"
+        },
+        "open_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Open flags, blockers, or warnings"
+        },
+        "track": {
+          "type": "string",
+          "description": "Optional track slug persisted with the checkpoint"
+        },
+        "commit": {
+          "type": "string",
+          "description": "Commit hash persisted with the checkpoint"
+        },
+        "tests_green": {
+          "type": "boolean",
+          "description": "Whether the test suite was green at checkpoint time."
+        },
+        "lease_id": {
+          "type": "string",
+          "description": "Claimed scope lease_id that remains held at this handoff"
+        },
+        "branch": {
+          "type": "string",
+          "description": "Branch name persisted with the checkpoint"
+        }
+      }
+    },
+    {
+      "route": "session.continuity",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "n": {
+          "type": "integer",
+          "description": "Number of recent turns to recall (default: 5)"
+        },
+        "session_id": {
+          "type": "string",
+          "description": "Target session (default: most recent)"
+        },
+        "current_session_id": {
+          "type": "string",
+          "description": "Session to exclude (optional)"
+        },
+        "since": {
+          "type": "string",
+          "description": "Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD"
+        },
+        "until": {
+          "type": "string",
+          "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD"
+        },
+        "max_content_bytes": {
+          "type": "integer",
+          "description": "Per-turn content cap in bytes (default 8192)"
+        },
+        "max_response_bytes": {
+          "type": "integer",
+          "description": "Turns budget in bytes (default 49152)"
+        },
+        "include_briefing_text": {
+          "type": "boolean",
+          "description": "Include the ready-to-inject briefing.text block"
+        }
+      }
+    },
+    {
+      "route": "session.digest",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "description": "Target session (default: most recent lane)"
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum turns to include (default 20)"
+        }
+      }
+    },
+    {
+      "route": "session.list",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "description": "Filter to one session lane"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum lanes to return (default 50)"
+        }
+      }
+    },
+    {
+      "route": "session.recall",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "description": "Session ID"
+        },
+        "query": {
+          "type": "string",
+          "description": "Case-insensitive content substring filter"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum turns to return (default 50)"
+        }
+      }
+    },
+    {
+      "route": "session.record",
+      "declared": true,
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "content": {
+          "type": "string",
+          "description": "Turn content to persist"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "user",
+            "ai"
+          ],
+          "description": "Who produced the turn"
+        },
+        "turn_type": {
+          "type": "string",
+          "description": "Turn type (e.g. 'decision', 'milestone', 'observation')"
+        },
+        "importance": {
+          "type": "number",
+          "description": "0.0 to 1.0 salience"
+        },
+        "session_id": {
+          "type": "string",
+          "description": "Target session ID"
+        },
+        "supersedes": {
+          "type": "string",
+          "description": "Memory id of an earlier turn this record replaces"
+        },
+        "track": {
+          "type": "string",
+          "description": "Optional track slug"
+        }
+      }
+    },
+    {
+      "route": "session.replay",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "description": "Session ID"
+        },
+        "since": {
+          "type": "string",
+          "description": "Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD"
+        },
+        "until": {
+          "type": "string",
+          "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD"
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum turns (default 50)"
+        },
+        "include_superseded": {
+          "type": "boolean",
+          "description": "Also return turns replaced via supersedes (default false)."
+        },
+        "min_importance": {
+          "type": "number",
+          "description": "Selective mode floor (default 0.7)"
+        },
+        "token_budget": {
+          "type": "integer",
+          "description": "Progressive mode token budget (default 2000)"
+        },
+        "turn_types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Selective mode: turn types to keep"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "full",
+            "selective",
+            "progressive"
+          ],
+          "description": "Replay mode (default full)"
+        }
+      }
+    },
+    {
+      "route": "session.start",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Session title"
+        },
+        "user": {
+          "type": "string",
+          "description": "User identifier (default: 'default')"
+        }
+      }
+    },
+    {
+      "route": "wm",
+      "declared": true,
+      "required": [],
+      "properties": {
+        "thought": {
+          "type": "string",
+          "description": "Natural language query or command auto-routed via NLU"
+        },
+        "route": {
+          "type": "string",
+          "description": "Target tool route (e.g. 'memory.create', 'memory.search', 'session.continuity')"
+        },
+        "args": {
+          "type": "object",
+          "description": "Parameters for the routed tool"
+        },
+        "action": {
+          "type": "string",
+          "description": "Alternative action name"
+        }
+      }
+    }
+  ]
+}
+rc=0
