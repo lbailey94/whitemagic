@@ -776,12 +776,125 @@ impl OutcomeRecord {
 }
 
 /// Subject top1-top2 margin: shortlist `margin` or deliberation `margin_prior`.
+///
+/// Callers must only sign or calibrate on this value after the subject receipt
+/// verified against the store gate key.
 fn subject_margin(subject: &Value) -> Option<f64> {
     subject
         .get("margin")
         .and_then(Value::as_f64)
         .or_else(|| subject.get("margin_prior").and_then(Value::as_f64))
         .filter(|margin| margin.is_finite())
+}
+
+/// A verified calibration sample extracted from one outcomes journal line.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct VerifiedOutcome {
+    /// Signed margin from the outcome receipt or its verified subject.
+    pub margin: f64,
+    /// Signed (receipt) or corroborated (reference line) success assertion.
+    pub success: bool,
+}
+
+/// Why an outcomes journal line yielded no calibration sample.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OutcomeLineSkip {
+    /// Malformed, unsigned, bad-signature, or with no verifiable subject.
+    Unverified,
+    /// The line verified but carries no signed margin (legacy record).
+    NoMargin,
+}
+
+/// Verify one `outcomes.jsonl` line and extract its signed calibration sample.
+///
+/// A line is accepted only when it is a signed outcome receipt that verifies
+/// against the store's gate key, or when it references a subject receipt that
+/// verifies. Margins are never read from unauthenticated lines: a reference
+/// line takes the margin from the verified subject receipt, never from itself.
+pub fn verified_outcome_sample(
+    line: &str,
+    store_path: &Path,
+) -> Result<VerifiedOutcome, OutcomeLineSkip> {
+    let value: Value = serde_json::from_str(line).map_err(|_| OutcomeLineSkip::Unverified)?;
+    let is_receipt = value.get("spec").is_some() || value.get("signature").is_some();
+    if is_receipt {
+        let report =
+            verify_receipt_value(&value, store_path).map_err(|_| OutcomeLineSkip::Unverified)?;
+        if report["valid"].as_bool() != Some(true) {
+            return Err(OutcomeLineSkip::Unverified);
+        }
+        let margin = value
+            .get("margin")
+            .and_then(Value::as_f64)
+            .filter(|margin| margin.is_finite())
+            .ok_or(OutcomeLineSkip::NoMargin)?;
+        let success = value
+            .get("success")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
+        return Ok(VerifiedOutcome { margin, success });
+    }
+
+    // Reference line: not itself signed, so require a verifiable subject
+    // receipt and take the margin from that signed receipt.
+    let reference = value
+        .get("subject_receipt")
+        .and_then(Value::as_str)
+        .or_else(|| value.get("subject_path").and_then(Value::as_str))
+        .ok_or(OutcomeLineSkip::Unverified)?;
+    let subject_path =
+        resolve_subject_receipt(store_path, reference).ok_or(OutcomeLineSkip::Unverified)?;
+    let subject_report =
+        verify_receipt_file(&subject_path, store_path).map_err(|_| OutcomeLineSkip::Unverified)?;
+    if subject_report["valid"].as_bool() != Some(true) {
+        return Err(OutcomeLineSkip::Unverified);
+    }
+    let subject_raw =
+        std::fs::read_to_string(&subject_path).map_err(|_| OutcomeLineSkip::Unverified)?;
+    let subject: Value =
+        serde_json::from_str(&subject_raw).map_err(|_| OutcomeLineSkip::Unverified)?;
+    let margin = subject_margin(&subject).ok_or(OutcomeLineSkip::NoMargin)?;
+    let success = value
+        .get("success")
+        .and_then(Value::as_bool)
+        .or_else(|| {
+            value
+                .get("outcome")
+                .and_then(Value::as_str)
+                .map(|outcome| outcome == "success")
+        })
+        .ok_or(OutcomeLineSkip::Unverified)?;
+    Ok(VerifiedOutcome { margin, success })
+}
+
+/// Resolve a journal reference to a receipt file inside `<store>/receipts`.
+///
+/// Only file names are honored (never `..` or absolute traversal); a bare
+/// receipt id matches `<id>.json` or any `*-<id>.json` in the receipts dir.
+fn resolve_subject_receipt(store_path: &Path, reference: &str) -> Option<PathBuf> {
+    let receipts_dir = store_path.join("receipts");
+    let file_name = Path::new(reference).file_name()?.to_str()?;
+    if file_name.is_empty() {
+        return None;
+    }
+    let direct = receipts_dir.join(file_name);
+    if direct.is_file() {
+        return Some(direct);
+    }
+    let exact = format!("{reference}.json");
+    let suffix = format!("-{reference}.json");
+    let mut matches: Vec<PathBuf> = std::fs::read_dir(&receipts_dir)
+        .ok()?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name == exact || name.ends_with(&suffix))
+        })
+        .collect();
+    matches.sort();
+    matches.into_iter().next()
 }
 
 /// Record an outcome for a subject receipt: sign it, write a sidecar next to
@@ -817,7 +930,13 @@ pub fn record_outcome(args: &Value, store_path: &Path, readonly: bool) -> Result
     let subject_verified = verify_receipt_file(&receipt_path, store_path)
         .map(|report| report["valid"].as_bool().unwrap_or(false))
         .unwrap_or(false);
-    let margin = subject_margin(&subject);
+    // Only a verified subject receipt may contribute a signed margin; an
+    // unverified subject file is attacker-controlled calibration input.
+    let margin = if subject_verified {
+        subject_margin(&subject)
+    } else {
+        None
+    };
 
     let (signing_key, _) = resolve_or_create_mandala_gate_key(store_path)
         .map_err(|e| format!("gate key error: {e}"))?;
@@ -864,9 +983,18 @@ pub fn record_outcome(args: &Value, store_path: &Path, readonly: bool) -> Result
         .and_then(|_| file.write_all(b"\n"))
         .map_err(|e| format!("outcomes journal write: {e}"))?;
 
+    let margin_omitted_reason = if record.margin.is_some() {
+        None
+    } else if !subject_verified {
+        Some("subject_unverified")
+    } else {
+        Some("subject_lacks_signed_margin")
+    };
+
     Ok(json!({
         "status": "success",
         "outcome": record,
+        "margin_omitted_reason": margin_omitted_reason,
         "sidecar_path": sidecar.display().to_string(),
         "journal_path": journal.display().to_string(),
     }))
@@ -1447,10 +1575,45 @@ mod tests {
             );
         }
 
-        let tau = gate.calibrate_tau(&store);
+        let report = gate.calibrate_tau_report(&store);
+        assert_eq!(report.samples_used, 10);
+        assert_eq!(report.lines_skipped_unverified, 0);
+        assert_eq!(report.lines_skipped_no_margin, 0);
+        assert!(!report.used_default_tau);
         assert!(
-            (tau - 0.5).abs() < 1e-9,
-            "calibration must honor signed margins and success filtering, got {tau}"
+            (report.tau - 0.5).abs() < 1e-9,
+            "calibration must honor signed margins and success filtering, got {}",
+            report.tau
+        );
+        assert!((gate.calibrate_tau(&store) - report.tau).abs() < 1e-12);
+        std::fs::remove_dir_all(store).expect("cleanup fixture store");
+    }
+
+    #[test]
+    fn unverified_subject_margin_is_not_signed() {
+        let gate_key = SigningKey::from_bytes(&[78u8; 32]);
+        let foreign_key = SigningKey::from_bytes(&[79u8; 32]);
+        let store = fixture_store(&gate_key);
+        let subject_path = store.join("foreign-subject.json");
+        signed_deliberation_subject(&foreign_key, &subject_path, 0.99);
+        let args = json!({
+            "receipt_path": subject_path.display().to_string(),
+            "outcome": "success",
+        });
+        let report = record_outcome(&args, &store, false).expect("record unverified outcome");
+        assert_eq!(report["outcome"]["subject_verified"], json!(false));
+        assert!(
+            report["outcome"].get("margin").is_none(),
+            "unverified subject margin must not be signed"
+        );
+        assert_eq!(report["outcome"]["success"], json!(true));
+        assert_eq!(report["margin_omitted_reason"], json!("subject_unverified"));
+
+        // The signed outcome still verifies, but carries no margin to calibrate on.
+        let line = serde_json::to_string(&report["outcome"]).expect("serialize outcome");
+        assert_eq!(
+            verified_outcome_sample(&line, &store),
+            Err(OutcomeLineSkip::NoMargin)
         );
         std::fs::remove_dir_all(store).expect("cleanup fixture store");
     }

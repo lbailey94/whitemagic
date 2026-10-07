@@ -16,6 +16,8 @@ use sha2::{Digest, Sha256};
 use uuid::Uuid;
 use wm_gen3_core::mandala::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 
+use crate::receipt_verify::{OutcomeLineSkip, verified_outcome_sample};
+
 /// Spec identifier for System 1.5 deliberation receipts.
 pub const DELIBERATION_SPEC: &str = "continuity-receipt/1.5#deliberation.v2";
 
@@ -48,6 +50,27 @@ pub struct CandidateRoute {
     pub description: Option<String>,
 }
 
+/// Outcome of one conformal calibration pass over the outcomes journal.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CalibrationReport {
+    /// Calibrated margin threshold (`default_tau` when data is insufficient).
+    pub tau: f64,
+    /// Confidence level used for the finite-sample quantile.
+    pub confidence_level: f64,
+    /// True when `<store>/receipts/outcomes.jsonl` exists.
+    pub journal_present: bool,
+    /// Non-empty journal lines seen.
+    pub journal_lines: usize,
+    /// Verified successful margins that produced the quantile.
+    pub samples_used: usize,
+    /// Lines skipped because they did not verify against the gate key.
+    pub lines_skipped_unverified: usize,
+    /// Verified lines skipped because they carry no signed margin.
+    pub lines_skipped_no_margin: usize,
+    /// True when `tau` fell back to `default_tau`.
+    pub used_default_tau: bool,
+}
+
 /// Dynamic Conformal Risk Control Gate.
 #[derive(Debug, Clone)]
 pub struct ConformalGate {
@@ -75,33 +98,60 @@ impl ConformalGate {
     }
 
     /// Calibrate margin threshold tau from recorded outcomes.jsonl if present.
+    ///
+    /// Only cryptographically verified outcome receipts contribute; forged or
+    /// tampered journal lines are skipped. Use [`Self::calibrate_tau_report`]
+    /// to see how many lines were skipped.
     pub fn calibrate_tau(&self, store_path: &Path) -> f64 {
+        self.calibrate_tau_report(store_path).tau
+    }
+
+    /// Calibrate tau and report how many journal lines were not trusted.
+    pub fn calibrate_tau_report(&self, store_path: &Path) -> CalibrationReport {
         let outcomes_file = store_path.join("receipts").join("outcomes.jsonl");
-        if !outcomes_file.exists() {
-            return self.default_tau;
+        let mut report = CalibrationReport {
+            tau: self.default_tau,
+            confidence_level: self.confidence_level,
+            journal_present: outcomes_file.exists(),
+            journal_lines: 0,
+            samples_used: 0,
+            lines_skipped_unverified: 0,
+            lines_skipped_no_margin: 0,
+            used_default_tau: true,
+        };
+        if !report.journal_present {
+            return report;
         }
 
         let content = match std::fs::read_to_string(&outcomes_file) {
             Ok(s) => s,
-            Err(_) => return self.default_tau,
+            Err(_) => return report,
         };
 
-        // Extract margins for successful dispatches
+        // Extract margins for successful dispatches. A line only counts when
+        // its outcome receipt (or referenced subject receipt) verifies against
+        // the store gate key, so appended junk cannot move the threshold.
         let mut non_conformity_scores: Vec<f64> = Vec::new();
         for line in content.lines() {
-            if let Ok(val) = serde_json::from_str::<serde_json::Value>(line) {
-                if let Some(margin) = val.get("margin").and_then(|m| m.as_f64()) {
-                    let success = val.get("success").and_then(|s| s.as_bool()).unwrap_or(true);
-                    if success {
+            if line.trim().is_empty() {
+                continue;
+            }
+            report.journal_lines += 1;
+            match verified_outcome_sample(line, store_path) {
+                Ok(sample) => {
+                    if sample.success {
                         // High margin = low non-conformity score
-                        non_conformity_scores.push((1.0 - margin).max(0.0));
+                        non_conformity_scores.push((1.0 - sample.margin).max(0.0));
                     }
                 }
+                Err(OutcomeLineSkip::Unverified) => report.lines_skipped_unverified += 1,
+                Err(OutcomeLineSkip::NoMargin) => report.lines_skipped_no_margin += 1,
             }
         }
+        report.samples_used = non_conformity_scores.len();
 
         if non_conformity_scores.len() < 10 {
-            return self.default_tau;
+            return report;
         }
 
         non_conformity_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
@@ -112,7 +162,9 @@ impl ConformalGate {
         let q = non_conformity_scores[idx];
 
         // Invert non-conformity score back to margin threshold
-        (1.0 - q).max(0.02)
+        report.tau = (1.0 - q).max(0.02);
+        report.used_default_tau = false;
+        report
     }
 
     /// Evaluate whether a top-1 candidate passes the conformal gate or requires deliberation.
@@ -710,5 +762,97 @@ mod tests {
         assert!(outcome.degraded);
         assert_eq!(outcome.confidence, 0.0);
         assert_eq!(outcome.chosen_route, "memory.create");
+    }
+
+    fn calibration_fixture_store(key: &SigningKey) -> PathBuf {
+        let store = std::env::temp_dir().join(format!("wm-calibration-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(store.join("receipts")).expect("create calibration store");
+        std::fs::write(store.join("mandala_gate_key.bin"), key.to_bytes()).expect("write gate key");
+        store
+    }
+
+    #[test]
+    fn test_calibrate_tau_ignores_forged_unverified_journal_lines() {
+        let key = SigningKey::from_bytes(&[31u8; 32]);
+        let store = calibration_fixture_store(&key);
+        let mut journal = String::new();
+        for _ in 0..10 {
+            journal.push_str("{\"margin\":0.0,\"success\":true}\n");
+        }
+        // A structurally valid but tampered signature must not count either.
+        let mut forged = crate::receipt_verify::OutcomeRecord::new(
+            "subject".into(),
+            "continuity-receipt/0.5#deliberation.v2".into(),
+            true,
+            Some(0.0),
+            &serde_json::json!({"outcome": "success"}),
+            format!("did:key:{}", hex_encode(&key.verifying_key().to_bytes())),
+        )
+        .expect("forged record builds");
+        forged.sign(&key);
+        forged.signature = Some("0".repeat(128));
+        journal.push_str(&serde_json::to_string(&forged).expect("serialize forged"));
+        journal.push('\n');
+        std::fs::write(store.join("receipts").join("outcomes.jsonl"), journal)
+            .expect("write forged journal");
+
+        let gate = ConformalGate::new(0.95, 0.05);
+        let report = gate.calibrate_tau_report(&store);
+        assert_eq!(report.tau, 0.05, "forged lines must not move tau");
+        assert_eq!(report.lines_skipped_unverified, 11);
+        assert_eq!(report.samples_used, 0);
+        assert!(report.used_default_tau);
+        assert_eq!(gate.calibrate_tau(&store), 0.05);
+        std::fs::remove_dir_all(store).expect("cleanup calibration store");
+    }
+
+    #[test]
+    fn test_calibrate_tau_follows_verified_subject_references() {
+        let key = SigningKey::from_bytes(&[32u8; 32]);
+        let store = calibration_fixture_store(&key);
+        let receipt = DeliberationReceipt::sign(
+            &key,
+            "reference calibration fixture",
+            &["memory.search".into(), "memory.create".into()],
+            "memory.search",
+            0.5,
+            0.05,
+            0.9,
+            1.0,
+            false,
+            "model-sha256",
+            DELIBERATION_PROMPT_VERSION,
+        );
+        let subject_path = store
+            .join("receipts")
+            .join(format!("deliberation-{}.json", receipt.receipt_id));
+        std::fs::write(
+            &subject_path,
+            serde_json::to_vec(&receipt).expect("serialize subject"),
+        )
+        .expect("write subject receipt");
+
+        let mut journal = String::new();
+        for _ in 0..10 {
+            journal.push_str(&format!(
+                "{{\"subject_receipt\":\"{}\",\"success\":true}}\n",
+                receipt.receipt_id
+            ));
+        }
+        journal.push_str("{\"subject_receipt\":\"missing-subject\",\"success\":true}\n");
+        std::fs::write(store.join("receipts").join("outcomes.jsonl"), journal)
+            .expect("write reference journal");
+
+        let gate = ConformalGate::new(0.95, 0.05);
+        let report = gate.calibrate_tau_report(&store);
+        assert_eq!(report.samples_used, 10);
+        assert_eq!(report.lines_skipped_unverified, 1);
+        assert_eq!(report.lines_skipped_no_margin, 0);
+        assert!(
+            (report.tau - 0.5).abs() < 1e-9,
+            "verified subject references must calibrate, got {}",
+            report.tau
+        );
+        std::fs::remove_dir_all(store).expect("cleanup calibration store");
     }
 }
