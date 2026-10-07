@@ -118,4 +118,4 @@ verifies hashes/counts independently before integration.
   used by `IMPL_B1_ACCEPTANCE_2026-09-17`.
 - **Score equality across systems is never required.** Gen2 bundle scores, recorded-cell scores,
   and Gen3 D2 support are different scales; the join is field semantics, not value equality
-  (`docs/BUNDLE_JOURNAL_PARITY.md`).
+  (`docs/archive/legacy/BUNDLE_JOURNAL_PARITY.md`).

@@ -1,7 +1,7 @@
 # Wave-1 spec A1 — Durable store + ingestion gate
 
 **Status: FROZEN rev 1 (2026-09-17, sha256 `cf638395…`) · rev 2 amendment drafted 2026-09-17
-(noise disposition — pending operator ratification).** Compiled per `docs/PHASE4_WAVE_PLAN.md`
+(noise disposition — pending operator ratification).** Compiled per `docs/archive/research/PHASE4_WAVE_PLAN.md`
 §7 (cross-cutting spec template) at WMgen3 tip `b7565ee` (tree clean), under the frozen nucleus
 (`docs/NUCLEUS.md`, sha256 `73c5a9cf…`). **Owner: Lucas Bailey (operator)** — assigned at
 ratification. Rev 2 is additive to rev 1 and takes effect at operator ratification +

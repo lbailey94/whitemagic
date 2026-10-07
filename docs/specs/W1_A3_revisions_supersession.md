@@ -1,7 +1,7 @@
 # Wave-1 spec A3 — Revisions/supersession
 
 **Status: FROZEN rev 1 (2026-09-17, sha256 `3adedac0…`) · rev 2 amendment drafted 2026-09-17
-(case 1 disposition — operator-ratified; pending receipt).** Compiled per `docs/PHASE4_WAVE_PLAN.md`
+(case 1 disposition — operator-ratified; pending receipt).** Compiled per `docs/archive/research/PHASE4_WAVE_PLAN.md`
 §7 at WMgen3 tip `b7565ee` (tree clean), under the frozen nucleus (`docs/NUCLEUS.md`, sha256
 `73c5a9cf…`). **Owner: Lucas Bailey (operator)** — assigned at ratification. Rev 2 is additive to
 rev 1 and takes effect at `receipts/W1_SPEC_A3_AMEND_2026-09-17.md`. Docs-only: no code, no gates,
@@ -162,7 +162,7 @@ Each case must exist as a runnable acceptance assertion before the row exits; no
    disclosed**, not excluded: the edge is a supersedes relation, recall applies the statutory
    penalty + `superseded_by` while still returning both records, and audit flags stay visible.
    A stricter **value-replacement rule (rule v2)** is registered as a **gated candidate** in
-   `PHASE4_ERRATA.md` — re-entry requires its own registration + a full corpus re-baseline; no
+   `archive/research/PHASE4_ERRATA.md` — re-entry requires its own registration + a full corpus re-baseline; no
    execution is authorized by this spec.
 2. **Temporal absence** — facts with no temporal anchor: R must not propose on missing time;
    temporal-absence is tested explicitly (v26 FAMA degraded to no signal here).

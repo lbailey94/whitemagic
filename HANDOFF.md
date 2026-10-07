@@ -1,4 +1,36 @@
-# WMgen3 — HANDOFF (updated 2026-09-19)
+# WMgen3 — HANDOFF
+
+## Current state (2026-10-06)
+
+- **Product binary** `wm` is the **Gen3 10.2.0-alpha line** (currently alpha.4; the
+  workspace `Cargo.toml` is version truth). Commands: `grimoire init status remember
+  recall system2 sweep dream route galaxy inspect apotheosis census migrate migrate-all
+  quarantine backfill-session-evidence contract serve mesh session ingest mandala vault
+  evolve shortlist deliberate verify-receipt outcome organ peer sentinel selftest`
+  (`decision` only when built with the optional `systemone` feature). The v9-only
+  commands (`doctor`, `connect`, `setup`, `quickstart`, `backup`, `restore`, `update`,
+  `seal`, `verify`, `trust`, `anchor`) are not in this binary.
+- **MCP profiles:** default `cyberbrain` (12 lean tools); `full` is 40 curated routes
+  plus feature-gated routes — `wm contract --json` reports the compiled total (43 on
+  the default `system05` build) and is the authority.
+- **Health:** `wm selftest` runs the install-invariant persistence probe and reports
+  host health separately (`host_status`/`host_health`; `--strict` exits 1 only on a
+  critical host verdict). Reference: `docs/SELFTEST_AND_HOST_HEALTH.md`.
+- **Gate status:** Gate 9A is closed and archived under `docs/archive/gate9a/`; the
+  M9/PEB-15 milestone-era record below is historical. Research record:
+  `docs/archive/research/`; legacy plans/audits: `docs/archive/legacy/`.
+- **Live queues:** operator planning tree `planning/TONIGHT_CHECKLIST_2026-10-06.md`;
+  fleet coordination on the Sangha board (`sangha brief`, `sangha inbox`).
+- **Docs map:** `docs/INDEX.md`.
+
+---
+
+## Historical openers (retained as the record; superseded)
+
+> **Archive note:** paths inside these openers and the §-sections below refer to
+> their pre-archive locations. Phase/wave research now lives under
+> `docs/archive/research/`, Gate 9A under `docs/archive/gate9a/`, and legacy
+> plans/audits under `docs/archive/legacy/` — see `docs/INDEX.md`.
 
 > **NEXT SESSION OPENER (docs-sweep close, 2026-09-19; milestone-era tip `8c13904`; tree
 > clean):** **The milestone era is complete through M8C and M9 is open.** M0–M8C

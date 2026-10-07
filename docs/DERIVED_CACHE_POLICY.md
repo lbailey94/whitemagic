@@ -1,7 +1,7 @@
 # Derived embedding-cache policy — 2026-09-22
 
 Status: policy for the persistent derived embedding cache (`embed_cache` LMDB database). It
-resolves the Article 7 boundary recorded as open in `GATE_9A_EXTERNAL_EFFECT_BOUNDARIES.md` and
+resolves the Article 7 boundary recorded as open in `archive/gate9a/GATE_9A_EXTERNAL_EFFECT_BOUNDARIES.md` and
 errata #3/#57. This cache is **derived state**, never canonical evidence.
 
 ## Classification
@@ -27,7 +27,7 @@ errata #3/#57. This cache is **derived state**, never canonical evidence.
 - `projection_off_recall_writes_no_cache` — projection-disabled recall performs no derived writes.
 - Evil Gana attempt 7: the derived hologram has no handle to the canonical store; runtime test plus
   compile-fail proof (`hologram.rs`, `contract.rs::derived_hologram_index_cannot_mutate_canonical_store`).
-- Article 9: cache/model activity is inventoried in `GATE_9A_EXTERNAL_EFFECT_BOUNDARIES.md` with its
+- Article 9: cache/model activity is inventoried in `archive/gate9a/GATE_9A_EXTERNAL_EFFECT_BOUNDARIES.md` with its
   distinct durability guarantee.
 
 ## Explicit non-claims

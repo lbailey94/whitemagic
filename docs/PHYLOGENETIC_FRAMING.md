@@ -1,8 +1,8 @@
 # Gen3 — Phylogenetic framing (reading lens for the compile pass)
 
 **Status:** reading lens · 2026-09-17 · **framing only — assigns no verdicts, adds no doctrine,
-changes no gate.** Companion to `PHASE3_DECOMPOSITION.md` (the verdict set it reads) and
-`PHASE3_COMPILE_PASS.md` (the method). Every frame below is status-tagged and points to its
+changes no gate.** Companion to `archive/research/PHASE3_DECOMPOSITION.md` (the verdict set it reads) and
+`archive/research/PHASE3_COMPILE_PASS.md` (the method). Every frame below is status-tagged and points to its
 existing home; where a frame is new packaging rather than existing record, it says so.
 
 **Provenance note:** this framing coalesced in the operator's 2026-09-17 discussion with an
@@ -31,8 +31,8 @@ compile-pass verdict vocabulary (CONV §3 L4174–4182) — which is why it work
 | **EXPERIMENT (manifest-gated)** | never fairly tried — enters only with ancestor · wire · acceptance · owner |
 
 Evidence anchors: 77 named engine concepts absorbed into 28 slots (canon §7); Gardens already
-becoming fields in Gen1 (`garden_config.py:3-5` via CODE_ARCHAEOLOGY); the audit that corrected
-`violet`/`drive`/`god` from names to functions (`PHASE3_DECOMPOSITION.md` E24).
+becoming fields in Gen1 (`garden_config.py:3-5` via archive/research/CODE_ARCHAEOLOGY); the audit that corrected
+`violet`/`drive`/`god` from names to functions (`archive/research/PHASE3_DECOMPOSITION.md` E24).
 
 ## 2. Spiral, not cycle — what makes a loop productive
 
@@ -46,7 +46,7 @@ S_{t+1} = F(S_t, E_t, C_t)     E = external evidence/stimulus · C = consequence
 The formalism is a **gloss over mechanisms that already exist as law**: the novelty
 requirement and outward spiral (friction → improve → resolve), Closure 2 (inference cannot
 create world evidence), and the metabolism metric M = externally grounded intake / total
-processing (`METABOLISM_PLAN.md` §3; **monitor, never a target** — Goodhart is named there).
+processing (`archive/legacy/METABOLISM_PLAN.md` §3; **monitor, never a target** — Goodhart is named there).
 
 **W × M hypothesis (status: experimental model, not a finding; 2026-09-17).** A wiring-fraction
 (W = effectful-reachable / implemented-candidate) × metabolism (M) product is proposed as the

@@ -1,6 +1,6 @@
 # Wave-1 spec A2 — Evidence disclosure
 
-**Status: DRAFT — compiled 2026-09-17 · NOT frozen.** Compiled per `docs/PHASE4_WAVE_PLAN.md`
+**Status: DRAFT — compiled 2026-09-17 · NOT frozen.** Compiled per `docs/archive/research/PHASE4_WAVE_PLAN.md`
 §7 (cross-cutting spec template) at WMgen3 tip `b7565ee` (tree clean), under the frozen nucleus
 (`docs/NUCLEUS.md`, sha256 `73c5a9cf…`). **Owner: unset — operator assigns at freeze.** The freeze
 takes effect only at operator ratification + `receipts/` entry. Docs-only: no code, no gates, no
@@ -83,7 +83,7 @@ benchmark-derived.
 ### 1.5 Statutory parameters named (Tier-2, none swept)
 
 Invocation pin floors (`--min-score 0 --min-coverage 0`; NUCLEUS §3) · D2 score policy
-(`PHASE1_SCORE_POLICY.md` §5) · audit protocols v1.2/v1.3 (flags published, never deleted; raw +
+(`archive/research/PHASE1_SCORE_POLICY.md` §5) · audit protocols v1.2/v1.3 (flags published, never deleted; raw +
 adjudicated reporting — N5).
 
 ### 1.6 Journal events owned by this spec
