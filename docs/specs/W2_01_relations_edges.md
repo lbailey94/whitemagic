@@ -1,6 +1,6 @@
 # Wave-2 spec 01 — Relations / associations (edges)
 
-**Status: DRAFT — compiled 2026-09-17 · NOT frozen.** Compiled per `docs/PHASE4_WAVE_PLAN.md`
+**Status: DRAFT — compiled 2026-09-17 · NOT frozen.** Compiled per `docs/archive/research/PHASE4_WAVE_PLAN.md`
 §7 at WMgen3 tip `3d67663` (tree clean), under the frozen nucleus (`docs/NUCLEUS.md`, sha256
 `73c5a9cf…`). **Owner: unset — operator assigns at freeze.** Docs-only. Freeze at operator
 ratification + `receipts/` entry.
@@ -22,7 +22,7 @@ figure is comment-sourced (UNVERIFIED).
 ### 1.1 Edge form and round-trip
 
 - `e = (w, s, c, t)` — learned strength · sign/direction · resource cost · trust — plus `kind`,
-  `src`/`dst`, `class`, provenance, `state` (`PHASE1_CONTRACTS.md:58-63`). (SOURCE-IMPLEMENTED)
+  `src`/`dst`, `class`, provenance, `state` (`archive/research/PHASE1_CONTRACTS.md:58-63`). (SOURCE-IMPLEMENTED)
 - **Typed persistence is the contract:** `kind` and direction survive save/load and transfer;
   the C5 canary (relation kinds/endpoints byte-identical across processes) is the template.
   The v26 class — typed columns exist, hydration ignores them, save re-inserts 3-column triples

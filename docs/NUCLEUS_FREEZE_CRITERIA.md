@@ -3,7 +3,7 @@
 **Status:** criteria draft · 2026-09-17 · **reviewed in session; four-part snapshot restructure
 and two-door admission/disposition split applied** (§1–§2). Remains a draft until the freeze is
 performed. Docs-only: performs no freeze, names no frozen hashes, changes no gate. Companion to
-`PHASE3_ENTRY_DECISION.md` and `PHASE3_COMPILE_PASS.md`.
+`archive/research/PHASE3_ENTRY_DECISION.md` and `archive/research/PHASE3_COMPILE_PASS.md`.
 
 Purpose: by the Phase-3/Phase-4 boundary, Gen3 must have an explicit **nucleus snapshot** — the
 pinned part of the organism that Phase-4 re-expression may inherit from but never dissolve into

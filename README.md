@@ -17,7 +17,7 @@ next session — without sending your memory store to any hosted service.
   "mcpServers": {
     "whitemagic": {
       "command": "wm",
-      "args": ["serve", "--profile", "curated"]
+      "args": ["serve", "--profile", "cyberbrain"]
     }
   }
 }
@@ -69,10 +69,10 @@ next session — without sending your memory store to any hosted service.
 
 ## Status
 
-**WhiteMagic v9.** Release channel: **open alpha** — public alpha for MCP
-agents. The version number is a compatibility signal; the channel is
-an evidence claim (beta and stable each require their own exit conditions,
-not a version milestone).
+**WhiteMagic Gen3** (the `wm` 10.2 alpha line). Release channel: **open
+alpha** — public alpha for MCP agents. The version number is a compatibility
+signal; the channel is an evidence claim (beta and stable each require their
+own exit conditions, not a version milestone).
 
 - **Install path: Linux x86-64, Linux arm64, macOS arm64, and Windows x86_64** — install-gated. Linux builds are dynamically linked (glibc 2.39+): the ONNX runtime the v10 line loads has no static musl build (pre-v10 releases still ship musl). Releases also publish gzipped distributables (~58% smaller) that the installer prefers on slow links. macOS installs through the same checksum-verified installer (hardware smoke evidence in [issue #2](https://github.com/lbailey94/whitemagic/issues/2)); Windows installs through `scripts/install.ps1`. Every gated installer path is certified against the published release in CI.
 - **Support window:** the current minor and the previous minor on the install-gated lines (Linux x86-64, Linux arm64, macOS arm64, Windows x86_64) receive fixes; older minors are archival — see [`SECURITY.md`](SECURITY.md).
@@ -86,7 +86,7 @@ The supported alpha contract:
 - explicit MCP routes for dependable behavior;
 - durable memory creation and lexical search without an external model;
 - session record, replay, and cross-session continuity;
-- a complete backup, verification, and restore path;
+- an end-to-end install invariant (`wm selftest`) with host-health diagnostics;
 - no telemetry by default and no required WhiteMagic cloud service;
 - truthful degradation when optional models or embeddings are unavailable.
 
@@ -129,64 +129,68 @@ Adoption snapshot (2026-09-13): 759 npm downloads/30d · 1,846 Docker pulls ·
 67 crates.io downloads. Package installs are independent of the installer and
 grew without any website CTA — the memory layer chooses its own doors.
 
-Verify the installation, activate it, and see the product work end to end:
+Verify the installation and see the product work end to end:
 
 ```bash
 wm --version    # wm 10.2.0-alpha.4
 wm status       # display substrate status, epoch, record counts, and store health
 ```
 
-`wm grimoire` proves the environment and previews client wiring; it ends by
-telling you activation itself needs `wm connect --write`. `wm quickstart` is
-the optional 30-second two-process continuity demo on an isolated store, and
-`wm doctor` is a troubleshooting tool, not a setup step — run
-`wm doctor --deep` when something looks wrong.
+`wm grimoire` proves the environment and previews client wiring; add `--write`
+to write detected MCP client configurations (`--json` for a machine-readable
+report). `wm selftest` runs the full invariant check (a throwaway store plus
+host health); see [`docs/SELFTEST_AND_HOST_HEALTH.md`](docs/SELFTEST_AND_HOST_HEALTH.md).
 
 ## Everyday commands
 
 ```bash
-wm status         # is WhiteMagic ready? (store, counts, index, last backup)
-wm selftest       # ~1-second end-to-end invariant check (throwaway store)
-wm connect        # wire every detected MCP client (dry run first; add --write)
-wm setup          # list clients / per-client setup (wm setup <client> --write)
-wm update check   # is a newer signed release available? (notify-only)
+wm status                       # store, epoch, record counts, store health
+wm selftest                     # install invariant + host health (--json, --strict)
+wm remember "decision text"     # record a memory (--galaxy, --source, --kind)
+wm recall "query"               # search memories (--limit, --historical, --scope)
+wm session list                 # sessions: checkpoint | record | continuity | list
+wm serve                        # MCP stdio server (--profile cyberbrain is the default)
 ```
+
+The v9-only commands (`doctor`, `connect`, `setup`, `quickstart`, `backup`,
+`restore`, `update`, `seal`, `verify`, `trust`, `anchor`) belong to the `wm9`
+binary line, not the Gen3 `wm` documented here.
 
 ## Connect an MCP client
 
 Point any MCP client at:
 
 ```bash
-wm serve --profile curated
+wm serve                          # cyberbrain profile (default)
+wm serve --profile full           # full curated catalog
 ```
 
-The server communicates over stdio and exposes the `wm` meta-tool plus a
-discrete lifecycle catalog — 30 MCP tools in the curated profile: the 14
-CRUD/lifecycle aliases (`memory.create/search/read/list/hybrid_recall/update/
-revisions/ingest`, `session.start/record/checkpoint/continuity`,
-`receipts.emit/verify`) and 15 read-only handles
-(`memory.count/stats/tags/aggregate/associations/batch_read/query/filter/
-nearby/vector.search`, `session.list/recall/replay`,
-`gnosis.status/explain`). Read-only servers (`--readonly`) advertise the 23
-read-only entries only — write routes are refused there anyway. The `wm`
-meta-tool provides explicit access to the full curated route catalog (70
-routes) without expanding the client's schema.
-Direct handles for the common lifecycle calls, with NLU routing still available.
+The server communicates over stdio. Two profiles exist:
+
+- **`cyberbrain` (default)** — 12 lean MCP tools: `memory_recall`,
+  `memory_remember`, `memory_get`, `memory_stats`, the `wm` meta-tool
+  (explicit `route=` dispatch to the catalog), `session_checkpoint`,
+  `session_continuity`, `session_record`, `session_list`, `galaxy_list`,
+  `galaxy_fork`, `mesh_sync`.
+- **`full`** — 40 curated routes covering memory CRUD, search, sessions,
+  receipts, galaxies, mandala, gnosis, sangha, and mesh; optional features add
+  gated routes (`decision.shortlist`, `decision.deliberate`,
+  `decision.outcome`, `systemone.decide`) when compiled in. A default build
+  reports 43 routes via `wm contract --json` (the route count is whatever the
+  running binary registered — that manifest is the authority).
+
 Explicit routing is the dependable contract:
 
 - `wm(route="memory.create", args={...})`
 - `wm(route="session.start", args={...})`
-- `wm(route="tools.list", args={})`
-
-`--profile curated` selects the supported memory/session surface and is the
-default when no profile is specified. Pass `--profile full` for the research
-archive surface (see below).
+- `wm(route="galaxy.list", args={})`
 
 ## Privacy and data
 
-- Your store lives locally at `~/.local/share/whitemagic`. Nothing is sent to
-  WhiteMagic-operated services; there is no telemetry by default (any future
-  sharing is opt-in, previewable, and schema-bound).
+- Your store lives locally at `~/.local/share/whitemagic/gen3` (override with
+  `--store <path>` or `WM_STORE`). Nothing is sent to WhiteMagic-operated
+  services; there is no telemetry by default (any future sharing is opt-in,
+  previewable, and schema-bound).
 - Privacy flags exclude memories from responses and reasoning. **They are
   access controls, not encryption** — anyone who can read the store files can
   read the contents. Do not store credentials in memories.
@@ -194,44 +198,32 @@ archive surface (see below).
 
 ## Backup and restore
 
-Back up the **whole store root** (LMDB database, search indexes, and all
-session/state files — not just the `lmdb/` subdirectory):
+The Gen3 `wm` has no `backup`/`restore` subcommands (`wm backup`, `wm restore`,
+`wm doctor`, `wm seal`, and `wm verify` are part of the v9 `wm9` line). Back up
+the **whole store directory** while no server is running:
 
 ```bash
-# Stop the server first, then:
-wm backup                                  # writes ~/whitemagic-backups/<timestamp>/
-wm backup --out /path/to/external/disk     # keep copies OFF the live machine
+# Stop any `wm serve` first, then copy the store root:
+cp -a ~/.local/share/whitemagic/gen3 /path/to/external/disk/gen3-$(date +%F)
 ```
 
-Each backup contains the full store plus a `SHA256SUMS` manifest. Restore
-after a failure (this replaces the target store):
-
-```bash
-wm restore --backup ~/whitemagic-backups/whitemagic-backup-<timestamp> --force
-wm doctor                                  # confirm health after restore
-```
-
-Restore verifies every file against the manifest before touching anything,
-and refuses tampered or incomplete backups. Notes:
-
-- `wm seal` / `wm verify` detect *integrity drift*; they do not recover data.
-  Only a backup recovers data.
-- Transaction rollback (`transaction.rollback`) is an in-store, short-lived
-  undo — not a substitute for backups.
-- Keep at least one backup on a different disk or machine.
+- Keep at least one copy on a different disk or machine.
+- After restoring a copy, verify it with `wm selftest` and inspect it with
+  `wm status`.
+- Transaction rollback (`mandala`/session internals) is a short-lived undo, not
+  a substitute for backups.
 
 ## Research surface (not part of the alpha contract)
 
 The codebase contains a larger research system beyond the product boundary:
 autonomous cycles, dream consolidation, bicameral reasoning, an imagination
 engine, self-play training loops, polyglot sidecars (Julia/Haskell/Zig/Koka),
-a signed multi-agent mesh, holographic memory coordinates, and the full
-research archive (~300 routes; the generated
-`docs/contract/route-schema-manifest.json` is the authority) reachable via
-`wm serve` without a profile restriction. These are
-research surfaces without product acceptance evidence; they may change or be
-removed. Only surfaces documented in this README are part of the product
-contract.
+a signed multi-agent mesh, holographic memory coordinates, and the rest of the
+route catalog reachable via `wm serve --profile full` plus the optional
+feature-gated routes. `wm contract --json` is the authority for the compiled
+route set. These are research surfaces without product acceptance evidence;
+they may change or be removed. Only surfaces documented in this README are part
+of the product contract.
 
 ## Building from source
 
@@ -245,31 +237,31 @@ cargo clippy --all-targets
 
 ## Documentation
 
-- [`docs/QUICKSTART.md`](docs/QUICKSTART.md) — the two-process continuity demo
-- [`docs/QUICKSTART.es.md`](docs/QUICKSTART.es.md) — guía rápida (Español)
-- [`docs/QUICKSTART.pt-BR.md`](docs/QUICKSTART.pt-BR.md) — guia rápido (Português BR)
-- [`docs/QUICKSTART.fr.md`](docs/QUICKSTART.fr.md) — guide de démarrage (Français)
-- [`docs/QUICKSTART.de.md`](docs/QUICKSTART.de.md) — Schnellstart (Deutsch)
-- [`docs/QUICKSTART.hi.md`](docs/QUICKSTART.hi.md) — क्विकस्टार्ट (हिन्दी)
-- [`docs/QUICKSTART.id.md`](docs/QUICKSTART.id.md) — mulai cepat (Indonesia)
-- [`docs/QUICKSTART.ar.md`](docs/QUICKSTART.ar.md) — البداية السريعة (العربية)
-- [`docs/QUICKSTART.sw.md`](docs/QUICKSTART.sw.md) — mwongozo wa haraka (Kiswahili)
-- [`docs/QUICKSTART.ne.md`](docs/QUICKSTART.ne.md) — द्रुत सुरुवात (नेपाली)
-- [`docs/TRANSLATIONS.md`](docs/TRANSLATIONS.md) — translation index and help-wanted languages
-- [`docs/MCP_CONFIG_GUIDE.md`](docs/MCP_CONFIG_GUIDE.md) — client configuration
-- [`docs/MULTI_LAPTOP.md`](docs/MULTI_LAPTOP.md) — moving between machines (backup/restore, session carry)
+- [`docs/INDEX.md`](docs/INDEX.md) — map of the documentation tree
+- [`docs/SELFTEST_AND_HOST_HEALTH.md`](docs/SELFTEST_AND_HOST_HEALTH.md) — `wm selftest` checks, thresholds, and `--strict`/`--json` contracts
+- [`INSTALL.md`](INSTALL.md) — source build, store setup, optional model layer
+- [`skill.md`](skill.md) — five-minute agent onboarding
+- [`llms.txt`](llms.txt) — machine-readable index
+- [`docs/CHARTER.md`](docs/CHARTER.md) — binding constitutional core
+- [`docs/NUCLEUS.md`](docs/NUCLEUS.md) — frozen nucleus snapshot
 - [`continuity-receipt`](https://github.com/lbailey94/continuity-receipt) — signed, offline-verifiable records of governed tasks (separate spec repo, Apache-2.0)
 - [`CHANGELOG.md`](CHANGELOG.md) — release notes
 - [`SECURITY.md`](SECURITY.md) — reporting vulnerabilities
 
-## Migrating from v26 (legacy Python)
+## Migrating from v26 / Gen2 (LMDB stores)
 
-If you ran the retired Python version:
+If you ran the retired Python version (v26) or an earlier Gen2 line, audit and
+migrate its LMDB store (the directory containing `data.mdb`) into Gen3:
 
 ```bash
-wm migrate --v2-dir ~/.whitemagic/users/local/galaxies --dry-run   # preview
-wm migrate --v2-dir ~/.whitemagic/users/local/galaxies              # migrate
+wm census ~/.whitemagic/users/local/galaxies/lmdb          # zero-dependency audit
+wm migrate --source ~/.whitemagic/lmdb --dry-run           # preview
+wm migrate --source ~/.whitemagic/lmdb                     # migrate into the Gen3 store
+wm migrate-all --source-root <projects-root> --target-root ~/.local/share/whitemagic/gen3-projects
 ```
+
+`wm quarantine <file>` reviews the migration quarantine log; a `WM_STORE`/`--store`
+override selects the destination.
 
 ## The stack
 

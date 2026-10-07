@@ -1,6 +1,6 @@
 # Wave-2 spec 05 — Recipe layer (candidate)
 
-**Status: DRAFT — compiled 2026-09-17 · NOT frozen.** Compiled per `docs/PHASE4_WAVE_PLAN.md`
+**Status: DRAFT — compiled 2026-09-17 · NOT frozen.** Compiled per `docs/archive/research/PHASE4_WAVE_PLAN.md`
 §7 at WMgen3 tip `3d67663` (tree clean), under the frozen nucleus (`docs/NUCLEUS.md`, sha256
 `73c5a9cf…`). **Owner: unset — operator assigns at freeze.** Docs-only. Freeze at operator
 ratification + `receipts/` entry.

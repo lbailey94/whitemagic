@@ -1,4 +1,34 @@
-# WMgen3 store and data hygiene — 2026-09-22
+# Gen3 store layout and data hygiene
+
+> **Superseded banner:** the policy text below is the 2026-09-22 WMgen3-era
+> record. It predates the sanctioned Gen2→Gen3 migration path (`wm census` →
+> `wm migrate`/`wm migrate-all`, Gate 9D) and the current v10 store layout
+> documented first in this file. The disposable-store discipline and the
+> never-adopt-in-place rule still stand; the "no migration until 9D" clause is
+> historical. Read the current layout section before the 2026-09-22 record.
+
+## Current store layout (v10 / Gen3)
+
+| Path | What it is | How it is used |
+|---|---|---|
+| `~/.local/share/whitemagic/gen3` | **Main Gen3 store** (default) | `wm init`, `wm status`, `wm serve`; override with `--store` or `$WM_STORE` |
+| `~/.local/share/whitemagic/gen3-projects/<project>` | Per-project Gen3 stores (e.g. `opencode`) | produced by `wm migrate-all --target-root ~/.local/share/whitemagic/gen3-projects`; pass `--store` to operate on one |
+| `~/.local/share/whitemagic/vault` | Geneseed/vault state (`vault.jsonl`, `geneseed_vault.jsonl` under the store) | `wm vault`, `wm apotheosis` |
+| `~/.local/share/edge-galaxy` | Edge-galaxy telemetry store (separate service) | not a Gen3 memory store; treat as read-only |
+| `~/.local/share/whitemagic/lmdb` | Legacy Gen2 store fallback (if present) | read-only mount via `wm serve --legacy-store <dir>`, or migrate with `wm migrate --source <dir>` |
+| `data/WMdata/projects/<project>` | v9/Gen2 LMDB project stores (`data.mdb`) | audit with `wm census <dir>`; migrate with `wm migrate --source <dir>` |
+
+Store resolution order without `--store`: `$WM_STORE` →
+`~/.local/share/whitemagic/gen3` → legacy `~/.local/share/whitemagic/lmdb` →
+`~/.local/share/whitemagic` → `./gen3-store`. Stores are versioned: a store
+written by an incompatible format version refuses to open rather than migrating
+silently.
+
+Migration is a **one-way copy** out of Gen2 LMDB; the source is never written.
+Never point Gen3 tooling at a live v9 store in place, and never write into
+`data/WMdata/projects/*`.
+
+## Historical policy (2026-09-22, superseded)
 
 Policy: **every WMgen3 store is disposable synthetic data.** Real WhiteMagic data (WMv9 /
 WHITEMAGIC memory stores, knowledge bases, journals, the production tree) must never be opened,

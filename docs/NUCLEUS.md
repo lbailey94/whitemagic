@@ -8,7 +8,7 @@ no freeze: it names the snapshot's contents and pins, records the verification a
 ratification + `receipts/` entry. Docs-only: no code, no gates changed.
 
 **Authority.** `CHARTER.md` (v0.1.1) governs the constitutional core; the ratified
-`PHASE3_DECOMPOSITION.md` and its receipts govern the dispositions recorded beside the snapshot
+`archive/research/PHASE3_DECOMPOSITION.md` and its receipts govern the dispositions recorded beside the snapshot
 (§7). Where this file and a source diverge, the source governs and the divergence is a finding.
 
 **Reading rules (criteria §1).** The four parts are pinned together but are not the same kind of
@@ -173,14 +173,14 @@ re-ratifying the constitution. Listed statutes and their recorded values:
 
 | Statute | Value (as recorded) | Source |
 |---|---|---|
-| Score policy **D2** | idf-weighted query support (Option B); `score ∈ [0,1]`; `<0.01` = essentially no informative support; no per-query/corpus normalization; property-tested | `PHASE1_SCORE_POLICY.md` §5; PREREG §2 |
+| Score policy **D2** | idf-weighted query support (Option B); `score ∈ [0,1]`; `<0.01` = essentially no informative support; no per-query/corpus normalization; property-tested | `archive/research/PHASE1_SCORE_POLICY.md` §5; PREREG §2 |
 | Candidacy rule v1 | `candidacy.v1.shared-rare+value-diff+temporal`; rare divisor 20; floor 2; pair budget 200,000; supersede penalty 0.60; recency weight 0.05 | PREREG §2 |
 | Projection threshold | τ = 0.694, battery-derived (not benchmark-tuned) | HANDOFF §2; dependency exception receipt |
 | Audit protocols | v1.2 (Phase-2 corpora); v1.3 (validated on Testbed II) | HANDOFF §6.3 |
 | Invocation pin | `--limit 10 --candidate-limit 100 --min-score 0 --min-coverage 0`; scored T8/T1+T6; guardrails T2/T9 | PREREG §2 |
 | Budgets | Fail-closed enforcement at every adaptive boundary (Charter §3.1); thesis +2-session budget | Charter §3.1; PHASE0_RATIFICATION §5 |
 | Horizons | Phase-1 import tier fixed `persistent` (replacement unearned); lifecycle rotation principles | E5; Charter §6 |
-| Metabolism metric M | Monitor, never a target | METABOLISM_PLAN §3 |
+| Metabolism metric M | Monitor, never a target | archive/legacy/METABOLISM_PLAN §3 |
 | Dependencies | Dependency manifest; embedding exception as recorded (scope note in receipt) | `DEPENDENCY_MANIFEST.md`; exception receipt |
 
 Runtime switch inventory and defaults:
@@ -233,7 +233,7 @@ Runtime switch inventory and defaults:
 | `experiments/testbed_ii/gated2/corpus_gated2/MANIFEST.json` | `fd24cfc7df58f757bf7e9ffcf61712c803a59dba3d6c2183103ee96b0aef05b1` |
 | `experiments/testbed_ii/gated3/corpus_gated3/MANIFEST.json` | `f99f6261be6e94b1825333a0466912e2680a5bb9faa309ad3170592d905cd233` |
 | `docs/NUCLEUS_FREEZE_CRITERIA.md` (current draft text) | `2d311e08ccb32aad0947163f26e6a33c369f4c7725fdc6f929e735fc41ed773a` |
-| `docs/PHASE3_DECOMPOSITION.md` (current text) | `194f081c1e09440706aeb3463270b116947312e0a76f219f20a2d687597d8e79` |
+| `docs/archive/research/PHASE3_DECOMPOSITION.md` (current text) | `194f081c1e09440706aeb3463270b116947312e0a76f219f20a2d687597d8e79` |
 | `HANDOFF.md` (at compilation) | `1e451320ba4bc3e1166635d66bd878f1eb6217728e070acd3172ec7fad702c62` |
 | `wm-gen3` release build present at compilation | `b1c66fec53856007d8d42f038ab3a87227fe7a0da53dfa82140ba6621e1ac96d` |
 
@@ -316,7 +316,7 @@ correctness adds no nucleus entries.
 | `receipts/DEPENDENCY_EXCEPTION_EMBEDDINGS_2026-09-16.md` | `331f306ac03b39cb7e4b460558386b77381b41edca8e46f254ef8198de13d2f1` |
 
 Also beside the snapshot (unhashed here; pinned in their own receipts): the Phase-3 decomposition
-with errata (§6 register), `PHASE4_ERRATA.md` (30 items A–G), the wave findings W0–W3 + masters,
+with errata (§6 register), `archive/research/PHASE4_ERRATA.md` (30 items A–G), the wave findings W0–W3 + masters,
 `WAVE_EXTRACTION_PROTOCOL.md`, and the experiment reports named in §4.
 
 ## 8. Scope footnotes — what this snapshot does NOT claim

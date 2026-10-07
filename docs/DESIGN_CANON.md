@@ -2,10 +2,10 @@
 
 **Status:** design record · 2026-09-16 (annotated 2026-09-19) · **not binding** — `docs/CHARTER.md` binds; this file remembers.
 Status tags below are design-time snapshots; the implemented/earned state lives in `docs/NUCLEUS.md`
-and `docs/PHASE3_DECOMPOSITION.md`, and PEB-era evidence in `receipts/BENCHMARK_*.md`.
+and `docs/archive/research/PHASE3_DECOMPOSITION.md`, and PEB-era evidence in `receipts/BENCHMARK_*.md`.
 Written after a three-pass read of `~/Desktop/dev journal/WHITEMAGIC CHATGPT CONVERSATIONS.txt`
 (§2 L1741–3420 design sessions; §3 L3422–4271 expedition + strategy) cross-checked against the
-verified code survey in `docs/CODE_ARCHAEOLOGY.md`. Status labels and per-frame dispositions now
+verified code survey in `docs/archive/research/CODE_ARCHAEOLOGY.md`. Status labels and per-frame dispositions now
 have a home in `docs/THEORY_MECHANISM_MAP.md` (2026-09-17).
 
 Purpose: keep the converged Gen2→Gen3 design vocabulary, mark what is **actually implemented**
@@ -18,10 +18,10 @@ Status legend:
 
 | Tag | Meaning |
 |---|---|
-| **IMPL-G2** | exists in frozen Gen2 v9.1.7 today (evidence in `CODE_ARCHAEOLOGY.md`) |
+| **IMPL-G2** | exists in frozen Gen2 v9.1.7 today (evidence in `archive/research/CODE_ARCHAEOLOGY.md`) |
 | **PARTIAL-G2** | Gen2 has a related mechanism, but not the concept as described |
 | **DESIGN** | converged intent; not built; enters only through Phases 1–3 gates |
-| **DEFERRED** | deliberately out of scope until Phase 2 passes (`SCAFFOLD_STRATEGY.md` §8) |
+| **DEFERRED** | deliberately out of scope until Phase 2 passes (`archive/legacy/SCAFFOLD_STRATEGY.md` §8) |
 | **CAND-LAW** | candidate Charter amendment; requires the CHARTER §4 procedure |
 
 ---
@@ -33,7 +33,7 @@ Status legend:
 > Gen3: plastic structure under mechanized selection inside constitutional constraint.
 > — §3 L4016–4018
 
-Corrections the archaeology forced onto the narrative (see `CODE_ARCHAEOLOGY.md` §17):
+Corrections the archaeology forced onto the narrative (see `archive/research/CODE_ARCHAEOLOGY.md` §17):
 Gen1's counts drift (e.g. "875 dispatch entries" vs 851/879 measured); Gen1's "emergence"
 was partly simulated (5 hardcoded detectors + `random.uniform` novelty); the
 number-drift problem itself is the historical lesson, not a footnote.
@@ -118,7 +118,7 @@ One memory can belong to many galaxies with weighted membership
 (retrieval 0.93 / engineering 0.84 / WhiteMagic 0.99 / …); galaxies acquire centroids, topology,
 relations, overlap; Dreaming may propose new conceptual regions (§2 L1969–2017). Status:
 **PARTIAL-G2** — galaxies are per-name physical containers (dynamic; taxonomy advisory-only
-— `findings/W1_galaxies_compartments.md`); membership weights absent.
+— `archive/research/findings/W1_galaxies_compartments.md`); membership weights absent.
 
 ## 4. Dynamic field & Cognitive Physics
 
@@ -132,7 +132,7 @@ relations, overlap; Dreaming may propose new conceptual regions (§2 L1969–201
   propagation with per-hop decay, and neuro-score decay exist as primitives; the regime concept
   does not. Corrections of record: the declared 300 s half-life **never ticks** (`tick_decay` has
   zero callers — Errata #14), and parts of this machinery are dormant/inert
-  (`findings/W3_field_activation.md`).
+  (`archive/research/findings/W3_field_activation.md`).
 - Temperature as regime selector (§2 L2197–2219): low → precise recall; medium → problem
   solving/analogy; high → creative association/dreaming; constrained + high verification →
   auditing. "Same machinery. Different regime."

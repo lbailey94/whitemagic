@@ -4,23 +4,24 @@ Operational quickstart for AI agents that cloned this repository. Goal: from clo
 
 ## What this is
 
-Local-first memory and session continuity for coding agents, exposed over MCP. A single Rust binary (`wm`) runs a stdio JSON-RPC server your MCP client talks to. Memory is stored on-device; no usage telemetry, prompts, or memories are transmitted off-device by default. WhiteMagic does keep local diagnostic evidence on-device (e.g., RSI friction records), and update checks fetch a public, static release manifest. Optional model/embedding backends degrade truthfully when absent.
+Local-first memory and session continuity for coding agents, exposed over MCP. A single Rust binary (`wm`) runs a stdio JSON-RPC server your MCP client talks to. Memory is stored on-device; no usage telemetry, prompts, or memories are transmitted off-device by default. WhiteMagic does keep local diagnostic evidence on-device (e.g., RSI friction records). Optional model/embedding backends degrade truthfully when absent.
 
 ## Install and verify
 
 ```bash
-curl -fsSL https://www.whitemagic.dev/install.sh?ref=wmv9-skill | sh
-wm --version         # expect: wm 9.3.4
-wm grimoire          # guided first-run (when present); --json for a machine-readable report
-# builds without grimoire: use the step-by-step path below
-wm quickstart        # throwaway demo store — a decision survives a restart
-wm selftest --json   # 8 end-to-end invariants on a throwaway store
-wm connect --write   # detect installed MCP clients and wire each (dry-run first: wm connect)
-wm setup             # per-client view: wm setup <client> [--write]
-wm ingest --source <folder> --dry-run   # preview: walk notes/docs into a galaxy (local-only)
+curl -fsSL https://www.whitemagic.dev/install.sh?ref=gen3-skill | sh
+wm --version         # expect: wm 10.2.x-alpha (Gen3 line)
+wm grimoire          # guided first-run: environment check + client wiring preview
+                     #   --json for a machine-readable report; --write to write client configs
+wm selftest --json   # install invariant (throwaway store) + host_status/host_health
+wm selftest --strict # exit 1 only when the host verdict is critical
+wm ingest --file notes.jsonl --default-source notes:stream   # JSONL stream ('-' = stdin)
+# folder/document harvesting is the MCP `memory.ingest` tool (dry-run-first, redacts by default)
 ```
 
-`wm doctor` is the troubleshooting tool — run it when something misbehaves, not on a healthy fresh install.
+The v9-only commands (`doctor`, `connect`, `setup`, `quickstart`, `backup`,
+`restore`, `update`, `seal`, `verify`, `trust`, `anchor`) belong to the `wm9`
+binary line, not Gen3 `wm`; `wm grimoire --write` covers client wiring here.
 Building from source instead: `cargo build --release` in this repository, then install `target/release/wm` onto your `PATH`.
 
 ## Wire your MCP client
@@ -32,13 +33,16 @@ Claude Desktop, Cursor, Codex, Gemini CLI, opencode — any MCP client:
   "mcpServers": {
     "whitemagic": {
       "command": "wm",
-      "args": ["serve", "--profile", "curated"]
+      "args": ["serve", "--profile", "cyberbrain"]
     }
   }
 }
 ```
 
-The `curated` profile is the supported surface: explicit, dependable routes instead of an unbounded tool catalog.
+`cyberbrain` is the default profile (12 lean tools); `--profile full` exposes
+the 40-route curated catalog plus any feature-gated routes the build registered
+(`wm contract --json` reports the exact set). Explicit routes are the dependable
+surface.
 
 ## First useful actions
 
@@ -49,9 +53,10 @@ The `curated` profile is the supported surface: explicit, dependable routes inst
 3. **Checkpoint at the end of real work** — sessions support record,
    replay, and cross-session continuity, so the next session resumes
    from evidence instead of re-reading everything.
-4. **Load your documents when you have them** — `wm ingest` is
-   dry-run-first, scrubs credential-shaped content with `--redact`, and
-   resumes on re-run (per-file SHA-256 ledger; nothing leaves the machine).
+4. **Load your documents when you have them** — the MCP `memory.ingest` tool
+   harvests a folder or batch dry-run-first (`source`, `dry_run`, `redact`),
+   scrubs credential-shaped content by default, and nothing leaves the machine.
+   The CLI `wm ingest` streams JSONL (`--file`).
 
 ## Vocabulary (explicit routes are the contract)
 
@@ -63,7 +68,7 @@ The `curated` profile is the supported surface: explicit, dependable routes inst
 | what did we decide about X | `memory.search` |
 | resume where we left off | `session.continuity` |
 | correct an earlier belief | `memory.update` (supersede; pass `galaxy` for non-default galaxies) |
-| discover the surface | `tools.list` |
+| discover the surface | MCP `tools/list` (or `wm contract --json` on the CLI) |
 | finish the session | `session.record` summary + `session.checkpoint` |
 
 `session.record` and `session.checkpoint` require an active session — call
@@ -75,8 +80,9 @@ path for anything that matters.
 
 - Trusted, local, single-user operation; Linux Landlock containment
   and firebreak guards are part of the contract.
-- Backup/verify/restore exists and is a first-class path — use it
-  before risky operations.
+- Back up the store directory (copy it while no server runs) before risky
+  operations, and verify with `wm selftest`; `wm backup`/`wm restore` are
+  wm9-line commands, not Gen3.
 - The web surface (https://whitemagic.dev) is a discovery surface,
   not a host: it never holds your memories.
 - Security posture and reporting: [SECURITY.md](SECURITY.md).
@@ -86,5 +92,5 @@ path for anything that matters.
 
 - [README.md](README.md) — product overview and supported contract.
 - [CHANGELOG.md](CHANGELOG.md) — release history.
-- [docs/](docs/) — architecture and operations documentation.
+- [docs/INDEX.md](docs/INDEX.md) — map of the documentation tree.
 - Machine-readable identity: https://whitemagic.dev/ai-agent.json

@@ -22,43 +22,25 @@ project, and the rules below exist so changes stay reviewable.
 ## Good first contributions
 
 - MCP client configurations and setup notes for clients not yet covered
-  (see [`docs/MCP_CONFIG_GUIDE.md`](docs/MCP_CONFIG_GUIDE.md)).
+  (start from [`docs/INDEX.md`](docs/INDEX.md) and [`skill.md`](skill.md)).
 - Documentation fixes — docs bugs are real bugs.
 - Interoperability mappings (continuity receipts, memory wire formats,
   W3C / IETF drafts).
-- Translations — see [Translations](#translations) below; Spanish and
-  Portuguese especially welcome, plus the help-wanted list.
-- Regression fixtures for the contract harness
-  ([`docs/TRACK_LOG.md`](docs/TRACK_LOG.md) is the track ledger contract).
+- Regression fixtures for the contract harness (the generated
+  `wm contract --json` manifest is the route/schema authority).
+- Translations — coordinated outside this tree; see below.
 
 ## Translations
 
-The quickstart is the first document most people read, and it ships in four
-languages. The current set and the help-wanted list live in
-[`docs/TRANSLATIONS.md`](docs/TRANSLATIONS.md):
-
-- [`docs/QUICKSTART.md`](docs/QUICKSTART.md) — English (canonical)
-- [`docs/QUICKSTART.es.md`](docs/QUICKSTART.es.md) — Español
-- [`docs/QUICKSTART.pt-BR.md`](docs/QUICKSTART.pt-BR.md) — Português (BR)
-- [`docs/QUICKSTART.fr.md`](docs/QUICKSTART.fr.md) — Français
-
-**Adding a translation:**
-
-1. Copy the English quickstart (or an existing translation) to
-   `docs/QUICKSTART.<tag>.md` (`es`, `pt-BR`, `fr`, `de`, `sw`, `hi`, `ne`, …).
-2. Translate the prose. **Leave commands, route names, JSON blocks, and asset
-   names exactly as they are** — they are the contract, not copy.
-3. Keep it **version-free**: never type a release version into a translation;
-   point at the README for the current version so the file cannot rot.
-4. Add the language switcher line at the top and add the row to
-   `docs/TRANSLATIONS.md` and the README documentation index.
-5. Open a PR. **A native speaker must review before merge** — say so in the
-   PR if you are one, and we will route a reviewer if you are not. Machine
-   translation without a human review is not accepted.
-
-The website's locale work is built on these translations (the plan lives in
-the site repo, `docs/MULTILINGUAL_PLAN.md`); site page copy is applied by the
-lab, so contributing a quickstart translation here is the way in.
+This repository currently ships the canonical English onboarding only
+([`README.md`](README.md), [`skill.md`](skill.md), [`llms.txt`](llms.txt)).
+The localized quickstart set referenced by older revisions is not present
+here; do not add links to it. If you want to translate the onboarding,
+open an issue to coordinate placement and review. When a translation lands:
+leave commands, route names, JSON blocks, and asset names exactly as they are
+(the contract, not copy), keep it version-free, and require a native-speaker
+review before merge. Machine translation without a human review is not
+accepted.
 
 ## Development
 
@@ -78,7 +60,9 @@ Disk hygiene: never run `cargo clean`; use `scripts/prune_build_cache.sh` or
 
 - One slice per pull request; describe the claim and the evidence.
 - Keep the curated surface stable. New tools or routes need an `EffectRow`
-  and a profile decision (see [`AGENTS.md`](AGENTS.md)).
+  and a profile decision (profiles are defined in
+  `crates/wm-gen3-harness/src/bridge.rs`; `wm contract --json` reports the
+  compiled catalog).
 - Documentation: no unverified numbers. Version and count references are
   generated or dated, never typed.
 - Commit messages: imperative and scoped, matching `git log`.

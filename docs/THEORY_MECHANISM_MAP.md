@@ -4,13 +4,13 @@
 count criterion + Brier identity) · **not binding** (`CHARTER.md` binds; `DESIGN_CANON.md`
 remembers; this file classifies). Written from a second pass over the founding conversations
 (`~/Desktop/dev journal/WHITEMAGIC CHATGPT CONVERSATIONS.txt`, cited as CONV with segment map in
-§7) against the current record: `HANDOFF.md`, `ARCHITECTURE_CONSOLIDATION.md`,
-`experiments/testbed_ii/gated{,2,3}/REPORT_GATED*.md`, `METABOLISM_PLAN.md`.
+§7) against the current record: `HANDOFF.md`, `archive/legacy/ARCHITECTURE_CONSOLIDATION.md`,
+`experiments/testbed_ii/gated{,2,3}/REPORT_GATED*.md`, `archive/legacy/METABOLISM_PLAN.md`.
 
 Purpose: one place that says, for every theoretical frame in the corpus, **which status label it
 carries**, **where it lives** (code, docs, experiment, or nothing yet), and **what would move
 it**. This is not a fourth thesis (CONV L3967–3971: *"We now have enough philosophy"*). It assigns no verdicts of its own; the Phase-3 verdicts live in the ratified
-`PHASE3_DECOMPOSITION.md` (entry decision 2026-09-17).
+`archive/research/PHASE3_DECOMPOSITION.md` (entry decision 2026-09-17).
 
 ## 0. Status vocabulary (fixed — extend only with an operator receipt)
 
@@ -56,7 +56,7 @@ The strongest *formalizable* contribution in the corpus. Read them as label-flow
 
 Why this matters: everything else in the philosophy is persuasion — *these two are
 type-checkable*. The Gen2 lesson they encode is exact: canaries that exist but never fire are
-worth nothing (`CODE_ARCHAEOLOGY.md` §12), so the gate is a **demonstrated live refusal**, not a
+worth nothing (`archive/research/CODE_ARCHAEOLOGY.md` §12), so the gate is a **demonstrated live refusal**, not a
 module's presence. If the project ever earns a formal-methods budget, this is where it goes.
 
 ## 3. Frame ledger
@@ -93,7 +93,7 @@ Statuses per §0. "Moves it" names the smallest thing that would change the labe
 
 | Frame | Origin | Status | Where it lives | Moves it |
 |---|---|---|---|---|
-| Field dynamics (activation/decay/inhibition/temperature) | CONV L2154–2219 | **PARTIAL** (Gen2 primitives) / **DEFERRED** (WMgen3 field) | Gen2 activation map, 300 s decay **declared but never applied** (`tick_decay` has zero callers — activations saturate; live propagation is offline-only); WMgen3 `e=(w,s,c,t)` only (errata 2026-09-17, `PHASE4_ERRATA.md` F-14) | A task where propagation beats retrieval (none demonstrated; v26's read-side SA channel was live in the default planner — see `findings/W3_field_activation.md`) |
+| Field dynamics (activation/decay/inhibition/temperature) | CONV L2154–2219 | **PARTIAL** (Gen2 primitives) / **DEFERRED** (WMgen3 field) | Gen2 activation map, 300 s decay **declared but never applied** (`tick_decay` has zero callers — activations saturate; live propagation is offline-only); WMgen3 `e=(w,s,c,t)` only (errata 2026-09-17, `archive/research/PHASE4_ERRATA.md` F-14) | A task where propagation beats retrieval (none demonstrated; v26's read-side SA channel was live in the default planner — see `archive/research/findings/W3_field_activation.md`) |
 | Selection theory (constitution → eligible → Pareto → statutes + exploration budget) | CONV L4089–4096, L4098–4122; Charter §6 | **PARTIAL** | Per-operation selection contracts in Phase 1; Pareto/statutory layer pending | Phase 3 |
 | Recall compiler / verbs-as-ISA / planner | CONV L2323–2366, L2515–2550 | **UNTESTED** — the verb-basis thesis is unvalidated | Four verbs built; no compiler | A composability demonstration in Phase 3 |
 | Thought-stars vs memory-stars (stellar lifecycle) | CONV L2116–2152 | **UNTESTED** | Canon §3.4 DESIGN | Any experiment where ephemeral→durable promotion matters |
@@ -129,7 +129,7 @@ status labels beyond this; they are the corpus's design language and narrative m
   (CONV L3873) is the audit object.
 - **Selection** = constrained multi-objective optimization where the constitution is a
   *feasibility constraint* (never a tradeable score) and exploration is an explicit budget line.
-- **M = externally grounded intake / total processing** (`METABOLISM_PLAN.md` §3). Monitor, never
+- **M = externally grounded intake / total processing** (`archive/legacy/METABOLISM_PLAN.md` §3). Monitor, never
   a target — Goodhart is already named in the plan. Its product half is the release cadence.
 - **Currentness strata** (structural arbitration: current/unresolved/superseded, ranks within)
   is the empirically strongest mechanism produced so far — more than any field math.
@@ -166,8 +166,8 @@ status labels beyond this; they are the corpus's design language and narrative m
   **§2** L1741–3420 (Gen3 design sessions) · **§3** L3422–4271 (Gen1/Gen2 expedition + strategy).
   Cite as `CONV §2 L2197`.
 - Companion records: `DESIGN_CANON.md` (converged design vocabulary, IMPL/PARTIAL/DESIGN tags),
-  `ARCHITECTURE_CONSOLIDATION.md` (per-mechanism experiment matrix),
-  `PHASE3_DECOMPOSITION.md` (route families + hypotheses), `METABOLISM_PLAN.md`, `CHARTER.md`.
+  `archive/legacy/ARCHITECTURE_CONSOLIDATION.md` (per-mechanism experiment matrix),
+  `archive/research/PHASE3_DECOMPOSITION.md` (route families + hypotheses), `archive/legacy/METABOLISM_PLAN.md`, `CHARTER.md`.
 - External projects referenced by the corpus (Zero/Moving Castles, Aventurine, Savannah,
   alignment-via-RPG) are context, not lineage — see CONV §3 L3563–3648 and L3755–3793.
 
@@ -179,5 +179,5 @@ status labels beyond this; they are the corpus's design language and narrative m
 3. **One name per concept** (the Mandala-Glossary discipline: one canonical name per concept;
    metaphor overload is the flagged failure mode of the baroque era).
 4. **Verdicts are gated**: this map assigns none; ratified Phase-3 verdicts live in
-   `PHASE3_DECOMPOSITION.md` (entry decision 2026-09-17; `receipts/PHASE3_COMPILE_PASS_2026-09-17.md`).
+   `archive/research/PHASE3_DECOMPOSITION.md` (entry decision 2026-09-17; `receipts/PHASE3_COMPILE_PASS_2026-09-17.md`).
 5. **Counts and statuses are generated or tested**, never narrated upward (HANDOFF §4).

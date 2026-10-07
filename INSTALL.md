@@ -24,13 +24,16 @@ target directory on an SSD for faster iteration.
 ## 2. Store
 
 ```sh
-wm init --store ~/.local/share/whitemagic-gen3
-wm status --store ~/.local/share/whitemagic-gen3
+wm init                          # default: ~/.local/share/whitemagic/gen3
+wm init --store ~/.local/share/whitemagic/gen3
+wm status --store ~/.local/share/whitemagic/gen3
 ```
 
-Without `--store` the CLI uses its default store location. Gen3 stores are
-versioned (`validate_header`); a store written by a different format version
-refuses to open rather than migrating silently.
+Without `--store`, the CLI resolves the store in this order: `$WM_STORE`,
+`~/.local/share/whitemagic/gen3`, then the legacy `~/.local/share/whitemagic/lmdb`
+or `~/.local/share/whitemagic` if they exist (otherwise `./gen3-store`). Gen3
+stores are versioned (`validate_header`); a store written by a different format
+version refuses to open rather than migrating silently.
 
 ## 3. Model layer (all local, all optional)
 
@@ -90,11 +93,18 @@ content fail with a clear error. Non-loopback endpoints require
 ## 4. Verify
 
 ```sh
-wm selftest --json
-wm status
+wm selftest --json     # install invariants + host_status/host_health (see docs/SELFTEST_AND_HOST_HEALTH.md)
+wm selftest --strict   # exit 1 only when the host verdict is critical
+wm status              # store, epoch, record counts, store health
 WM_GEN3_EMBED_CACHE=<cache> wm recall "smoke query" --projection
 cargo test --workspace
 ```
+
+`wm selftest --json` always reports the persistence invariant as `status`;
+host health rides separately as `host_status`/`host_health` so an unhealthy
+host never fails the install contract. Use `--strict` in CI/guards when a
+critical host state (crash-looping user units, exhausted memory/disk) should
+fail the run; warnings never fail.
 
 ## 5. Platform notes
 
