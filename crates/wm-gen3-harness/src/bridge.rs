@@ -24,6 +24,7 @@ use uuid::Uuid;
 
 use wm_gen3_core::compat::{Gen2EpisodicRecord, Gen2Reader};
 use wm_gen3_core::evidence::RatifiedChannel;
+use wm_gen3_core::firebreak::{Firebreak, FirebreakGate};
 use wm_gen3_core::mandala::{
     Signature, Signer, SigningKey, Verifier, VerifyingKey, resolve_or_create_mandala_gate_key,
 };
@@ -347,8 +348,20 @@ fn profile_allows_tool(profile: McpProfile, name: &str) -> bool {
 /// it: every declared property is either consumed or absent.
 pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
     ("memory.pin", &["id", "galaxy", "pinned"]),
-    ("memory.update", &["id", "content", "reason"]),
-    ("memory.revisions", &["id", "action"]),
+    (
+        "memory.update",
+        &[
+            "id",
+            "content",
+            "reason",
+            "tags",
+            "importance",
+            "title",
+            "topic",
+            "galaxy",
+        ],
+    ),
+    ("memory.revisions", &["id", "action", "galaxy"]),
     (
         "memory.aggregate",
         &["field", "op", "query", "metric", "limit"],
@@ -364,6 +377,8 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
             "limit",
             "galaxy",
             "redact",
+            "include_credential_files",
+            "wait_secs",
         ],
     ),
     (
@@ -408,9 +423,15 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
             "agent_id",
             "checkpoint_type",
             "context_token",
+            "root",
+            "label",
+            "data",
         ],
     ),
-    ("session.list", &["session_id", "limit"]),
+    (
+        "session.list",
+        &["session_id", "limit", "sequence", "title", "type"],
+    ),
     (
         "session.replay",
         &[
@@ -423,6 +444,9 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
             "token_budget",
             "turn_types",
             "mode",
+            "cursor",
+            "page_size",
+            "max_wire_bytes",
         ],
     ),
     ("session.recall", &["session_id", "query", "limit"]),
@@ -1386,6 +1410,46 @@ fn handle_wm_router(
                 }
                 _ => {}
             }
+            // Firebreak NLU hook: the outer MCP seam only sees the `thought`
+            // prose, so the NLU-resolved route's args are scanned here before
+            // dispatch. Off-seam routes are skipped (gate() would pass them
+            // silently anyway).
+            if Firebreak::is_on_seam(predicted_route) {
+                let firebreak = Firebreak::promoted();
+                match firebreak.gate(predicted_route, &extracted_args) {
+                    FirebreakGate::Refuse {
+                        verdict,
+                        message,
+                        advisories: _,
+                    } => {
+                        return Err(format!("firebreak {verdict}: {message}"));
+                    }
+                    FirebreakGate::Pass {
+                        verdict,
+                        advisories,
+                    } => {
+                        let mut result = execute_hybrid_tool_call(
+                            predicted_route,
+                            &extracted_args,
+                            substrate,
+                            store_path,
+                            readonly,
+                            profile,
+                        )?;
+                        if let Value::Object(ref mut map) = result {
+                            map.insert(
+                                "firebreak".to_string(),
+                                json!({
+                                    "armed": firebreak.is_armed(),
+                                    "verdict": verdict,
+                                    "advisories": advisories,
+                                }),
+                            );
+                        }
+                        return Ok(result);
+                    }
+                }
+            }
             return execute_hybrid_tool_call(
                 predicted_route,
                 &extracted_args,
@@ -1921,6 +1985,36 @@ fn handle_memory_update(
         .and_then(Value::as_str)
         .unwrap_or("memory.update");
 
+    // Legacy (pre-honesty) arguments are accepted: tags/importance are applied
+    // where the store can carry them; title/topic/galaxy have no durable slot.
+    let legacy_tags: Vec<String> = args
+        .get("tags")
+        .and_then(Value::as_array)
+        .map(|array| {
+            array
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+    let legacy_importance = args.get("importance").and_then(Value::as_f64);
+    let mut deprecated_args: Vec<String> = Vec::new();
+    if args.get("title").is_some() {
+        deprecated_args.push(
+            "title: ignored (records are content-addressed; titles are not stored)".to_string(),
+        );
+    }
+    if args.get("topic").is_some() {
+        deprecated_args.push("topic: ignored (records are content-addressed)".to_string());
+    }
+    if args.get("galaxy").is_some() {
+        deprecated_args.push(
+            "galaxy: ignored (the superseding record inherits the prior record's galaxy)"
+                .to_string(),
+        );
+    }
+
     let prior_source = substrate
         .store()
         .get_record(old_id)
@@ -1948,10 +2042,18 @@ fn handle_memory_update(
         None => return Err("Update produced no output".to_string()),
     };
 
-    let revision = substrate.record_revision(old_id, new_id, reason)?;
+    let revision = substrate.record_revision_with_tags(old_id, new_id, reason, &legacy_tags)?;
+    if legacy_importance.is_some() {
+        append_record_meta(
+            substrate.store().path(),
+            new_id,
+            &legacy_tags,
+            legacy_importance,
+        );
+    }
     let new_uuid = substrate.get_or_create_uuid(new_id);
 
-    Ok(json!({
+    let mut response = json!({
         "status": "success",
         "id": new_uuid.to_string(),
         "record_id": new_id,
@@ -1959,7 +2061,11 @@ fn handle_memory_update(
         "superseded_record_id": old_id,
         "revision": revision,
         "message": "Memory updated; prior record superseded by a durable revision entry"
-    }))
+    });
+    if !deprecated_args.is_empty() {
+        response["deprecated_args"] = json!(deprecated_args);
+    }
+    Ok(response)
 }
 
 fn handle_memory_revisions(args: &Value, substrate: &Substrate) -> Result<Value, String> {
@@ -1974,25 +2080,40 @@ fn handle_memory_revisions(args: &Value, substrate: &Substrate) -> Result<Value,
         .lookup_uuid_by_id(rec_id)
         .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &rec_id.to_be_bytes()));
 
+    let deprecated_args = args.get("galaxy").map(|_| {
+        vec![
+            "galaxy: ignored (revision chains are store-global, not galaxy-partitioned)"
+                .to_string(),
+        ]
+    });
+
     match args.get("action").and_then(Value::as_str).unwrap_or("list") {
         "list" => {
             let revisions = substrate.revision_chain(rec_id);
-            Ok(json!({
+            let mut response = json!({
                 "status": "success",
                 "id": uuid.to_string(),
                 "record_id": rec_id,
                 "count": revisions.len(),
                 "revisions": revisions
-            }))
+            });
+            if let Some(deprecated_args) = deprecated_args {
+                response["deprecated_args"] = json!(deprecated_args);
+            }
+            Ok(response)
         }
         "verify" => {
             let report = substrate.verify_revision_chain(rec_id)?;
-            Ok(json!({
+            let mut response = json!({
                 "status": "success",
                 "id": uuid.to_string(),
                 "record_id": rec_id,
                 "verify": report
-            }))
+            });
+            if let Some(deprecated_args) = deprecated_args {
+                response["deprecated_args"] = json!(deprecated_args);
+            }
+            Ok(response)
         }
         other => Err(format!(
             "memory.revisions refuses action '{other}': supported actions are 'list' and 'verify'"
@@ -2481,6 +2602,19 @@ fn handle_memory_ingest(
         .and_then(Value::as_u64)
         .map(|value| value as usize);
 
+    let mut deprecated_args: Vec<String> = Vec::new();
+    if args.get("include_credential_files").is_some() {
+        deprecated_args.push(
+            "include_credential_files: ignored (inline/file ingestion reads only the caller-supplied payload)"
+                .to_string(),
+        );
+    }
+    if args.get("wait_secs").is_some() {
+        deprecated_args.push(
+            "wait_secs: ignored (the batch-create path does not wait on store locks)".to_string(),
+        );
+    }
+
     let mut candidates: Vec<(RememberItem, Option<(Vec<String>, Option<f64>)>)> = Vec::new();
 
     if let Some(items) = args.get("items") {
@@ -2541,7 +2675,7 @@ fn handle_memory_ingest(
 
     let considered = candidates.len();
     if dry_run {
-        return Ok(json!({
+        let mut response = json!({
             "status": "success",
             "dry_run": true,
             "would_ingest": considered,
@@ -2552,7 +2686,11 @@ fn handle_memory_ingest(
             "galaxy": galaxy,
             "epoch": substrate.store().epoch().unwrap_or(0),
             "message": "dry run: no records written"
-        }));
+        });
+        if !deprecated_args.is_empty() {
+            response["deprecated_args"] = json!(deprecated_args);
+        }
+        return Ok(response);
     }
 
     substrate.set_intake_authority(RatifiedChannel::mint("wm-mcp-ingest"));
@@ -2574,7 +2712,7 @@ fn handle_memory_ingest(
         }
     }
 
-    Ok(json!({
+    let mut response = json!({
         "status": "success",
         "dry_run": false,
         "records_ingested": records_ingested,
@@ -2583,7 +2721,11 @@ fn handle_memory_ingest(
         "redacted_tokens": redacted_tokens,
         "galaxy": galaxy,
         "epoch": substrate.store().epoch().unwrap_or(0)
-    }))
+    });
+    if !deprecated_args.is_empty() {
+        response["deprecated_args"] = json!(deprecated_args);
+    }
+    Ok(response)
 }
 
 // ── Session Implementations ────────────────────────────────────────────────
@@ -3018,6 +3160,17 @@ fn handle_session_checkpoint(
         .get("context_token")
         .and_then(Value::as_str)
         .map(str::to_string);
+    // Legacy label/data are persisted beside the checkpoint; root has no
+    // auto-git-capture implementation and is accepted with a warning.
+    let label = args.get("label").and_then(Value::as_str);
+    let data = args.get("data");
+    let mut deprecated_args: Vec<String> = Vec::new();
+    if args.get("root").is_some() {
+        deprecated_args.push(
+            "root: ignored (auto git-capture is not implemented; pass commit/branch explicitly)"
+                .to_string(),
+        );
+    }
 
     let cp = SessionCheckpoint {
         session_id: session_id.to_string(),
@@ -3036,6 +3189,8 @@ fn handle_session_checkpoint(
         "branch": branch,
         "tests_green": tests_green,
         "lease_id": lease_id,
+        "label": label,
+        "data": data,
     });
 
     substrate.set_intake_authority(RatifiedChannel::mint("wm-session-checkpoint"));
@@ -3043,7 +3198,7 @@ fn handle_session_checkpoint(
         .session_checkpoint_enriched(&cp, &meta)
         .map_err(|e| format!("Failed to record checkpoint: {e}"))?;
 
-    Ok(json!({
+    let mut response = json!({
         "status": "success",
         "session_id": session_id,
         "checkpoint_record_id": rec_id,
@@ -3054,7 +3209,11 @@ fn handle_session_checkpoint(
         "tests_green": tests_green,
         "lease_id": lease_id,
         "epoch": substrate.store().epoch().unwrap_or(0)
-    }))
+    });
+    if !deprecated_args.is_empty() {
+        response["deprecated_args"] = json!(deprecated_args);
+    }
+    Ok(response)
 }
 
 fn handle_session_start(args: &Value, store_path: &Path) -> Result<Value, String> {
@@ -3135,6 +3294,14 @@ fn handle_session_list(
         .and_then(Value::as_u64)
         .unwrap_or(50)
         .max(1) as usize;
+    let mut deprecated_args: Vec<String> = Vec::new();
+    for legacy in ["sequence", "title", "type"] {
+        if args.get(legacy).is_some() {
+            deprecated_args.push(format!(
+                "{legacy}: ignored (lanes are identified by session_id)"
+            ));
+        }
+    }
 
     let mut lanes: std::collections::BTreeMap<String, LaneSummary> =
         std::collections::BTreeMap::new();
@@ -3204,11 +3371,15 @@ fn handle_session_list(
         })
         .collect();
 
-    Ok(json!({
+    let mut response = json!({
         "status": "success",
         "count": sessions.len(),
         "sessions": sessions
-    }))
+    });
+    if !deprecated_args.is_empty() {
+        response["deprecated_args"] = json!(deprecated_args);
+    }
+    Ok(response)
 }
 
 fn handle_session_recall(args: &Value, store_path: &Path) -> Result<Value, String> {
@@ -3249,7 +3420,21 @@ fn handle_session_recall(args: &Value, store_path: &Path) -> Result<Value, Strin
 fn handle_session_replay(args: &Value, store_path: &Path) -> Result<Value, String> {
     reject_unknown_args("session.replay", args)?;
     let session_id = args.get("session_id").and_then(Value::as_str);
-    let mode = args.get("mode").and_then(Value::as_str).unwrap_or("full");
+    let mut deprecated_args: Vec<String> = Vec::new();
+    let requested_mode = args.get("mode").and_then(Value::as_str).unwrap_or("full");
+    let mode = if requested_mode == "lossless" {
+        deprecated_args.push("mode 'lossless': deprecated, mapped to 'full'".to_string());
+        "full"
+    } else {
+        requested_mode
+    };
+    for legacy in ["cursor", "page_size", "max_wire_bytes"] {
+        if args.get(legacy).is_some() {
+            deprecated_args.push(format!(
+                "{legacy}: ignored (stateless replay returns a bounded full window; no cursor/lossless paging)"
+            ));
+        }
+    }
     let n = args.get("n").and_then(Value::as_u64).unwrap_or(50).max(1) as usize;
     let since = args
         .get("since")
@@ -3333,7 +3518,7 @@ fn handle_session_replay(args: &Value, store_path: &Path) -> Result<Value, Strin
         token_estimate = turns.iter().map(SessionTurn::estimated_tokens).sum();
     }
 
-    Ok(json!({
+    let mut response = json!({
         "status": "success",
         "session_id": session_id.unwrap_or("all"),
         "mode": mode,
@@ -3343,7 +3528,11 @@ fn handle_session_replay(args: &Value, store_path: &Path) -> Result<Value, Strin
         "turns_omitted": after_filter.saturating_sub(turns.len()),
         "token_estimate": token_estimate,
         "trajectory": turns
-    }))
+    });
+    if !deprecated_args.is_empty() {
+        response["deprecated_args"] = json!(deprecated_args);
+    }
+    Ok(response)
 }
 
 fn handle_session_digest(
@@ -3586,6 +3775,106 @@ fn verify_emitted_continuity_receipt(value: &Value, store_path: &Path) -> Result
     }))
 }
 
+/// Create `<store>/receipts` if missing, owner-only (0700) on unix.
+fn ensure_receipts_dir(receipts_dir: &Path) -> Result<(), String> {
+    std::fs::create_dir_all(receipts_dir).map_err(|e| format!("receipt dir: {e}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(receipts_dir, std::fs::Permissions::from_mode(0o700))
+            .map_err(|e| format!("receipt dir permissions: {e}"))?;
+    }
+    Ok(())
+}
+
+/// Resolve a caller-supplied `out` path strictly inside `<store>/receipts`.
+///
+/// Rejects absolute paths, `..` traversal, symlinked components/targets, and
+/// anything whose parent would resolve outside the receipts directory.
+/// Intermediate directories are created one component at a time so an existing
+/// symlink can never redirect creation outside the receipts dir.
+fn confined_receipt_path(receipts_dir: &Path, out: &str) -> Result<std::path::PathBuf, String> {
+    use std::path::Component;
+    let requested = Path::new(out);
+    if requested.is_absolute() {
+        return Err(
+            "receipts.emit refuses absolute 'out' paths; use a path inside <store>/receipts"
+                .to_string(),
+        );
+    }
+    let mut relative = std::path::PathBuf::new();
+    for component in requested.components() {
+        match component {
+            Component::Normal(part) => relative.push(part),
+            Component::CurDir => {}
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                return Err(
+                    "receipts.emit refuses 'out' paths that escape <store>/receipts".to_string(),
+                );
+            }
+        }
+    }
+    let Some(file_name) = relative.file_name() else {
+        return Err("receipts.emit 'out' must name a file".to_string());
+    };
+    let canonical_root = receipts_dir
+        .canonicalize()
+        .map_err(|e| format!("receipt dir resolve: {e}"))?;
+    let mut cursor = canonical_root.clone();
+    let mut parents: Vec<&std::ffi::OsStr> = relative.iter().collect();
+    parents.pop();
+    for part in parents {
+        cursor.push(part);
+        match std::fs::symlink_metadata(&cursor) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(format!(
+                    "receipts.emit refuses symlinked 'out' component '{}'",
+                    cursor.display()
+                ));
+            }
+            Ok(metadata) if !metadata.is_dir() => {
+                return Err(format!(
+                    "receipts.emit 'out' component '{}' is not a directory",
+                    cursor.display()
+                ));
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                std::fs::create_dir(&cursor)
+                    .map_err(|e| format!("receipt 'out' dir create: {e}"))?;
+                let metadata = std::fs::symlink_metadata(&cursor)
+                    .map_err(|e| format!("receipt 'out' dir stat: {e}"))?;
+                if metadata.file_type().is_symlink() || !metadata.is_dir() {
+                    return Err("receipts.emit 'out' path escapes <store>/receipts".to_string());
+                }
+            }
+            Err(error) => return Err(format!("receipt 'out' stat: {error}")),
+        }
+    }
+    let candidate = cursor.join(file_name);
+    if let Ok(metadata) = std::fs::symlink_metadata(&candidate) {
+        if metadata.file_type().is_symlink() {
+            return Err(format!(
+                "receipts.emit refuses symlinked 'out' target '{}'",
+                candidate.display()
+            ));
+        }
+        if metadata.is_dir() {
+            return Err("receipts.emit 'out' must name a file, not a directory".to_string());
+        }
+    }
+    let parent = candidate
+        .parent()
+        .ok_or_else(|| "receipt 'out' has no parent".to_string())?;
+    let canonical_parent = parent
+        .canonicalize()
+        .map_err(|e| format!("receipt 'out' parent resolve: {e}"))?;
+    if !canonical_parent.starts_with(&canonical_root) {
+        return Err("receipts.emit 'out' path escapes <store>/receipts".to_string());
+    }
+    Ok(candidate)
+}
+
 fn handle_receipts_emit(
     args: &Value,
     substrate: &Substrate,
@@ -3600,6 +3889,13 @@ fn handle_receipts_emit(
         .get("kind")
         .and_then(Value::as_str)
         .ok_or_else(|| "Missing required parameter 'kind'".to_string())?;
+    if kind == "task" {
+        return Err(
+            "receipts.emit refuses kind 'task': no signed task profile exists (task receipts \
+             have no defined signed semantics); supported kinds are 'session' and 'state_transition'"
+                .to_string(),
+        );
+    }
     if kind != "session" && kind != "state_transition" {
         return Err(format!(
             "receipts.emit refuses kind '{kind}': supported kinds are 'session' and 'state_transition'"
@@ -3616,7 +3912,7 @@ fn handle_receipts_emit(
         .map_err(|e| format!("gate key error: {e}"))?;
     let issuer_did = gate_key_did(&signing_key);
     let receipts_dir = store_path.join("receipts");
-    std::fs::create_dir_all(&receipts_dir).map_err(|e| format!("receipt dir: {e}"))?;
+    ensure_receipts_dir(&receipts_dir)?;
     let journal = receipts_dir.join("emitted.jsonl");
     let prior_receipt_digest =
         prior_emitted_digest(&journal, kind).unwrap_or_else(|| "genesis".to_string());
@@ -3728,9 +4024,9 @@ fn handle_receipts_emit(
             .map_err(|e| format!("receipts journal write: {e}"))?;
     }
     let out_path = if let Some(out) = out {
-        let out_path = Path::new(out);
-        std::fs::write(out_path, &serialized).map_err(|e| format!("receipt out write: {e}"))?;
-        Some(out_path.display().to_string())
+        let target = confined_receipt_path(&receipts_dir, out)?;
+        std::fs::write(&target, &serialized).map_err(|e| format!("receipt out write: {e}"))?;
+        Some(target.display().to_string())
     } else {
         None
     };
@@ -5490,6 +5786,75 @@ mod receipt_truth_tests {
     }
 
     #[test]
+    fn receipt_out_paths_are_confined() {
+        let store = std::env::temp_dir().join(format!("wm-mcp-out-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&store).expect("store dir");
+        let mut substrate =
+            Substrate::open(&store, None, wm_gen3_core::constitution::default_view())
+                .expect("substrate");
+        substrate.set_budget(1_000_000);
+        substrate.set_noise_enabled(false);
+        std::fs::write(
+            store.join("session_log.jsonl"),
+            "{\"turn_id\":\"t1\",\"session_id\":\"lane\",\"content\":\"x\",\"timestamp\":1}\n",
+        )
+        .expect("log");
+
+        let emitted = handle_receipts_emit(
+            &json!({"kind": "session", "out": "note.json"}),
+            &substrate,
+            &store,
+            false,
+        )
+        .expect("normal out write");
+        let out_path = emitted["out_path"].as_str().expect("out path");
+        assert!(
+            out_path.ends_with("receipts/note.json"),
+            "out must land inside receipts: {out_path}"
+        );
+        assert!(std::path::Path::new(out_path).is_file());
+
+        let err = handle_receipts_emit(
+            &json!({"kind": "session", "out": "../escape.json"}),
+            &substrate,
+            &store,
+            false,
+        )
+        .expect_err("traversal refused");
+        assert!(err.contains("escape"), "{err}");
+
+        let absolute = std::env::temp_dir().join(format!("wm-escape-{}.json", Uuid::new_v4()));
+        let err = handle_receipts_emit(
+            &json!({"kind": "session", "out": absolute.display().to_string()}),
+            &substrate,
+            &store,
+            false,
+        )
+        .expect_err("absolute refused");
+        assert!(err.contains("absolute"), "{err}");
+        assert!(!absolute.exists());
+
+        #[cfg(unix)]
+        {
+            let outside = std::env::temp_dir().join(format!("wm-symlink-{}", Uuid::new_v4()));
+            std::fs::write(&outside, "outside").expect("outside file");
+            let link = store.join("receipts").join("link.json");
+            std::os::unix::fs::symlink(&outside, &link).expect("symlink");
+            let err = handle_receipts_emit(
+                &json!({"kind": "session", "out": "link.json"}),
+                &substrate,
+                &store,
+                false,
+            )
+            .expect_err("symlink refused");
+            assert!(err.contains("symlink"), "{err}");
+            assert_eq!(std::fs::read_to_string(&outside).unwrap(), "outside");
+            let _ = std::fs::remove_file(&outside);
+        }
+        let _ = std::fs::remove_dir_all(&store);
+    }
+
+    #[test]
     fn session_receipt_is_signed_verifiable_and_tamper_evident() {
         let store = std::env::temp_dir().join(format!("wm-mcp-receipt-{}", Uuid::new_v4()));
         std::fs::create_dir_all(&store).expect("store dir");
@@ -5842,14 +6207,14 @@ mod contract_truth_tests {
 
         let err = execute_hybrid_tool_call(
             "session.replay",
-            &json!({"cursor": "opaque"}),
+            &json!({"bogus_replay": true}),
             &mut substrate,
             &dir,
             false,
             McpProfile::Full,
         )
-        .expect_err("cursor refused");
-        assert!(err.contains("unknown argument 'cursor'"), "{err}");
+        .expect_err("undeclared argument refused");
+        assert!(err.contains("unknown argument 'bogus_replay'"), "{err}");
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
@@ -6208,6 +6573,136 @@ mod honesty_behavior_tests {
     }
 
     #[test]
+    fn nlu_thought_route_is_firebreak_scanned() {
+        let (mut substrate, dir) = setup("firebreak");
+        // A benign thought resolving to the on-seam `mandala.evaluate` route
+        // passes the gate and carries the firebreak disclosure.
+        let benign = execute_hybrid_tool_call(
+            "wm",
+            &json!({
+                "thought": "evaluate candidate benchmark",
+                "args": {"candidate_id": "cand-firebreak", "actions": []}
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Full,
+        )
+        .expect("benign thought dispatches");
+        assert_eq!(benign["firebreak"]["armed"], true);
+        assert_eq!(benign["firebreak"]["verdict"], "allow");
+
+        // The same resolved route with a forbidden command arg is refused
+        // before the bridge dispatches it.
+        let err = execute_hybrid_tool_call(
+            "wm",
+            &json!({
+                "thought": "evaluate candidate benchmark",
+                "args": {"candidate_id": "cand-firebreak", "command": "rm -rf /"}
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Full,
+        )
+        .expect_err("forbidden command refused");
+        assert!(err.contains("FORBIDDEN"), "{err}");
+        assert!(err.contains("firebreak forbidden"), "{err}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn legacy_arguments_succeed_with_deprecation_warnings() {
+        let (mut substrate, dir) = setup("legacy");
+        std::fs::write(
+            dir.join("session_log.jsonl"),
+            "{\"turn_id\":\"t1\",\"session_id\":\"lane\",\"role\":\"ai\",\"turn_type\":\"decision\",\"content\":\"legacy turn\",\"importance\":0.9,\"timestamp\":100}\n",
+        )
+        .expect("log");
+
+        let replay = handle_session_replay(
+            &json!({
+                "session_id": "lane",
+                "mode": "lossless",
+                "cursor": "opaque",
+                "page_size": 16,
+                "max_wire_bytes": 4096
+            }),
+            &dir,
+        )
+        .expect("legacy replay shape");
+        assert_eq!(replay["mode"], "full");
+        let warnings = replay["deprecated_args"].as_array().expect("warnings");
+        assert!(
+            warnings
+                .iter()
+                .any(|w| w.as_str().unwrap().contains("lossless"))
+        );
+        assert!(
+            warnings
+                .iter()
+                .any(|w| w.as_str().unwrap().contains("cursor"))
+        );
+
+        let created =
+            handle_memory_create(&json!({"content": "legacy base"}), &mut substrate, false)
+                .expect("create");
+        let old = created["record_id"].as_u64().expect("id");
+        let updated = handle_memory_update(
+            &json!({
+                "id": old,
+                "content": "legacy revised",
+                "tags": ["legacy"],
+                "importance": 0.4,
+                "title": "T",
+                "topic": "ops"
+            }),
+            &mut substrate,
+            false,
+        )
+        .expect("legacy update shape");
+        assert_eq!(updated["revision"]["tags"][0], "legacy");
+        let warnings = updated["deprecated_args"].as_array().expect("warnings");
+        assert!(
+            warnings
+                .iter()
+                .any(|w| w.as_str().unwrap().contains("title"))
+        );
+
+        let listed = handle_session_list(
+            &json!({"sequence": 1, "title": "x", "type": "y", "limit": 5}),
+            &substrate,
+            &dir,
+        )
+        .expect("legacy list shape");
+        assert_eq!(listed["deprecated_args"].as_array().unwrap().len(), 3);
+
+        let checkpoint = handle_session_checkpoint(
+            &json!({
+                "session_id": "lane",
+                "summary": "legacy checkpoint",
+                "root": "/repo",
+                "label": "lbl",
+                "data": {"k": 1}
+            }),
+            &mut substrate,
+            false,
+        )
+        .expect("legacy checkpoint shape");
+        let warnings = checkpoint["deprecated_args"].as_array().expect("warnings");
+        assert!(
+            warnings
+                .iter()
+                .any(|w| w.as_str().unwrap().contains("root"))
+        );
+
+        let err = handle_receipts_emit(&json!({"kind": "task"}), &substrate, &dir, false)
+            .expect_err("task refused");
+        assert!(err.contains("no signed task profile"), "{err}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn replay_modes_and_continuity_time_filters() {
         let (mut substrate, dir) = setup("replay");
         std::fs::write(
@@ -6253,9 +6748,18 @@ mod honesty_behavior_tests {
         let windowed = handle_session_replay(&json!({"until": "100"}), &dir).expect("until");
         assert_eq!(windowed["returned"], 1);
 
-        let err = handle_session_replay(&json!({"mode": "lossless"}), &dir)
-            .expect_err("lossless unsupported");
-        assert!(err.contains("refuses mode 'lossless'"), "{err}");
+        let legacy = handle_session_replay(&json!({"mode": "lossless"}), &dir)
+            .expect("lossless maps to full with a warning");
+        assert_eq!(legacy["mode"], "full");
+        assert!(
+            legacy["deprecated_args"][0]
+                .as_str()
+                .unwrap()
+                .contains("lossless")
+        );
+        let err = handle_session_replay(&json!({"mode": "bogus"}), &dir)
+            .expect_err("unknown mode refused");
+        assert!(err.contains("refuses mode 'bogus'"), "{err}");
 
         let continuity =
             handle_session_continuity(&json!({"session_id": "lane", "n": 1}), &substrate, &dir)

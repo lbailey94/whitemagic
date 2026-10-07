@@ -220,6 +220,9 @@ pub struct RevisionEntry {
     pub timestamp: u64,
     #[serde(default)]
     pub reason: String,
+    /// Optional tags carried over from a legacy `memory.update` call.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -459,6 +462,9 @@ pub struct Substrate {
     /// UUID <-> u64 record ID mapping table.
     uuid_to_id: HashMap<Uuid, u64>,
     id_to_uuid: HashMap<u64, Uuid>,
+    /// Next `RevisionEntry.revision` to assign; `None` until first use, then
+    /// cached so repeated updates do not rescan `revisions.jsonl`.
+    revision_counter: Option<u64>,
 }
 
 impl Substrate {
@@ -562,6 +568,7 @@ impl Substrate {
             hebbian_coactivations: HashMap::new(),
             uuid_to_id,
             id_to_uuid,
+            revision_counter: None,
         })
     }
 
@@ -2275,7 +2282,11 @@ impl Substrate {
     // Durable pin set & revision chain (append-only JSONL sidecars)
     // ========================================================================
 
-    /// Append one durable JSONL line to a store-root sidecar, fsyncing it.
+    /// Append one durable JSONL line to a store-root sidecar.
+    ///
+    /// The line and its trailing newline are written in a single `write_all`
+    /// (then fsynced), so a crash can leave a partial or doubled tail line but
+    /// never interleave bytes from two appends.
     fn append_store_sidecar(&self, file: &str, value: &serde_json::Value) -> Result<(), String> {
         use std::io::Write as _;
         let path = self.store.path().join(file);
@@ -2284,12 +2295,31 @@ impl Substrate {
             .append(true)
             .open(&path)
             .map_err(|e| format!("{file} open ({}): {e}", path.display()))?;
-        let line = serde_json::to_string(value).map_err(|e| format!("{file} encode: {e}"))?;
+        let mut line = serde_json::to_string(value).map_err(|e| format!("{file} encode: {e}"))?;
+        line.push('\n');
         handle
             .write_all(line.as_bytes())
-            .and_then(|_| handle.write_all(b"\n"))
             .and_then(|_| handle.sync_data())
             .map_err(|e| format!("{file} append: {e}"))
+    }
+
+    /// Parse one sidecar line, salvaging the first JSON object when a crash
+    /// concatenated two objects on one line (`{...}{...}`). A trailing partial
+    /// line yields `None` and is dropped.
+    fn parse_sidecar_line(line: &str) -> Option<serde_json::Value> {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            return None;
+        }
+        if let Ok(value) = serde_json::from_str::<serde_json::Value>(trimmed) {
+            return Some(value);
+        }
+        for (index, _) in trimmed.match_indices("}{") {
+            if let Ok(value) = serde_json::from_str::<serde_json::Value>(&trimmed[..index + 1]) {
+                return Some(value);
+            }
+        }
+        None
     }
 
     fn read_store_sidecar(&self, file: &str) -> Vec<serde_json::Value> {
@@ -2299,8 +2329,26 @@ impl Substrate {
         };
         content
             .lines()
-            .filter_map(|line| serde_json::from_str::<serde_json::Value>(line.trim()).ok())
+            .filter_map(Self::parse_sidecar_line)
             .collect()
+    }
+
+    /// Next revision sequence, cached after the first scan so repeated updates
+    /// are O(1) instead of rescanning the whole sidecar per write.
+    fn next_revision(&mut self) -> u64 {
+        if let Some(next) = self.revision_counter {
+            self.revision_counter = Some(next + 1);
+            return next;
+        }
+        let max = self
+            .revision_entries()
+            .iter()
+            .map(|entry| entry.revision)
+            .max()
+            .unwrap_or(0);
+        let next = max + 1;
+        self.revision_counter = Some(next + 1);
+        next
     }
 
     fn require_writable(&self, action: &str) -> Result<(), String> {
@@ -2390,6 +2438,17 @@ impl Substrate {
         new_id: u64,
         reason: &str,
     ) -> Result<RevisionEntry, String> {
+        self.record_revision_with_tags(prior_id, new_id, reason, &[])
+    }
+
+    /// `record_revision` plus legacy tags recorded on the revision entry.
+    pub fn record_revision_with_tags(
+        &mut self,
+        prior_id: u64,
+        new_id: u64,
+        reason: &str,
+        tags: &[String],
+    ) -> Result<RevisionEntry, String> {
         self.require_writable("memory.update")?;
         if prior_id == new_id {
             return Err("revision prior and new record ids must differ".to_string());
@@ -2406,7 +2465,7 @@ impl Substrate {
             .ok_or_else(|| format!("revision new record {new_id} not found"))?;
 
         let entry = RevisionEntry {
-            revision: self.revision_entries().len() as u64 + 1,
+            revision: self.next_revision(),
             record_id: prior_id,
             new_record_id: new_id,
             prior_content_hash: sha256_hex(prior.content().as_bytes()),
@@ -2416,16 +2475,24 @@ impl Substrate {
                 .map(|d| d.as_secs())
                 .unwrap_or(0),
             reason: reason.to_string(),
+            tags: tags.to_vec(),
         };
         let value = serde_json::to_value(&entry).map_err(|e| e.to_string())?;
         self.append_store_sidecar("revisions.jsonl", &value)?;
 
-        let relation_id = self.store.alloc_relation_id().map_err(|e| e.to_string())?;
-        let sweep = self.store.peek_sweep_counter().unwrap_or(0);
-        let relation = Relation::new(relation_id, new_id, prior_id, 1.0, sweep);
-        self.store
-            .put_relation(&relation)
-            .map_err(|e| format!("supersede relation write failed: {e}"))?;
+        // The durable sidecar link above is always written. The in-store
+        // Supersedes relation additionally retires the prior record in recall,
+        // but `Store::put_relation` exists only on the operator/reference/test
+        // relation path; the adaptive-only build keeps the sidecar link alone.
+        #[cfg(any(test, feature = "operator", feature = "reference-models"))]
+        {
+            let relation_id = self.store.alloc_relation_id().map_err(|e| e.to_string())?;
+            let sweep = self.store.peek_sweep_counter().unwrap_or(0);
+            let relation = Relation::new(relation_id, new_id, prior_id, 1.0, sweep);
+            self.store
+                .put_relation(&relation)
+                .map_err(|e| format!("supersede relation write failed: {e}"))?;
+        }
 
         Ok(entry)
     }
@@ -4538,6 +4605,27 @@ mod cache_boundary_tests {
             assert_eq!(ro.revision_chain(id).len(), 1);
             assert_eq!(ro.verify_revision_chain(id).unwrap()["valid"], true);
         }
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn revision_sidecar_salvages_crash_tail_and_keeps_numbering() {
+        let path = temp_store("rev-tail");
+        {
+            let mut s = Substrate::open(&path, None, default_view()).expect("open");
+            s.set_noise_enabled(false);
+            s.remember_batch(&[item("one"), item("two"), item("three")]);
+        }
+        let valid = "{\"revision\":1,\"record_id\":0,\"new_record_id\":1,\"prior_content_hash\":\"a\",\"new_content_hash\":\"b\",\"timestamp\":1,\"reason\":\"first\"}\n";
+        let merged = "{\"revision\":2,\"record_id\":1,\"new_record_id\":2,\"prior_content_hash\":\"c\",\"new_content_hash\":\"d\",\"timestamp\":2,\"reason\":\"crash\"}{\"revision\":3,\"record_id\":2,";
+        std::fs::write(path.join("revisions.jsonl"), format!("{valid}{merged}\n")).expect("write");
+
+        let mut s = Substrate::open(&path, None, default_view()).expect("reopen");
+        let entries = s.revision_entries();
+        assert_eq!(entries.len(), 2, "salvage first object, drop partial tail");
+        assert_eq!(entries[1].revision, 2);
+        let entry = s.record_revision(1, 2, "second").expect("revision");
+        assert_eq!(entry.revision, 3, "numbering continues past salvaged max");
         let _ = std::fs::remove_dir_all(&path);
     }
 

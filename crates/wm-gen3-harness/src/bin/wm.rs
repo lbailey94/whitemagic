@@ -13,7 +13,9 @@ use std::io::BufRead;
 use std::path::{Path, PathBuf};
 
 use wm_gen3_core::compat::{
-    Gen2Census, Gen2Reader, MigrationOptions, migrate_gen2_sessions_to_gen3, migrate_gen2_to_gen3,
+    Gen2Census, Gen2Reader, MigrationOptions, SessionMigrationOptions, dry_run_migration_census,
+    migrate_gen2_sessions_to_gen3, migrate_gen2_sessions_to_gen3_with_options,
+    migrate_gen2_to_gen3,
 };
 use wm_gen3_core::constitution::default_view;
 use wm_gen3_core::evidence::RatifiedChannel;
@@ -5429,18 +5431,6 @@ fn run_migration(
         }
     };
 
-    let journal_path = target.join("journal.jsonl");
-    let mut substrate = match Substrate::open(target, Some(&journal_path), default_view()) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!(
-                "Failed to open target Gen3 store at {}: {e}",
-                target.display()
-            );
-            std::process::exit(1);
-        }
-    };
-
     let default_quarantine = target.join("quarantine.jsonl");
     let q_path = quarantine_file.unwrap_or(default_quarantine);
 
@@ -5452,53 +5442,86 @@ fn run_migration(
         quarantine_path: Some(q_path.clone()),
     };
 
-    match migrate_gen2_to_gen3(&reader, &mut substrate, &options) {
-        Ok(receipt) => {
-            println!("Migration complete!");
-            println!("Total Scanned:         {}", receipt.total_scanned);
-            println!("Successfully Migrated: {}", receipt.migrated_count);
-            println!("Duplicates Skipped:    {}", receipt.duplicate_skipped);
-            println!("Quarantined:           {}", receipt.quarantined_count);
-            println!("Target Epoch:          {}", receipt.target_epoch);
-            println!("Receipt Digest:        {}", receipt.receipt_digest);
-
-            let default_receipt = target.join("migration_receipt.json");
-            let r_path = receipt_file.unwrap_or(default_receipt);
-            if let Ok(serialized) = serde_json::to_string_pretty(&receipt) {
-                let _ = std::fs::write(&r_path, serialized);
-                println!("Receipt Written To:    {}", r_path.display());
-            }
-            if receipt.quarantined_count > 0 {
-                println!("Quarantine Log At:     {}", q_path.display());
-            }
-
-            let session_log = target.join("session_log.jsonl");
-            match migrate_gen2_sessions_to_gen3(&reader, &session_log) {
-                Ok(sreceipt) => {
-                    println!("Session Turns Migrated: {}", sreceipt.migrated);
-                    println!(
-                        "Session Turns Skipped:  {} (duplicates {} / quarantined {} / decode-skipped {})",
-                        sreceipt.duplicates_skipped
-                            + sreceipt.quarantined
-                            + sreceipt.decode_skipped,
-                        sreceipt.duplicates_skipped,
-                        sreceipt.quarantined,
-                        sreceipt.decode_skipped
-                    );
-                    println!("Sessions Covered:       {}", sreceipt.sessions);
-                    if let Ok(serialized) = serde_json::to_string_pretty(&sreceipt) {
-                        let path = target.join("session_migration_receipt.json");
-                        let _ = std::fs::write(&path, serialized);
-                        println!("Session Receipt:        {}", path.display());
-                    }
-                }
-                Err(e) => eprintln!("session-turn migration failed: {e}"),
+    // Dry runs must never create or open the target store. The target-safe
+    // census requires an existing `data.mdb` and reports a clean
+    // `target missing` error instead of conjuring the target.
+    let receipt = if dry_run {
+        match dry_run_migration_census(&reader, target, &options) {
+            Ok(receipt) => receipt,
+            Err(e) => {
+                eprintln!("Migration dry-run refused: {e}");
+                std::process::exit(1);
             }
         }
-        Err(e) => {
-            eprintln!("Migration halted with error: {e}");
-            std::process::exit(1);
+    } else {
+        let journal_path = target.join("journal.jsonl");
+        let mut substrate = match Substrate::open(target, Some(&journal_path), default_view()) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!(
+                    "Failed to open target Gen3 store at {}: {e}",
+                    target.display()
+                );
+                std::process::exit(1);
+            }
+        };
+        match migrate_gen2_to_gen3(&reader, &mut substrate, &options) {
+            Ok(receipt) => receipt,
+            Err(e) => {
+                eprintln!("Migration halted with error: {e}");
+                std::process::exit(1);
+            }
         }
+    };
+
+    println!("Migration complete!");
+    println!("Total Scanned:         {}", receipt.total_scanned);
+    println!("Successfully Migrated: {}", receipt.migrated_count);
+    println!("Duplicates Skipped:    {}", receipt.duplicate_skipped);
+    println!("Quarantined:           {}", receipt.quarantined_count);
+    println!("Target Epoch:          {}", receipt.target_epoch);
+    println!("Receipt Digest:        {}", receipt.receipt_digest);
+
+    let default_receipt = target.join("migration_receipt.json");
+    let r_path = receipt_file.unwrap_or(default_receipt);
+    if let Ok(serialized) = serde_json::to_string_pretty(&receipt) {
+        let _ = std::fs::write(&r_path, serialized);
+        println!("Receipt Written To:    {}", r_path.display());
+    }
+    if receipt.quarantined_count > 0 {
+        if dry_run {
+            println!("Quarantine Would Be At: {}", q_path.display());
+        } else {
+            println!("Quarantine Log At:     {}", q_path.display());
+        }
+    }
+
+    let session_log = target.join("session_log.jsonl");
+    match migrate_gen2_sessions_to_gen3_with_options(
+        &reader,
+        &session_log,
+        &SessionMigrationOptions {
+            dry_run,
+            quarantine_path: None,
+        },
+    ) {
+        Ok(sreceipt) => {
+            println!("Session Turns Migrated: {}", sreceipt.migrated);
+            println!(
+                "Session Turns Skipped:  {} (duplicates {} / quarantined {} / decode-skipped {})",
+                sreceipt.duplicates_skipped + sreceipt.quarantined + sreceipt.decode_skipped,
+                sreceipt.duplicates_skipped,
+                sreceipt.quarantined,
+                sreceipt.decode_skipped
+            );
+            println!("Sessions Covered:       {}", sreceipt.sessions);
+            if let Ok(serialized) = serde_json::to_string_pretty(&sreceipt) {
+                let path = target.join("session_migration_receipt.json");
+                let _ = std::fs::write(&path, serialized);
+                println!("Session Receipt:        {}", path.display());
+            }
+        }
+        Err(e) => eprintln!("session-turn migration failed: {e}"),
     }
 }
 
