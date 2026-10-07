@@ -40,6 +40,7 @@ pub mod dsl;
 pub mod evidence;
 pub mod factory;
 pub mod field;
+pub mod firebreak;
 pub mod ganying;
 pub mod gen1_gems;
 pub mod geometry;
