@@ -5,6 +5,9 @@
   base `ef623fbd5e80d64a47c3335e99a34ea3b9bf7511` (10.2.0-alpha.6, branch `docs/gate9b-evidence`);
   pointers `receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md`,
   `docs/LEGACY_CLI_AUDIT_2026-10-07.md`
+- **Addendum rev.2:** 2026-10-07 post-merge (`80b34c2`, main wave-3) — `wm at-rest` and
+  `wm host-guard` CLI covered (`88ac66a`), closure static scan repaired (`ef24101` + boundary
+  receipt), artifact-evidence command count corrected; audit rev.2
 - **Target Architecture:** WhiteMagic Gen3 `wm` binary (`crates/wm-gen3-harness`, `crates/wm-gen3-core/src/compat.rs`)
 - **Base Commit:** `2a923b4c60f97570551d4bcbb02c290ad474f77b` (10.2.0-alpha.5, `main`)
 - **Operator / Authority:** Lucas (ratification pending)
@@ -53,7 +56,8 @@ locally re-executed tests on the base commit (cargo 1.98.0 / rustc 1.98.0,
 | **CLI/bridge unit tests** | `cargo test --workspace` (alpha.4 CI [run 37537977637](https://github.com/lbailey94/whitemagic/actions/runs/37537977637) and alpha.5 CI, default features) | Green; includes `legacy_mount_reads_and_refuses_writes`, `legacy_catalog_is_the_read_only_surface`, `session_start_appends_lane_marker`, `last_session_lane_reads_tail`, `mesh_cli_dial_allowlist_refuses_empty_and_unlisted_peers`, `selftest_fails_closed_when_temp_root_cannot_create_scratch`, `bounded_jsonrpc_reader_drains_oversized_line_then_reads_next_frame` |
 | **Install certification** | `certify-install` jobs (alpha.5 release run) | Green on aarch64-macos, aarch64, x86_64 against the published assets |
 | **Packaged-artifact checks** (addendum) | installed `wm10` alpha.6 (sha `fcd7f5a0…`) and manifest-verified published `wm-linux-x86_64` alpha.6 (sha `05de780c…`), isolated `/tmp` stores: `init`, `status`, `selftest --json`, `contract --json`, `apotheosis`, `inspect`, `grimoire`, `remember`/`recall`, `mandala status/triage`, `mesh status`, `peer list`, `shortlist`, stdio MCP probe (`initialize` / `tools/list` / `memory.create` / `memory.search` / `session.continuity`) | **Green on both artifacts** (13 check families; 9/9 invariant audit; 44 tools; server rc=0). Detail: `receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md` |
-| **Legacy CLI audit** (addendum) | `wm9` 9.3.4 `--help` / `help --all` vs `wm10` 10.2.0-alpha.6 `<cmd> --help`; command-presence log in the evidence bundle | 30 v9-only commands dispositioned (Preserve/Translate/Deprecate/Remove) + 8 shared names with semantic drift: `docs/LEGACY_CLI_AUDIT_2026-10-07.md` |
+| **Legacy CLI audit** (addendum) | `wm9` 9.3.4 `--help` / `help --all` vs `wm10` 10.2.0-alpha.6 `<cmd> --help`; 63-name command-presence log in the evidence bundle | 30 v9-only commands dispositioned (Preserve/Translate/Deprecate/Remove) + 8 shared names with semantic drift: `docs/LEGACY_CLI_AUDIT_2026-10-07.md` (rev.2 updates `at-rest`) |
+| **Wave-3 CLI additions** (addendum rev.2) | merged main `80b34c2`; source `crates/wm-gen3-harness/src/bin/wm.rs` (`HostGuard`/`AtRest`/`Compact` variants + parse tests `host_guard_cli_flags_parse`); `bash scripts/check_closures.sh` re-run | `wm host-guard status\|run\|arm\|disarm`, `wm at-rest status\|migrate` wired (`88ac66a`); closure scan **3/3 PASS** after `ef24101` (allowlist + `receipts/BOUNDARY_WM_NODE_TRANSPORT_SPAWNS_2026-10-07.md`) |
 
 The `wm` binary root carries `#![recursion_limit]` but not its own
 `#![forbid(unsafe_code)]` (the harness library does); `rg unsafe` over
@@ -96,12 +100,18 @@ The `wm` binary root carries `#![recursion_limit]` but not its own
    drivers are `cargo test -p wm-gen3-core` harnesses against the source crate
    with no binary path (exact blockers in the addendum §4). Requires an H15-2
    scope amendment or a Gen3-native packaged battery to close.
-3. **Legacy CLI audit: CLOSED (addendum).** 30 v9-only commands dispositioned
-   plus 8 shared names with semantic drift — `docs/LEGACY_CLI_AUDIT_2026-10-07.md`.
-   The audit surfaces follow-on gaps (no Gen3 `backup`/`restore`; `wm at-rest`
-   CLI pending; memory source-trust curation partial), recorded there.
-4. **`wm host-guard` CLI wiring is pending** (core engine landed in
-   alpha.5; see CHANGELOG 10.2.0-alpha.5 "Added").
+3. **Legacy CLI audit: CLOSED (addendum; rev.2 update).** 30 v9-only commands
+   dispositioned plus 8 shared names with semantic drift —
+   `docs/LEGACY_CLI_AUDIT_2026-10-07.md`. Remaining follow-on gaps: no Gen3
+   whole-store `backup`/`restore`; memory source-trust curation partial.
+   `wm at-rest` CLI is now covered (wave-3 `88ac66a`: `wm at-rest status|migrate`;
+   audit #29 rev.2).
+4. **`wm host-guard` CLI: CLOSED (addendum rev.2).** Wave-3 commit `88ac66a`
+   (merged `467dcfb`) wires `wm host-guard status|run|arm|disarm` in
+   `crates/wm-gen3-harness/src/bin/wm.rs`; `run` is report-only unless `--act`
+   (single-lease locked, durable armed flag). Caveat: `wm compact` e2e
+   compaction is gated on `lmdb-utils` (`mdb_copy`) availability; the report
+   math is unit-tested.
 5. The Gate 9D real-store test self-skips when the WMv9 planning store is
    absent; it did not run in any cited CI execution.
 6. **v9-era bench scripts do not speak the Gen3 CLI.** `curated_smoke_test.py`,
@@ -114,15 +124,12 @@ The `wm` binary root carries `#![recursion_limit]` but not its own
    byte-identical to the published alpha.6 asset (sha/size differ); both were
    tested, with identical results. Published-asset hash verification used the
    release manifest (`05de780c…`).
-8. **Closure static scan is RED at the addendum base (`ef623fb`).**
-   `bash scripts/check_closures.sh` passes rules 1–2 but fails rule 3 on
-   `crates/wm-gen3-harness/src/bin/wm_node.rs:1036,1159` — the Geth Phase 2
-   `wm-node` Unix-socket accept loop is a physical-I/O transport site but is
-   missing from the scanner allowlist (`transport.rs`/`mesh.rs`/`mcp_server.rs`
-   only). CI runs this script on push, so the tracked closure gate fails at this
-   base; the "3/3 PASS" citation above is alpha.5-era. Fix = scanner allowlist
-   entry + boundary receipt (code/script edit, not made by this docs lane).
-   Evidence: `receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md` §4a,
+8. **Closure static scan: RESOLVED (addendum rev.2).** The scan was red at the
+   addendum base (`ef623fb`, rule 3 on the `wm_node.rs` spawns); wave-3 `ef24101`
+   extended the scanner allowlist and added the boundary receipt
+   (`receipts/BOUNDARY_WM_NODE_TRANSPORT_SPAWNS_2026-10-07.md`). Re-run at the
+   merge base `80b34c2`: **3/3 PASS** (`closure static scans: PASS`). History:
+   `receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md` §4a,
    `logs/13-closure-scan-base.txt`.
 
 ## 5. Transition
@@ -134,5 +141,7 @@ the 9B/9C/9D closures is the remaining statutory step; open items above are
 carried as ratification conditions. The 2026-10-07 addendum
 (`receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md`,
 `docs/LEGACY_CLI_AUDIT_2026-10-07.md`) removes the packaged-evidence and audit
-gaps; the remaining ratification conditions are items 1, 4, 5, 8, and the
-H15-2 closure decision in item 2.
+gaps; the remaining ratification conditions are item 1 (CI reference-model
+battery green), item 5 (9D real-store skip), and the H15-2 closure decision in
+item 2. Items 3, 4, and 8 are addressed (audit, wave-3 CLI wiring, closure-scan
+repair).
