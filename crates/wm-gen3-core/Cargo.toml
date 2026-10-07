@@ -68,6 +68,14 @@ rmp-serde = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
+# At-rest key hierarchy + record AEAD (Q39 slices A–B port from v9):
+# Argon2id for passphrase-mode root keys, XChaCha20-Poly1305 for the keyring
+# and record envelopes, HKDF-SHA256 for galaxy/scope KEK derivation,
+# zeroization for secrets. Versions mirror the v9 branch exactly.
+argon2 = "0.5"
+chacha20poly1305 = "0.10"
+hkdf = "0.12"
+zeroize = { version = "1", features = ["derive"] }
 rayon = "1.10"
 ed25519-dalek = "3.0.0"
 getrandom = "0.3"
