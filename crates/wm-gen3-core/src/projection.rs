@@ -253,6 +253,8 @@ mod a3_diagnostic {
             }
             return;
         }
+        // Inline fixture table; a type alias would not add clarity here.
+        #[allow(clippy::type_complexity)]
         let pairs: &[(&str, &str, Vec<(&str, &str)>)] = &[
             (
                 "seed14/T1_coffee",

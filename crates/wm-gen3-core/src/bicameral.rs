@@ -10,7 +10,7 @@
 //!    - **Noul:** Boolean probability of predicate satisfaction ($P \in [0.0, 1.0]$).
 //!    - **Choice:** Categorical distribution over target attractor basins ($A_1 \dots A_8$).
 //!    - **Score:** Ordinal expected utility and estimated risk ratings ($[0.0, 1.0]$).
-//!    *Constraint:* Decision models emit $\Delta\text{field}$; they never hold commit authority.
+//!      *Constraint:* Decision models emit $\Delta\text{field}$; they never hold commit authority.
 //! 3. **Chamber γ (Constitutional Verifier / Analytical Catuṣkoṭi Kernel):**
 //!    Formal logic and deterministic verification ("Are we permitted and warranted to act?").
 //!    Applies Contextualized Catuṣkoṭi ($K_1$ Affirmed, $K_2$ Denied, $K_3$ Contradiction,
@@ -166,20 +166,15 @@ pub enum CognitiveDispatch {
 }
 
 /// Tactical and operational execution tier for an action skeleton (rooted in Gen1 xianfeng/wei_wuzu/huben).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum SkeletonTier {
     /// Minimal, ultra-fast, zero-overhead execution path (Xianfeng / Vanguard).
     Vanguard,
     /// Balanced, robust, general-purpose execution path (Wei Wuzu / Standard).
+    #[default]
     Standard,
     /// Comprehensive, exhaustive verification and audit path (Huben / Heavy).
     Heavy,
-}
-
-impl Default for SkeletonTier {
-    fn default() -> Self {
-        Self::Standard
-    }
 }
 
 /// Standardized, evolvable multi-action skeleton for speculative execution and pre-warmed commit.
@@ -1232,23 +1227,23 @@ impl CognitiveRouter {
     pub fn compile_dream_insights(&mut self, insights: &[crate::dream::DreamInsight]) -> usize {
         let mut added = 0usize;
         for ins in insights {
-            if ins.utility_score >= 0.85 && ins.confidence >= 0.85 {
-                if !self
+            if ins.utility_score >= 0.85
+                && ins.confidence >= 0.85
+                && !self
                     .compiled_dream_rules
                     .iter()
                     .any(|r| r.rule_id == ins.id)
-                {
-                    self.compiled_dream_rules.push(CompiledDreamRule {
-                        rule_id: ins.id.clone(),
-                        source_concept: ins.source_concept.clone(),
-                        target_concept: ins.target_concept.clone(),
-                        relation_type: ins.relation_type.clone(),
-                        action_recommendation: ins.actionable_recommendation.clone(),
-                        utility_score: ins.utility_score,
-                        confidence: ins.confidence,
-                    });
-                    added += 1;
-                }
+            {
+                self.compiled_dream_rules.push(CompiledDreamRule {
+                    rule_id: ins.id.clone(),
+                    source_concept: ins.source_concept.clone(),
+                    target_concept: ins.target_concept.clone(),
+                    relation_type: ins.relation_type.clone(),
+                    action_recommendation: ins.actionable_recommendation.clone(),
+                    utility_score: ins.utility_score,
+                    confidence: ins.confidence,
+                });
+                added += 1;
             }
         }
         added
@@ -1965,7 +1960,7 @@ pub fn run_peb9_speculative_consensus_benchmark(_seed: u64) -> Peb9BenchmarkRepo
     for trial in 0..total_trials {
         let task_type = trial % 5;
         let candidate_id = trial as u64;
-        let source_basin = (trial % 8) as usize;
+        let source_basin = trial % 8;
 
         // Construct task scenarios across 5 diverse fixture regimes
         let (proposal, verifier_status, ground_truth_success) = match task_type {
@@ -2053,7 +2048,8 @@ pub fn run_peb9_speculative_consensus_benchmark(_seed: u64) -> Peb9BenchmarkRepo
         };
 
         // Decision Model Evaluation (Chamber β)
-        let evals = decision_model.evaluate_candidates(source_basin, &[proposal.clone()]);
+        let evals =
+            decision_model.evaluate_candidates(source_basin, std::slice::from_ref(&proposal));
         let eval = &evals[0];
 
         // Track Brier score for Arm B: (P(success) - outcome)^2

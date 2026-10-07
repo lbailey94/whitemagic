@@ -106,7 +106,7 @@ fn test_sub_symbolic_coordination_benchmarks() {
     let any_claim = TuplePattern::any_claim();
     let t0 = Instant::now();
     let mut consumed = 0;
-    while let Some(_) = space.in_matching(&any_claim, now_ms) {
+    while space.in_matching(&any_claim, now_ms).is_some() {
         consumed += 1;
     }
     let in_dur = t0.elapsed();

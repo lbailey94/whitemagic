@@ -223,7 +223,7 @@ pub fn verify_receipt_value(value: &Value, store_path: &Path) -> Result<Value, S
     }
 
     let result = verify_profile(value, &key, profile);
-    let detail = result.map_err(|e| format!("receipt verification refused: {e}"))?;
+    result.map_err(|e| format!("receipt verification refused: {e}"))?;
     let (signature_scope, unauthenticated_fields, numeric_projection, scope_notes) = match profile {
         "deliberation-v1" => (
             "continuity-receipt/1.5#deliberation legacy canonical_payload_v1",
@@ -296,7 +296,7 @@ pub fn verify_receipt_value(value: &Value, store_path: &Path) -> Result<Value, S
         "spec": spec,
         "receipt_id": value.get("receipt_id"),
         "issuer_did": value.get("issuer_did"),
-        "detail": detail,
+        "detail": (),
         "verified_offline": true,
         "signature_scope": signature_scope,
         "unauthenticated_fields": unauthenticated_fields,
@@ -663,7 +663,6 @@ pub struct OutcomeRecord {
 
 impl OutcomeRecord {
     /// Build an unsigned outcome record.
-    #[must_use]
     pub fn new(
         subject_receipt: String,
         subject_spec: String,

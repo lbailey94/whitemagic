@@ -1040,7 +1040,7 @@ mod tests {
             .collect()
     }
 
-    fn action_units<'a>(plan: &'a Plan, pick: fn(&Action) -> Option<&str>) -> Vec<&'a str> {
+    fn action_units(plan: &Plan, pick: fn(&Action) -> Option<&str>) -> Vec<&str> {
         plan.actions.iter().filter_map(pick).collect()
     }
 
@@ -1225,8 +1225,10 @@ mod tests {
             7200,
             "/usr/bin/chrome --type=renderer",
         )];
-        let mut policy = Policy::default();
-        policy.kill_orphans = true;
+        let policy = Policy {
+            kill_orphans: true,
+            ..Default::default()
+        };
         let plan = plan_at(&signals, &HostGuardState::default(), &policy, NOW);
         assert!(!plan.actions.iter().any(|action| matches!(
             action,
@@ -1255,8 +1257,10 @@ mod tests {
             process(999, "python3", 2048, 1000, "python3 app.py"),
             process(111, "ollama", 100, 7200, "ollama serve"),
         ];
-        let mut policy = Policy::default();
-        policy.kill_orphans = true;
+        let policy = Policy {
+            kill_orphans: true,
+            ..Default::default()
+        };
         let plan = plan_at(&signals, &HostGuardState::default(), &policy, NOW);
         assert_eq!(plan.severity, Verdict::Warn);
         assert_eq!(action_pids(&plan), vec![888, 4242]);
@@ -1322,8 +1326,10 @@ mod tests {
         active.is_orphan = false;
         active.cgroup_unit = "app-gnome-Terminal-1234.scope".to_string();
         signals.top_processes = vec![active];
-        let mut policy = Policy::default();
-        policy.kill_orphans = true;
+        let policy = Policy {
+            kill_orphans: true,
+            ..Default::default()
+        };
         let plan = plan_at(&signals, &HostGuardState::default(), &policy, NOW);
         assert!(action_pids(&plan).is_empty());
         assert!(
@@ -1343,8 +1349,10 @@ mod tests {
         server.is_orphan = false;
         server.cgroup_unit = "wm-serve@1000.service".to_string();
         signals.top_processes = vec![server];
-        let mut policy = Policy::default();
-        policy.kill_orphans = true;
+        let policy = Policy {
+            kill_orphans: true,
+            ..Default::default()
+        };
         let plan = plan_at(&signals, &HostGuardState::default(), &policy, NOW);
         assert!(action_pids(&plan).is_empty());
         assert!(
@@ -1368,16 +1376,20 @@ mod tests {
         desktop.is_orphan = true;
         desktop.cgroup_unit = "app-gnome-Alacritty-99.scope".to_string();
         signals.top_processes = vec![service, desktop];
-        let mut policy = Policy::default();
-        policy.kill_orphans = true;
+        let policy = Policy {
+            kill_orphans: true,
+            ..Default::default()
+        };
         let plan = plan_at(&signals, &HostGuardState::default(), &policy, NOW);
         assert!(action_pids(&plan).is_empty());
     }
 
     #[test]
     fn recovery_resumes_timers_after_two_calm_runs() {
-        let mut state = HostGuardState::default();
-        state.calm_runs = 2;
+        let mut state = HostGuardState {
+            calm_runs: 2,
+            ..Default::default()
+        };
         state
             .deferred_timers
             .insert("fleet-sync.timer".to_string(), NOW - 3600);
@@ -1406,8 +1418,10 @@ mod tests {
         assert!(state.deferred_timers.is_empty());
         assert_eq!(state.calm_runs, 3);
 
-        let mut early = HostGuardState::default();
-        early.calm_runs = 1;
+        let mut early = HostGuardState {
+            calm_runs: 1,
+            ..Default::default()
+        };
         early
             .deferred_timers
             .insert("fleet-sync.timer".to_string(), NOW - 60);
@@ -1505,8 +1519,10 @@ mod tests {
             &Policy::default(),
             NOW,
         );
-        let mut state = HostGuardState::default();
-        state.calm_runs = 5;
+        let mut state = HostGuardState {
+            calm_runs: 5,
+            ..Default::default()
+        };
         let before = state.to_json();
         let runner = FakeRunner::default();
         let report = execute(&plan, &mut state, &runner, NOW, true);
@@ -1540,10 +1556,12 @@ mod tests {
 
     #[test]
     fn state_roundtrip_and_corrupt_defaults() {
-        let mut state = HostGuardState::default();
-        state.calm_runs = 3;
-        state.last_digest = Some("abc".to_string());
-        state.last_post_at = Some(NOW);
+        let mut state = HostGuardState {
+            calm_runs: 3,
+            last_digest: Some("abc".to_string()),
+            last_post_at: Some(NOW),
+            ..Default::default()
+        };
         state
             .unit_stops
             .insert("a.service".to_string(), vec![NOW - 10, NOW - 20]);
@@ -1586,8 +1604,10 @@ mod tests {
         let same = plan_at(&signals, &state, &policy, NOW);
         assert_eq!(digest(&signals, &same), first);
 
-        let mut posted = HostGuardState::default();
-        posted.last_digest = Some(first.clone());
+        let posted = HostGuardState {
+            last_digest: Some(first.clone()),
+            ..Default::default()
+        };
         let deduped = plan_at(&signals, &posted, &policy, NOW);
         assert!(
             !deduped

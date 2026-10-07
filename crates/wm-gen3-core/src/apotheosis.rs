@@ -214,8 +214,10 @@ pub fn perform_apotheosis_audit(
 
     // 1. Invariant Integrity Audit
     let (acyclic, max_depth) = verify_vault_acyclicity(vault);
-    let mut inv = SubstrateInvariantAudit::default();
-    inv.article7_cladistics_acyclicity = acyclic;
+    let mut inv = SubstrateInvariantAudit {
+        article7_cladistics_acyclicity: acyclic,
+        ..Default::default()
+    };
 
     // Verify negative knowledge retention is functioning
     if vault.total_retirements > 0 && vault.retired_signatures.is_empty() {

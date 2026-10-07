@@ -142,32 +142,27 @@ impl ActionSkeleton {
             // 4. Language-specific signature heuristics
             match self.language {
                 SkeletonLanguage::Python => {
-                    if delta.action_type == AstActionType::AddFunction
-                        || delta.action_type == AstActionType::ModifySignature
+                    if (delta.action_type == AstActionType::AddFunction
+                        || delta.action_type == AstActionType::ModifySignature)
+                        && !delta.signature_delta.contains("def ")
+                        && !delta.signature_delta.contains("class ")
                     {
-                        if !delta.signature_delta.contains("def ")
-                            && !delta.signature_delta.contains("class ")
-                        {
-                            conflicts.push(format!(
-                                "Python signature for '{}' must contain 'def' or 'class': '{}'",
-                                delta.target_symbol, delta.signature_delta
-                            ));
-                        }
+                        conflicts.push(format!(
+                            "Python signature for '{}' must contain 'def' or 'class': '{}'",
+                            delta.target_symbol, delta.signature_delta
+                        ));
                     }
                 }
-                SkeletonLanguage::Rust => {
-                    if delta.action_type == AstActionType::AddFunction
-                        || delta.action_type == AstActionType::ModifySignature
-                    {
-                        if !delta.signature_delta.contains("fn ")
-                            && !delta.signature_delta.contains("pub fn ")
-                        {
-                            conflicts.push(format!(
-                                "Rust signature for '{}' must contain 'fn': '{}'",
-                                delta.target_symbol, delta.signature_delta
-                            ));
-                        }
-                    }
+                SkeletonLanguage::Rust
+                    if (delta.action_type == AstActionType::AddFunction
+                        || delta.action_type == AstActionType::ModifySignature)
+                        && !delta.signature_delta.contains("fn ")
+                        && !delta.signature_delta.contains("pub fn ") =>
+                {
+                    conflicts.push(format!(
+                        "Rust signature for '{}' must contain 'fn': '{}'",
+                        delta.target_symbol, delta.signature_delta
+                    ));
                 }
                 _ => {}
             }

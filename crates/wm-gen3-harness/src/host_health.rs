@@ -730,7 +730,7 @@ pub fn infer_orphan(ppid: u32, cgroup: &str) -> bool {
 
 fn cgroup_has_session_scope(cgroup: &str) -> bool {
     cgroup
-        .split(|character| character == '/' || character == ':')
+        .split(['/', ':'])
         .any(|component| component.starts_with("session-") && component.ends_with(".scope"))
 }
 
@@ -800,7 +800,7 @@ fn collect_processes(limit: usize) -> Vec<ProcessInfo> {
             is_orphan: infer_orphan(ppid, &cgroup_text),
         });
     }
-    processes.sort_by(|left, right| right.rss_mib.cmp(&left.rss_mib));
+    processes.sort_by_key(|process| std::cmp::Reverse(process.rss_mib));
     processes.truncate(limit);
     processes
 }
@@ -1029,7 +1029,7 @@ mod tests {
         let units =
             "  edge-galaxy.service loaded activating auto-restart Edge-galaxy telemetry store\n";
 
-        let expected = vec![
+        let expected = [
             memory_check(meminfo).unwrap(),
             pressure_check(Some(psi_mem), Some(psi_io)).unwrap(),
             swap_check(swaps).unwrap(),
@@ -1078,7 +1078,7 @@ mod tests {
         assert!(signals.mem_total_kib > 0);
         assert!((0.0..=1.5).contains(&signals.mem_available_fraction));
         let mut sorted = signals.top_processes.clone();
-        sorted.sort_by(|left, right| right.rss_mib.cmp(&left.rss_mib));
+        sorted.sort_by_key(|process| std::cmp::Reverse(process.rss_mib));
         assert_eq!(signals.top_processes.len(), sorted.len());
         for (actual, expected) in signals.top_processes.iter().zip(sorted.iter()) {
             assert_eq!(actual.pid, expected.pid);

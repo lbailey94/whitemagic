@@ -223,6 +223,8 @@ impl CausalCapabilityTicket {
     }
 
     /// Mints and cryptographically signs a new CausalCapabilityTicket.
+    // Signed ticket constructor mirrors the ticket fields one-to-one.
+    #[allow(clippy::too_many_arguments)]
     pub fn mint(
         task_id: Uuid,
         action_name: impl Into<String>,

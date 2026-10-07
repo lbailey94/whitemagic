@@ -490,6 +490,8 @@ impl MandalaPass {
     ///
     /// Principle P4: "One handle to continue, many forks to branch."
     /// Forking is strictly attenuating — child parameters <= parent in scope, time, and budget.
+    // Fork constructor mirrors the sealed parent pass fields one-to-one.
+    #[allow(clippy::too_many_arguments)]
     pub fn fork_child(
         &self,
         child_pass_id: impl Into<String>,
@@ -878,8 +880,7 @@ pub fn resolve_or_create_mandala_gate_key(
         Ok((signing, pubkey))
     } else {
         let mut bytes = [0u8; 32];
-        getrandom::fill(&mut bytes)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+        getrandom::fill(&mut bytes).map_err(|e| std::io::Error::other(e.to_string()))?;
         let signing = SigningKey::from_bytes(&bytes);
         let pubkey = signing.verifying_key().to_bytes();
 
@@ -910,9 +911,10 @@ pub fn resolve_or_create_mandala_gate_key(
 // ============================================================================
 
 /// Spatial capability barrier lifecycle phases inspired by Kekkaijutsu.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum KekkaiPhase {
     /// Hōi: Targeting coordinates and pinning ephemeral boundary claim.
+    #[default]
     Hoi,
     /// Jōshiki: Formulating access matrix and compiling Landlock/rlimit ruleset.
     Joshiki,
@@ -922,12 +924,6 @@ pub enum KekkaiPhase {
     Kai,
     /// Metsu: Forensic containment, annihilation of malicious payload, and routing to Negative Knowledge Lineage.
     Metsu,
-}
-
-impl Default for KekkaiPhase {
-    fn default() -> Self {
-        Self::Hoi
-    }
 }
 
 impl KekkaiPhase {
@@ -1609,6 +1605,8 @@ pub struct ContinuityReceipt05 {
 
 impl ContinuityReceipt05 {
     /// Constructs a new unsigned ContinuityReceipt05 instance.
+    // Receipt constructor mirrors the signed envelope fields one-to-one.
+    #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub fn new(
         receipt_id: String,
@@ -1664,7 +1662,7 @@ impl ContinuityReceipt05 {
         hasher.update(b"|");
         hasher.update(self.workspace_claim_digest.as_bytes());
         hasher.update(b"|");
-        hasher.update(&[if self.preflight_clearance { 1 } else { 0 }]);
+        hasher.update([if self.preflight_clearance { 1 } else { 0 }]);
         hasher.update(b"|");
         hasher.update(self.preflight_digest.as_bytes());
         hasher.update(b"|");
