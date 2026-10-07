@@ -3008,7 +3008,13 @@ fn handle_mandala_evaluate(
 
 /// Validate a `mesh_sync` dial target against the comma-separated
 /// `WM_MESH_SYNC_ALLOWLIST` (host:port entries). An empty allowlist refuses.
-fn mesh_sync_peer_allowlist(allowlist_raw: &str, addr: std::net::SocketAddr) -> Result<(), String> {
+///
+/// Shared by the MCP `mesh_sync` handler and the `wm mesh sync` /
+/// `wm mesh sync-genes` CLI commands.
+pub fn mesh_sync_peer_allowlist(
+    allowlist_raw: &str,
+    addr: std::net::SocketAddr,
+) -> Result<(), String> {
     let allowlist: Vec<std::net::SocketAddr> = allowlist_raw
         .split(',')
         .map(str::trim)

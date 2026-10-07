@@ -310,8 +310,9 @@ fn h10_7_receipt_and_negative_knowledge_mesh_sync() {
     }];
     store_a.remember_batch(&items);
 
-    // 2. Node A mints and stores a Spec 0.5 Continuity Receipt in mandala_ledger.jsonl
-    let receipt = wm_gen3_core::mandala::ContinuityReceipt05::new(
+    // 2. Node A mints and signs a Spec 0.5 Continuity Receipt in mandala_ledger.jsonl
+    // (unsigned receipts are refused by verified bundle import).
+    let mut receipt = wm_gen3_core::mandala::ContinuityReceipt05::new(
         "receipt-sync-test-001".to_string(),
         "tenant-mesh".to_string(),
         "agent-alpha".to_string(),
@@ -324,6 +325,7 @@ fn h10_7_receipt_and_negative_knowledge_mesh_sync() {
         None,
         "did:key:alice".to_string(),
     );
+    receipt.sign(&alice_key);
     let ledger_a = dir_a.path().join("mandala_ledger.jsonl");
     std::fs::write(&ledger_a, serde_json::to_string(&receipt).unwrap() + "\n").unwrap();
 
