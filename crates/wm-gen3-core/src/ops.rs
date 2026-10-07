@@ -140,6 +140,86 @@ pub struct SessionContinuityView {
     pub representation: Option<crate::transport::RepresentationTransport>,
     pub timestamp_iso: Option<String>,
     pub raw_content: String,
+    /// Optional handoff metadata persisted with an enriched checkpoint
+    /// (`track`, `commit`, `branch`, `tests_green`, `lease_id`). `None` for
+    /// checkpoints written before these fields existed and for unstructured
+    /// session records.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub track: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commit: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub branch: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tests_green: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lease_id: Option<String>,
+}
+
+/// One durable session-log turn (`session_log.jsonl` entry, additive wire form).
+///
+/// Fields default so records written by earlier versions (or by Gen2 session
+/// migration, which adds `sequence`/`migrated_from`) still parse. Unknown
+/// fields are ignored by serde. `superseded_by` is derived at read time from
+/// `supersedes` links; it is not trusted from the file.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SessionTurn {
+    #[serde(default)]
+    pub turn_id: String,
+    #[serde(default)]
+    pub session_id: String,
+    #[serde(default)]
+    pub role: String,
+    #[serde(default)]
+    pub turn_type: String,
+    #[serde(default)]
+    pub content: String,
+    #[serde(default)]
+    pub importance: f64,
+    #[serde(default)]
+    pub timestamp: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub track: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supersedes: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub superseded_by: Option<String>,
+    #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
+    pub entry_type: Option<String>,
+}
+
+impl SessionTurn {
+    /// True for session-start markers written by `session.start`.
+    #[must_use]
+    pub fn is_start_marker(&self) -> bool {
+        self.entry_type.as_deref() == Some("session_start") || self.turn_type == "session_start"
+    }
+
+    /// Rough token estimate used by progressive replay/digest budgeting.
+    #[must_use]
+    pub fn estimated_tokens(&self) -> u64 {
+        ((self.content.chars().count() as u64) + 3) / 4 + 4
+    }
+}
+
+/// One durable revision link recorded by `memory.update`.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct RevisionEntry {
+    /// Monotonic append sequence across the store's `revisions.jsonl`.
+    pub revision: u64,
+    /// Prior record id (the superseded record).
+    pub record_id: u64,
+    /// New record id (the superseding record).
+    pub new_record_id: u64,
+    /// SHA-256 of the prior record's content at revision time.
+    pub prior_content_hash: String,
+    /// SHA-256 of the new record's content at revision time.
+    pub new_content_hash: String,
+    pub timestamp: u64,
+    #[serde(default)]
+    pub reason: String,
 }
 
 #[derive(Debug, Clone)]
@@ -2018,11 +2098,33 @@ impl Substrate {
     /// The checkpoint is structured into canonical JSON, signed via `CommitCapability`,
     /// committed to the store, and given a canonical source tag `session:<session_id>:<checkpoint_type>`.
     pub fn session_checkpoint(&mut self, checkpoint: &SessionCheckpoint) -> Result<u64, String> {
+        self.session_checkpoint_enriched(checkpoint, &serde_json::Value::Null)
+    }
+
+    /// Record a checkpoint plus caller-supplied handoff metadata.
+    ///
+    /// The committed record is the serialized checkpoint object with each
+    /// non-null `meta` key merged in at the top level. `SessionCheckpoint`
+    /// parsing ignores unknown keys, so plain and enriched records remain
+    /// mutually compatible, and old checkpoints keep their exact wire shape.
+    pub fn session_checkpoint_enriched(
+        &mut self,
+        checkpoint: &SessionCheckpoint,
+        meta: &serde_json::Value,
+    ) -> Result<u64, String> {
         let source = format!(
             "session:{}:{}",
             checkpoint.session_id, checkpoint.checkpoint_type
         );
-        let content = serde_json::to_string(checkpoint).map_err(|e| e.to_string())?;
+        let mut value = serde_json::to_value(checkpoint).map_err(|e| e.to_string())?;
+        if let (Some(object), Some(extra)) = (value.as_object_mut(), meta.as_object()) {
+            for (key, item) in extra {
+                if !item.is_null() {
+                    object.insert(key.clone(), item.clone());
+                }
+            }
+        }
+        let content = serde_json::to_string(&value).map_err(|e| e.to_string())?;
 
         let item = RememberItem {
             content,
@@ -2089,6 +2191,17 @@ impl Substrate {
 
         // Try to parse structured checkpoint
         if let Ok(cp) = serde_json::from_str::<SessionCheckpoint>(record.content()) {
+            let meta = serde_json::from_str::<serde_json::Value>(record.content()).ok();
+            let meta_str = |key: &str| {
+                meta.as_ref()
+                    .and_then(|value| value.get(key))
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_string)
+            };
+            let tests_green = meta
+                .as_ref()
+                .and_then(|value| value.get("tests_green"))
+                .and_then(serde_json::Value::as_bool);
             return Ok(Some(SessionContinuityView {
                 record_id: record.id(),
                 epoch,
@@ -2102,6 +2215,11 @@ impl Substrate {
                 representation: cp.representation,
                 timestamp_iso: cp.timestamp_iso,
                 raw_content: record.content().to_string(),
+                track: meta_str("track"),
+                commit: meta_str("commit"),
+                branch: meta_str("branch"),
+                tests_green,
+                lease_id: meta_str("lease_id"),
             }));
         }
 
@@ -2124,6 +2242,11 @@ impl Substrate {
             representation: None,
             timestamp_iso: None,
             raw_content: record.content().to_string(),
+            track: None,
+            commit: None,
+            branch: None,
+            tests_green: None,
+            lease_id: None,
         }))
     }
 
@@ -2147,6 +2270,377 @@ impl Substrate {
 
         Ok(sessions.into_iter().collect())
     }
+
+    // ========================================================================
+    // Durable pin set & revision chain (append-only JSONL sidecars)
+    // ========================================================================
+
+    /// Append one durable JSONL line to a store-root sidecar, fsyncing it.
+    fn append_store_sidecar(&self, file: &str, value: &serde_json::Value) -> Result<(), String> {
+        use std::io::Write as _;
+        let path = self.store.path().join(file);
+        let mut handle = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .map_err(|e| format!("{file} open ({}): {e}", path.display()))?;
+        let line = serde_json::to_string(value).map_err(|e| format!("{file} encode: {e}"))?;
+        handle
+            .write_all(line.as_bytes())
+            .and_then(|_| handle.write_all(b"\n"))
+            .and_then(|_| handle.sync_data())
+            .map_err(|e| format!("{file} append: {e}"))
+    }
+
+    fn read_store_sidecar(&self, file: &str) -> Vec<serde_json::Value> {
+        let path = self.store.path().join(file);
+        let Ok(content) = std::fs::read_to_string(path) else {
+            return Vec::new();
+        };
+        content
+            .lines()
+            .filter_map(|line| serde_json::from_str::<serde_json::Value>(line.trim()).ok())
+            .collect()
+    }
+
+    fn require_writable(&self, action: &str) -> Result<(), String> {
+        if self.store.is_readonly() {
+            Err(format!("store is read-only: {action} refused"))
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Actual durable pin state for a record (`None` = never pinned/unpinned).
+    #[must_use]
+    pub fn pin_state(&self, record_id: u64) -> Option<bool> {
+        self.read_store_sidecar("pins.jsonl")
+            .into_iter()
+            .rev()
+            .find_map(|value| {
+                if value.get("record_id").and_then(serde_json::Value::as_u64) == Some(record_id) {
+                    value.get("pinned").and_then(serde_json::Value::as_bool)
+                } else {
+                    None
+                }
+            })
+    }
+
+    /// Whether a record is currently pinned (last write wins).
+    #[must_use]
+    pub fn is_pinned(&self, record_id: u64) -> bool {
+        self.pin_state(record_id).unwrap_or(false)
+    }
+
+    /// Effective pinned record ids, sorted ascending.
+    #[must_use]
+    pub fn pinned_ids(&self) -> Vec<u64> {
+        let mut state: HashMap<u64, bool> = HashMap::new();
+        for value in self.read_store_sidecar("pins.jsonl") {
+            if let (Some(id), Some(pinned)) = (
+                value.get("record_id").and_then(serde_json::Value::as_u64),
+                value.get("pinned").and_then(serde_json::Value::as_bool),
+            ) {
+                state.insert(id, pinned);
+            }
+        }
+        let mut ids: Vec<u64> = state
+            .into_iter()
+            .filter_map(|(id, pinned)| pinned.then_some(id))
+            .collect();
+        ids.sort_unstable();
+        ids
+    }
+
+    /// Durably pin (`pinned=true`) or release (`pinned=false`) one record.
+    ///
+    /// Appends to `<store>/pins.jsonl`; the last entry for a record wins, so a
+    /// torn tail line can never flip a prior decision. Returns the actual state.
+    pub fn set_pin(&mut self, record_id: u64, pinned: bool) -> Result<bool, String> {
+        self.require_writable("memory.pin")?;
+        let exists = self
+            .store
+            .get_record(record_id)
+            .map_err(|e| format!("pin lookup failed: {e}"))?
+            .is_some();
+        if !exists {
+            return Err(format!("record {record_id} not found in store"));
+        }
+        let at_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+        let entry = serde_json::json!({
+            "record_id": record_id,
+            "pinned": pinned,
+            "at_ms": at_ms,
+        });
+        self.append_store_sidecar("pins.jsonl", &entry)?;
+        Ok(pinned)
+    }
+
+    /// Record a durable revision link: `new_id` supersedes `prior_id`.
+    ///
+    /// Appends a `RevisionEntry` (prior/new content hashes, timestamp, reason)
+    /// to `<store>/revisions.jsonl` and writes a `Supersedes` relation so the
+    /// existing recall path retires the prior record.
+    pub fn record_revision(
+        &mut self,
+        prior_id: u64,
+        new_id: u64,
+        reason: &str,
+    ) -> Result<RevisionEntry, String> {
+        self.require_writable("memory.update")?;
+        if prior_id == new_id {
+            return Err("revision prior and new record ids must differ".to_string());
+        }
+        let prior = self
+            .store
+            .get_record(prior_id)
+            .map_err(|e| format!("revision prior lookup failed: {e}"))?
+            .ok_or_else(|| format!("revision prior record {prior_id} not found"))?;
+        let new = self
+            .store
+            .get_record(new_id)
+            .map_err(|e| format!("revision new lookup failed: {e}"))?
+            .ok_or_else(|| format!("revision new record {new_id} not found"))?;
+
+        let entry = RevisionEntry {
+            revision: self.revision_entries().len() as u64 + 1,
+            record_id: prior_id,
+            new_record_id: new_id,
+            prior_content_hash: sha256_hex(prior.content().as_bytes()),
+            new_content_hash: sha256_hex(new.content().as_bytes()),
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0),
+            reason: reason.to_string(),
+        };
+        let value = serde_json::to_value(&entry).map_err(|e| e.to_string())?;
+        self.append_store_sidecar("revisions.jsonl", &value)?;
+
+        let relation_id = self.store.alloc_relation_id().map_err(|e| e.to_string())?;
+        let sweep = self.store.peek_sweep_counter().unwrap_or(0);
+        let relation = Relation::new(relation_id, new_id, prior_id, 1.0, sweep);
+        self.store
+            .put_relation(&relation)
+            .map_err(|e| format!("supersede relation write failed: {e}"))?;
+
+        Ok(entry)
+    }
+
+    /// All revision entries in durable append order.
+    #[must_use]
+    pub fn revision_entries(&self) -> Vec<RevisionEntry> {
+        self.read_store_sidecar("revisions.jsonl")
+            .into_iter()
+            .filter_map(|value| serde_json::from_value::<RevisionEntry>(value).ok())
+            .collect()
+    }
+
+    /// The revision chain containing `record_id`, oldest entry first.
+    #[must_use]
+    pub fn revision_chain(&self, record_id: u64) -> Vec<RevisionEntry> {
+        let entries = self.revision_entries();
+        let mut connected: HashSet<u64> = HashSet::from([record_id]);
+        let mut selected: Vec<usize> = Vec::new();
+        loop {
+            let mut grew = false;
+            for (index, entry) in entries.iter().enumerate() {
+                if selected.contains(&index) {
+                    continue;
+                }
+                if connected.contains(&entry.record_id) || connected.contains(&entry.new_record_id)
+                {
+                    connected.insert(entry.record_id);
+                    connected.insert(entry.new_record_id);
+                    selected.push(index);
+                    grew = true;
+                }
+            }
+            if !grew {
+                break;
+            }
+        }
+        let mut chain: Vec<RevisionEntry> = selected
+            .into_iter()
+            .map(|index| entries[index].clone())
+            .collect();
+        chain.sort_by_key(|entry| entry.revision);
+        chain
+    }
+
+    /// Whether any durable revision entry supersedes `record_id`.
+    #[must_use]
+    pub fn is_superseded(&self, record_id: u64) -> bool {
+        self.revision_entries()
+            .iter()
+            .any(|entry| entry.record_id == record_id)
+    }
+
+    /// Recompute and report revision-chain integrity for `record_id`.
+    ///
+    /// Every entry's recorded prior/new content hashes are recomputed from the
+    /// store and the chain links are checked for gaps. A missing prior record,
+    /// a hash mismatch, or a broken link makes the chain invalid.
+    pub fn verify_revision_chain(&self, record_id: u64) -> Result<serde_json::Value, String> {
+        let chain = self.revision_chain(record_id);
+        let mut failures: Vec<serde_json::Value> = Vec::new();
+        let mut previous_new: Option<u64> = None;
+        for entry in &chain {
+            match self.store.get_record(entry.record_id) {
+                Ok(Some(prior)) => {
+                    let actual = sha256_hex(prior.content().as_bytes());
+                    if actual != entry.prior_content_hash {
+                        failures.push(serde_json::json!({
+                            "revision": entry.revision,
+                            "kind": "prior_hash_mismatch",
+                            "record_id": entry.record_id,
+                            "recorded": entry.prior_content_hash,
+                            "recomputed": actual,
+                        }));
+                    }
+                }
+                Ok(None) => failures.push(serde_json::json!({
+                    "revision": entry.revision,
+                    "kind": "prior_record_missing",
+                    "record_id": entry.record_id,
+                })),
+                Err(e) => failures.push(serde_json::json!({
+                    "revision": entry.revision,
+                    "kind": "prior_record_read_error",
+                    "record_id": entry.record_id,
+                    "error": e.to_string(),
+                })),
+            }
+            match self.store.get_record(entry.new_record_id) {
+                Ok(Some(new)) => {
+                    let actual = sha256_hex(new.content().as_bytes());
+                    if actual != entry.new_content_hash {
+                        failures.push(serde_json::json!({
+                            "revision": entry.revision,
+                            "kind": "new_hash_mismatch",
+                            "record_id": entry.new_record_id,
+                            "recorded": entry.new_content_hash,
+                            "recomputed": actual,
+                        }));
+                    }
+                }
+                Ok(None) => failures.push(serde_json::json!({
+                    "revision": entry.revision,
+                    "kind": "new_record_missing",
+                    "record_id": entry.new_record_id,
+                })),
+                Err(e) => failures.push(serde_json::json!({
+                    "revision": entry.revision,
+                    "kind": "new_record_read_error",
+                    "record_id": entry.new_record_id,
+                    "error": e.to_string(),
+                })),
+            }
+            if let Some(previous) = previous_new {
+                if previous != entry.record_id {
+                    failures.push(serde_json::json!({
+                        "revision": entry.revision,
+                        "kind": "chain_link_gap",
+                        "expected_prior": previous,
+                        "recorded_prior": entry.record_id,
+                    }));
+                }
+            }
+            previous_new = Some(entry.new_record_id);
+        }
+
+        Ok(serde_json::json!({
+            "valid": failures.is_empty(),
+            "chain_length": chain.len(),
+            "head_record_id": chain.last().map(|entry| entry.new_record_id).unwrap_or(record_id),
+            "entries_checked": chain.len(),
+            "failures": failures,
+        }))
+    }
+}
+
+/// Compose a read-only session digest from typed turns and the latest checkpoint.
+///
+/// Returns `(markdown, json)`; the JSON value carries the session id, generated
+/// timestamp, turn list, and the checkpoint view (or null).
+#[must_use]
+pub fn compose_session_digest(
+    session_id: &str,
+    turns: &[SessionTurn],
+    checkpoint: Option<&SessionContinuityView>,
+) -> (String, serde_json::Value) {
+    let generated_at = chrono::Utc::now().to_rfc3339();
+    let mut markdown = String::new();
+    markdown.push_str(&format!("# Session Digest: {session_id}\n\n"));
+    markdown.push_str(&format!("_Generated: {generated_at}_\n\n"));
+    match checkpoint {
+        Some(cp) => {
+            markdown.push_str("## Latest Checkpoint\n\n");
+            markdown.push_str(&format!(
+                "- Record: #{} (epoch {})\n",
+                cp.record_id, cp.epoch
+            ));
+            markdown.push_str(&format!("- Agent: {}\n", cp.agent_id));
+            markdown.push_str(&format!("- Type: {}\n", cp.checkpoint_type));
+            if let Some(timestamp) = &cp.timestamp_iso {
+                markdown.push_str(&format!("- Timestamp: {timestamp}\n"));
+            }
+            if let Some(commit) = &cp.commit {
+                markdown.push_str(&format!("- Commit: {commit}\n"));
+            }
+            if let Some(branch) = &cp.branch {
+                markdown.push_str(&format!("- Branch: {branch}\n"));
+            }
+            if let Some(tests_green) = cp.tests_green {
+                markdown.push_str(&format!("- Tests green: {tests_green}\n"));
+            }
+            markdown.push_str(&format!("\n**Summary:** {}\n\n", cp.summary));
+            if !cp.next_queue.is_empty() {
+                markdown.push_str("### Next Queue\n\n");
+                for item in &cp.next_queue {
+                    markdown.push_str(&format!("- [ ] {item}\n"));
+                }
+                markdown.push('\n');
+            }
+            if !cp.open_flags.is_empty() {
+                markdown.push_str("### Open Flags\n\n");
+                for flag in &cp.open_flags {
+                    markdown.push_str(&format!("- {flag}\n"));
+                }
+                markdown.push('\n');
+            }
+        }
+        None => markdown.push_str("## Latest Checkpoint\n\n_No checkpoint recorded._\n\n"),
+    }
+    markdown.push_str(&format!("## Turns ({})\n\n", turns.len()));
+    for turn in turns {
+        let track = turn
+            .track
+            .as_deref()
+            .map(|track| format!(" track={track}"))
+            .unwrap_or_default();
+        let superseded = turn
+            .superseded_by
+            .as_ref()
+            .map(|id| format!(" (superseded by {id})"))
+            .unwrap_or_default();
+        markdown.push_str(&format!(
+            "- [{}] {}/{}: {}{}{}\n",
+            turn.timestamp, turn.role, turn.turn_type, turn.content, track, superseded
+        ));
+    }
+
+    let json = serde_json::json!({
+        "session_id": session_id,
+        "generated_at": generated_at,
+        "turn_count": turns.len(),
+        "turns": turns,
+        "checkpoint": checkpoint,
+    });
+    (markdown, json)
 }
 
 #[cfg(test)]
@@ -3969,6 +4463,171 @@ mod cache_boundary_tests {
             sessions.contains(&"ancient-session".to_string()),
             "early session must survive beyond the recent-record window: {sessions:?}"
         );
+    }
+
+    #[test]
+    fn pin_set_is_durable_and_reversible() {
+        let path = temp_store("pins");
+        {
+            let mut s = Substrate::open(&path, None, default_view()).expect("open");
+            s.set_noise_enabled(false);
+            let id = s.remember_batch(&[item("pin me")]).remove(0).unwrap();
+            assert_eq!(s.pin_state(id), None);
+            assert!(!s.is_pinned(id));
+            assert!(s.set_pin(id, true).expect("pin"));
+            assert!(s.is_pinned(id));
+            assert_eq!(s.pinned_ids(), vec![id]);
+            assert!(!s.set_pin(id, false).expect("unpin"));
+            assert!(!s.is_pinned(id));
+            assert!(s.pinned_ids().is_empty());
+            assert!(s.set_pin(id, true).expect("re-pin"));
+        }
+        {
+            let s = Substrate::open_readonly(&path, None, default_view()).expect("reopen");
+            let id = s.store().iter_records().unwrap()[0].id();
+            assert!(s.is_pinned(id), "pin survives process restart");
+        }
+        {
+            let mut s = Substrate::open(&path, None, default_view()).expect("reopen rw");
+            let id = s.store().iter_records().unwrap()[0].id();
+            assert!(!s.set_pin(id, false).expect("unpin after restart"));
+        }
+        {
+            let s = Substrate::open_readonly(&path, None, default_view()).expect("reopen ro");
+            let id = s.store().iter_records().unwrap()[0].id();
+            assert!(!s.is_pinned(id), "release survives process restart");
+        }
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn revision_chain_is_durable_verifiable_and_supersedes() {
+        let path = temp_store("revisions");
+        let verify = {
+            let mut s = Substrate::open(&path, None, default_view()).expect("open");
+            s.set_noise_enabled(false);
+            let v1 = s.remember_batch(&[item("state one")]).remove(0).unwrap();
+            let v2 = s.remember_batch(&[item("state two")]).remove(0).unwrap();
+            let entry = s.record_revision(v1, v2, "corrected").expect("revision");
+            assert_eq!(entry.record_id, v1);
+            assert_eq!(entry.new_record_id, v2);
+            assert_eq!(s.revision_chain(v1).len(), 1);
+            assert!(s.is_superseded(v1));
+            assert!(!s.is_superseded(v2));
+            let hits = s.recall_expect(&RecallQuery {
+                query: "state one".into(),
+                limit: 10,
+                candidate_limit: 100,
+                include_historical: false,
+                min_score: 0.0,
+                min_coverage: 0.0,
+                scope: None,
+            });
+            assert!(
+                hits.iter()
+                    .any(|hit| hit.id == v1 && hit.superseded_by.is_some()),
+                "superseded record must be marked by recall: {hits:?}"
+            );
+            s.verify_revision_chain(v1).expect("verify")
+        };
+        assert_eq!(verify["valid"], true);
+        assert_eq!(verify["chain_length"], 1);
+        {
+            let ro = Substrate::open_readonly(&path, None, default_view()).expect("reopen");
+            let id = ro.store().iter_records().unwrap()[0].id();
+            assert_eq!(ro.revision_chain(id).len(), 1);
+            assert_eq!(ro.verify_revision_chain(id).unwrap()["valid"], true);
+        }
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn enriched_checkpoint_surfaces_handoff_metadata() {
+        let path = temp_store("cp-meta");
+        let mut s = Substrate::open(&path, None, default_view()).expect("open");
+        let cp = SessionCheckpoint {
+            session_id: "lane".into(),
+            agent_id: "agent".into(),
+            checkpoint_type: "handoff".into(),
+            summary: "handoff".into(),
+            next_queue: vec!["next".into()],
+            open_flags: vec![],
+            context_token: None,
+            representation: None,
+            timestamp_iso: Some("2026-10-06T00:00:00Z".into()),
+        };
+        let meta = serde_json::json!({
+            "track": "mission-a",
+            "commit": "abc123",
+            "branch": "feat/mcp-truth",
+            "tests_green": true,
+            "lease_id": "lease-1",
+            "unused": null,
+        });
+        s.session_checkpoint_enriched(&cp, &meta).expect("enriched");
+        let view = s.session_continuity(Some("lane")).unwrap().unwrap();
+        assert_eq!(view.track.as_deref(), Some("mission-a"));
+        assert_eq!(view.commit.as_deref(), Some("abc123"));
+        assert_eq!(view.branch.as_deref(), Some("feat/mcp-truth"));
+        assert_eq!(view.tests_green, Some(true));
+        assert_eq!(view.lease_id.as_deref(), Some("lease-1"));
+
+        // A plain checkpoint still parses and keeps the old wire shape.
+        let plain = SessionCheckpoint {
+            checkpoint_type: "turn".into(),
+            summary: "plain".into(),
+            ..cp.clone()
+        };
+        s.session_checkpoint(&plain).expect("plain");
+        let view = s.session_continuity(Some("lane")).unwrap().unwrap();
+        assert_eq!(view.summary, "plain");
+        assert_eq!(view.commit, None);
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn compose_session_digest_includes_checkpoint_and_turns() {
+        let turns = vec![SessionTurn {
+            turn_id: "t1".into(),
+            session_id: "lane".into(),
+            role: "ai".into(),
+            turn_type: "summary".into(),
+            content: "did things".into(),
+            importance: 0.9,
+            timestamp: 100,
+            track: Some("mission-a".into()),
+            agent_id: None,
+            supersedes: None,
+            superseded_by: None,
+            entry_type: None,
+        }];
+        let view = SessionContinuityView {
+            record_id: 1,
+            epoch: 2,
+            session_id: "lane".into(),
+            agent_id: "agent".into(),
+            checkpoint_type: "handoff".into(),
+            summary: "checkpoint summary".into(),
+            next_queue: vec!["next".into()],
+            open_flags: vec!["flag".into()],
+            context_token: None,
+            representation: None,
+            timestamp_iso: Some("2026-10-06T00:00:00Z".into()),
+            raw_content: String::new(),
+            track: Some("mission-a".into()),
+            commit: Some("abc".into()),
+            branch: None,
+            tests_green: Some(true),
+            lease_id: None,
+        };
+        let (markdown, json) = compose_session_digest("lane", &turns, Some(&view));
+        assert!(markdown.contains("Session Digest: lane"));
+        assert!(markdown.contains("checkpoint summary"));
+        assert!(markdown.contains("- [ ] next"));
+        assert_eq!(json["turn_count"], 1);
+        assert_eq!(json["checkpoint"]["commit"], "abc");
+        let (_, empty) = compose_session_digest("none", &[], None);
+        assert!(empty["checkpoint"].is_null());
     }
 
     /// Read-only snapshot recall with projection: a query-vector cache miss must

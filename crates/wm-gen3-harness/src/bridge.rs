@@ -3,7 +3,7 @@
 //! Provides the "Lossless Core Swap" interface:
 //! 1. Preserves 100% of the public MCP interface and Gen2 contract (`contract.rs`).
 //! 2. Exposes dual profiles: `cyberbrain` (10 lean tools for CLI agents) and
-//!    `full` / `curated` (36 tools for full IDE extensions).
+//!    `full` / `curated` (37 tools for full IDE extensions).
 //! 3. Bridges legacy tool calls (`memory.create`, `memory.search`, `memory.read`,
 //!    `session.continuity`, etc.) to Gen3 Substrate operations with bijective
 //!    UUID <-> u64 identity translation.
@@ -11,8 +11,10 @@
 
 #![forbid(unsafe_code)]
 
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::path::Path;
@@ -22,16 +24,21 @@ use uuid::Uuid;
 
 use wm_gen3_core::compat::{Gen2EpisodicRecord, Gen2Reader};
 use wm_gen3_core::evidence::RatifiedChannel;
-use wm_gen3_core::mandala::resolve_or_create_mandala_gate_key;
+use wm_gen3_core::mandala::{
+    Signature, Signer, SigningKey, Verifier, VerifyingKey, resolve_or_create_mandala_gate_key,
+};
 use wm_gen3_core::mesh::{MeshClient, resolve_or_create_mesh_key};
-use wm_gen3_core::ops::{ImportKind, RecallQuery, RememberItem, SessionCheckpoint, Substrate};
+use wm_gen3_core::ops::{
+    ImportKind, RecallQuery, RememberItem, SessionCheckpoint, SessionContinuityView, SessionTurn,
+    Substrate, compose_session_digest,
+};
 
 /// Active MCP Tool Profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum McpProfile {
     /// 10 lean tools for CLI agents (Antigravity, Claude Code, Opencode).
     Cyberbrain,
-    /// 36 tools: complete curated memory hierarchy, receipts, session continuity, and Mandala.
+    /// 37 tools: complete curated memory hierarchy, receipts, session continuity, and Mandala.
     Full,
 }
 
@@ -272,7 +279,9 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "session.checkpoint" | "session_checkpoint" => "session.checkpoint",
         "session.start" => "session.start",
         "session.list" | "session_list" => "session.list",
-        "session.recall" | "session.replay" => "session.recall",
+        "session.recall" => "session.recall",
+        "session.replay" => "session.replay",
+        "session.digest" => "session.digest",
         "receipts.emit" => "receipts.emit",
         "receipts.verify" => "receipts.verify",
         "mandala.status" => "mandala.status",
@@ -329,6 +338,119 @@ fn profile_allows_tool(profile: McpProfile, name: &str) -> bool {
         Some(key) => allowed_profile_keys(profile).contains(key),
         None => false,
     }
+}
+
+/// Arguments each mission-owned tool actually consumes.
+///
+/// Handlers validate against this table (unknown keys are refused), and the
+/// contract test asserts the advertised schemas never declare anything outside
+/// it: every declared property is either consumed or absent.
+pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
+    ("memory.pin", &["id", "galaxy", "pinned"]),
+    ("memory.update", &["id", "content", "reason"]),
+    ("memory.revisions", &["id", "action"]),
+    (
+        "memory.aggregate",
+        &["field", "op", "query", "metric", "limit"],
+    ),
+    (
+        "memory.ingest",
+        &[
+            "items",
+            "items_jsonl",
+            "text",
+            "source",
+            "dry_run",
+            "limit",
+            "galaxy",
+            "redact",
+        ],
+    ),
+    (
+        "session.record",
+        &[
+            "content",
+            "role",
+            "turn_type",
+            "importance",
+            "session_id",
+            "supersedes",
+            "track",
+            "agent_id",
+            "log_type",
+        ],
+    ),
+    (
+        "session.continuity",
+        &[
+            "n",
+            "session_id",
+            "current_session_id",
+            "since",
+            "until",
+            "max_content_bytes",
+            "max_response_bytes",
+            "include_briefing_text",
+        ],
+    ),
+    (
+        "session.checkpoint",
+        &[
+            "session_id",
+            "summary",
+            "next_queue",
+            "open_flags",
+            "track",
+            "commit",
+            "branch",
+            "tests_green",
+            "lease_id",
+            "agent_id",
+            "checkpoint_type",
+            "context_token",
+        ],
+    ),
+    ("session.list", &["session_id", "limit"]),
+    (
+        "session.replay",
+        &[
+            "session_id",
+            "since",
+            "until",
+            "n",
+            "include_superseded",
+            "min_importance",
+            "token_budget",
+            "turn_types",
+            "mode",
+        ],
+    ),
+    ("session.recall", &["session_id", "query", "limit"]),
+    ("receipts.emit", &["kind", "session_id", "out", "limit"]),
+    ("session.digest", &["session_id", "n"]),
+];
+
+/// Consumed-argument list for a canonical tool route, if declared.
+#[must_use]
+pub fn consumed_arguments(tool: &str) -> Option<&'static [&'static str]> {
+    TOOL_ARGUMENTS
+        .iter()
+        .find_map(|(name, args)| (*name == tool).then_some(*args))
+}
+
+/// Refuse any argument not in the tool's consumed-argument table.
+fn reject_unknown_args(tool: &str, args: &Value) -> Result<(), String> {
+    let Some(allowed) = consumed_arguments(tool) else {
+        return Ok(());
+    };
+    if let Some(object) = args.as_object() {
+        for key in object.keys() {
+            if !allowed.contains(&key.as_str()) {
+                return Err(format!("{tool} refuses unknown argument '{key}'"));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// 10 Lean Cyberbrain MCP Tools.
@@ -480,7 +602,7 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
     tools
 }
 
-/// 36 Curated Full Suite MCP Tools (preserving 100% Gen2 tools.snapshot.json + Mandala + Gen3).
+/// 37 Curated Full Suite MCP Tools (preserving 100% Gen2 tools.snapshot.json + Mandala + Gen3).
 pub fn get_full_curated_tools_list(readonly: bool) -> Value {
     let mode_hint = if readonly {
         " (READ-ONLY: mutations refused)"
@@ -682,31 +804,26 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
         {
             "name": "memory.update",
             "title": "Update Memory",
-            "description": format!("Update an existing memory: appends a revision into the cryptographic history chain.{mode_hint}"),
+            "description": format!("Update an existing memory by writing a superseding record and a durable revision entry (prior/new content hashes, timestamp, reason).{mode_hint}"),
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "id": { "description": "Memory UUID or numeric record_id to update" },
-                    "content": { "type": "string", "description": "New content" },
-                    "tags": { "type": "array", "items": { "type": "string" }, "description": "Replacement tags" },
-                    "importance": { "type": "number", "description": "New importance score" },
-                    "title": { "type": "string", "description": "New title (optional)" },
-                    "topic": { "type": "string", "description": "New topic label (optional)" },
-                    "galaxy": { "type": "string", "description": "Galaxy (default: codex)" }
+                    "content": { "type": "string", "description": "New content for the superseding record" },
+                    "reason": { "type": "string", "description": "Optional reason recorded in the revision entry" }
                 },
-                "required": ["id"]
+                "required": ["id", "content"]
             }
         },
         {
             "name": "memory.revisions",
             "title": "Memory Revisions",
-            "description": "Inspect the tamper-evident revision chain of a memory.",
+            "description": "List the durable revision chain of a memory, or verify it by recomputing content hashes and chain links.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "id": { "description": "Memory UUID or record_id to inspect" },
-                    "action": { "type": "string", "enum": ["list", "verify"], "description": "Action: 'list' (default) or 'verify'" },
-                    "galaxy": { "type": "string", "description": "Galaxy (default: codex)" }
+                    "action": { "type": "string", "enum": ["list", "verify"], "description": "Action: 'list' (default) or 'verify'" }
                 },
                 "required": ["id"]
             }
@@ -714,7 +831,7 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
         {
             "name": "session.checkpoint",
             "title": "Session Checkpoint",
-            "description": format!("Save a structured checkpoint (git state, next queue, open flags) for lossless handoffs.{mode_hint}"),
+            "description": format!("Save a structured checkpoint (summary, git state, next queue, open flags, track/lease metadata) for lossless handoffs.{mode_hint}"),
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -722,53 +839,51 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
                     "summary": { "type": "string", "description": "High-density summary of decisions, state, and findings" },
                     "next_queue": { "type": "array", "items": { "type": "string" }, "description": "Ordered next steps" },
                     "open_flags": { "type": "array", "items": { "type": "string" }, "description": "Open flags, blockers, or warnings" },
-                    "track": { "type": "string", "description": "Optional track slug" },
-                    "commit": { "type": "string", "description": "Manual commit hash" },
-                    "root": { "type": "string", "description": "Repository root for auto git-capture" },
-                    "label": { "type": "string", "description": "Checkpoint label (default 'checkpoint')" },
-                    "data": { "type": "object", "description": "Legacy free-form passthrough stored beside the handoff." },
+                    "track": { "type": "string", "description": "Optional track slug persisted with the checkpoint" },
+                    "commit": { "type": "string", "description": "Commit hash persisted with the checkpoint" },
                     "tests_green": { "type": "boolean", "description": "Whether the test suite was green at checkpoint time." },
                     "lease_id": { "type": "string", "description": "Claimed scope lease_id that remains held at this handoff" },
-                    "branch": { "type": "string", "description": "Manual branch name" }
+                    "branch": { "type": "string", "description": "Branch name persisted with the checkpoint" }
                 }
             }
         },
         {
             "name": "memory.ingest",
             "title": "Ingest Memories",
-            "description": format!("Ingest a folder or batch of documents/transcripts into the Substrate.{mode_hint}"),
+            "description": format!("Ingest inline items (items / items_jsonl / text) or a JSONL/text file (source) via the batch-create path; returns real counts and refuses malformed input.{mode_hint}"),
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "source": { "type": "string", "description": "Directory or file to harvest" },
+                    "items": { "type": "array", "description": "Array of items: strings, or objects {content, source?, kind?, tags?, importance?}" },
+                    "items_jsonl": { "type": "string", "description": "Newline-delimited JSONL items, or plain non-empty text lines" },
+                    "text": { "type": "string", "description": "Single plain-text memory to ingest" },
+                    "source": { "type": "string", "description": "Optional path to a JSONL or text file (same line rules as items_jsonl)" },
                     "dry_run": { "type": "boolean", "description": "Report without writing (default: true)" },
-                    "limit": { "type": "integer", "description": "Maximum records to ingest" },
-                    "galaxy": { "type": "string", "description": "Optional galaxy override for transcripts/documents." },
-                    "redact": { "type": "boolean", "default": true, "description": "Scrub credential-shaped content before storage (default true)." },
-                    "include_credential_files": { "type": "boolean", "default": false, "description": "Ingest credential-named files with redaction." },
-                    "wait_secs": { "type": "integer", "default": 0, "description": "Wait up to N seconds for a busy store before failing." }
-                },
-                "required": ["source"]
+                    "limit": { "type": "integer", "description": "Maximum items to ingest" },
+                    "galaxy": { "type": "string", "description": "Galaxy for items without an explicit source (default: codex)" },
+                    "redact": { "type": "boolean", "default": true, "description": "Scrub credential-shaped tokens before storage (default true)." }
+                }
             }
         },
         {
             "name": "receipts.emit",
             "title": "Emit Continuity Receipt",
-            "description": "Refuses generic receipt emission. Use a supported typed receipt producer so the signed fields have defined semantics.",
+            "description": "Emit a signed continuity receipt: kind 'session' signs a digest of the last `limit` session-log turns; kind 'state_transition' signs a store-state snapshot chained to the prior emitted receipt. 'task' receipts are not supported.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "kind": { "type": "string", "enum": ["session", "task", "state_transition"], "description": "Receipt kind" },
-                    "session_id": { "type": "string", "description": "Session UUID" },
-                    "out": { "type": "string", "description": "Optional file path to write receipt JSON" },
+                    "kind": { "type": "string", "enum": ["session", "state_transition"], "description": "Receipt kind" },
+                    "session_id": { "type": "string", "description": "Optional session filter for kind 'session'" },
+                    "out": { "type": "string", "description": "Optional file path to additionally write the receipt JSON" },
                     "limit": { "type": "integer", "minimum": 1, "description": "Maximum turns covered (session kind; default 200)" }
-                }
+                },
+                "required": ["kind"]
             }
         },
         {
             "name": "receipts.verify",
             "title": "Verify WhiteMagic Profile Receipt",
-            "description": "Verify one supported WhiteMagic receipt profile against the existing local gate key. This is not a Continuity Receipt bundle verifier.",
+            "description": "Verify one supported WhiteMagic receipt profile (including emitted session/state_transition continuity receipts) against the existing local gate key. This is not a general Continuity Receipt bundle verifier.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -815,14 +930,14 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
         {
             "name": "memory.aggregate",
             "title": "Aggregate Memories",
-            "description": "Aggregate a numeric or categorical field over matched memories.",
+            "description": "Aggregate over the matched record set: numeric fields (importance, created_at, epoch) support count/sum/avg/min/max; categorical fields (source, domain, class, status, galaxy) support count only. Unsupported field/op is refused.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "field": { "type": "string", "description": "Field to aggregate (e.g. 'importance')" },
+                    "field": { "type": "string", "description": "Numeric: importance | created_at | epoch. Categorical (count only): source | domain | class | status | galaxy" },
                     "op": { "type": "string", "enum": ["count", "sum", "avg", "min", "max"], "description": "Aggregation operator" },
                     "query": { "type": "string", "description": "Full-text query selecting the memories to aggregate over" },
-                    "metric": { "type": "string", "description": "Aggregate metric: count | session_count | session_span" },
+                    "metric": { "type": "string", "enum": ["count", "session_count", "session_span"], "description": "Alternative metric over matched records: count | session_count | session_span" },
                     "limit": { "type": "integer", "minimum": 1, "description": "Maximum candidates considered (default 50; must be >= 1)" }
                 }
             }
@@ -895,12 +1010,12 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
         {
             "name": "memory.pin",
             "title": "Pin Memory",
-            "description": format!("Pin a critical memory against decay, sweep compaction, and forgetting.{mode_hint}"),
+            "description": format!("Durably pin a critical memory against decay, sweep compaction, and forgetting, or release it with pinned=false.{mode_hint}"),
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "id": { "description": "Memory UUID or numeric record ID to pin" },
-                    "galaxy": { "type": "string", "description": "Galaxy (default: codex)" },
+                    "galaxy": { "type": "string", "description": "Optional galaxy this record must belong to (mismatch is refused)" },
                     "pinned": { "type": "boolean", "description": "true (default) = protect; false = release" }
                 },
                 "required": ["id"]
@@ -922,26 +1037,24 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
         {
             "name": "session.list",
             "title": "List Sessions",
-            "description": "List all active and historical agent sessions recorded in the substrate.",
+            "description": "List session lanes with turn count, last timestamp, latest preview, start-marker flag, and checkpoint presence.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "sequence": { "type": "integer", "description": "Filter by start sequence number" },
-                    "session_id": { "type": "string", "description": "Filter by session UUID" },
-                    "title": { "type": "string", "description": "Filter by title substring" },
-                    "type": { "type": "string", "description": "Filter by session type" }
+                    "session_id": { "type": "string", "description": "Filter to one session lane" },
+                    "limit": { "type": "integer", "minimum": 1, "description": "Maximum lanes to return (default 50)" }
                 }
             }
         },
         {
             "name": "session.recall",
             "title": "Recall Session Content",
-            "description": "Recall specific interactions and turns within a targeted session.",
+            "description": "Recall specific interactions and turns within a targeted session (optional content query and limit).",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "session_id": { "type": "string", "description": "Session ID" },
-                    "query": { "type": "string", "description": "Search query within session" },
+                    "query": { "type": "string", "description": "Case-insensitive content substring filter" },
                     "limit": { "type": "integer", "description": "Maximum turns to return (default 50)" }
                 }
             }
@@ -949,22 +1062,31 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
         {
             "name": "session.replay",
             "title": "Replay Session",
-            "description": "Replay the chronological trajectory of a session for audit and debugging.",
+            "description": "Replay the chronological trajectory of a session: 'full' returns all turns, 'selective' filters by min_importance/turn_types, and 'progressive' keeps the most recent turns within token_budget.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "session_id": { "type": "string", "description": "Session ID" },
                     "since": { "type": "string", "description": "Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD" },
                     "until": { "type": "string", "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD" },
-                    "n": { "type": "integer", "description": "Maximum turns (default 50)" },
+                    "n": { "type": "integer", "minimum": 1, "description": "Maximum turns (default 50)" },
                     "include_superseded": { "type": "boolean", "description": "Also return turns replaced via supersedes (default false)." },
-                    "cursor": { "type": "string", "description": "Lossless mode opaque placement cursor" },
                     "min_importance": { "type": "number", "description": "Selective mode floor (default 0.7)" },
-                    "page_size": { "type": "integer", "description": "Lossless mode records per page (default 16)" },
                     "token_budget": { "type": "integer", "description": "Progressive mode token budget (default 2000)" },
                     "turn_types": { "type": "array", "items": { "type": "string" }, "description": "Selective mode: turn types to keep" },
-                    "mode": { "type": "string", "description": "full | selective | progressive | lossless (default full)" },
-                    "max_wire_bytes": { "type": "integer", "description": "Lossless mode serialized JSON ceiling" }
+                    "mode": { "type": "string", "enum": ["full", "selective", "progressive"], "description": "Replay mode (default full)" }
+                }
+            }
+        },
+        {
+            "name": "session.digest",
+            "title": "Session Digest",
+            "description": "Compose a read-only digest from typed session-log turns and the latest checkpoint (markdown text plus JSON).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "session_id": { "type": "string", "description": "Target session (default: most recent lane)" },
+                    "n": { "type": "integer", "minimum": 1, "description": "Maximum turns to include (default 20)" }
                 }
             }
         },
@@ -1161,11 +1283,13 @@ pub fn execute_hybrid_tool_call(
             handle_session_checkpoint(args, substrate, readonly)
         }
         "session.start" => handle_session_start(args, store_path),
-        "session.list" | "session_list" => handle_session_list(substrate, store_path),
-        "session.recall" | "session.replay" => handle_session_recall(args, store_path),
+        "session.list" | "session_list" => handle_session_list(args, substrate, store_path),
+        "session.recall" => handle_session_recall(args, store_path),
+        "session.replay" => handle_session_replay(args, store_path),
+        "session.digest" => handle_session_digest(args, substrate, store_path),
 
         // ── Receipts & Evidence ────────────────────────────────────────────
-        "receipts.emit" => handle_receipts_emit(args, store_path, readonly),
+        "receipts.emit" => handle_receipts_emit(args, substrate, store_path, readonly),
         "receipts.verify" => handle_receipts_verify(args, store_path),
 
         // ── Mandala OS & Sandboxing ────────────────────────────────────────
@@ -1370,6 +1494,13 @@ fn handle_memory_create(
         Some(Err(e)) => return Err(format!("Substrate memory ingestion error: {e}")),
         None => return Err("Ingestion produced no output".to_string()),
     };
+
+    append_record_meta(
+        substrate.store().path(),
+        rec_id,
+        &tags,
+        args.get("importance").and_then(Value::as_f64),
+    );
 
     let uuid = if let Some(uuid_str) = args.get("uuid").and_then(Value::as_str) {
         if let Ok(parsed) = Uuid::parse_str(uuid_str) {
@@ -1627,7 +1758,12 @@ fn handle_galaxy_create(
     }))
 }
 
-fn handle_memory_pin(args: &Value, substrate: &Substrate, readonly: bool) -> Result<Value, String> {
+fn handle_memory_pin(
+    args: &Value,
+    substrate: &mut Substrate,
+    readonly: bool,
+) -> Result<Value, String> {
+    reject_unknown_args("memory.pin", args)?;
     if readonly {
         return Err("read-only mode: memory.pin refused".to_string());
     }
@@ -1638,6 +1774,24 @@ fn handle_memory_pin(args: &Value, substrate: &Substrate, readonly: bool) -> Res
     let record_id = resolve_id_to_u64(id_val, substrate)
         .ok_or_else(|| format!("Record not found: {id_val}"))?;
 
+    if let Some(galaxy) = args.get("galaxy").and_then(Value::as_str) {
+        let record = substrate
+            .store()
+            .get_record(record_id)
+            .map_err(|e| format!("Store read error: {e}"))?
+            .ok_or_else(|| format!("Record {record_id} does not exist in store"))?;
+        let actual = crate::starter_galaxy::extract_galaxy_from_source(record.source());
+        if actual != galaxy {
+            return Err(format!(
+                "record {record_id} belongs to galaxy '{actual}', not '{galaxy}'"
+            ));
+        }
+    }
+
+    let pinned = args.get("pinned").and_then(Value::as_bool).unwrap_or(true);
+    substrate.set_pin(record_id, pinned)?;
+    let actual_state = substrate.is_pinned(record_id);
+
     let uuid = substrate
         .lookup_uuid_by_id(record_id)
         .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &record_id.to_be_bytes()));
@@ -1646,8 +1800,12 @@ fn handle_memory_pin(args: &Value, substrate: &Substrate, readonly: bool) -> Res
         "status": "success",
         "id": uuid.to_string(),
         "record_id": record_id,
-        "pinned": true,
-        "message": "Memory pinned against sweep decay and forgetting"
+        "pinned": actual_state,
+        "message": if actual_state {
+            "Memory pinned against sweep decay and forgetting"
+        } else {
+            "Memory released; normal decay and compaction apply"
+        }
     }))
 }
 
@@ -1741,6 +1899,7 @@ fn handle_memory_update(
     substrate: &mut Substrate,
     readonly: bool,
 ) -> Result<Value, String> {
+    reject_unknown_args("memory.update", args)?;
     if readonly {
         return Err("read-only mode: memory.update refused".to_string());
     }
@@ -1753,11 +1912,31 @@ fn handle_memory_update(
     let content = args
         .get("content")
         .and_then(Value::as_str)
-        .ok_or_else(|| "Missing parameter 'content'".to_string())?;
+        .ok_or_else(|| "Missing required parameter 'content'".to_string())?;
+    if content.trim().is_empty() {
+        return Err("Parameter 'content' cannot be empty".to_string());
+    }
+    let reason = args
+        .get("reason")
+        .and_then(Value::as_str)
+        .unwrap_or("memory.update");
+
+    let prior_source = substrate
+        .store()
+        .get_record(old_id)
+        .map_err(|e| format!("Store read error: {e}"))?
+        .ok_or_else(|| format!("Record {old_id} does not exist in store"))?
+        .source()
+        .to_string();
+    let source = if prior_source.starts_with("corpus:") {
+        format!("{prior_source}:revision")
+    } else {
+        "agent:update".to_string()
+    };
 
     let item = RememberItem {
         content: content.to_string(),
-        source: "agent:update".to_string(),
+        source,
         kind: ImportKind::Reported,
     };
 
@@ -1769,6 +1948,7 @@ fn handle_memory_update(
         None => return Err("Update produced no output".to_string()),
     };
 
+    let revision = substrate.record_revision(old_id, new_id, reason)?;
     let new_uuid = substrate.get_or_create_uuid(new_id);
 
     Ok(json!({
@@ -1777,11 +1957,13 @@ fn handle_memory_update(
         "record_id": new_id,
         "uuid": new_uuid.to_string(),
         "superseded_record_id": old_id,
-        "message": "Memory updated with cryptographic revision link"
+        "revision": revision,
+        "message": "Memory updated; prior record superseded by a durable revision entry"
     }))
 }
 
 fn handle_memory_revisions(args: &Value, substrate: &Substrate) -> Result<Value, String> {
+    reject_unknown_args("memory.revisions", args)?;
     let id_val = args
         .get("id")
         .ok_or_else(|| "Missing required parameter 'id'".to_string())?;
@@ -1792,19 +1974,30 @@ fn handle_memory_revisions(args: &Value, substrate: &Substrate) -> Result<Value,
         .lookup_uuid_by_id(rec_id)
         .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &rec_id.to_be_bytes()));
 
-    Ok(json!({
-        "status": "success",
-        "id": uuid.to_string(),
-        "record_id": rec_id,
-        "revisions": [
-            {
-                "revision": 1,
+    match args.get("action").and_then(Value::as_str).unwrap_or("list") {
+        "list" => {
+            let revisions = substrate.revision_chain(rec_id);
+            Ok(json!({
+                "status": "success",
+                "id": uuid.to_string(),
                 "record_id": rec_id,
-                "uuid": uuid.to_string(),
-                "head": true
-            }
-        ]
-    }))
+                "count": revisions.len(),
+                "revisions": revisions
+            }))
+        }
+        "verify" => {
+            let report = substrate.verify_revision_chain(rec_id)?;
+            Ok(json!({
+                "status": "success",
+                "id": uuid.to_string(),
+                "record_id": rec_id,
+                "verify": report
+            }))
+        }
+        other => Err(format!(
+            "memory.revisions refuses action '{other}': supported actions are 'list' and 'verify'"
+        )),
+    }
 }
 
 fn handle_memory_associations(args: &Value, substrate: &Substrate) -> Result<Value, String> {
@@ -1871,15 +2064,195 @@ fn handle_memory_tags(substrate: &Substrate) -> Result<Value, String> {
     }))
 }
 
-fn handle_memory_aggregate(args: &Value, substrate: &Substrate) -> Result<Value, String> {
-    let count = substrate.store().record_count().unwrap_or(0);
-    let op = args.get("op").and_then(Value::as_str).unwrap_or("count");
+/// Read `<store>/record_meta.jsonl` (written by `wm ingest` and by
+/// `memory.create` when tags/importance are supplied) into `record_id -> importance`.
+fn read_record_importance(store_path: &Path) -> HashMap<u64, f64> {
+    let mut importance = HashMap::new();
+    let Ok(content) = std::fs::read_to_string(store_path.join("record_meta.jsonl")) else {
+        return importance;
+    };
+    for line in content.lines() {
+        if let Ok(value) = serde_json::from_str::<Value>(line.trim()) {
+            if let (Some(id), Some(score)) = (
+                value.get("record_id").and_then(Value::as_u64),
+                value.get("importance").and_then(Value::as_f64),
+            ) {
+                importance.insert(id, score);
+            }
+        }
+    }
+    importance
+}
+
+fn handle_memory_aggregate(args: &Value, substrate: &mut Substrate) -> Result<Value, String> {
+    reject_unknown_args("memory.aggregate", args)?;
+    let op = args.get("op").and_then(Value::as_str);
+    let field = args.get("field").and_then(Value::as_str);
+    let metric = args.get("metric").and_then(Value::as_str);
+    let query = args.get("query").and_then(Value::as_str);
+    let limit = args
+        .get("limit")
+        .and_then(Value::as_u64)
+        .unwrap_or(50)
+        .max(1) as usize;
+
+    if metric.is_some() && field.is_some() {
+        return Err("memory.aggregate accepts either 'field' or 'metric', not both".to_string());
+    }
+
+    let query = query.map(str::trim).filter(|q| !q.is_empty() && *q != "*");
+    let matched_ids: Vec<u64> = match query {
+        Some(query) => substrate
+            .recall(&RecallQuery {
+                query: query.to_string(),
+                limit,
+                candidate_limit: limit.max(100),
+                include_historical: true,
+                min_score: 0.0,
+                min_coverage: 0.0,
+                scope: None,
+            })
+            .map_err(|e| format!("aggregate query failed: {e}"))?
+            .into_iter()
+            .map(|hit| hit.id)
+            .collect(),
+        None => substrate
+            .store()
+            .iter_records()
+            .map_err(|e| format!("aggregate scan failed: {e}"))?
+            .into_iter()
+            .take(limit)
+            .map(|record| record.id())
+            .collect(),
+    };
+
+    if let Some(metric) = metric {
+        let session_ids: HashSet<String> = matched_ids
+            .iter()
+            .filter_map(|id| {
+                substrate
+                    .store()
+                    .get_record(*id)
+                    .ok()
+                    .flatten()
+                    .map(|record| record.source().to_string())
+            })
+            .filter(|source| source.starts_with("session:"))
+            .filter_map(|source| {
+                source
+                    .split(':')
+                    .nth(1)
+                    .filter(|id| !id.is_empty())
+                    .map(str::to_string)
+            })
+            .collect();
+        let aggregate = match metric {
+            "count" => json!(matched_ids.len()),
+            "session_count" => json!(session_ids.len()),
+            "session_span" => {
+                let mut span: Vec<u64> = matched_ids
+                    .iter()
+                    .filter_map(|id| substrate.store().get_record(*id).ok().flatten())
+                    .filter(|record| record.source().starts_with("session:"))
+                    .map(|record| record.created_at())
+                    .collect();
+                span.sort_unstable();
+                match (span.first(), span.last()) {
+                    (Some(first), Some(last)) => json!(last.saturating_sub(*first)),
+                    _ => json!(0),
+                }
+            }
+            other => {
+                return Err(format!(
+                    "memory.aggregate refuses metric '{other}': supported metrics are 'count', 'session_count', 'session_span'"
+                ));
+            }
+        };
+        return Ok(json!({
+            "status": "success",
+            "op": "count",
+            "metric": metric,
+            "aggregate": aggregate,
+            "sample_size": matched_ids.len()
+        }));
+    }
+
+    let Some(field) = field else {
+        let op = op.unwrap_or("count");
+        if op != "count" {
+            return Err(format!(
+                "memory.aggregate requires 'field' for op '{op}'; only op 'count' works without a field"
+            ));
+        }
+        return Ok(json!({
+            "status": "success",
+            "op": "count",
+            "aggregate": matched_ids.len(),
+            "sample_size": matched_ids.len()
+        }));
+    };
+    let op = op.unwrap_or("count");
+    if !matches!(op, "count" | "sum" | "avg" | "min" | "max") {
+        return Err(format!(
+            "memory.aggregate refuses op '{op}': supported ops are count, sum, avg, min, max"
+        ));
+    }
+
+    if matches!(field, "source" | "domain" | "class" | "status" | "galaxy") {
+        if op != "count" {
+            return Err(format!(
+                "field '{field}' is categorical; only op 'count' is supported"
+            ));
+        }
+        return Ok(json!({
+            "status": "success",
+            "op": "count",
+            "field": field,
+            "aggregate": matched_ids.len(),
+            "sample_size": matched_ids.len()
+        }));
+    }
+
+    let mut values: Vec<f64> = Vec::new();
+    match field {
+        "created_at" | "epoch" => {
+            for id in &matched_ids {
+                if let Ok(Some(record)) = substrate.store().get_record(*id) {
+                    values.push(record.created_at() as f64);
+                }
+            }
+        }
+        "importance" => {
+            let importance = read_record_importance(substrate.store().path());
+            for id in &matched_ids {
+                if let Some(score) = importance.get(id) {
+                    values.push(*score);
+                }
+            }
+        }
+        other => {
+            return Err(format!(
+                "memory.aggregate refuses field '{other}': numeric fields are 'importance', 'created_at', 'epoch'; categorical fields are 'source', 'domain', 'class', 'status', 'galaxy'"
+            ));
+        }
+    }
+
+    let aggregate = match (op, values.is_empty()) {
+        ("count", _) => json!(values.len()),
+        (_, true) => Value::Null,
+        ("sum", false) => json!(values.iter().sum::<f64>()),
+        ("avg", false) => json!(values.iter().sum::<f64>() / values.len() as f64),
+        ("min", false) => json!(values.iter().copied().fold(f64::INFINITY, f64::min)),
+        ("max", false) => json!(values.iter().copied().fold(f64::NEG_INFINITY, f64::max)),
+        _ => Value::Null,
+    };
 
     Ok(json!({
         "status": "success",
         "op": op,
-        "aggregate": count,
-        "sample_size": count
+        "field": field,
+        "aggregate": aggregate,
+        "sample_size": values.len()
     }))
 }
 
@@ -1921,31 +2294,432 @@ fn handle_memory_query(args: &Value, substrate: &mut Substrate) -> Result<Value,
     }))
 }
 
+/// Append one `record_meta.jsonl` entry (tags/importance) for an ingested record.
+fn append_record_meta(store_path: &Path, record_id: u64, tags: &[String], importance: Option<f64>) {
+    if tags.is_empty() && importance.is_none() {
+        return;
+    }
+    let ingested_at_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    let entry = json!({
+        "record_id": record_id,
+        "tags": tags,
+        "importance": importance.unwrap_or(0.0),
+        "ingested_at_ms": ingested_at_ms,
+    });
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(store_path.join("record_meta.jsonl"))
+    {
+        let _ = writeln!(file, "{entry}");
+    }
+}
+
+/// Scrub credential-shaped tokens from ingest content. Returns the cleaned
+/// text and the number of tokens redacted.
+fn scrub_credentials(text: &str) -> (String, usize) {
+    let mut redacted = 0usize;
+    let cleaned: Vec<String> = text
+        .split_whitespace()
+        .map(|token| {
+            let shaped = [
+                "sk-",
+                "sk_",
+                "ghp_",
+                "gho_",
+                "github_pat_",
+                "xoxb-",
+                "xoxp-",
+                "AKIA",
+                "AIza",
+            ]
+            .iter()
+            .any(|prefix| token.starts_with(prefix));
+            if shaped {
+                redacted += 1;
+                "[REDACTED]".to_string()
+            } else {
+                token.to_string()
+            }
+        })
+        .collect();
+    (cleaned.join(" "), redacted)
+}
+
+fn ingest_kind(value: Option<&Value>) -> ImportKind {
+    match value.and_then(Value::as_str).map(str::to_ascii_lowercase) {
+        Some(kind) if kind == "system" => ImportKind::System,
+        Some(kind) if kind == "simulated" => ImportKind::Simulated,
+        _ => ImportKind::Reported,
+    }
+}
+
+/// Parse one inline ingest item into a remember item plus optional metadata.
+#[allow(clippy::type_complexity)]
+fn parse_ingest_item(
+    value: &Value,
+    default_source: &str,
+) -> Result<(RememberItem, Option<(Vec<String>, Option<f64>)>), String> {
+    match value {
+        Value::String(text) => {
+            let content = text.trim();
+            if content.is_empty() {
+                return Err("ingest item content cannot be empty".to_string());
+            }
+            Ok((
+                RememberItem {
+                    content: content.to_string(),
+                    source: default_source.to_string(),
+                    kind: ImportKind::Reported,
+                },
+                None,
+            ))
+        }
+        Value::Object(object) => {
+            let content = object
+                .get("content")
+                .and_then(Value::as_str)
+                .ok_or_else(|| "ingest item object requires string 'content'".to_string())?;
+            if content.trim().is_empty() {
+                return Err("ingest item content cannot be empty".to_string());
+            }
+            let source = object
+                .get("source")
+                .and_then(Value::as_str)
+                .unwrap_or(default_source)
+                .to_string();
+            let kind = ingest_kind(object.get("kind"));
+            let tags: Vec<String> = object
+                .get("tags")
+                .and_then(Value::as_array)
+                .map(|array| {
+                    array
+                        .iter()
+                        .filter_map(Value::as_str)
+                        .map(str::to_string)
+                        .collect()
+                })
+                .unwrap_or_default();
+            let importance = object.get("importance").and_then(Value::as_f64);
+            let meta = if tags.is_empty() && importance.is_none() {
+                None
+            } else {
+                Some((tags, importance))
+            };
+            Ok((
+                RememberItem {
+                    content: content.to_string(),
+                    source,
+                    kind,
+                },
+                meta,
+            ))
+        }
+        _ => Err("ingest items must be strings or objects with 'content'".to_string()),
+    }
+}
+
+/// Parse JSONL text: each line is a JSON item object or a plain text line.
+#[allow(clippy::type_complexity)]
+fn parse_ingest_jsonl(
+    raw: &str,
+    default_source: &str,
+) -> Result<Vec<(RememberItem, Option<(Vec<String>, Option<f64>)>)>, String> {
+    let mut items = Vec::new();
+    for (index, line) in raw.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let line_no = index + 1;
+        if trimmed.starts_with('{') {
+            let value: Value = serde_json::from_str(trimmed)
+                .map_err(|e| format!("items_jsonl line {line_no}: malformed JSON: {e}"))?;
+            items.push(
+                parse_ingest_item(&value, default_source)
+                    .map_err(|e| format!("items_jsonl line {line_no}: {e}"))?,
+            );
+        } else if trimmed.starts_with('[') {
+            return Err(format!(
+                "items_jsonl line {line_no}: arrays are not accepted; one item per line"
+            ));
+        } else {
+            items.push((
+                RememberItem {
+                    content: trimmed.to_string(),
+                    source: default_source.to_string(),
+                    kind: ImportKind::Reported,
+                },
+                None,
+            ));
+        }
+    }
+    Ok(items)
+}
+
 fn handle_memory_ingest(
     args: &Value,
-    _substrate: &mut Substrate,
+    substrate: &mut Substrate,
     readonly: bool,
 ) -> Result<Value, String> {
+    reject_unknown_args("memory.ingest", args)?;
     if readonly {
         return Err("read-only mode: memory.ingest refused".to_string());
     }
-    let source = args
-        .get("source")
+    let galaxy = args
+        .get("galaxy")
         .and_then(Value::as_str)
-        .ok_or_else(|| "Missing required parameter 'source'".to_string())?;
-
+        .unwrap_or("codex");
+    let default_source = format!("corpus:{galaxy}:ingest");
     let dry_run = args.get("dry_run").and_then(Value::as_bool).unwrap_or(true);
+    let redact = args.get("redact").and_then(Value::as_bool).unwrap_or(true);
+    let limit = args
+        .get("limit")
+        .and_then(Value::as_u64)
+        .map(|value| value as usize);
+
+    let mut candidates: Vec<(RememberItem, Option<(Vec<String>, Option<f64>)>)> = Vec::new();
+
+    if let Some(items) = args.get("items") {
+        let array = items
+            .as_array()
+            .ok_or_else(|| "'items' must be an array".to_string())?;
+        for (index, item) in array.iter().enumerate() {
+            candidates.push(
+                parse_ingest_item(item, &default_source)
+                    .map_err(|e| format!("items[{index}]: {e}"))?,
+            );
+        }
+    }
+    if let Some(jsonl) = args.get("items_jsonl").and_then(Value::as_str) {
+        candidates.extend(parse_ingest_jsonl(jsonl, &default_source)?);
+    }
+    if let Some(text) = args.get("text").and_then(Value::as_str) {
+        if !text.trim().is_empty() {
+            candidates.push((
+                RememberItem {
+                    content: text.to_string(),
+                    source: default_source.clone(),
+                    kind: ImportKind::Reported,
+                },
+                None,
+            ));
+        }
+    }
+    if let Some(source) = args.get("source").and_then(Value::as_str) {
+        let path = Path::new(source);
+        if !path.is_file() {
+            return Err(format!(
+                "memory.ingest source '{source}' is not a readable file (directory harvest is not supported; use `wm ingest`)"
+            ));
+        }
+        let content = std::fs::read_to_string(path)
+            .map_err(|e| format!("memory.ingest source read failed: {e}"))?;
+        candidates.extend(parse_ingest_jsonl(&content, &default_source)?);
+    }
+
+    if candidates.is_empty() {
+        return Err(
+            "memory.ingest requires one of 'items', 'items_jsonl', 'text', or 'source'".to_string(),
+        );
+    }
+    if let Some(limit) = limit {
+        candidates.truncate(limit);
+    }
+
+    let mut redacted_tokens = 0usize;
+    if redact {
+        for (item, _) in &mut candidates {
+            let (cleaned, count) = scrub_credentials(&item.content);
+            item.content = cleaned;
+            redacted_tokens += count;
+        }
+    }
+
+    let considered = candidates.len();
+    if dry_run {
+        return Ok(json!({
+            "status": "success",
+            "dry_run": true,
+            "would_ingest": considered,
+            "records_ingested": 0,
+            "duplicates": 0,
+            "refused": 0,
+            "redacted_tokens": redacted_tokens,
+            "galaxy": galaxy,
+            "epoch": substrate.store().epoch().unwrap_or(0),
+            "message": "dry run: no records written"
+        }));
+    }
+
+    substrate.set_intake_authority(RatifiedChannel::mint("wm-mcp-ingest"));
+    let items: Vec<RememberItem> = candidates.iter().map(|(item, _)| item.clone()).collect();
+    let results = substrate.remember_batch(&items);
+    let mut records_ingested = 0usize;
+    let mut duplicates = 0usize;
+    let mut refused = 0usize;
+    for (index, result) in results.into_iter().enumerate() {
+        match result {
+            Ok(id) => {
+                records_ingested += 1;
+                if let Some((tags, importance)) = &candidates[index].1 {
+                    append_record_meta(substrate.store().path(), id, tags, *importance);
+                }
+            }
+            Err(error) if error.contains("duplicate") => duplicates += 1,
+            Err(_) => refused += 1,
+        }
+    }
 
     Ok(json!({
         "status": "success",
-        "source": source,
-        "dry_run": dry_run,
-        "records_ingested": 0,
-        "message": "Harvest evaluation complete (use 'wm ingest' for direct bulk stream)"
+        "dry_run": false,
+        "records_ingested": records_ingested,
+        "duplicates": duplicates,
+        "refused": refused,
+        "redacted_tokens": redacted_tokens,
+        "galaxy": galaxy,
+        "epoch": substrate.store().epoch().unwrap_or(0)
     }))
 }
 
 // ── Session Implementations ────────────────────────────────────────────────
+
+fn now_epoch_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// Read and derive the typed session log. Supersession is recomputed from
+/// `supersedes` links, never trusted from a stored `superseded_by`.
+fn read_session_turns(store_path: &Path) -> Vec<SessionTurn> {
+    let mut turns: Vec<SessionTurn> = Vec::new();
+    if let Ok(content) = std::fs::read_to_string(store_path.join("session_log.jsonl")) {
+        for line in content.lines() {
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            if let Ok(mut turn) = serde_json::from_str::<SessionTurn>(trimmed) {
+                turn.superseded_by = None;
+                turns.push(turn);
+            }
+        }
+    }
+    let links: Vec<(String, String)> = turns
+        .iter()
+        .filter_map(|turn| {
+            turn.supersedes
+                .as_ref()
+                .map(|prior| (prior.clone(), turn.turn_id.clone()))
+        })
+        .collect();
+    for (prior, new) in links {
+        for turn in turns.iter_mut() {
+            if turn.turn_id == prior {
+                turn.superseded_by = Some(new.clone());
+            }
+        }
+    }
+    turns
+}
+
+/// Parse an epoch-seconds, RFC 3339, or `YYYY-MM-DD` time bound.
+fn parse_time_bound(raw: &str) -> Result<u64, String> {
+    let text = raw.trim();
+    if text.is_empty() {
+        return Err("time bound cannot be empty".to_string());
+    }
+    if text.chars().all(|c| c.is_ascii_digit()) {
+        return text
+            .parse::<u64>()
+            .map_err(|e| format!("invalid epoch seconds '{text}': {e}"));
+    }
+    if let Ok(timestamp) = DateTime::parse_from_rfc3339(text) {
+        return Ok(timestamp.timestamp().max(0) as u64);
+    }
+    if let Ok(date) = NaiveDate::parse_from_str(text, "%Y-%m-%d") {
+        if let Some(datetime) = date.and_hms_opt(0, 0, 0) {
+            return Ok(datetime.and_utc().timestamp().max(0) as u64);
+        }
+    }
+    Err(format!(
+        "unsupported time bound '{text}' (use epoch seconds, RFC 3339, or YYYY-MM-DD)"
+    ))
+}
+
+fn truncate_utf8(text: &str, max_bytes: usize) -> String {
+    if text.len() <= max_bytes {
+        return text.to_string();
+    }
+    let mut end = max_bytes;
+    while end > 0 && !text.is_char_boundary(end) {
+        end -= 1;
+    }
+    text[..end].to_string()
+}
+
+fn preview(text: &str, max: usize) -> String {
+    let trimmed = text.trim();
+    if trimmed.chars().count() <= max {
+        trimmed.to_string()
+    } else {
+        let cut: String = trimmed.chars().take(max).collect();
+        format!("{cut}…")
+    }
+}
+
+fn compose_briefing(
+    session: &str,
+    checkpoint: Option<&SessionContinuityView>,
+    turns: &[SessionTurn],
+) -> String {
+    let mut out = String::new();
+    out.push_str(&format!("Session {session}\n"));
+    match checkpoint {
+        Some(cp) => {
+            out.push_str(&format!(
+                "Checkpoint [{}]: {}\n",
+                cp.checkpoint_type, cp.summary
+            ));
+            if let Some(commit) = &cp.commit {
+                out.push_str(&format!("Commit: {commit}\n"));
+            }
+            if let Some(branch) = &cp.branch {
+                out.push_str(&format!("Branch: {branch}\n"));
+            }
+            if let Some(true) = cp.tests_green {
+                out.push_str("Tests: green\n");
+            }
+            if !cp.next_queue.is_empty() {
+                out.push_str("Next queue:\n");
+                for item in &cp.next_queue {
+                    out.push_str(&format!("- [ ] {item}\n"));
+                }
+            }
+            if !cp.open_flags.is_empty() {
+                out.push_str("Open flags:\n");
+                for flag in &cp.open_flags {
+                    out.push_str(&format!("- {flag}\n"));
+                }
+            }
+        }
+        None => out.push_str("No checkpoint recorded.\n"),
+    }
+    if let Some(last) = turns.last() {
+        out.push_str(&format!(
+            "Latest turn ({}): {}\n",
+            last.turn_type,
+            preview(&last.content, 160)
+        ));
+    }
+    out
+}
 
 fn handle_session_record(
     args: &Value,
@@ -1953,6 +2727,7 @@ fn handle_session_record(
     store_path: &Path,
     readonly: bool,
 ) -> Result<Value, String> {
+    reject_unknown_args("session.record", args)?;
     if readonly {
         return Err("read-only mode: session writes refused".to_string());
     }
@@ -1967,23 +2742,36 @@ fn handle_session_record(
         .or_else(|| last_session_lane(store_path))
         .unwrap_or_else(|| "default".to_string());
     let role = args.get("role").and_then(Value::as_str).unwrap_or("user");
+    let agent_id = args.get("agent_id").and_then(Value::as_str);
+    let log_type = args.get("log_type").and_then(Value::as_str);
     let turn_type = args
         .get("turn_type")
         .and_then(Value::as_str)
+        .or(log_type)
         .unwrap_or("message");
     let importance = args
         .get("importance")
         .and_then(Value::as_f64)
         .unwrap_or(0.5);
+    let track = args.get("track").and_then(Value::as_str);
+    let supersedes = args.get("supersedes").and_then(Value::as_str);
+
+    if let Some(prior_turn) = supersedes {
+        let exists = read_session_turns(store_path)
+            .iter()
+            .any(|turn| turn.turn_id == prior_turn && turn.session_id == session_id);
+        if !exists {
+            return Err(format!(
+                "session.record cannot supersede turn '{prior_turn}': no such turn id in lane '{session_id}'"
+            ));
+        }
+    }
 
     let session_log = store_path.join("session_log.jsonl");
     let turn_id = Uuid::new_v4().to_string();
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
+    let now = now_epoch_secs();
 
-    let entry = json!({
+    let mut entry = json!({
         "turn_id": turn_id,
         "session_id": session_id,
         "role": role,
@@ -1992,6 +2780,15 @@ fn handle_session_record(
         "importance": importance,
         "timestamp": now
     });
+    if let Some(track) = track {
+        entry["track"] = json!(track);
+    }
+    if let Some(agent_id) = agent_id {
+        entry["agent_id"] = json!(agent_id);
+    }
+    if let Some(supersedes) = supersedes {
+        entry["supersedes"] = json!(supersedes);
+    }
 
     if let Ok(mut file) = std::fs::OpenOptions::new()
         .create(true)
@@ -2002,9 +2799,14 @@ fn handle_session_record(
     }
 
     // Ingest into substrate as an evidence record
+    let source = match (agent_id, log_type) {
+        (Some(agent), Some(log_type)) => format!("session:{session_id}:{agent}:{log_type}"),
+        (Some(agent), None) => format!("session:{session_id}:{agent}"),
+        _ => format!("session:{session_id}"),
+    };
     let item = RememberItem {
         content: format!("[session:{session_id}] {role}: {content}"),
-        source: format!("session:{session_id}"),
+        source,
         kind: ImportKind::Reported,
     };
     substrate.set_intake_authority(RatifiedChannel::mint("wm-session-turn"));
@@ -2014,44 +2816,152 @@ fn handle_session_record(
         "status": "success",
         "turn_id": turn_id,
         "session_id": session_id,
+        "track": track,
+        "supersedes": supersedes,
         "recorded_at": now
     }))
 }
 
 fn handle_session_continuity(
     args: &Value,
-    _substrate: &Substrate,
+    substrate: &Substrate,
     store_path: &Path,
 ) -> Result<Value, String> {
-    let session_id = args.get("session_id").and_then(Value::as_str);
+    reject_unknown_args("session.continuity", args)?;
+    let explicit_session = args.get("session_id").and_then(Value::as_str);
+    let current_session = args.get("current_session_id").and_then(Value::as_str);
     let n = args.get("n").and_then(Value::as_u64).unwrap_or(5) as usize;
+    let since = args
+        .get("since")
+        .and_then(Value::as_str)
+        .map(parse_time_bound)
+        .transpose()?;
+    let until = args
+        .get("until")
+        .and_then(Value::as_str)
+        .map(parse_time_bound)
+        .transpose()?;
+    if let (Some(since), Some(until)) = (since, until) {
+        if since > until {
+            return Err("session.continuity: 'since' is after 'until'".to_string());
+        }
+    }
+    let max_content_bytes = args
+        .get("max_content_bytes")
+        .and_then(Value::as_u64)
+        .unwrap_or(8192) as usize;
+    let max_response_bytes = args
+        .get("max_response_bytes")
+        .and_then(Value::as_u64)
+        .unwrap_or(49152) as usize;
+    let include_briefing = args
+        .get("include_briefing_text")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
 
-    let session_log = store_path.join("session_log.jsonl");
-    let mut turns = Vec::new();
+    let all_turns = read_session_turns(store_path);
+    let effective_session = explicit_session.map(str::to_string).or_else(|| {
+        all_turns
+            .iter()
+            .rev()
+            .map(|turn| turn.session_id.as_str())
+            .find(|lane| !lane.is_empty() && Some(*lane) != current_session)
+            .map(str::to_string)
+    });
 
-    if let Ok(content) = std::fs::read_to_string(&session_log) {
-        for line in content.lines().rev() {
-            if let Ok(val) = serde_json::from_str::<Value>(line) {
-                if let Some(target) = session_id {
-                    if val["session_id"].as_str() != Some(target) {
-                        continue;
-                    }
-                }
-                turns.push(val);
-                if turns.len() >= n {
-                    break;
-                }
+    let mut turns: Vec<SessionTurn> = all_turns
+        .into_iter()
+        .filter(|turn| match &effective_session {
+            Some(lane) => turn.session_id == *lane,
+            None => true,
+        })
+        .filter(|turn| !turn.is_start_marker())
+        .filter(|turn| since.is_none_or(|floor| turn.timestamp >= floor))
+        .filter(|turn| until.is_none_or(|ceiling| turn.timestamp <= ceiling))
+        .filter(|turn| turn.superseded_by.is_none())
+        .collect();
+
+    let mut content_truncated = 0usize;
+    if max_content_bytes > 0 {
+        for turn in &mut turns {
+            if turn.content.len() > max_content_bytes {
+                turn.content = truncate_utf8(&turn.content, max_content_bytes);
+                content_truncated += 1;
             }
         }
     }
-    turns.reverse();
 
-    Ok(json!({
+    let total_turns = turns.len();
+    if turns.len() > n {
+        turns.drain(..turns.len() - n);
+    }
+
+    let mut recent: Vec<SessionTurn> = Vec::new();
+    let mut response_bytes = 0usize;
+    for turn in turns.iter().rev() {
+        let size = serde_json::to_string(turn).map(|s| s.len()).unwrap_or(0) + 1;
+        if !recent.is_empty() && response_bytes + size > max_response_bytes {
+            break;
+        }
+        response_bytes += size;
+        recent.push(turn.clone());
+    }
+    recent.reverse();
+    let turns_omitted = total_turns.saturating_sub(recent.len());
+
+    let session_label = effective_session
+        .clone()
+        .unwrap_or_else(|| "all".to_string());
+    let checkpoint = substrate
+        .session_continuity(effective_session.as_deref())
+        .ok()
+        .flatten()
+        .filter(|view| {
+            let in_floor = since.is_none_or(|floor| {
+                view.timestamp_iso
+                    .as_deref()
+                    .and_then(|ts| DateTime::parse_from_rfc3339(ts).ok())
+                    .is_none_or(|ts| ts.timestamp().max(0) as u64 >= floor)
+            });
+            let in_ceiling = until.is_none_or(|ceiling| {
+                view.timestamp_iso
+                    .as_deref()
+                    .and_then(|ts| DateTime::parse_from_rfc3339(ts).ok())
+                    .is_none_or(|ts| ts.timestamp().max(0) as u64 <= ceiling)
+            });
+            in_floor && in_ceiling
+        });
+
+    let next_queue = checkpoint
+        .as_ref()
+        .map(|view| view.next_queue.clone())
+        .unwrap_or_default();
+    let open_flags = checkpoint
+        .as_ref()
+        .map(|view| view.open_flags.clone())
+        .unwrap_or_default();
+    let briefing = include_briefing.then(|| {
+        json!({
+            "text": compose_briefing(&session_label, checkpoint.as_ref(), &recent),
+        })
+    });
+
+    let mut response = json!({
         "status": "success",
-        "session_id": session_id.unwrap_or("all"),
-        "turns_count": turns.len(),
-        "recent_turns": turns
-    }))
+        "session_id": session_label,
+        "turns_count": recent.len(),
+        "recent_turns": recent,
+        "turns_omitted": turns_omitted,
+        "content_truncated": content_truncated,
+        "next_queue": next_queue,
+        "open_flags": open_flags,
+        "checkpoint": checkpoint,
+    });
+    if let Some(briefing) = briefing {
+        response["briefing"] = briefing;
+    }
+
+    Ok(response)
 }
 
 fn handle_session_checkpoint(
@@ -2059,6 +2969,7 @@ fn handle_session_checkpoint(
     substrate: &mut Substrate,
     readonly: bool,
 ) -> Result<Value, String> {
+    reject_unknown_args("session.checkpoint", args)?;
     if readonly {
         return Err("read-only mode: session_checkpoint refused".to_string());
     }
@@ -2074,6 +2985,10 @@ fn handle_session_checkpoint(
         .get("agent_id")
         .and_then(Value::as_str)
         .unwrap_or("agent");
+    let checkpoint_type = args
+        .get("checkpoint_type")
+        .and_then(Value::as_str)
+        .unwrap_or("turn");
     let next_queue: Vec<String> = args
         .get("next_queue")
         .and_then(Value::as_array)
@@ -2094,28 +3009,50 @@ fn handle_session_checkpoint(
                 .collect()
         })
         .unwrap_or_default();
+    let track = args.get("track").and_then(Value::as_str);
+    let commit = args.get("commit").and_then(Value::as_str);
+    let branch = args.get("branch").and_then(Value::as_str);
+    let tests_green = args.get("tests_green").and_then(Value::as_bool);
+    let lease_id = args.get("lease_id").and_then(Value::as_str);
+    let context_token = args
+        .get("context_token")
+        .and_then(Value::as_str)
+        .map(str::to_string);
 
     let cp = SessionCheckpoint {
         session_id: session_id.to_string(),
         agent_id: agent_id.to_string(),
-        checkpoint_type: "turn".to_string(),
+        checkpoint_type: checkpoint_type.to_string(),
         summary: summary.to_string(),
         next_queue,
         open_flags,
-        context_token: None,
+        context_token,
         representation: None,
-        timestamp_iso: None,
+        timestamp_iso: Some(Utc::now().to_rfc3339()),
     };
+    let meta = json!({
+        "track": track,
+        "commit": commit,
+        "branch": branch,
+        "tests_green": tests_green,
+        "lease_id": lease_id,
+    });
 
     substrate.set_intake_authority(RatifiedChannel::mint("wm-session-checkpoint"));
     let rec_id = substrate
-        .session_checkpoint(&cp)
+        .session_checkpoint_enriched(&cp, &meta)
         .map_err(|e| format!("Failed to record checkpoint: {e}"))?;
 
     Ok(json!({
         "status": "success",
         "session_id": session_id,
         "checkpoint_record_id": rec_id,
+        "checkpoint_type": checkpoint_type,
+        "track": track,
+        "commit": commit,
+        "branch": branch,
+        "tests_green": tests_green,
+        "lease_id": lease_id,
         "epoch": substrate.store().epoch().unwrap_or(0)
     }))
 }
@@ -2175,88 +3112,637 @@ fn last_session_lane(store_path: &Path) -> Option<String> {
     })
 }
 
-fn handle_session_list(substrate: &Substrate, store_path: &Path) -> Result<Value, String> {
-    let mut sessions = std::collections::BTreeSet::new();
+#[derive(Default)]
+struct LaneSummary {
+    turn_count: usize,
+    last_timestamp: u64,
+    latest_preview: String,
+    latest_turn_type: String,
+    has_start_marker: bool,
+    has_checkpoint: bool,
+    tracks: std::collections::BTreeSet<String>,
+}
 
-    // 1. Check session_log.jsonl
-    let session_log = store_path.join("session_log.jsonl");
-    if let Ok(content) = std::fs::read_to_string(&session_log) {
-        for line in content.lines() {
-            if let Ok(val) = serde_json::from_str::<Value>(line) {
-                if let Some(s) = val.get("session_id").and_then(Value::as_str) {
-                    if !s.is_empty() {
-                        sessions.insert(s.to_string());
-                    }
-                }
+fn handle_session_list(
+    args: &Value,
+    substrate: &Substrate,
+    store_path: &Path,
+) -> Result<Value, String> {
+    reject_unknown_args("session.list", args)?;
+    let filter = args.get("session_id").and_then(Value::as_str);
+    let limit = args
+        .get("limit")
+        .and_then(Value::as_u64)
+        .unwrap_or(50)
+        .max(1) as usize;
+
+    let mut lanes: std::collections::BTreeMap<String, LaneSummary> =
+        std::collections::BTreeMap::new();
+    for turn in read_session_turns(store_path) {
+        if turn.session_id.is_empty() {
+            continue;
+        }
+        if filter.is_some_and(|lane| lane != turn.session_id) {
+            continue;
+        }
+        let entry = lanes.entry(turn.session_id.clone()).or_default();
+        if turn.is_start_marker() {
+            entry.has_start_marker = true;
+            continue;
+        }
+        entry.turn_count += 1;
+        if let Some(track) = &turn.track {
+            if !track.is_empty() {
+                entry.tracks.insert(track.clone());
             }
+        }
+        if turn.timestamp >= entry.last_timestamp {
+            entry.last_timestamp = turn.timestamp;
+            entry.latest_preview = preview(&turn.content, 120);
+            entry.latest_turn_type = turn.turn_type.clone();
         }
     }
 
-    // 2. Check session_checkpoint.json
-    let checkpoint = store_path.join("session_checkpoint.json");
-    if let Ok(content) = std::fs::read_to_string(&checkpoint) {
-        if let Ok(val) = serde_json::from_str::<Value>(&content) {
-            if let Some(s) = val.get("session_id").and_then(Value::as_str) {
-                if !s.is_empty() {
-                    sessions.insert(s.to_string());
-                }
-            }
+    // Checkpoint-only lanes recorded in the substrate.
+    for lane in substrate.session_list().unwrap_or_default() {
+        if filter.is_some_and(|wanted| wanted != lane) {
+            continue;
+        }
+        lanes.entry(lane).or_default();
+    }
+
+    let mut list: Vec<(String, LaneSummary)> = lanes.into_iter().collect();
+    for (lane, summary) in list.iter_mut() {
+        if !summary.has_checkpoint && !summary.has_start_marker {
+            summary.has_checkpoint = substrate
+                .session_continuity(Some(lane))
+                .ok()
+                .flatten()
+                .is_some();
         }
     }
+    list.sort_by(|(lane_a, a), (lane_b, b)| {
+        b.last_timestamp
+            .cmp(&a.last_timestamp)
+            .then_with(|| lane_a.cmp(lane_b))
+    });
+    list.truncate(limit);
 
-    // 3. Merge substrate sessions
-    for s in substrate.session_list().unwrap_or_default() {
-        sessions.insert(s);
-    }
+    let sessions: Vec<Value> = list
+        .into_iter()
+        .map(|(lane, summary)| {
+            json!({
+                "session_id": lane,
+                "turn_count": summary.turn_count,
+                "last_timestamp": summary.last_timestamp,
+                "latest_preview": summary.latest_preview,
+                "latest_turn_type": summary.latest_turn_type,
+                "has_start_marker": summary.has_start_marker,
+                "has_checkpoint": summary.has_checkpoint,
+                "tracks": summary.tracks.into_iter().collect::<Vec<String>>(),
+            })
+        })
+        .collect();
 
-    if sessions.is_empty() {
-        sessions.insert("default".to_string());
-    }
-
-    let list: Vec<String> = sessions.into_iter().collect();
     Ok(json!({
         "status": "success",
-        "count": list.len(),
-        "sessions": list
+        "count": sessions.len(),
+        "sessions": sessions
     }))
 }
 
 fn handle_session_recall(args: &Value, store_path: &Path) -> Result<Value, String> {
+    reject_unknown_args("session.recall", args)?;
     let session_id = args.get("session_id").and_then(Value::as_str);
-    let session_log = store_path.join("session_log.jsonl");
-    let mut turns = Vec::new();
+    let query = args
+        .get("query")
+        .and_then(Value::as_str)
+        .map(str::to_lowercase)
+        .filter(|query| !query.is_empty());
+    let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(50) as usize;
 
-    if let Ok(content) = std::fs::read_to_string(&session_log) {
-        for line in content.lines() {
-            if let Ok(val) = serde_json::from_str::<Value>(line) {
-                if let Some(target) = session_id {
-                    if val["session_id"].as_str() != Some(target) {
-                        continue;
-                    }
-                }
-                turns.push(val);
-            }
-        }
+    let mut turns: Vec<Value> = read_session_turns(store_path)
+        .into_iter()
+        .filter(|turn| !turn.is_start_marker())
+        .filter(|turn| session_id.is_none_or(|target| turn.session_id == target))
+        .filter(|turn| {
+            query
+                .as_ref()
+                .is_none_or(|query| turn.content.to_lowercase().contains(query))
+        })
+        .filter_map(|turn| serde_json::to_value(turn).ok())
+        .collect();
+    let total = turns.len();
+    if turns.len() > limit {
+        turns.drain(..turns.len() - limit);
     }
 
     Ok(json!({
         "status": "success",
         "session_id": session_id.unwrap_or("all"),
+        "total_turns": total,
+        "returned": turns.len(),
         "trajectory": turns
+    }))
+}
+
+fn handle_session_replay(args: &Value, store_path: &Path) -> Result<Value, String> {
+    reject_unknown_args("session.replay", args)?;
+    let session_id = args.get("session_id").and_then(Value::as_str);
+    let mode = args.get("mode").and_then(Value::as_str).unwrap_or("full");
+    let n = args.get("n").and_then(Value::as_u64).unwrap_or(50).max(1) as usize;
+    let since = args
+        .get("since")
+        .and_then(Value::as_str)
+        .map(parse_time_bound)
+        .transpose()?;
+    let until = args
+        .get("until")
+        .and_then(Value::as_str)
+        .map(parse_time_bound)
+        .transpose()?;
+    if let (Some(since), Some(until)) = (since, until) {
+        if since > until {
+            return Err("session.replay: 'since' is after 'until'".to_string());
+        }
+    }
+    let include_superseded = args
+        .get("include_superseded")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let min_importance = args
+        .get("min_importance")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.7);
+    let token_budget = args
+        .get("token_budget")
+        .and_then(Value::as_u64)
+        .unwrap_or(2000);
+    let turn_types: Option<Vec<String>> =
+        args.get("turn_types").and_then(Value::as_array).map(|a| {
+            a.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        });
+
+    let mut turns: Vec<SessionTurn> = read_session_turns(store_path)
+        .into_iter()
+        .filter(|turn| !turn.is_start_marker())
+        .filter(|turn| session_id.is_none_or(|target| turn.session_id == target))
+        .filter(|turn| since.is_none_or(|floor| turn.timestamp >= floor))
+        .filter(|turn| until.is_none_or(|ceiling| turn.timestamp <= ceiling))
+        .filter(|turn| include_superseded || turn.superseded_by.is_none())
+        .collect();
+    let total_turns = turns.len();
+
+    let mut token_estimate = 0u64;
+    match mode {
+        "full" => {}
+        "selective" => {
+            turns.retain(|turn| turn.importance >= min_importance);
+            if let Some(types) = &turn_types {
+                turns.retain(|turn| types.contains(&turn.turn_type));
+            }
+        }
+        "progressive" => {
+            let mut selected: Vec<SessionTurn> = Vec::new();
+            for turn in turns.iter().rev() {
+                let cost = turn.estimated_tokens();
+                if !selected.is_empty() && token_estimate + cost > token_budget {
+                    break;
+                }
+                token_estimate += cost;
+                selected.push(turn.clone());
+            }
+            selected.reverse();
+            turns = selected;
+        }
+        other => {
+            return Err(format!(
+                "session.replay refuses mode '{other}': supported modes are 'full', 'selective', 'progressive'"
+            ));
+        }
+    }
+
+    let after_filter = turns.len();
+    if turns.len() > n {
+        turns.drain(..turns.len() - n);
+    }
+    if mode != "progressive" {
+        token_estimate = turns.iter().map(SessionTurn::estimated_tokens).sum();
+    }
+
+    Ok(json!({
+        "status": "success",
+        "session_id": session_id.unwrap_or("all"),
+        "mode": mode,
+        "total_turns": total_turns,
+        "turns_after_filter": after_filter,
+        "returned": turns.len(),
+        "turns_omitted": after_filter.saturating_sub(turns.len()),
+        "token_estimate": token_estimate,
+        "trajectory": turns
+    }))
+}
+
+fn handle_session_digest(
+    args: &Value,
+    substrate: &Substrate,
+    store_path: &Path,
+) -> Result<Value, String> {
+    reject_unknown_args("session.digest", args)?;
+    let session_filter = args
+        .get("session_id")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .or_else(|| last_session_lane(store_path));
+    let n = args.get("n").and_then(Value::as_u64).unwrap_or(20).max(1) as usize;
+
+    let mut turns: Vec<SessionTurn> = read_session_turns(store_path)
+        .into_iter()
+        .filter(|turn| !turn.is_start_marker())
+        .filter(|turn| {
+            session_filter
+                .as_deref()
+                .is_none_or(|target| turn.session_id == target)
+        })
+        .filter(|turn| turn.superseded_by.is_none())
+        .collect();
+    if turns.len() > n {
+        turns.drain(..turns.len() - n);
+    }
+
+    let label = session_filter.clone().unwrap_or_else(|| "all".to_string());
+    let checkpoint = substrate
+        .session_continuity(session_filter.as_deref())
+        .ok()
+        .flatten();
+    let (markdown, json_digest) = compose_session_digest(&label, &turns, checkpoint.as_ref());
+
+    Ok(json!({
+        "status": "success",
+        "session_id": label,
+        "markdown": markdown,
+        "json": json_digest
     }))
 }
 
 // ── Receipts & Evidence ────────────────────────────────────────────────────
 
-fn handle_receipts_emit(args: &Value, store_path: &Path, readonly: bool) -> Result<Value, String> {
+const EMIT_SPEC_SESSION: &str = "continuity-receipt/0.5#session";
+const EMIT_SPEC_STATE_TRANSITION: &str = "continuity-receipt/0.5#state_transition";
+
+fn hex_encode(bytes: &[u8]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+fn hex_decode(hex: &str) -> Option<Vec<u8>> {
+    if hex.len() % 2 != 0 {
+        return None;
+    }
+    (0..hex.len())
+        .step_by(2)
+        .map(|index| u8::from_str_radix(&hex[index..index + 2], 16).ok())
+        .collect()
+}
+
+fn gate_key_did(key: &SigningKey) -> String {
+    format!("did:key:{}", hex_encode(&key.verifying_key().to_bytes()))
+}
+
+/// Load the store's existing Mandala gate key without creating one.
+fn load_gate_signing_key(store_path: &Path) -> Result<SigningKey, String> {
+    let key_path = store_path.join("mandala_gate_key.bin");
+    let bytes = std::fs::read(&key_path)
+        .map_err(|e| format!("gate key read ({}): {e}", key_path.display()))?;
+    if bytes.len() != 32 {
+        return Err(format!("gate key must be 32 bytes, got {}", bytes.len()));
+    }
+    let mut array = [0u8; 32];
+    array.copy_from_slice(&bytes);
+    Ok(SigningKey::from_bytes(&array))
+}
+
+/// Signed continuity receipt emitted by `receipts.emit`.
+///
+/// `content_digest` is the SHA-256 of the canonical signing bytes (which
+/// exclude `content_digest` and `signature`); verification recomputes it and
+/// then checks the Ed25519 signature over the same bytes.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct EmittedContinuityReceipt {
+    spec: String,
+    receipt_id: String,
+    kind: String,
+    subject: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    session_id: Option<String>,
+    created_at_ms: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    turn_count: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    first_turn_ts: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    last_turn_ts: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    turns_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    store_epoch: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    store_record_count: Option<u64>,
+    payload_digest: String,
+    prior_receipt_digest: String,
+    content_digest: String,
+    issuer_did: String,
+    #[serde(default)]
+    signature: Option<String>,
+}
+
+impl EmittedContinuityReceipt {
+    fn canonical_signing_bytes(&self) -> Vec<u8> {
+        let mut hasher = Sha256::new();
+        hasher.update(self.spec.as_bytes());
+        hasher.update(b"|");
+        hasher.update(self.receipt_id.as_bytes());
+        hasher.update(b"|");
+        hasher.update(self.kind.as_bytes());
+        hasher.update(b"|");
+        hasher.update(self.subject.as_bytes());
+        hasher.update(b"|");
+        if let Some(session) = &self.session_id {
+            hasher.update(session.as_bytes());
+        }
+        hasher.update(b"|");
+        hasher.update(self.created_at_ms.to_le_bytes());
+        for value in [
+            self.turn_count,
+            self.first_turn_ts,
+            self.last_turn_ts,
+            self.store_epoch,
+            self.store_record_count,
+        ] {
+            hasher.update(b"|");
+            if let Some(value) = value {
+                hasher.update(value.to_le_bytes());
+            }
+        }
+        hasher.update(b"|");
+        if let Some(digest) = &self.turns_digest {
+            hasher.update(digest.as_bytes());
+        }
+        hasher.update(b"|");
+        hasher.update(self.payload_digest.as_bytes());
+        hasher.update(b"|");
+        hasher.update(self.prior_receipt_digest.as_bytes());
+        hasher.update(b"|");
+        hasher.update(self.issuer_did.as_bytes());
+        hasher.finalize().to_vec()
+    }
+
+    fn sign(&mut self, key: &SigningKey) {
+        let signature = key.sign(&self.canonical_signing_bytes());
+        self.signature = Some(hex_encode(&signature.to_bytes()));
+    }
+
+    fn verify(&self, key: &VerifyingKey) -> Result<(), String> {
+        let signature_hex = self.signature.as_ref().ok_or("unsigned receipt")?;
+        let bytes = hex_decode(signature_hex).ok_or("signature is not valid hex")?;
+        if bytes.len() != 64 {
+            return Err("signature must be 64 bytes".to_string());
+        }
+        let mut array = [0u8; 64];
+        array.copy_from_slice(&bytes);
+        let signature = Signature::from_bytes(&array);
+        key.verify(&self.canonical_signing_bytes(), &signature)
+            .map_err(|e| format!("signature invalid: {e}"))
+    }
+}
+
+/// Most recent `content_digest` for a receipt kind from `<store>/receipts/emitted.jsonl`.
+fn prior_emitted_digest(journal: &Path, kind: &str) -> Option<String> {
+    let content = std::fs::read_to_string(journal).ok()?;
+    content.lines().rev().find_map(|line| {
+        let value: Value = serde_json::from_str(line.trim()).ok()?;
+        if value.get("kind").and_then(Value::as_str) == Some(kind) {
+            value
+                .get("content_digest")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+        } else {
+            None
+        }
+    })
+}
+
+fn verify_emitted_continuity_receipt(value: &Value, store_path: &Path) -> Result<Value, String> {
+    let receipt: EmittedContinuityReceipt =
+        serde_json::from_value(value.clone()).map_err(|e| format!("emitted receipt parse: {e}"))?;
+    let expected_spec = match receipt.kind.as_str() {
+        "session" => EMIT_SPEC_SESSION,
+        "state_transition" => EMIT_SPEC_STATE_TRANSITION,
+        other => {
+            return Err(format!(
+                "unsupported emitted continuity receipt kind '{other}'"
+            ));
+        }
+    };
+    if receipt.spec != expected_spec {
+        return Err(format!(
+            "spec/kind mismatch: expected {expected_spec}, got {}",
+            receipt.spec
+        ));
+    }
+    let key = load_gate_signing_key(store_path)?;
+    let expected_did = gate_key_did(&key);
+    if receipt.issuer_did != expected_did {
+        return Err(format!(
+            "issuer_did mismatch: expected {expected_did}, got {}",
+            receipt.issuer_did
+        ));
+    }
+    let canonical = receipt.canonical_signing_bytes();
+    let recomputed = hex_encode(&Sha256::digest(&canonical));
+    if recomputed != receipt.content_digest {
+        return Err("content_digest mismatch: receipt fields were altered".to_string());
+    }
+    receipt.verify(&key.verifying_key())?;
+
+    Ok(json!({
+        "status": "success",
+        "valid": true,
+        "profile": receipt.kind,
+        "spec": receipt.spec,
+        "receipt_id": receipt.receipt_id,
+        "issuer_did": receipt.issuer_did,
+        "detail": "emitted continuity receipt verifies against the store gate key",
+        "verified_offline": true,
+        "signature_scope": format!("{} canonical_signing_bytes", receipt.spec),
+        "unauthenticated_fields": [],
+        "numeric_projection": ["integer fields use their exact encoded representation"],
+        "scope_notes": [
+            "signature authenticates the issuer's claimed turn digest / store snapshot; \
+             the session log and store counters are not re-read from disk here"
+        ],
+    }))
+}
+
+fn handle_receipts_emit(
+    args: &Value,
+    substrate: &Substrate,
+    store_path: &Path,
+    readonly: bool,
+) -> Result<Value, String> {
+    reject_unknown_args("receipts.emit", args)?;
     if readonly {
         return Err("read-only mode: receipts.emit refused".to_string());
     }
-    let _ = (args, store_path);
-    Err(
-        "receipts.emit refused: no generic signed receipt profile is defined; use a typed producer"
-            .to_string(),
-    )
+    let kind = args
+        .get("kind")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'kind'".to_string())?;
+    if kind != "session" && kind != "state_transition" {
+        return Err(format!(
+            "receipts.emit refuses kind '{kind}': supported kinds are 'session' and 'state_transition'"
+        ));
+    }
+    let limit = args
+        .get("limit")
+        .and_then(Value::as_u64)
+        .unwrap_or(200)
+        .max(1) as usize;
+    let out = args.get("out").and_then(Value::as_str);
+
+    let (signing_key, _) = resolve_or_create_mandala_gate_key(store_path)
+        .map_err(|e| format!("gate key error: {e}"))?;
+    let issuer_did = gate_key_did(&signing_key);
+    let receipts_dir = store_path.join("receipts");
+    std::fs::create_dir_all(&receipts_dir).map_err(|e| format!("receipt dir: {e}"))?;
+    let journal = receipts_dir.join("emitted.jsonl");
+    let prior_receipt_digest =
+        prior_emitted_digest(&journal, kind).unwrap_or_else(|| "genesis".to_string());
+
+    let mut receipt = EmittedContinuityReceipt {
+        spec: String::new(),
+        receipt_id: Uuid::new_v4().to_string(),
+        kind: kind.to_string(),
+        subject: String::new(),
+        session_id: None,
+        created_at_ms: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0),
+        turn_count: None,
+        first_turn_ts: None,
+        last_turn_ts: None,
+        turns_digest: None,
+        store_epoch: None,
+        store_record_count: None,
+        payload_digest: String::new(),
+        prior_receipt_digest,
+        content_digest: String::new(),
+        issuer_did,
+        signature: None,
+    };
+
+    match kind {
+        "session" => {
+            let session_id = args
+                .get("session_id")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+            let mut turns: Vec<SessionTurn> = read_session_turns(store_path)
+                .into_iter()
+                .filter(|turn| {
+                    session_id
+                        .as_ref()
+                        .is_none_or(|target| turn.session_id == *target)
+                })
+                .collect();
+            if turns.len() > limit {
+                turns.drain(..turns.len() - limit);
+            }
+            let canonical_turns = turns
+                .iter()
+                .map(|turn| serde_json::to_string(turn).unwrap_or_default())
+                .collect::<Vec<String>>()
+                .join("\n");
+            let turns_digest = hex_encode(&Sha256::digest(canonical_turns.as_bytes()));
+            receipt.spec = EMIT_SPEC_SESSION.to_string();
+            receipt.subject = format!("session:{}", session_id.as_deref().unwrap_or("all"));
+            receipt.session_id = session_id;
+            receipt.turn_count = Some(turns.len() as u64);
+            receipt.first_turn_ts = turns.first().map(|turn| turn.timestamp);
+            receipt.last_turn_ts = turns.last().map(|turn| turn.timestamp);
+            receipt.turns_digest = Some(turns_digest.clone());
+            receipt.payload_digest = turns_digest;
+        }
+        "state_transition" => {
+            let epoch = substrate.store().epoch().unwrap_or(0);
+            let record_count = substrate.store().record_count().unwrap_or(0);
+            let realm_id = substrate
+                .store()
+                .realm_id()
+                .map(|bytes| hex_encode(&bytes))
+                .unwrap_or_default();
+            let payload = json!({
+                "epoch": epoch,
+                "record_count": record_count,
+                "realm_id": realm_id,
+                "journal_ok": substrate.journal_ok(),
+                "violations": substrate.violations(),
+            });
+            receipt.spec = EMIT_SPEC_STATE_TRANSITION.to_string();
+            receipt.subject = format!("store:{realm_id}");
+            receipt.store_epoch = Some(epoch);
+            receipt.store_record_count = Some(record_count as u64);
+            receipt.payload_digest = hex_encode(&Sha256::digest(payload.to_string().as_bytes()));
+        }
+        other => {
+            return Err(format!(
+                "receipts.emit refuses kind '{other}': supported kinds are 'session' and 'state_transition'"
+            ));
+        }
+    }
+
+    let canonical = receipt.canonical_signing_bytes();
+    receipt.content_digest = hex_encode(&Sha256::digest(&canonical));
+    receipt.sign(&signing_key);
+    receipt
+        .verify(&signing_key.verifying_key())
+        .map_err(|e| format!("emitted receipt self-verification failed: {e}"))?;
+
+    let serialized =
+        serde_json::to_string_pretty(&receipt).map_err(|e| format!("receipt serialize: {e}"))?;
+    let path = receipts_dir.join(format!("{}.json", receipt.receipt_id));
+    std::fs::write(&path, &serialized).map_err(|e| format!("receipt write: {e}"))?;
+    {
+        let line = serde_json::to_string(&receipt).map_err(|e| format!("receipt encode: {e}"))?;
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&journal)
+            .map_err(|e| format!("receipts journal open: {e}"))?;
+        file.write_all(line.as_bytes())
+            .and_then(|_| file.write_all(b"\n"))
+            .and_then(|_| file.sync_data())
+            .map_err(|e| format!("receipts journal write: {e}"))?;
+    }
+    let out_path = if let Some(out) = out {
+        let out_path = Path::new(out);
+        std::fs::write(out_path, &serialized).map_err(|e| format!("receipt out write: {e}"))?;
+        Some(out_path.display().to_string())
+    } else {
+        None
+    };
+
+    Ok(json!({
+        "status": "success",
+        "kind": kind,
+        "receipt": receipt,
+        "path": path.display().to_string(),
+        "out_path": out_path,
+        "prior_receipt_digest": receipt.prior_receipt_digest,
+    }))
 }
 
 fn handle_receipts_verify(args: &Value, store_path: &Path) -> Result<Value, String> {
@@ -2271,6 +3757,11 @@ fn handle_receipts_verify(args: &Value, store_path: &Path) -> Result<Value, Stri
     let bundle = args
         .get("bundle")
         .ok_or_else(|| "receipts.verify requires an inline 'bundle' receipt object".to_string())?;
+    if let Some(spec) = bundle.get("spec").and_then(Value::as_str) {
+        if spec == EMIT_SPEC_SESSION || spec == EMIT_SPEC_STATE_TRANSITION {
+            return verify_emitted_continuity_receipt(bundle, store_path);
+        }
+    }
     crate::receipt_verify::verify_receipt_value(bundle, store_path)
 }
 
@@ -3979,15 +5470,93 @@ mod receipt_truth_tests {
     }
 
     #[test]
-    fn generic_emit_refuses_without_writing_or_creating_store() {
+    fn unsupported_emit_kind_refuses_without_writing_or_creating_store() {
         let store = std::env::temp_dir().join(format!("wm-mcp-emit-{}", Uuid::new_v4()));
-        let result = handle_receipts_emit(&json!({"kind": "task"}), &store, false);
+        let substrate_store =
+            std::env::temp_dir().join(format!("wm-mcp-emit-sub-{}", Uuid::new_v4()));
+        let substrate = Substrate::open(
+            &substrate_store,
+            None,
+            wm_gen3_core::constitution::default_view(),
+        )
+        .expect("substrate");
+        let result = handle_receipts_emit(&json!({"kind": "task"}), &substrate, &store, false);
         assert!(
-            result
-                .unwrap_err()
-                .contains("no generic signed receipt profile")
+            result.unwrap_err().contains("refuses kind 'task'"),
+            "task receipts must be refused explicitly"
         );
         assert!(!store.exists());
+        let _ = std::fs::remove_dir_all(&substrate_store);
+    }
+
+    #[test]
+    fn session_receipt_is_signed_verifiable_and_tamper_evident() {
+        let store = std::env::temp_dir().join(format!("wm-mcp-receipt-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&store).expect("store dir");
+        let mut substrate =
+            Substrate::open(&store, None, wm_gen3_core::constitution::default_view())
+                .expect("substrate");
+        substrate.set_budget(1_000_000);
+        substrate.set_noise_enabled(false);
+        std::fs::write(
+            store.join("session_log.jsonl"),
+            "{\"turn_id\":\"t1\",\"session_id\":\"lane\",\"content\":\"first\",\"importance\":0.9,\"timestamp\":100}\n\
+             {\"turn_id\":\"t2\",\"session_id\":\"lane\",\"content\":\"second\",\"importance\":0.4,\"timestamp\":200}\n",
+        )
+        .expect("log");
+
+        let emitted = handle_receipts_emit(
+            &json!({"kind": "session", "session_id": "lane", "limit": 10}),
+            &substrate,
+            &store,
+            false,
+        )
+        .expect("emit session receipt");
+        assert_eq!(emitted["receipt"]["turn_count"], 2);
+        assert_eq!(emitted["receipt"]["first_turn_ts"], 100);
+        assert_eq!(emitted["receipt"]["last_turn_ts"], 200);
+        assert_eq!(emitted["receipt"]["prior_receipt_digest"], "genesis");
+        assert!(emitted["receipt"]["signature"].as_str().is_some());
+
+        let verified = handle_receipts_verify(&json!({"bundle": emitted["receipt"]}), &store)
+            .expect("verify emitted receipt");
+        assert_eq!(verified["valid"], true);
+        assert_eq!(verified["profile"], "session");
+
+        let mut tampered = emitted["receipt"].clone();
+        tampered["turn_count"] = json!(99);
+        let refused =
+            handle_receipts_verify(&json!({"bundle": tampered}), &store).expect_err("tamper");
+        assert!(refused.contains("content_digest mismatch"), "{refused}");
+
+        // A second emission chains to the first.
+        let second = handle_receipts_emit(
+            &json!({"kind": "session", "session_id": "lane"}),
+            &substrate,
+            &store,
+            false,
+        )
+        .expect("second emit");
+        assert_eq!(
+            second["receipt"]["prior_receipt_digest"],
+            emitted["receipt"]["content_digest"]
+        );
+
+        // state_transition receipts sign a store snapshot.
+        let state = handle_receipts_emit(
+            &json!({"kind": "state_transition"}),
+            &substrate,
+            &store,
+            false,
+        )
+        .expect("emit state transition");
+        assert_eq!(state["receipt"]["store_record_count"], 0);
+        let verified = handle_receipts_verify(&json!({"bundle": state["receipt"]}), &store)
+            .expect("verify state receipt");
+        assert_eq!(verified["valid"], true);
+        assert_eq!(verified["profile"], "state_transition");
+
+        let _ = std::fs::remove_dir_all(&store);
     }
 }
 
@@ -4130,6 +5699,586 @@ mod profile_and_allowlist_tests {
             .expect_err("handler refuses without an allowlist");
             assert!(err.contains("WM_MESH_SYNC_ALLOWLIST"), "{err}");
         }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod contract_truth_tests {
+    use super::*;
+
+    /// Every tool touched by the honesty mission: advertised schema properties
+    /// must be a subset of the arguments its handler actually consumes.
+    const SCOPED_TOOLS: &[&str] = &[
+        "memory.pin",
+        "memory.update",
+        "memory.revisions",
+        "memory.aggregate",
+        "memory.ingest",
+        "session.record",
+        "session.continuity",
+        "session.checkpoint",
+        "session.list",
+        "session.replay",
+        "session.recall",
+        "receipts.emit",
+        "session.digest",
+    ];
+
+    #[test]
+    fn declared_schema_properties_are_consumed_or_absent() {
+        for profile in [McpProfile::Full, McpProfile::Cyberbrain] {
+            let tools = get_tools_list_for_profile(profile, false);
+            for tool in tools.as_array().expect("tool array") {
+                let Some(tool_name) = tool["name"].as_str() else {
+                    continue;
+                };
+                let Some(canonical) = canonical_route(tool_name) else {
+                    continue;
+                };
+                if !SCOPED_TOOLS.contains(&canonical) {
+                    continue;
+                }
+                let consumed = consumed_arguments(canonical)
+                    .unwrap_or_else(|| panic!("{canonical} must have a consumed-argument table"));
+                if let Some(properties) = tool["inputSchema"]["properties"].as_object() {
+                    for declared in properties.keys() {
+                        assert!(
+                            consumed.contains(&declared.as_str()),
+                            "{profile:?} '{tool_name}' declares '{declared}', \
+                             which the handler does not consume"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn dropped_stub_arguments_are_absent_from_schemas() {
+        let tools = get_full_curated_tools_list(false);
+        let find = |name: &str| {
+            tools
+                .as_array()
+                .expect("tool array")
+                .iter()
+                .find(|tool| tool["name"].as_str() == Some(name))
+                .unwrap_or_else(|| panic!("tool {name} advertised"))
+                .clone()
+        };
+
+        for dropped in ["cursor", "page_size", "max_wire_bytes", "lossless"] {
+            assert!(
+                find("session.replay")["inputSchema"]["properties"]
+                    .get(dropped)
+                    .is_none(),
+                "session.replay must not advertise unsupported '{dropped}'"
+            );
+        }
+        for dropped in ["root", "label", "data"] {
+            assert!(
+                find("session.checkpoint")["inputSchema"]["properties"]
+                    .get(dropped)
+                    .is_none(),
+                "session.checkpoint must not advertise unsupported '{dropped}'"
+            );
+        }
+        for dropped in ["sequence", "title", "type"] {
+            assert!(
+                find("session.list")["inputSchema"]["properties"]
+                    .get(dropped)
+                    .is_none(),
+                "session.list must not advertise unsupported '{dropped}'"
+            );
+        }
+        for dropped in ["tags", "importance", "title", "topic", "galaxy"] {
+            assert!(
+                find("memory.update")["inputSchema"]["properties"]
+                    .get(dropped)
+                    .is_none(),
+                "memory.update must not advertise unsupported '{dropped}'"
+            );
+        }
+        for dropped in ["include_credential_files", "wait_secs"] {
+            assert!(
+                find("memory.ingest")["inputSchema"]["properties"]
+                    .get(dropped)
+                    .is_none(),
+                "memory.ingest must not advertise unsupported '{dropped}'"
+            );
+        }
+        assert!(
+            find("receipts.emit")["inputSchema"]["properties"]["kind"]["enum"]
+                .as_array()
+                .expect("kind enum")
+                .iter()
+                .all(|kind| kind.as_str() != Some("task")),
+            "receipts.emit must not advertise the unsupported 'task' kind"
+        );
+    }
+
+    #[test]
+    fn handlers_refuse_undeclared_arguments() {
+        let (mut substrate, dir) = (
+            Substrate::open(
+                &std::env::temp_dir().join(format!("wm-contract-{}", Uuid::new_v4())),
+                None,
+                wm_gen3_core::constitution::default_view(),
+            )
+            .expect("substrate"),
+            std::env::temp_dir().join(format!("wm-contract-dir-{}", Uuid::new_v4())),
+        );
+        std::fs::create_dir_all(&dir).expect("dir");
+        let err = execute_hybrid_tool_call(
+            "memory.pin",
+            &json!({"id": 1, "bogus": true}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Full,
+        )
+        .expect_err("unknown argument refused");
+        assert!(err.contains("unknown argument 'bogus'"), "{err}");
+
+        let err = execute_hybrid_tool_call(
+            "session.replay",
+            &json!({"cursor": "opaque"}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Full,
+        )
+        .expect_err("cursor refused");
+        assert!(err.contains("unknown argument 'cursor'"), "{err}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod session_e2e_tests {
+    use super::*;
+    use crate::mcp_server::{McpBackend, dispatch_json};
+
+    fn call(backend: &McpBackend, id: u64, name: &str, args: Value) -> Value {
+        let body = json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": "tools/call",
+            "params": { "name": name, "arguments": args }
+        })
+        .to_string();
+        let response = dispatch_json(backend, body.as_bytes()).expect("dispatch response");
+        let parsed: Value = serde_json::from_str(&response).expect("json-rpc response");
+        assert_eq!(
+            parsed["result"]["isError"], false,
+            "tool {name} errored: {parsed}"
+        );
+        let text = parsed["result"]["content"][0]["text"]
+            .as_str()
+            .expect("tool text");
+        serde_json::from_str(text).expect("tool payload json")
+    }
+
+    #[test]
+    fn dispatch_json_session_lane_continuity_checkpoint_and_digest() {
+        let dir = std::env::temp_dir().join(format!("wm-session-e2e-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("substrate");
+        substrate.set_budget(1_000_000);
+        substrate.set_noise_enabled(false);
+        let backend = McpBackend::gen3(substrate, &dir, McpProfile::Full, false);
+
+        let start = call(&backend, 1, "session.start", json!({"title": "e2e lane"}));
+        let lane = start["session_id"].as_str().expect("lane").to_string();
+
+        let recorded = call(
+            &backend,
+            2,
+            "session.record",
+            json!({
+                "session_id": lane,
+                "content": "decided X",
+                "turn_type": "decision",
+                "importance": 0.9,
+                "track": "mission-a"
+            }),
+        );
+        let turn_id = recorded["turn_id"].as_str().expect("turn id").to_string();
+
+        let checkpoint = call(
+            &backend,
+            3,
+            "session.checkpoint",
+            json!({
+                "session_id": lane,
+                "summary": "checkpoint summary",
+                "next_queue": ["do y"],
+                "open_flags": ["blocked"],
+                "commit": "abc123",
+                "branch": "feat/mcp-truth",
+                "tests_green": true,
+                "lease_id": "lease-1"
+            }),
+        );
+        assert_eq!(checkpoint["commit"], "abc123");
+
+        let continuity = call(
+            &backend,
+            4,
+            "session.continuity",
+            json!({"session_id": lane, "n": 5, "include_briefing_text": true}),
+        );
+        assert_eq!(continuity["turns_count"], 1);
+        assert_eq!(continuity["recent_turns"][0]["turn_id"], turn_id);
+        assert_eq!(continuity["recent_turns"][0]["track"], "mission-a");
+        assert_eq!(continuity["checkpoint"]["commit"], "abc123");
+        assert_eq!(continuity["checkpoint"]["branch"], "feat/mcp-truth");
+        assert_eq!(continuity["checkpoint"]["tests_green"], true);
+        assert_eq!(continuity["checkpoint"]["lease_id"], "lease-1");
+        assert_eq!(continuity["next_queue"][0], "do y");
+        assert!(
+            continuity["briefing"]["text"]
+                .as_str()
+                .expect("briefing")
+                .contains("checkpoint summary")
+        );
+
+        let digest = call(&backend, 5, "session.digest", json!({"session_id": lane}));
+        let markdown = digest["markdown"].as_str().expect("markdown");
+        assert!(markdown.contains("Session Digest"));
+        assert!(markdown.contains("checkpoint summary"));
+        assert_eq!(digest["json"]["turn_count"], 1);
+
+        // supersedes retires the prior turn from continuity but replay can
+        // still surface it on request.
+        let superseding = call(
+            &backend,
+            6,
+            "session.record",
+            json!({
+                "session_id": lane,
+                "content": "changed Y",
+                "turn_type": "decision",
+                "supersedes": turn_id
+            }),
+        );
+        assert_eq!(superseding["supersedes"], turn_id);
+        let continuity = call(
+            &backend,
+            7,
+            "session.continuity",
+            json!({"session_id": lane}),
+        );
+        assert_eq!(continuity["turns_count"], 1);
+        assert_eq!(continuity["recent_turns"][0]["content"], "changed Y");
+        let replay = call(
+            &backend,
+            8,
+            "session.replay",
+            json!({
+                "session_id": lane,
+                "include_superseded": true,
+                "mode": "selective",
+                "min_importance": 0.0
+            }),
+        );
+        assert_eq!(replay["returned"], 2);
+
+        let list = call(&backend, 9, "session.list", json!({"limit": 10}));
+        assert_eq!(list["sessions"][0]["session_id"], lane);
+        assert_eq!(list["sessions"][0]["has_start_marker"], true);
+        assert_eq!(list["sessions"][0]["turn_count"], 2);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod honesty_behavior_tests {
+    use super::*;
+
+    fn setup(tag: &str) -> (Substrate, std::path::PathBuf) {
+        let dir = std::env::temp_dir().join(format!("wm-honesty-{tag}-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("substrate");
+        substrate.set_budget(1_000_000);
+        substrate.set_noise_enabled(false);
+        (substrate, dir)
+    }
+
+    #[test]
+    fn pin_handler_persists_releases_and_validates_galaxy() {
+        let (mut substrate, dir) = setup("pin");
+        let created = handle_memory_create(
+            &json!({"content": "pinnable fact", "importance": 0.8, "tags": ["ops"]}),
+            &mut substrate,
+            false,
+        )
+        .expect("create");
+        let id = created["record_id"].as_u64().expect("record id");
+
+        let pinned = handle_memory_pin(&json!({"id": id}), &mut substrate, false).expect("pin");
+        assert_eq!(pinned["pinned"], true);
+        assert_eq!(
+            pinned["message"],
+            "Memory pinned against sweep decay and forgetting"
+        );
+
+        let reopened =
+            Substrate::open_readonly(&dir, None, wm_gen3_core::constitution::default_view())
+                .expect("reopen");
+        assert!(reopened.is_pinned(id), "pin must survive reopen");
+
+        let released =
+            handle_memory_pin(&json!({"id": id, "pinned": false}), &mut substrate, false)
+                .expect("unpin");
+        assert_eq!(released["pinned"], false);
+        assert!(!substrate.is_pinned(id));
+
+        let err = handle_memory_pin(&json!({"id": id, "galaxy": "guide"}), &mut substrate, false)
+            .expect_err("galaxy mismatch");
+        assert!(err.contains("belongs to galaxy 'codex'"), "{err}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn update_records_revision_and_revisions_verify_chain() {
+        let (mut substrate, dir) = setup("update");
+        let first =
+            handle_memory_create(&json!({"content": "first version"}), &mut substrate, false)
+                .expect("create");
+        let old = first["record_id"].as_u64().expect("old id");
+        let updated = handle_memory_update(
+            &json!({"id": old, "content": "second version", "reason": "typo"}),
+            &mut substrate,
+            false,
+        )
+        .expect("update");
+        assert_eq!(updated["revision"]["reason"], "typo");
+        assert_eq!(updated["revision"]["record_id"], old);
+        let new = updated["record_id"].as_u64().expect("new id");
+
+        let listed = handle_memory_revisions(&json!({"id": old}), &substrate).expect("list");
+        assert_eq!(listed["count"], 1);
+        assert_eq!(listed["revisions"][0]["new_record_id"], new);
+
+        let verified = handle_memory_revisions(&json!({"id": new, "action": "verify"}), &substrate)
+            .expect("verify");
+        assert_eq!(verified["verify"]["valid"], true);
+        assert_eq!(verified["verify"]["chain_length"], 1);
+
+        let err = handle_memory_revisions(&json!({"id": new, "action": "rebase"}), &substrate)
+            .expect_err("bad action");
+        assert!(err.contains("refuses action 'rebase'"), "{err}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn aggregate_computes_real_values_and_refuses_unsupported() {
+        let (mut substrate, dir) = setup("aggregate");
+        for (text, importance) in [
+            ("alpha one", 0.25),
+            ("alpha two", 0.75),
+            ("beta three", 0.5),
+        ] {
+            handle_memory_create(
+                &json!({"content": text, "importance": importance}),
+                &mut substrate,
+                false,
+            )
+            .expect("create");
+        }
+
+        let sum = handle_memory_aggregate(
+            &json!({"field": "importance", "op": "sum", "limit": 10}),
+            &mut substrate,
+        )
+        .expect("sum");
+        assert_eq!(sum["aggregate"], 1.5);
+        assert_eq!(sum["sample_size"], 3);
+
+        let avg = handle_memory_aggregate(
+            &json!({"field": "importance", "op": "avg", "limit": 10}),
+            &mut substrate,
+        )
+        .expect("avg");
+        assert_eq!(avg["aggregate"], 0.5);
+
+        let min = handle_memory_aggregate(
+            &json!({"field": "importance", "op": "min", "limit": 10}),
+            &mut substrate,
+        )
+        .expect("min");
+        assert_eq!(min["aggregate"], 0.25);
+        let max = handle_memory_aggregate(
+            &json!({"field": "importance", "op": "max", "limit": 10}),
+            &mut substrate,
+        )
+        .expect("max");
+        assert_eq!(max["aggregate"], 0.75);
+
+        let count = handle_memory_aggregate(
+            &json!({"field": "created_at", "op": "count", "limit": 10}),
+            &mut substrate,
+        )
+        .expect("count");
+        assert_eq!(count["aggregate"], 3);
+        assert_eq!(count["sample_size"], 3);
+
+        let categorical = handle_memory_aggregate(
+            &json!({"field": "source", "op": "count", "limit": 10}),
+            &mut substrate,
+        )
+        .expect("categorical");
+        assert_eq!(categorical["aggregate"], 3);
+
+        let err = handle_memory_aggregate(&json!({"field": "source", "op": "sum"}), &mut substrate)
+            .expect_err("categorical sum");
+        assert!(err.contains("categorical"), "{err}");
+        let err = handle_memory_aggregate(&json!({"field": "mood", "op": "avg"}), &mut substrate)
+            .expect_err("unknown field");
+        assert!(err.contains("refuses field 'mood'"), "{err}");
+        let err = handle_memory_aggregate(
+            &json!({"field": "importance", "op": "median"}),
+            &mut substrate,
+        )
+        .expect_err("unknown op");
+        assert!(err.contains("refuses op 'median'"), "{err}");
+
+        let metric =
+            handle_memory_aggregate(&json!({"metric": "count", "limit": 10}), &mut substrate)
+                .expect("metric");
+        assert_eq!(metric["aggregate"], 3);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn ingest_inline_items_are_real_and_malformed_input_refused() {
+        let (mut substrate, dir) = setup("ingest");
+        let dry = handle_memory_ingest(
+            &json!({"items": ["one", "two"], "dry_run": true}),
+            &mut substrate,
+            false,
+        )
+        .expect("dry run");
+        assert_eq!(dry["would_ingest"], 2);
+        assert_eq!(dry["records_ingested"], 0);
+
+        let real = handle_memory_ingest(
+            &json!({
+                "items_jsonl": "{\"content\":\"jsonl one\",\"tags\":[\"t\"],\"importance\":0.3}\nplain line\n",
+                "text": "tail text",
+                "dry_run": false
+            }),
+            &mut substrate,
+            false,
+        )
+        .expect("ingest");
+        assert_eq!(real["records_ingested"], 3);
+        assert_eq!(substrate.store().record_count().unwrap(), 3);
+
+        let duplicate = handle_memory_ingest(
+            &json!({"text": "tail text", "dry_run": false}),
+            &mut substrate,
+            false,
+        )
+        .expect("duplicate");
+        assert_eq!(duplicate["duplicates"], 1);
+        assert_eq!(duplicate["records_ingested"], 0);
+
+        let redacted = handle_memory_ingest(
+            &json!({"text": "token ghp_abcdef123", "dry_run": false}),
+            &mut substrate,
+            false,
+        )
+        .expect("redact");
+        assert_eq!(redacted["redacted_tokens"], 1);
+
+        let err = handle_memory_ingest(&json!({"items_jsonl": "{bad json"}), &mut substrate, false)
+            .expect_err("malformed jsonl");
+        assert!(err.contains("malformed JSON"), "{err}");
+        let err = handle_memory_ingest(&json!({"items": [{"source": "x"}]}), &mut substrate, false)
+            .expect_err("missing content");
+        assert!(err.contains("requires string 'content'"), "{err}");
+        let err = handle_memory_ingest(&json!({}), &mut substrate, false).expect_err("no input");
+        assert!(err.contains("requires one of"), "{err}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn replay_modes_and_continuity_time_filters() {
+        let (mut substrate, dir) = setup("replay");
+        std::fs::write(
+            dir.join("session_log.jsonl"),
+            "{\"turn_id\":\"t1\",\"session_id\":\"lane\",\"role\":\"ai\",\"turn_type\":\"observation\",\"content\":\"early note\",\"importance\":0.2,\"timestamp\":100}\n\
+             {\"turn_id\":\"t2\",\"session_id\":\"lane\",\"role\":\"ai\",\"turn_type\":\"decision\",\"content\":\"mid decision\",\"importance\":0.9,\"timestamp\":200}\n\
+             {\"turn_id\":\"t3\",\"session_id\":\"lane\",\"role\":\"ai\",\"turn_type\":\"summary\",\"content\":\"late summary\",\"importance\":0.6,\"timestamp\":300}\n",
+        )
+        .expect("log");
+
+        let full = handle_session_replay(&json!({"session_id": "lane"}), &dir).expect("full");
+        assert_eq!(full["returned"], 3);
+        assert_eq!(full["mode"], "full");
+
+        let selective = handle_session_replay(
+            &json!({"session_id": "lane", "mode": "selective", "min_importance": 0.8}),
+            &dir,
+        )
+        .expect("selective");
+        assert_eq!(selective["returned"], 1);
+        assert_eq!(selective["trajectory"][0]["turn_id"], "t2");
+
+        let typed = handle_session_replay(
+            &json!({"mode": "selective", "min_importance": 0.0, "turn_types": ["summary"]}),
+            &dir,
+        )
+        .expect("typed");
+        assert_eq!(typed["returned"], 1);
+        assert_eq!(typed["trajectory"][0]["turn_id"], "t3");
+
+        let progressive =
+            handle_session_replay(&json!({"mode": "progressive", "token_budget": 8}), &dir)
+                .expect("progressive");
+        assert!(progressive["returned"].as_u64().unwrap() >= 1);
+        assert!(progressive["returned"].as_u64().unwrap() <= 3);
+        assert_eq!(
+            progressive["trajectory"][progressive["returned"].as_u64().unwrap() as usize - 1]["turn_id"],
+            "t3"
+        );
+
+        let windowed = handle_session_replay(&json!({"since": "150"}), &dir).expect("since");
+        assert_eq!(windowed["returned"], 2);
+        let windowed = handle_session_replay(&json!({"until": "100"}), &dir).expect("until");
+        assert_eq!(windowed["returned"], 1);
+
+        let err = handle_session_replay(&json!({"mode": "lossless"}), &dir)
+            .expect_err("lossless unsupported");
+        assert!(err.contains("refuses mode 'lossless'"), "{err}");
+
+        let continuity =
+            handle_session_continuity(&json!({"session_id": "lane", "n": 1}), &substrate, &dir)
+                .expect("continuity n");
+        assert_eq!(continuity["turns_count"], 1);
+        assert_eq!(continuity["recent_turns"][0]["turn_id"], "t3");
+        let continuity = handle_session_continuity(
+            &json!({"session_id": "lane", "until": "150"}),
+            &substrate,
+            &dir,
+        )
+        .expect("continuity until");
+        assert_eq!(continuity["turns_count"], 1);
+        assert_eq!(continuity["recent_turns"][0]["turn_id"], "t1");
+
+        let err = handle_session_record(
+            &json!({"content": "x", "session_id": "lane", "supersedes": "missing"}),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect_err("unknown supersedes");
+        assert!(err.contains("no such turn id"), "{err}");
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
