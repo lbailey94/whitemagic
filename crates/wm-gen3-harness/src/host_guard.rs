@@ -313,16 +313,25 @@ impl CommandRunner for SystemRunner {
     }
 }
 
-/// systemd-shaped unit names only: `^[A-Za-z0-9@_.:-]+\.(service|timer)$`.
+/// systemd-shaped unit names only, hardened against option injection: the
+/// first character must be alphanumeric, the rest `[A-Za-z0-9@_.:-]`, and the
+/// name must end in `.service` or `.timer`. Names starting with `-` (parsed by
+/// `systemctl` as an option) or `.` are rejected, so a compromised signal can
+/// never smuggle an option into a `systemctl ... <unit>` argv.
 pub fn validate_unit_name(unit: &str) -> bool {
     let stem_valid = unit
         .strip_suffix(".service")
         .or_else(|| unit.strip_suffix(".timer"))
         .is_some_and(|stem| !stem.is_empty());
-    stem_valid
-        && unit
-            .chars()
-            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '@' | '_' | '.' | ':' | '-'))
+    if !stem_valid {
+        return false;
+    }
+    let mut chars = unit.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    first.is_ascii_alphanumeric()
+        && chars.all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '@' | '_' | '.' | ':' | '-'))
 }
 
 /// Single-wildcard glob used for the protected-unit patterns (`syncthing*`).
@@ -821,22 +830,45 @@ fn pressure_verdict(signals: &HostSignals, policy: &Policy, reasons: &mut Vec<St
     verdict
 }
 
-/// Orphan inference targets: heavy (>= 1 GiB RSS), old (>= 600 s), and either
-/// a known local-inference server (`llama-server`, `ollama`) or a `python3`
-/// process whose cmdline matches lane/eval/bench. The signal-level
-/// `is_orphan` flag is advisory context; this inference is what the guard acts
-/// on, and only when `kill_orphans` is enabled.
+/// Orphan inference targets: the signal-level `is_orphan` flag must be set,
+/// the process must be heavy (>= 1 GiB RSS) and old (>= 600 s), carry
+/// additional orphan evidence (reparented to init, or left in a
+/// `session-*.scope`), and be either a known local-inference server
+/// (`llama-server`, `ollama`) or a `python3` process whose cmdline matches
+/// lane/eval/bench. Selection alone never kills: `kill_orphans` must also be
+/// enabled, otherwise the process is only listed.
 fn orphan_candidate(process: &ProcessInfo, policy: &Policy, now: u64) -> bool {
+    if !process.is_orphan {
+        return false;
+    }
     if process.rss_mib < policy.orphan_rss_mib {
         return false;
     }
     if now.saturating_sub(process.start_epoch) < policy.orphan_min_age_secs {
         return false;
     }
+    if !orphan_evidence(process) {
+        return false;
+    }
     if policy.orphan_comms.contains(&process.comm) {
         return true;
     }
     process.comm == "python3" && cmdline_matches_inference(&process.cmdline, policy)
+}
+
+/// Additional evidence beyond the advisory `is_orphan` flag: reparented to
+/// init (`ppid == 1`) or left in a `session-*.scope`. The guard treats a
+/// session scope as dead for an old process because systemd removes the scope
+/// with its session; with `KillUserProcesses=no`, leftovers linger there.
+/// Processes inside a live user unit — `app-gnome-*` scopes or any `.service`
+/// — are refused even if the signal layer flagged them, since those are
+/// desktop apps or managed services rather than abandoned sessions.
+fn orphan_evidence(process: &ProcessInfo) -> bool {
+    if process.cgroup_unit.starts_with("app-gnome-") || process.cgroup_unit.ends_with(".service") {
+        return false;
+    }
+    process.ppid == 1
+        || (process.cgroup_unit.starts_with("session-") && process.cgroup_unit.ends_with(".scope"))
 }
 
 fn cmdline_matches_inference(cmdline: &str, policy: &Policy) -> bool {
@@ -982,6 +1014,8 @@ mod tests {
         }
     }
 
+    /// Default fixture: a true orphan (reparented to init, lingering in a dead
+    /// session scope, flagged by the signal layer).
     fn process(pid: u32, comm: &str, rss_mib: u64, age_secs: u64, cmdline: &str) -> ProcessInfo {
         ProcessInfo {
             pid,
@@ -990,7 +1024,7 @@ mod tests {
             cmdline: cmdline.to_string(),
             rss_mib,
             exe: String::new(),
-            cgroup_unit: "app-gnome-x.scope".to_string(),
+            cgroup_unit: "session-7.scope".to_string(),
             start_epoch: NOW.saturating_sub(age_secs),
             is_orphan: true,
         }
@@ -1261,10 +1295,83 @@ mod tests {
         assert_eq!(plan.severity, Verdict::Warn);
         assert!(action_pids(&plan).is_empty());
         assert!(
+            plan.reasons
+                .iter()
+                .any(|reason| reason.contains("orphan candidate pid 4242"))
+        );
+        assert!(
             plan.suppressed
                 .iter()
                 .any(|note| note.contains("kill_orphans disabled"))
         );
+    }
+
+    #[test]
+    fn interactive_benchmark_process_is_not_an_orphan_candidate() {
+        let mut signals = healthy_signals();
+        // Active lane process: markers match, but it was not reparented and
+        // lives in a live app scope — never touch it.
+        let mut active = process(
+            31337,
+            "python3",
+            4096,
+            7200,
+            "python3 scripts/benchmark.py --lane eval",
+        );
+        active.ppid = 4242;
+        active.is_orphan = false;
+        active.cgroup_unit = "app-gnome-Terminal-1234.scope".to_string();
+        signals.top_processes = vec![active];
+        let mut policy = Policy::default();
+        policy.kill_orphans = true;
+        let plan = plan_at(&signals, &HostGuardState::default(), &policy, NOW);
+        assert!(action_pids(&plan).is_empty());
+        assert!(
+            !plan
+                .reasons
+                .iter()
+                .any(|reason| reason.contains("orphan candidate"))
+        );
+    }
+
+    #[test]
+    fn active_llama_server_is_never_terminated() {
+        let mut signals = healthy_signals();
+        // A live server that the signal layer did not flag as orphan.
+        let mut server = process(555, "llama-server", 4096, 7200, "llama-server --port 8080");
+        server.ppid = 4242;
+        server.is_orphan = false;
+        server.cgroup_unit = "wm-serve@1000.service".to_string();
+        signals.top_processes = vec![server];
+        let mut policy = Policy::default();
+        policy.kill_orphans = true;
+        let plan = plan_at(&signals, &HostGuardState::default(), &policy, NOW);
+        assert!(action_pids(&plan).is_empty());
+        assert!(
+            !plan
+                .reasons
+                .iter()
+                .any(|reason| reason.contains("orphan candidate"))
+        );
+    }
+
+    #[test]
+    fn live_cgroup_blocks_orphan_evidence_even_when_flagged() {
+        let mut signals = healthy_signals();
+        // Mis-flagged processes in live user units must still be refused.
+        let mut service = process(4444, "llama-server", 4096, 7200, "llama-server");
+        service.ppid = 1;
+        service.is_orphan = true;
+        service.cgroup_unit = "wm-gateway.service".to_string();
+        let mut desktop = process(4545, "llama-server", 4096, 7200, "llama-server");
+        desktop.ppid = 1;
+        desktop.is_orphan = true;
+        desktop.cgroup_unit = "app-gnome-Alacritty-99.scope".to_string();
+        signals.top_processes = vec![service, desktop];
+        let mut policy = Policy::default();
+        policy.kill_orphans = true;
+        let plan = plan_at(&signals, &HostGuardState::default(), &policy, NOW);
+        assert!(action_pids(&plan).is_empty());
     }
 
     #[test]
@@ -1506,10 +1613,43 @@ mod tests {
     fn unit_validation_matches_systemd_shape() {
         assert!(validate_unit_name("fleet-sync.timer"));
         assert!(validate_unit_name("wm-serve@1000.service"));
+        assert!(validate_unit_name("a1.service"));
         assert!(!validate_unit_name("fleet-sync.timer; rm -rf /"));
         assert!(!validate_unit_name(".service"));
         assert!(!validate_unit_name("edge-galaxy.socket"));
         assert!(!validate_unit_name(""));
+    }
+
+    #[test]
+    fn unit_validation_rejects_option_injection() {
+        // Leading `-` is parsed by systemctl as an option; never allow it.
+        assert!(!validate_unit_name("-H.service"));
+        assert!(!validate_unit_name("--x.service"));
+        assert!(!validate_unit_name("-H.timer"));
+        // Leading `.` (hidden/relative shape) is rejected too.
+        assert!(!validate_unit_name(".hidden.service"));
+        assert!(!validate_unit_name("@1000.service"));
+        // Injection only becomes dangerous when passed to the runner, so prove
+        // execute refuses to plan/run stop actions for these names.
+        let mut signals = healthy_signals();
+        signals.crash_loop_units = vec![crash_unit("-H.service", 6534)];
+        let plan = plan_at(
+            &signals,
+            &HostGuardState::default(),
+            &Policy::default(),
+            NOW,
+        );
+        assert!(
+            !plan
+                .actions
+                .iter()
+                .any(|action| matches!(action, Action::StopUnit { .. }))
+        );
+        assert!(
+            plan.suppressed
+                .iter()
+                .any(|note| note.contains("-H.service") && note.contains("invalid unit name"))
+        );
     }
 
     #[test]
