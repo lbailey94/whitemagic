@@ -54,6 +54,12 @@ const META_EPOCH: &[u8] = b"__epc__";
 const META_NEXT_RECORD: &[u8] = b"__nrid_";
 const META_NEXT_RELATION: &str = "next_relation_id";
 const META_SWEEP: &str = "sweep";
+/// Monotonic relation-write stamp: bumped in the same transaction as every
+/// relation write. The recall adjacency cache uses it as a cross-process
+/// change signal (lmdb 0.8 exposes no `Env::info()`/`last_txnid`).
+const META_RELATION_VIEW: &[u8] = b"__rvw__";
+/// Postings-index tokenizer/format marker used by the duplicate-probe fast path.
+const META_IDENTITY_INDEX: &[u8] = b"__iidx__";
 
 /// Unforgeable-to-ops witness that a snapshot came from the authoritative Store.
 /// The tuple field is private: only this module can construct it.
@@ -223,9 +229,11 @@ pub struct Store {
     at_rest: Option<AtRestState>,
     /// Keyring DBI handle (present iff [`Self::at_rest`] is).
     keyring: Option<Database>,
-    /// Lazily derived relation adjacency for recall. Process-local only (never
-    /// persisted, no cross-process sharing); every relation write invalidates it.
-    cached_relations_view: Mutex<Option<Arc<RelationsView>>>,
+    /// Lazily derived relation adjacency for recall, tagged with the relation
+    /// stamp it was built from. Process-local only (never persisted); rebuilt
+    /// when the store's relation stamp moves (same-handle writes invalidate,
+    /// other processes' writes are observed through the stamp).
+    cached_relations_view: Mutex<Option<(u64, Arc<RelationsView>)>>,
     #[cfg(test)]
     fail_after_stage: Cell<Option<u8>>,
     /// Structural debug counter: stored-record decodes performed by this handle.
@@ -1478,6 +1486,7 @@ impl Store {
             )));
         }
         txn.put(db, &key, &value, lmdb::WriteFlags::empty())?;
+        bump_relation_view_stamp(&mut txn, self.default)?;
         txn.commit()?;
         self.invalidate_relations_view();
         Ok(())
@@ -1495,30 +1504,61 @@ impl Store {
         Ok(out)
     }
 
+    /// Cheap cross-process change signal for relation writes. lmdb 0.8
+    /// exposes neither `Env::info()` nor transaction ids, so relation writes
+    /// bump this in-store stamp in their own transaction instead. Missing
+    /// (pre-stamp stores) reads as 0.
+    fn read_relation_view_stamp(&self) -> Result<u64, StoreError> {
+        let txn = self.env.begin_ro_txn()?;
+        match txn.get(self.default, &META_RELATION_VIEW) {
+            Ok(bytes) if bytes.len() == 8 => Ok(u64::from_be_bytes(
+                bytes
+                    .try_into()
+                    .map_err(|_| StoreError::CorruptVersionHeader)?,
+            )),
+            Ok(_) => Err(StoreError::CorruptVersionHeader),
+            Err(lmdb::Error::NotFound) => Ok(0),
+            Err(e) => Err(e.into()),
+        }
+    }
+
     /// Lazily built, process-local relation adjacency for recall. The first
     /// call scans the relations keyspace once; later calls share the cached
-    /// view until a relation write invalidates it (see
-    /// [`Self::invalidate_relations_view`]). This never persists state: the
-    /// cache lives and dies with the handle.
+    /// view while the store's relation stamp is unchanged. The stamp moves on
+    /// every relation write — including writes committed by another process
+    /// (CLI sweep, second server) — so a warm handle never serves a stale
+    /// supersede/source resolution. Builds happen under the handle mutex, so a
+    /// concurrent write cannot be overwritten by a stale view, and failed
+    /// builds are not cached (the next call retries). This never persists
+    /// state: the cache lives and dies with the handle.
     pub(crate) fn relations_view(&self) -> Arc<RelationsView> {
-        if let Some(view) = self
+        let mut guard = self
             .cached_relations_view
             .lock()
-            .expect("relations view lock")
-            .as_ref()
+            .expect("relations view lock");
+        let stamp = match self.read_relation_view_stamp() {
+            Ok(stamp) => stamp,
+            // Do not cache a read failure as an empty view.
+            Err(_) => return Arc::new(RelationsView::default()),
+        };
+        if let Some((cached_stamp, view)) = guard.as_ref()
+            && *cached_stamp == stamp
         {
             return Arc::clone(view);
         }
-        let relations = self.iter_relations().unwrap_or_default();
+        let relations = match self.iter_relations() {
+            Ok(relations) => relations,
+            // Transient read error: serve an empty view, cache nothing.
+            Err(_) => return Arc::new(RelationsView::default()),
+        };
         let view = Arc::new(RelationsView::derive(&relations));
-        *self
-            .cached_relations_view
-            .lock()
-            .expect("relations view lock") = Some(Arc::clone(&view));
+        *guard = Some((stamp, Arc::clone(&view)));
         view
     }
 
-    /// Drop the derived relation adjacency after a relation write.
+    /// Drop the derived relation adjacency after a relation write. The stamp
+    /// bump alone would also force a rebuild; this keeps same-handle caches
+    /// observably cold without waiting for the next stamp read.
     pub(crate) fn invalidate_relations_view(&self) {
         *self
             .cached_relations_view
@@ -1534,6 +1574,33 @@ impl Store {
             .lock()
             .expect("relations view lock")
             .is_some()
+    }
+
+    /// Tokenizer/format marker of the postings index, when the store carries
+    /// one (absent on pre-marker stores and fresh environments).
+    pub(crate) fn identity_index_marker(&self) -> Result<Option<String>, StoreError> {
+        let txn = self.env.begin_ro_txn()?;
+        match txn.get(self.default, &META_IDENTITY_INDEX) {
+            Ok(bytes) => Ok(Some(String::from_utf8_lossy(bytes).into_owned())),
+            Err(lmdb::Error::NotFound) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    /// Backfill the postings-index marker so later opens can take the fast
+    /// postings-based duplicate probe.
+    pub(crate) fn set_identity_index_marker(&self, marker: &str) -> Result<(), StoreError> {
+        self.ensure_writable()?;
+        let marker_bytes: &[u8] = marker.as_bytes();
+        let mut txn = self.env.begin_rw_txn()?;
+        txn.put(
+            self.default,
+            &META_IDENTITY_INDEX,
+            &marker_bytes,
+            lmdb::WriteFlags::empty(),
+        )?;
+        txn.commit()?;
+        Ok(())
     }
 
     /// Growth metrics from filesystem metadata plus the configured map size.
@@ -1965,6 +2032,9 @@ impl Store {
                 }
             }
         }
+        if !request.effects().is_empty() {
+            bump_relation_view_stamp(&mut txn, self.default)?;
+        }
         self.fail_after(1)?;
 
         txn.put(
@@ -2268,6 +2338,31 @@ fn read_counter<T: Transaction>(txn: &T, db: Database, key: &[u8]) -> Result<u64
             .try_into()
             .map_err(|_| StoreError::CorruptVersionHeader)?,
     ))
+}
+
+/// Bump the relation-write stamp inside the caller's write transaction, so a
+/// committed relation write and its change signal are atomic.
+fn bump_relation_view_stamp(
+    txn: &mut lmdb::RwTransaction<'_>,
+    default: Database,
+) -> Result<(), StoreError> {
+    let current = match txn.get(default, &META_RELATION_VIEW) {
+        Ok(bytes) if bytes.len() == 8 => u64::from_be_bytes(
+            bytes
+                .try_into()
+                .map_err(|_| StoreError::CorruptVersionHeader)?,
+        ),
+        Ok(_) => 0,
+        Err(lmdb::Error::NotFound) => 0,
+        Err(e) => return Err(e.into()),
+    };
+    txn.put(
+        default,
+        &META_RELATION_VIEW,
+        &bytes_u64(current.saturating_add(1)),
+        lmdb::WriteFlags::empty(),
+    )?;
+    Ok(())
 }
 
 fn add_count(target: &mut u64, amount: u64) -> Result<(), SweepError> {
@@ -3410,6 +3505,49 @@ mod tests {
             store.at_rest_migration_ledger().unwrap().unwrap(),
             ledger_after,
             "a completed pass must not rewrite the ledger"
+        );
+    }
+
+    /// Wave-3 fix: a relation committed by ANOTHER handle (think: CLI sweep or
+    /// a second server process) must be observed by an already-warm adjacency
+    /// cache. The relation stamp is bumped in the writer's transaction, so the
+    /// reader rebuilds instead of serving stale supersede/source resolution.
+    #[test]
+    fn relation_view_rebuilds_after_another_handles_write() {
+        let tmp = TempStore::new("relations-cross-handle");
+        let reader = Store::open(&tmp.0).unwrap();
+        let writer = Store::open(&tmp.0).unwrap();
+
+        let warm = reader.relations_view();
+        assert!(
+            warm.superseded_by.is_empty(),
+            "fresh store has no relations"
+        );
+        assert!(reader.relations_view_cached(), "reader cache is warm");
+
+        writer
+            .put_relation(&Relation::new(1, 100, 101, 0.9, 0))
+            .expect("second handle writes a relation");
+
+        let observed = reader.relations_view();
+        assert_eq!(
+            observed.superseded_by.get(&101),
+            Some(&1),
+            "warm reader must observe the other handle's relation write"
+        );
+        assert!(observed.sources.contains(&100));
+
+        // Same-handle writes keep invalidating as before.
+        writer
+            .put_relation(&Relation::associate(2, 101, 102, 0.4, 0))
+            .expect("second relation write");
+        let observed = reader.relations_view();
+        assert!(
+            observed
+                .graph_edges
+                .get(&102)
+                .is_some_and(|edges| edges.iter().any(|(dst, _)| *dst == 101)),
+            "associative edge from the other handle is observed too"
         );
     }
 }
