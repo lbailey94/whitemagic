@@ -23,7 +23,10 @@
 //! * `proposal.get` (`wm_getProposal`)    — scaffold inspection
 //!
 //! Single-writer safety: a second bind on a live socket is refused with a clear
-//! error. `SIGTERM`/`SIGINT` shut the node down gracefully and remove the socket.
+//! error, and an existing path is only reclaimed when it is a stale *socket* —
+//! other file types are never unlinked. The socket is user-scoped (mode `0600`);
+//! a world-writable parent directory triggers a warning. `SIGTERM`/`SIGINT` shut
+//! the node down gracefully and remove the socket.
 
 #![forbid(unsafe_code)]
 
@@ -31,7 +34,7 @@ use clap::Parser;
 use signal_hook::consts::{SIGINT, SIGTERM};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -235,7 +238,13 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
     Ok(())
 }
 
-/// Binds the UDS, refusing a second live writer and clearing stale socket files.
+/// Binds the UDS, refusing a second live writer and clearing stale *sockets* only.
+///
+/// An existing path is reclaimed only when `symlink_metadata` reports a socket
+/// and nothing is listening on it. Regular files, directories, and symlinks are
+/// never unlinked: the node refuses to start with a clear error instead. The
+/// bound socket is chmodded to `0600` (user-scoped) and that mode is verified;
+/// a world-writable parent directory emits a warning.
 fn bind_listener(path: &Path) -> Result<UnixListener, String> {
     let path_bytes = path.as_os_str().len();
     if path_bytes > MAX_SOCKET_PATH_BYTES {
@@ -248,22 +257,42 @@ fn bind_listener(path: &Path) -> Result<UnixListener, String> {
         if !parent.as_os_str().is_empty() {
             std::fs::create_dir_all(parent)
                 .map_err(|e| format!("create socket dir {}: {e}", parent.display()))?;
+            match std::fs::metadata(parent) {
+                Ok(meta) if meta.permissions().mode() & 0o002 != 0 => {
+                    eprintln!(
+                        "wm-node: warning: parent directory {} is world-writable; the socket is user-scoped (0600) but path replacement attacks are possible — prefer a private runtime dir",
+                        parent.display()
+                    );
+                }
+                Ok(_) => {}
+                Err(e) => return Err(format!("stat socket dir {}: {e}", parent.display())),
+            }
         }
     }
-    if path.exists() {
-        match UnixStream::connect(path) {
-            Ok(_) => {
+    match std::fs::symlink_metadata(path) {
+        Ok(meta) => {
+            if !meta.file_type().is_socket() {
                 return Err(format!(
-                    "another wm-node is already listening on {} (refusing second bind)",
+                    "path {} exists and is not a socket (refusing to unlink it); remove it manually or choose another --socket",
                     path.display()
                 ));
             }
-            Err(_) => {
-                // Stale socket left by a previous crash: reclaim it.
-                std::fs::remove_file(path)
-                    .map_err(|e| format!("remove stale socket {}: {e}", path.display()))?;
+            match UnixStream::connect(path) {
+                Ok(_) => {
+                    return Err(format!(
+                        "another wm-node is already listening on {} (refusing second bind)",
+                        path.display()
+                    ));
+                }
+                Err(_) => {
+                    // Stale socket left by a previous crash: reclaim it.
+                    std::fs::remove_file(path)
+                        .map_err(|e| format!("remove stale socket {}: {e}", path.display()))?;
+                }
             }
         }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(format!("stat {}: {e}", path.display())),
     }
     let listener = UnixListener::bind(path).map_err(|e| {
         if e.kind() == std::io::ErrorKind::AddrInUse {
@@ -275,7 +304,28 @@ fn bind_listener(path: &Path) -> Result<UnixListener, String> {
             format!("bind {}: {e}", path.display())
         }
     })?;
-    let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600));
+
+    if let Err(e) = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)) {
+        drop(listener);
+        let _ = std::fs::remove_file(path);
+        return Err(format!("chmod socket {} to 0600: {e}", path.display()));
+    }
+    let mode = match std::fs::metadata(path) {
+        Ok(meta) => meta.permissions().mode() & 0o777,
+        Err(e) => {
+            drop(listener);
+            let _ = std::fs::remove_file(path);
+            return Err(format!("stat socket {} after chmod: {e}", path.display()));
+        }
+    };
+    if mode != 0o600 {
+        drop(listener);
+        let _ = std::fs::remove_file(path);
+        return Err(format!(
+            "socket {} has mode {mode:o}, expected 0600; refusing to serve",
+            path.display()
+        ));
+    }
     Ok(listener)
 }
 
@@ -1380,6 +1430,37 @@ mod tests {
         );
 
         drop(conn);
+        node.stop().expect("graceful shutdown");
+    }
+
+    #[test]
+    fn regular_file_path_is_refused_and_survives() {
+        let path = temp_path("wm-node-not-a-socket", "txt");
+        std::fs::write(&path, b"precious notes").expect("write regular file");
+
+        let err = bind_listener(&path).expect_err("must refuse a regular file");
+        assert!(err.contains("not a socket"), "unexpected error: {err}");
+
+        let shutdown = Arc::new(AtomicBool::new(false));
+        let err = run_server(&path, None, shutdown, None)
+            .expect_err("run_server must refuse a regular file");
+        assert!(err.contains("not a socket"), "unexpected error: {err}");
+
+        assert!(path.exists(), "regular file must survive");
+        assert_eq!(std::fs::read(&path).expect("read file"), b"precious notes");
+        std::fs::remove_file(&path).expect("cleanup");
+    }
+
+    #[test]
+    fn socket_permissions_are_owner_only() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let node = start_node(None);
+        let mode = std::fs::metadata(&node.socket)
+            .expect("stat socket")
+            .permissions()
+            .mode()
+            & 0o777;
+        assert_eq!(mode, 0o600, "socket mode {mode:o}, expected 0600");
         node.stop().expect("graceful shutdown");
     }
 
