@@ -252,18 +252,19 @@ All three RED findings and two AMBER findings are resolved and proven in test su
    batteries stay source-form until a scope amendment or a Gen3-native packaged battery lands.
 3. **H15-3:** the 9C amendment's numeric thresholds (Precision ≥ 2.12 %, Recall ≥ 85 %, ≥ 50 % candidate reduction) are not directly re-instrumented by the acceptance battery.
 4. **H15-4:** true physical power-loss qualification is not performed; crash consistency is emulated with write-ahead fsync + reopen.
-5. **9B (CLOSED by addendum, 2026-10-07):** `docs/LEGACY_CLI_AUDIT_2026-10-07.md` tables all 30
-   v9-only commands (Preserve/Translate/Deprecate/Remove) and the 8 drifted shared names. The
-   audit surfaces follow-on gaps, not 9B blockers: no Gen3 whole-store `backup`/`restore`,
-   `wm at-rest` CLI pending, memory source-trust curation partial.
+5. **9B (CLOSED by addendum, 2026-10-07; rev.2):** `docs/LEGACY_CLI_AUDIT_2026-10-07.md` tables
+   all 30 v9-only commands (Preserve/Translate/Deprecate/Remove) and the 8 drifted shared names.
+   `wm at-rest` and `wm host-guard` CLI are now covered (wave-3 `88ac66a`, merged `80b34c2`:
+   `wm at-rest status|migrate`; `wm host-guard status|run|arm|disarm`; `wm compact` e2e gated on
+   `lmdb-utils`). Remaining follow-on gaps, not 9B blockers: no Gen3 whole-store
+   `backup`/`restore`; memory source-trust curation partial.
 6. **9B build tooling (new, addendum):** v9-era gates (`scripts/curated_smoke_test.py`,
    `scripts/longmemeval_bench.py`, `scripts/memorastrict_bench.py`, `scripts/eval_matrix.sh`) pass
    the removed `serve --max-requests/--rate-limit` flags and the smoke additionally asserts the
    v9 MCP payload contract; `scripts/eval_all_tools.py` does not exist at this base. A
    Gen3-native process-level smoke should replace them for packaged-artifact gating.
-7. **Closure scan red at the addendum base (new, discovered during evidence capture):**
-   `bash scripts/check_closures.sh` passes rules 1–2 but fails rule 3 on
-   `crates/wm-gen3-harness/src/bin/wm_node.rs:1036,1159` (Geth Phase 2 `wm-node` transport spawn
-   absent from the scanner allowlist). The alpha.5 "3/3 PASS" citation no longer holds for
-   `ef623fb`; CI is red at this step until the allowlist plus a boundary receipt lands
-   (`receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md` §4a).
+7. **Closure scan: RESOLVED (rev.2).** The scan failed rule 3 at `ef623fb`
+   (`crates/wm-gen3-harness/src/bin/wm_node.rs` spawns); wave-3 `ef24101` extended the scanner
+   allowlist and added `receipts/BOUNDARY_WM_NODE_TRANSPORT_SPAWNS_2026-10-07.md`. Re-run at the
+   merge base `80b34c2`: `closure static scans: PASS` (3/3). History:
+   `receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md` §4a.

@@ -7,6 +7,9 @@
   (packaged-artifact M0–M8 evidence; legacy CLI audit)
 - **Status:** evidence recorded; **no code edits**; H15-2 remains formally open at the
   preregistered driver-form scope (bounded below); operator ratification untouched
+- **Rev 2 (2026-10-07, post-merge `80b34c2`):** command-presence count corrected to 63;
+  §4a closure-scan finding updated — repaired by wave-3 `ef24101` (allowlist + boundary
+  receipt); `wm at-rest`/`wm host-guard` CLI now covered (audit rev.2)
 - **Evidence bundle:** `receipts/gate9b_artifact_evidence_20261007/`
   (raw logs, `SHA256SUMS`, `summary.json`, release manifest, exact patch)
 
@@ -73,7 +76,7 @@ evidence bundle. `WM` = the artifact path; both artifacts were exercised.
 | 10 | Mesh / peer trust | `$WM mesh status --store <tmp>`; `$WM peer list --json --store <tmp>` | node identity + verifying key present; local peer `trust_tier: local`, capabilities `[sync, dispatch, telemetry, triage]` |
 | 11 | Static-embedding shortlist | `echo 'recall my last session' \| $WM shortlist --store <tmp> --k 3` | top route `session.recall` 0.8538; gate `dispatch`; signed shortlist receipt written |
 | 12 | MCP stdio surface | `$WM serve --store <tmp> --profile full` (JSON-RPC: `initialize`, `tools/list`, then `tools/call` `wm` → `memory.create`, `memory.search`, `session.continuity`) | `serverInfo {name: whitemagic-gen3, version: 10.2.0-alpha.6, profile: full}`; **44 tools, `wm` at index 0**; create→search round-trip finds the marker; `session.continuity` returns checkpoint/queue/turn fields; **server rc=0** (both) |
-| 13 | Command-presence inventory | `for c in <58 names>; do $WM $c --help; done` | 30 v9-only commands absent from `wm10` (basis for the legacy audit); shared names retained: `serve`, `contract`, `selftest`, `status`, `grimoire`, `session`, `ingest`, `migrate` (log `10-command-presence.txt`) |
+| 13 | Command-presence inventory | `for c in <63 names>; do $WM $c --help; done` | 30 v9-only commands absent from the tested `wm10` alpha.6 artifacts (basis for the legacy audit); shared names retained: `serve`, `contract`, `selftest`, `status`, `grimoire`, `session`, `ingest`, `migrate` (log `10-command-presence.txt`; merged main adds `at-rest`/`host-guard`/`compact` — see audit rev.2) |
 
 ## 4. What could not be run against a packaged artifact — exact blockers
 
@@ -111,9 +114,9 @@ evidence bundle. `WM` = the artifact path; both artifacts were exercised.
    asset was therefore fetched, manifest-verified, and exercised separately (all overlapping
    checks identical).
 
-## 4a. Base-tree side finding (not caused by this lane)
+## 4a. Base-tree side finding — closure scan (rev.2: resolved on main)
 
-`bash scripts/check_closures.sh` at `ef623fb` (docs-only working tree) **fails rule 3**:
+`bash scripts/check_closures.sh` at `ef623fb` (docs-only working tree) **failed rule 3**:
 
 ```
 CLOSURE SCAN FAILED: thread spawn outside the physical-I/O transport:
@@ -121,15 +124,14 @@ crates/wm-gen3-harness/src/bin/wm_node.rs:1036:  std::thread::spawn(...)
 crates/wm-gen3-harness/src/bin/wm_node.rs:1159:  std::thread::spawn(...)
 ```
 
-Rules 1–2 pass. The sites belong to the Geth Phase 2 `wm-node` Unix-socket listener
-(added in 10.2.0-alpha.6); the scanner's allowlist covers only `transport.rs`, `mesh.rs`,
+Rules 1–2 passed. The sites belong to the Geth Phase 2 `wm-node` Unix-socket listener
+(added in 10.2.0-alpha.6); the scanner's allowlist covered only `transport.rs`, `mesh.rs`,
 and `mcp_server.rs`. Line 1036 is the accept loop dispatching per-connection handlers — a
-physical-I/O transport site in intent (Article 4-compliant), so this is a **scanner
-allowlist gap**, not evidence of a semantic breach. However, CI runs this exact script on
-push, so the tracked closure gate is **red at this base** and the verdict's "closure scans
-3/3" citation (alpha.5) no longer holds for `ef623fb`. Fixing it requires a scanner
-allowlist entry (a code/script edit, outside this evidence lane) with the ratified-boundary
-receipt pattern used for the mesh spawns. Log:
+physical-I/O transport site in intent (Article 4-compliant), so this was a **scanner
+allowlist gap**, not evidence of a semantic breach. **Resolution (rev.2):** wave-3 `ef24101`
+extended the scanner allowlist and added the ratified boundary receipt
+`receipts/BOUNDARY_WM_NODE_TRANSPORT_SPAWNS_2026-10-07.md`; re-run at merge base `80b34c2`
+reports `closure static scans: PASS` (3/3). Original log:
 `receipts/gate9b_artifact_evidence_20261007/logs/13-closure-scan-base.txt`.
 `python3 scripts/version_truth.py --check` passes (`10.2.0-alpha.6` agrees on all surfaces).
 
@@ -146,9 +148,10 @@ receipt pattern used for the mesh spawns. Log:
   closure requires a scope amendment or a new packaged-battery driver.
 - **Gate 9B overall:** remains **engineering-closed, ratification pending**. This receipt
   removes the "no packaged-artifact evidence" gap and closes the audit gap; it does **not**
-  close the strict H15-2 wording, and it does not touch the remaining CI/host-guard/9D
-  conditions in the verdict §4. It additionally records that the tracked closure scan is
-  **red at the addendum base** (§4a) — a new ratification condition unless repaired.
+  close the strict H15-2 wording. Rev.2: the §4a closure-scan finding was repaired on main by
+  `ef24101` (re-run at merge `80b34c2`: 3/3 PASS), and wave-3 `88ac66a` closes the
+  `wm at-rest`/`wm host-guard` CLI gaps; the only remaining verdict §4 conditions are the CI
+  reference-model battery, the 9D real-store skip, and the H15-2 closure decision.
 
 ## 6. Reproduction
 

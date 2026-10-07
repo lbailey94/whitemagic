@@ -8,10 +8,13 @@
 - **Subject binaries:** legacy `wm9` 9.3.4 (installed) vs Gen3 `wm10` 10.2.0-alpha.6 (installed;
   sha256 `fcd7f5a0f0353a482c85ba04b0fe7cd0d7e3db599947f9182ccdce58575819aa`)
 - **Method:** command inventory from `wm9 --help` + `wm9 help --all`; Gen3 presence determined by
-  `wm10 <cmd> --help` exit status and help text. Raw inventory:
+  `wm10 <cmd> --help` exit status and help text. Raw inventory (63 names):
   `receipts/gate9b_artifact_evidence_20261007/logs/10-command-presence.txt`.
   This audits the **CLI** surface; the Gen3 MCP route surface is separately machine-checked by
   `wm10 contract --json` (44 routes / 40 declared / 4 undeclared).
+- **Rev 2 (2026-10-07, post-merge `80b34c2`):** wave-3 commit `88ac66a` wired `wm at-rest`
+  (`status|migrate`) and added the Gen3-only `wm host-guard` (`status|run|arm|disarm`) and
+  `wm compact` commands; row #29 and §4.2 updated. All other dispositions stand.
 
 ## 1. Disposition vocabulary
 
@@ -54,13 +57,18 @@
 | 26 | `anchor` | Merkle-anchor store attestations, optional publish | **Translate** | `wm mandala record-receipt` + `wm mesh export` | Gen3 anchors Merkle state commitments in signed receipts and signed sync bundles. |
 | 27 | `repair-content` | Repair gate-failing V8-drift memory content | **Remove** | `memory.update` (if supersession is needed) | The V8 drift corpus never existed in Gen3 stores, so in-place repair is not applicable. |
 | 28 | `redact-content` | Retro-redact credential-shaped stored content | **Translate** | `memory.ingest` (`redact: true`, default) / MCP ingest | Redaction moved to the ingest boundary; there is no retro-scan CLI in Gen3. |
-| 29 | `at-rest` | At-rest keyring operations (Q39 slice B) | **Translate (pending)** | `wm at-rest` (planned; keyring engine landed in 10.2.0-alpha.6) | The Gen3 at-rest engine (`off\|keyfile\|passphrase`) landed in alpha.6, but its CLI "lands next" per CHANGELOG — not yet invocable. |
+| 29 | `at-rest` | At-rest keyring operations (Q39 slice B) | **Translate** (rev.2) | `wm at-rest status` / `wm at-rest migrate` (merged main `88ac66a`) | CLI now wired: `status` reports mode/keyring/wrapped DEKs/migration ledger; `migrate` is bounded-batch seal-on-rewrite (`--dry-run` available, `--yes` required for writes). |
 | 30 | `trust` | Survey/correct memory source-trust provenance | **Translate (partial)** | `wm peer` (peer trust tiers); `min_trust` read-side filter | Peer trust is re-derived; the memory source-trust survey/correction workflow is not — v9 memory curation stays on `wm9 trust`. |
 
 Not a command: **`federate`** does not exist in `wm9` 9.3.4
 (`error: unrecognized subcommand 'federate'`). The federated concept maps to `wm mesh`
 (sovereign sync) and `wm serve --transport http|sse` (loopback-gated) in Gen3; nothing to
 disposition.
+
+Wave-3 Gen3-only additions (not v9-derived, so not dispositioned above): `wm host-guard
+status|run|arm|disarm` (wave-3 `88ac66a`; `run` is report-only unless `--act`, single-lease
+locked, durable armed flag), `wm compact` (LMDB compaction; e2e gated on `lmdb-utils`/`mdb_copy`,
+report math unit-tested), and `wm at-rest status|migrate` (#29 above).
 
 ## 3. Shared names with changed semantics (present in both, not v9-only)
 
@@ -80,7 +88,8 @@ disposition.
 1. **No Gen3 whole-store `backup`/`restore`** (#15/#16) — Gen3 disaster recovery is an
    unimplemented capability; production graduation should schedule it or record an explicit
    acceptance of the risk.
-2. **`wm at-rest` CLI not yet wired** (#29) — engine landed in alpha.6; pending.
+2. **`wm at-rest` CLI: CLOSED (rev.2)** — `wm at-rest status|migrate` wired in wave-3
+   `88ac66a` (see #29); `migrate` is bounded-batch seal-on-rewrite and requires `--yes`.
 3. **Memory source-trust curation** (#30) — peer trust re-derived, memory-side survey/correction
    not yet.
 4. **v9-era bench scripts** depend on the removed `serve --max-requests/--rate-limit` flags and
