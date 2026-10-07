@@ -48,6 +48,8 @@ SURFACES = [
     "npm/whitemagic-mcp/README.md",
     "CITATION.cff",
     "README.md",
+    "skill.md",
+    "scripts/install.sh",
 ]
 
 VERSION_RE = re.compile(r"\bv?(?:10\.\d+\.\d+(?:-alpha(?:\.\d+)?)?|9\.\d+\.\d+)\b")
@@ -60,10 +62,10 @@ RELEASED_HEADING_RE = re.compile(r"^## \[(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.]+)?)]")
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 # Historical version mentions that must never count as drift or be rewritten
-# (they describe past releases, not current version truth).
-EXEMPT = {
-    "SECURITY.md": {"9.0.0"},
-}
+# (they describe past releases, not current version truth). No current surface
+# carries historical-only references; the unit tests inject an entry to cover
+# the mechanism (test_historical_versions_are_exempt).
+EXEMPT: dict[str, set[str]] = {}
 
 
 def versions_in(text: str, exempt: frozenset[str] = frozenset()) -> list[str]:

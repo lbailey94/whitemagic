@@ -104,6 +104,28 @@ class ScorerFixtures(unittest.TestCase):
         self.assertTrue(supports_reference_text("The destination is Paris.", "Paris"))
 
 
+T3_ANNOTATIONS_PATH = (
+    SCRIPTS.parent / "benchmarks/data/memorastrict/t3_source_annotations_v1.json"
+)
+T3_GROUPED_FIXTURE_PATH = (
+    SCRIPTS.parent
+    / "benchmarks/validation/fixtures/memorastrict_t3_grouped_source_v1.json"
+)
+T3_DATASET_PATH = SCRIPTS.parent / "benchmarks/data/memorastrict/bench_seed1.json"
+T3_MISSING_FIXTURES = [
+    str(path.relative_to(SCRIPTS.parent))
+    for path in (T3_ANNOTATIONS_PATH, T3_GROUPED_FIXTURE_PATH, T3_DATASET_PATH)
+    if not path.is_file()
+]
+
+
+@unittest.skipUnless(
+    not T3_MISSING_FIXTURES,
+    "memorastrict T3 fixtures unavailable: "
+    + ", ".join(T3_MISSING_FIXTURES)
+    + " (the v10 trim removed benchmarks/data datasets and benchmarks/validation/ "
+    "was never tracked in git); run in the eval fixture checkout to execute",
+)
 class T3GroupedSourceFixtures(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

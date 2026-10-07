@@ -82,13 +82,14 @@ jobs:
         # docs/CLOSURE_TESTS.md §1.1-B/C + §2.1 (dependency rule, mutation
         # surface isolation) and CHARTER Article 4 (spawns only in the
         # physical-I/O transports). The scan's `cargo tree` runs --offline,
-        # so it depends on the locked fetch above.
+        # so it depends on the locked fetch above. The script is tracked;
+        # a missing file is a hard failure, not a skipped gate.
         run: |
-          if [ -f scripts/check_closures.sh ]; then
-            bash scripts/check_closures.sh
-          else
-            echo "::warning::scripts/check_closures.sh is not tracked in this tree; closure gate skipped"
+          if [ ! -f scripts/check_closures.sh ]; then
+            echo "::error::scripts/check_closures.sh missing from this tree; the closure gate is mandatory"
+            exit 1
           fi
+          bash scripts/check_closures.sh
       - name: Warm fastembed cache
         run: cargo run -p wm-gen3-core --example warm_embed_cache
       - name: Run workspace tests

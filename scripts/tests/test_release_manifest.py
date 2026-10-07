@@ -47,12 +47,16 @@ class ReleaseManifestFactsTest(unittest.TestCase):
 
     def test_health_required_assets_match_manifest_targets(self) -> None:
         # The release-health probe's required-asset list must stay in
-        # lockstep with the manifest targets (and so with the build matrix);
-        # drift here is the 2026-10-04 false-LAGGING class.
+        # lockstep with the build matrix. Windows is parked out of the alpha
+        # matrix (release.yml, 2026-10-05: ONNX link/DLL work pending), so its
+        # manifest targets are excluded from the current expectation — re-add
+        # them here only together with the matrix entry.
         import release_health as rh
 
         expected = set()
         for filename in rm.TARGETS:
+            if filename.endswith(".exe"):
+                continue
             expected.add(filename)
             expected.add(f"{filename}.sha256")
             if not filename.endswith(".exe"):

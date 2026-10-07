@@ -30,7 +30,7 @@ def make_tree(version: str = "9.1.4") -> tuple[tempfile.TemporaryDirectory, Path
             path.write_text(f"# install: sh -s -- --version v{version}\n", encoding="utf-8")
         elif rel == "PRIVACY_POLICY.md":
             path.write_text(f"# Privacy\n\n**Version**: {version}\n", encoding="utf-8")
-        elif rel == "SECURITY.md":
+        elif rel == "HISTORY.md":
             path.write_text(
                 f"> the fleet runs {version} (the pinned 9.0.0 runtime was removed)\n",
                 encoding="utf-8",
@@ -90,14 +90,24 @@ class VersionTruthTest(unittest.TestCase):
             self.assertEqual(vt.check(root, None), 0)
 
     def test_historical_versions_are_exempt(self) -> None:
-        tmp, root = make_tree("9.1.4")
-        with tmp:
-            security = (root / "SECURITY.md").read_text(encoding="utf-8")
-            self.assertIn("9.0.0", security)
-            # Not drift, and not rewritten.
-            self.assertEqual(vt.check(root, None), 0)
-            self.assertEqual(vt.set_version(root, "9.1.5", dry_run=False), 0)
-            self.assertIn("9.0.0", (root / "SECURITY.md").read_text(encoding="utf-8"))
+        # SECURITY.md no longer carries any numeric version reference, so the
+        # exemption mechanism is exercised with a synthetic history surface.
+        vt.SURFACES.append("HISTORY.md")
+        vt.EXEMPT["HISTORY.md"] = {"9.0.0"}
+        try:
+            tmp, root = make_tree("9.1.4")
+            with tmp:
+                history = (root / "HISTORY.md").read_text(encoding="utf-8")
+                self.assertIn("9.0.0", history)
+                # Not drift, and not rewritten.
+                self.assertEqual(vt.check(root, None), 0)
+                self.assertEqual(vt.set_version(root, "9.1.5", dry_run=False), 0)
+                self.assertIn(
+                    "9.0.0", (root / "HISTORY.md").read_text(encoding="utf-8")
+                )
+        finally:
+            vt.SURFACES.remove("HISTORY.md")
+            vt.EXEMPT.pop("HISTORY.md", None)
 
     def test_set_dry_run_writes_nothing(self) -> None:
         tmp, root = make_tree("9.1.4")
