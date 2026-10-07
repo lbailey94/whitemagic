@@ -7,25 +7,13 @@ use crate::embedder::VaultEmbedder;
 use crate::extractor::OpencodeExtractor;
 use crate::graph::CausalGraphBuilder;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct VaultSyncState {
     pub last_synced_session_time: i64,
     pub last_synced_message_time: i64,
     pub total_chunks_indexed: usize,
     pub total_nodes_indexed: usize,
     pub total_edges_indexed: usize,
-}
-
-impl Default for VaultSyncState {
-    fn default() -> Self {
-        Self {
-            last_synced_session_time: 0,
-            last_synced_message_time: 0,
-            total_chunks_indexed: 0,
-            total_nodes_indexed: 0,
-            total_edges_indexed: 0,
-        }
-    }
 }
 
 pub struct VaultDaemon {

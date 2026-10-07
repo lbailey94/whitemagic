@@ -684,17 +684,17 @@ pub fn synthesize_regime_telemetry(
 pub fn jacobi_eigen_24(cov: &[[f64; 24]; 24], max_iter: usize) -> ([f64; 24], [[f64; 24]; 24]) {
     let mut a = *cov;
     let mut v = [[0.0f64; 24]; 24];
-    for i in 0..24 {
-        v[i][i] = 1.0;
+    for (i, row) in v.iter_mut().enumerate() {
+        row[i] = 1.0;
     }
 
     for _ in 0..max_iter {
         let mut max_off = 0.0f64;
         let mut p = 0;
         let mut q = 1;
-        for i in 0..24 {
-            for j in (i + 1)..24 {
-                let off = a[i][j].abs();
+        for (i, row) in a.iter().enumerate() {
+            for (j, a_ij) in row.iter().enumerate().skip(i + 1) {
+                let off = a_ij.abs();
                 if off > max_off {
                     max_off = off;
                     p = i;
@@ -757,18 +757,18 @@ pub fn jacobi_eigen_24(cov: &[[f64; 24]; 24], max_iter: usize) -> ([f64; 24], [[
 /// Inverts an N x N matrix using Gauss-Jordan elimination with partial pivoting.
 pub fn invert_square_matrix(mat: &[Vec<f64>]) -> Option<Vec<Vec<f64>>> {
     let n = mat.len();
-    let mut a: Vec<Vec<f64>> = mat.iter().map(|row| row.clone()).collect();
+    let mut a: Vec<Vec<f64>> = mat.to_vec();
     let mut inv = vec![vec![0.0f64; n]; n];
-    for i in 0..n {
-        inv[i][i] = 1.0;
+    for (i, row) in inv.iter_mut().enumerate() {
+        row[i] = 1.0;
     }
 
     for col in 0..n {
         let mut max_row = col;
         let mut max_val = a[col][col].abs();
-        for row in (col + 1)..n {
-            if a[row][col].abs() > max_val {
-                max_val = a[row][col].abs();
+        for (row, a_row) in a.iter().enumerate().skip(col + 1) {
+            if a_row[col].abs() > max_val {
+                max_val = a_row[col].abs();
                 max_row = row;
             }
         }
@@ -822,15 +822,15 @@ pub fn solve_ridge_regression(
 
     // A = Z^T Z + lambda I
     let mut a = vec![vec![0.0f64; p]; p];
-    for i in 0..n {
+    for z_row in &z_aug {
         for r in 0..p {
             for c in 0..p {
-                a[r][c] += z_aug[i][r] * z_aug[i][c];
+                a[r][c] += z_row[r] * z_row[c];
             }
         }
     }
-    for r in 0..p {
-        a[r][r] += lambda;
+    for (r, row) in a.iter_mut().enumerate() {
+        row[r] += lambda;
     }
 
     let a_inv = invert_square_matrix(&a)?;
@@ -892,19 +892,19 @@ pub fn evaluate_linear_probe(
 
     // Compute variance of y_test
     let mut col_means = vec![0.0f64; d];
-    for i in 0..n {
+    for y_row in y_test {
         for c in 0..d {
-            col_means[c] += y_test[i][c];
+            col_means[c] += y_row[c];
         }
     }
-    for c in 0..d {
-        col_means[c] /= n as f64;
+    for mean in col_means.iter_mut() {
+        *mean /= n as f64;
     }
 
     let mut total_var = 0.0f64;
-    for i in 0..n {
+    for y_row in y_test {
         for c in 0..d {
-            let diff = y_test[i][c] - col_means[c];
+            let diff = y_row[c] - col_means[c];
             total_var += diff * diff;
         }
     }
@@ -939,13 +939,13 @@ pub fn evaluate_regime_classification_f1(
     let p = k + 1;
 
     let mut preds = Vec::with_capacity(n_test);
-    for i in 0..n_test {
+    for z_row in z_test {
         let mut best_class = 0;
         let mut best_score = -1e9f64;
-        for c in 0..num_classes {
-            let mut score = weights[p - 1][c];
+        for (c, w) in weights[p - 1].iter().enumerate() {
+            let mut score = *w;
             for j in 0..k {
-                score += z_test[i][j] * weights[j][c];
+                score += z_row[j] * weights[j][c];
             }
             if score > best_score {
                 best_score = score;
@@ -1003,24 +1003,24 @@ pub fn compute_pairwise_redundancy(features: &[Vec<f64>]) -> f64 {
     }
 
     let mut means = vec![0.0f64; k];
-    for i in 0..n {
+    for feature in features {
         for j in 0..k {
-            means[j] += features[i][j];
+            means[j] += feature[j];
         }
     }
-    for j in 0..k {
-        means[j] /= n as f64;
+    for mean in means.iter_mut() {
+        *mean /= n as f64;
     }
 
     let mut stds = vec![0.0f64; k];
-    for i in 0..n {
+    for feature in features {
         for j in 0..k {
-            let diff = features[i][j] - means[j];
+            let diff = feature[j] - means[j];
             stds[j] += diff * diff;
         }
     }
-    for j in 0..k {
-        stds[j] = (stds[j] / (n - 1) as f64).sqrt().max(1e-9);
+    for std in stds.iter_mut() {
+        *std = (*std / (n - 1) as f64).sqrt().max(1e-9);
     }
 
     let mut total_corr = 0.0f64;
@@ -1028,8 +1028,8 @@ pub fn compute_pairwise_redundancy(features: &[Vec<f64>]) -> f64 {
     for i in 0..k {
         for j in (i + 1)..k {
             let mut cov = 0.0f64;
-            for row in 0..n {
-                cov += (features[row][i] - means[i]) * (features[row][j] - means[j]);
+            for feature in features {
+                cov += (feature[i] - means[i]) * (feature[j] - means[j]);
             }
             let r = cov / ((n - 1) as f64 * stds[i] * stds[j]);
             total_corr += r.abs();
@@ -1124,8 +1124,8 @@ pub fn run_peb7_spectroscopy_fidelity_benchmark(seed: u64) -> Peb7BenchmarkRepor
             means_24[j] += row[j];
         }
     }
-    for j in 0..24 {
-        means_24[j] /= train_steps as f64;
+    for mean in means_24.iter_mut() {
+        *mean /= train_steps as f64;
     }
 
     let mut cov_24 = [[0.0f64; 24]; 24];
@@ -1136,9 +1136,9 @@ pub fn run_peb7_spectroscopy_fidelity_benchmark(seed: u64) -> Peb7BenchmarkRepor
             }
         }
     }
-    for r in 0..24 {
-        for c in 0..24 {
-            cov_24[r][c] /= (train_steps - 1) as f64;
+    for row in cov_24.iter_mut() {
+        for cell in row.iter_mut() {
+            *cell /= (train_steps - 1) as f64;
         }
     }
 
@@ -1164,19 +1164,14 @@ pub fn run_peb7_spectroscopy_fidelity_benchmark(seed: u64) -> Peb7BenchmarkRepor
 
     // Generate Random_22 projection matrix
     let mut rand_mat = vec![vec![0.0f64; 24]; 22];
-    for r in 0..22 {
-        for c in 0..24 {
-            rand_mat[r][c] = (rand_f32(&mut rng) * 2.0 - 1.0) as f64;
+    for row in rand_mat.iter_mut() {
+        for cell in row.iter_mut() {
+            *cell = (rand_f32(&mut rng) * 2.0 - 1.0) as f64;
         }
         // Normalize
-        let norm: f64 = rand_mat[r]
-            .iter()
-            .map(|&x| x * x)
-            .sum::<f64>()
-            .sqrt()
-            .max(1e-9);
-        for c in 0..24 {
-            rand_mat[r][c] /= norm;
+        let norm: f64 = row.iter().map(|&x| x * x).sum::<f64>().sqrt().max(1e-9);
+        for cell in row.iter_mut() {
+            *cell /= norm;
         }
     }
 
@@ -1299,7 +1294,7 @@ pub mod tests {
 
         for (i, &act) in sig.activations.iter().enumerate() {
             assert!(
-                act >= 0.0 && act <= 1.0,
+                (0.0..=1.0).contains(&act),
                 "Motif {} ({:?}) out of bounds: {}",
                 i,
                 DynamicalMotif::ALL[i],
@@ -1311,10 +1306,12 @@ pub mod tests {
     #[test]
     fn test_spectrometer_is_pure_and_deterministic() {
         let spec = CanonicalSpectrometer::new();
-        let mut telem = RuntimeTelemetry::default();
-        telem.candidate_variance = 0.88;
-        telem.bytes_streamed = 1024.0;
-        telem.temperature = 1.2;
+        let telem = RuntimeTelemetry {
+            candidate_variance: 0.88,
+            bytes_streamed: 1024.0,
+            temperature: 1.2,
+            ..Default::default()
+        };
 
         let sig1 = spec.observe(&telem);
         let sig2 = spec.observe(&telem);
@@ -1365,7 +1362,7 @@ pub mod tests {
             assert!(!act.is_nan(), "Activation must never be NaN");
             assert!(!act.is_infinite(), "Activation must never be infinite");
             assert!(
-                act >= 0.0 && act <= 1.0,
+                (0.0..=1.0).contains(&act),
                 "Activation must be clamped in [0, 1]"
             );
         }

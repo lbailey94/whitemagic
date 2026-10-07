@@ -457,7 +457,7 @@ impl SubstrateSnapshot {
     #[must_use]
     pub fn compute_state_hash(records: &HashMap<String, String>, epoch: u64) -> [u8; 32] {
         let mut hasher = Sha256::new();
-        hasher.update(&epoch.to_le_bytes());
+        hasher.update(epoch.to_le_bytes());
         // Sort keys for deterministic hash
         let mut keys: Vec<&String> = records.keys().collect();
         keys.sort();
@@ -535,11 +535,11 @@ impl StateDelta {
             hasher.update(k.as_bytes());
             match &self.mutations[k] {
                 Some(v) => {
-                    hasher.update(&[1u8]);
+                    hasher.update([1u8]);
                     hasher.update(v.as_bytes());
                 }
                 None => {
-                    hasher.update(&[0u8]);
+                    hasher.update([0u8]);
                 }
             }
         }
@@ -629,14 +629,14 @@ pub fn compute_canonical_warrant_digest(
     status: EpistemicStatus,
 ) -> [u8; 16] {
     let mut hasher = Sha256::new();
-    hasher.update(&candidate_id.to_le_bytes());
+    hasher.update(candidate_id.to_le_bytes());
     hasher.update(snapshot_hash);
-    hasher.update(&epoch.to_le_bytes());
-    hasher.update(&(scope.len() as u64).to_le_bytes());
+    hasher.update(epoch.to_le_bytes());
+    hasher.update((scope.len() as u64).to_le_bytes());
     hasher.update(scope.as_bytes());
     // Canonical IEEE-754 normalized bit patterns
-    hasher.update(&margin.to_bits().to_le_bytes());
-    hasher.update(&risk.to_bits().to_le_bytes());
+    hasher.update(margin.to_bits().to_le_bytes());
+    hasher.update(risk.to_bits().to_le_bytes());
     let status_tag: u8 = match status {
         EpistemicStatus::Affirmed => 1,
         EpistemicStatus::Denied => 2,
@@ -644,7 +644,7 @@ pub fn compute_canonical_warrant_digest(
         EpistemicStatus::Insufficient => 4,
         EpistemicStatus::CategoryError => 0,
     };
-    hasher.update(&[status_tag]);
+    hasher.update([status_tag]);
     let full = hasher.finalize();
     let mut digest = [0u8; 16];
     digest.copy_from_slice(&full[..16]);
@@ -1139,11 +1139,8 @@ pub fn run_peb10_pulse_compiler_benchmark(total_trials: usize) -> Peb10Benchmark
         // Perturb the store: epoch advances before commit
         store2.current_epoch += 1;
 
-        match store2.commit(cap, comp_delta) {
-            Err(PulseError::StaleWorldEpoch { .. }) => {
-                stale_world_successes += 1;
-            }
-            _ => {}
+        if let Err(PulseError::StaleWorldEpoch { .. }) = store2.commit(cap, comp_delta) {
+            stale_world_successes += 1;
         }
 
         // -------------------------------------------------------------
@@ -1446,8 +1443,10 @@ pub fn run_peb10_pulse_compiler_benchmark(total_trials: usize) -> Peb10Benchmark
                 description: "".into(),
             })
             .collect();
-        let mut env7 = ResourceEnvelope::default();
-        env7.max_candidates = 30;
+        let env7 = ResourceEnvelope {
+            max_candidates: 30,
+            ..Default::default()
+        };
 
         let res7 = PulseTree::compile(
             snap7,
@@ -1562,7 +1561,7 @@ pub fn run_peb10_pulse_compiler_benchmark(total_trials: usize) -> Peb10Benchmark
                     "task_result".into(),
                 );
                 let mut h = Sha256::new();
-                h.update(&task._id.to_le_bytes());
+                h.update(task._id.to_le_bytes());
                 for (k, v) in &task._state_snapshot {
                     h.update(k.as_bytes());
                     h.update(v.as_bytes());
@@ -1956,8 +1955,10 @@ mod tests {
             })
             .collect();
 
-        let mut env = ResourceEnvelope::default();
-        env.max_candidates = 25; // limit to 25
+        let env = ResourceEnvelope {
+            max_candidates: 25, // limit to 25
+            ..Default::default()
+        };
 
         let res = PulseTree::compile(
             snapshot,

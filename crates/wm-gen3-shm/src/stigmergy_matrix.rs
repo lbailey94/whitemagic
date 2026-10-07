@@ -43,6 +43,11 @@ unsafe impl<'a> Sync for ShmStigmergyMatrix<'a> {}
 
 impl<'a> ShmStigmergyMatrix<'a> {
     /// Format and initialize the pheromone matrix memory.
+    ///
+    /// # Safety
+    ///
+    /// `slots` must point to `count` writable [`ShmPheromoneSlot`] entries in shared
+    /// memory valid for this process's lifetime.
     pub unsafe fn init(slots: *mut ShmPheromoneSlot, count: usize) {
         unsafe {
             for i in 0..count {
@@ -72,8 +77,8 @@ impl<'a> ShmStigmergyMatrix<'a> {
             let slot = unsafe { &*self.base_ptr.add(idx) };
 
             let curr = slot.state_ver.load(Ordering::Acquire);
-            if curr == PHEROMONE_STATE_EMPTY || curr == PHEROMONE_STATE_EVAPORATED {
-                if slot
+            if (curr == PHEROMONE_STATE_EMPTY || curr == PHEROMONE_STATE_EVAPORATED)
+                && slot
                     .state_ver
                     .compare_exchange(
                         curr,
@@ -82,37 +87,36 @@ impl<'a> ShmStigmergyMatrix<'a> {
                         Ordering::Relaxed,
                     )
                     .is_ok()
-                {
-                    unsafe {
-                        let slot_ref = &mut *self.base_ptr.add(idx);
-                        slot_ref.kind = p.kind;
-                        slot_ref.p_id.copy_from_slice(p.id.as_bytes());
-                        slot_ref.target_path_hash = path_hash;
-                        slot_ref.ast_scope_hash = ast_hash;
-                        slot_ref.line_start = p.line_start;
-                        slot_ref.line_end = p.line_end;
-                        slot_ref.initial_intensity = p.initial_intensity;
-                        slot_ref.half_life_ms = p.half_life_ms.max(100);
-                        slot_ref.emitted_at_ms = p.emitted_at_ms;
-                        slot_ref.issuer_hash = Self::hash_str(&p.issuer);
+            {
+                unsafe {
+                    let slot_ref = &mut *self.base_ptr.add(idx);
+                    slot_ref.kind = p.kind;
+                    slot_ref.p_id.copy_from_slice(p.id.as_bytes());
+                    slot_ref.target_path_hash = path_hash;
+                    slot_ref.ast_scope_hash = ast_hash;
+                    slot_ref.line_start = p.line_start;
+                    slot_ref.line_end = p.line_end;
+                    slot_ref.initial_intensity = p.initial_intensity;
+                    slot_ref.half_life_ms = p.half_life_ms.max(100);
+                    slot_ref.emitted_at_ms = p.emitted_at_ms;
+                    slot_ref.issuer_hash = Self::hash_str(&p.issuer);
 
-                        let p_bytes = p.target_path.as_bytes();
-                        let p_len = p_bytes.len().min(159);
-                        slot_ref.target_path_str[..p_len].copy_from_slice(&p_bytes[..p_len]);
-                        slot_ref.target_path_str[p_len] = 0;
+                    let p_bytes = p.target_path.as_bytes();
+                    let p_len = p_bytes.len().min(159);
+                    slot_ref.target_path_str[..p_len].copy_from_slice(&p_bytes[..p_len]);
+                    slot_ref.target_path_str[p_len] = 0;
 
-                        let a_bytes = p.ast_scope.as_bytes();
-                        let a_len = a_bytes.len().min(95);
-                        slot_ref.ast_scope_str[..a_len].copy_from_slice(&a_bytes[..a_len]);
-                        slot_ref.ast_scope_str[a_len] = 0;
+                    let a_bytes = p.ast_scope.as_bytes();
+                    let a_len = a_bytes.len().min(95);
+                    slot_ref.ast_scope_str[..a_len].copy_from_slice(&a_bytes[..a_len]);
+                    slot_ref.ast_scope_str[a_len] = 0;
 
-                        let i_bytes = p.issuer.as_bytes();
-                        let i_len = i_bytes.len().min(47);
-                        slot_ref.issuer_str[..i_len].copy_from_slice(&i_bytes[..i_len]);
-                        slot_ref.issuer_str[i_len] = 0;
-                    }
-                    return Ok(p.id);
+                    let i_bytes = p.issuer.as_bytes();
+                    let i_len = i_bytes.len().min(47);
+                    slot_ref.issuer_str[..i_len].copy_from_slice(&i_bytes[..i_len]);
+                    slot_ref.issuer_str[i_len] = 0;
                 }
+                return Ok(p.id);
             }
         }
         Err("Pheromone matrix full")

@@ -2958,10 +2958,7 @@ mod runtime_truth_tests {
         )
         .expect("parse next frame");
         assert_eq!(request["id"], 7);
-        assert!(matches!(
-            read_bounded_line(&mut reader, 128).expect("eof"),
-            None
-        ));
+        assert!(read_bounded_line(&mut reader, 128).expect("eof").is_none());
     }
 
     #[test]
@@ -3953,10 +3950,8 @@ fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
             let target_pubkey_hex =
                 if target.len() == 64 && target.chars().all(|c| c.is_ascii_hexdigit()) {
                     Some(target.clone())
-                } else if let Some(p) = dir.get_by_id(&target) {
-                    Some(p.public_key_hex.clone())
                 } else {
-                    None
+                    dir.get_by_id(&target).map(|p| p.public_key_hex.clone())
                 };
 
             let ev_hash = evidence.unwrap_or_else(|| {
@@ -4890,8 +4885,10 @@ fn run_host_guard_run(
 
     let armed = load_host_guard_armed(state_dir);
     let mut state = load_host_guard_state(state_dir);
-    let mut policy = Policy::default();
-    policy.kill_orphans = kill_orphans;
+    let policy = Policy {
+        kill_orphans,
+        ..Default::default()
+    };
     let signals = wm_gen3_harness::host_health::collect_signals();
     let now = unix_now_secs();
     let mut plan = host_guard::plan_at(&signals, &state, &policy, now);
@@ -5419,6 +5416,8 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                             use std::io::{BufRead, BufReader};
                             let reader = BufReader::new(file);
                             let mut insights: Vec<wm_gen3_core::dream::DreamInsight> = Vec::new();
+                            // flatten() keeps scanning after an unreadable line; map_while would drop the rest.
+                            #[allow(clippy::lines_filter_map_ok)]
                             for line in reader.lines().flatten() {
                                 let trimmed = line.trim();
                                 if !trimmed.is_empty() {
@@ -5662,8 +5661,10 @@ fn run_mandala_command(cmd: MandalaCommands, store_path: &Path) {
                 .unwrap_or_default()
                 .as_secs();
 
-            let mut manifest = CapabilityManifest::default();
-            manifest.network_restricted = network_restricted;
+            let mut manifest = CapabilityManifest {
+                network_restricted,
+                ..Default::default()
+            };
             if let Some(allow_str) = allowed {
                 manifest.scope_mode = ScopeMode::Include;
                 for op in allow_str
@@ -7931,15 +7932,15 @@ fn print_dream_report(log_path: &Path, insights_path: &Path, substrate: Option<&
             use std::io::BufReader;
             let reader = BufReader::new(file);
             let mut insights: Vec<wm_gen3_core::dream::DreamInsight> = Vec::new();
-            for line in reader.lines() {
-                if let Ok(l) = line {
-                    let trimmed = l.trim();
-                    if !trimmed.is_empty() {
-                        if let Ok(ins) =
-                            serde_json::from_str::<wm_gen3_core::dream::DreamInsight>(trimmed)
-                        {
-                            insights.push(ins);
-                        }
+            // flatten() keeps scanning after an unreadable line; map_while would drop the rest.
+            #[allow(clippy::lines_filter_map_ok)]
+            for l in reader.lines().flatten() {
+                let trimmed = l.trim();
+                if !trimmed.is_empty() {
+                    if let Ok(ins) =
+                        serde_json::from_str::<wm_gen3_core::dream::DreamInsight>(trimmed)
+                    {
+                        insights.push(ins);
                     }
                 }
             }

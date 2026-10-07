@@ -113,19 +113,19 @@ impl DualGraphOperators {
 /// Lightweight Jacobi eigenvalue decomposition for symmetric N x N matrices.
 pub fn jacobi_eigen_symmetric(mat: &[Vec<f64>], max_iter: usize) -> (Vec<f64>, Vec<Vec<f64>>) {
     let n = mat.len();
-    let mut a: Vec<Vec<f64>> = mat.iter().map(|row| row.clone()).collect();
+    let mut a: Vec<Vec<f64>> = mat.to_vec();
     let mut v = vec![vec![0.0f64; n]; n];
-    for i in 0..n {
-        v[i][i] = 1.0;
+    for (i, row) in v.iter_mut().enumerate() {
+        row[i] = 1.0;
     }
 
     for _ in 0..max_iter {
         let mut max_off = 0.0f64;
         let mut p = 0;
         let mut q = 1;
-        for i in 0..n {
-            for j in (i + 1)..n {
-                let off = a[i][j].abs();
+        for (i, row) in a.iter().enumerate() {
+            for (j, a_ij) in row.iter().enumerate().skip(i + 1) {
+                let off = a_ij.abs();
                 if off > max_off {
                     max_off = off;
                     p = i;
@@ -226,13 +226,13 @@ pub fn deterministic_spectral_kmeans(
     for _ in 1..k {
         let mut best_idx = 0;
         let mut max_min_dist = -1.0f64;
-        for i in 0..n {
+        for (i, emb) in embedding.iter().enumerate() {
             let min_d = centroids
                 .iter()
                 .map(|c| {
                     let mut sum = 0.0f64;
                     for dim in 0..d {
-                        let diff = embedding[i][dim] - c[dim];
+                        let diff = emb[dim] - c[dim];
                         sum += diff * diff;
                     }
                     sum
@@ -254,10 +254,10 @@ pub fn deterministic_spectral_kmeans(
         for i in 0..n {
             let mut nearest_c = 0;
             let mut min_dist = f64::INFINITY;
-            for c_idx in 0..k {
+            for (c_idx, centroid) in centroids.iter().enumerate().take(k) {
                 let mut sum = 0.0f64;
                 for dim in 0..d {
-                    let diff = embedding[i][dim] - centroids[c_idx][dim];
+                    let diff = embedding[i][dim] - centroid[dim];
                     sum += diff * diff;
                 }
                 if sum < min_dist {
@@ -524,12 +524,12 @@ pub fn generate_synthetic_substrate(
 
     // Generate node motif signatures in Sigma22 space
     let mut node_features = vec![[0.0f64; 22]; num_nodes];
-    for u in 0..num_nodes {
+    for (u, features) in node_features.iter_mut().enumerate() {
         let cluster = u / nodes_per_cluster;
-        for k in 0..22 {
+        for (k, feature) in features.iter_mut().enumerate() {
             // Distinct activation profile per cluster plus local variation
             let base = ((cluster * 3 + k) % 7) as f64 / 6.0;
-            node_features[u][k] = (base * 0.7 + rand_range(&mut rng, 0.05, 0.25)).clamp(0.0, 1.0);
+            *feature = (base * 0.7 + rand_range(&mut rng, 0.05, 0.25)).clamp(0.0, 1.0);
         }
     }
 
@@ -693,8 +693,8 @@ pub fn discover_candidate_basins(
             norm += val * val;
         }
         norm = norm.sqrt().max(1e-9);
-        for k in 0..best_k {
-            embedding[i][k] /= norm;
+        for cell in embedding[i].iter_mut() {
+            *cell /= norm;
         }
     }
 
@@ -711,13 +711,13 @@ pub fn discover_candidate_basins(
     let mut motif_scales = [0.0f64; 22];
     for k in 0..22 {
         let mut mean = 0.0f64;
-        for i in 0..n {
-            mean += node_features[i][k];
+        for features in node_features {
+            mean += features[k];
         }
         mean /= n as f64;
         let mut var = 0.0f64;
-        for i in 0..n {
-            let diff = node_features[i][k] - mean;
+        for features in node_features {
+            let diff = features[k] - mean;
             var += diff * diff;
         }
         motif_scales[k] = (var / (n - 1) as f64).sqrt().max(0.05);
@@ -737,8 +737,8 @@ pub fn discover_candidate_basins(
                     centroid[k] += node_features[m][k];
                 }
             }
-            for k in 0..22 {
-                centroid[k] /= members.len() as f64;
+            for c in centroid.iter_mut() {
+                *c /= members.len() as f64;
             }
 
             // Distances of members to centroid
@@ -785,39 +785,37 @@ pub fn simulate_dynamical_step(
     let mut drive = vec![0.0f64; n];
 
     // 1. Causal Flow: x * P
-    for u in 0..n {
-        if x[u] > 1e-12 {
-            let xu = x[u];
-            for v in 0..n {
-                drive[v] += alpha * xu * ops.transition_matrix[u][v];
+    for (u, &xu) in x.iter().enumerate() {
+        if xu > 1e-12 {
+            for (v, d) in drive.iter_mut().enumerate() {
+                *d += alpha * xu * ops.transition_matrix[u][v];
             }
         }
     }
 
     // 2. Restoring Potential Drive: x * W_sym
-    for u in 0..n {
-        if x[u] > 1e-12 {
-            let xu = x[u];
-            for v in 0..n {
-                drive[v] += beta * xu * ops.signed_affinity[u][v];
+    for (u, &xu) in x.iter().enumerate() {
+        if xu > 1e-12 {
+            for (v, d) in drive.iter_mut().enumerate() {
+                *d += beta * xu * ops.signed_affinity[u][v];
             }
         }
     }
 
     // 3. Supralinear competitive sharpening (Hopfield / CANN attractor dynamics)
-    for i in 0..n {
-        drive[i] = drive[i].max(0.0).powi(2);
+    for d in drive.iter_mut() {
+        *d = d.max(0.0).powi(2);
     }
 
     // 4. Normalization to probability simplex
     let sum: f64 = drive.iter().sum();
     if sum > 1e-12 {
-        for i in 0..n {
-            drive[i] /= sum;
+        for d in drive.iter_mut() {
+            *d /= sum;
         }
     } else {
-        for i in 0..n {
-            drive[i] = 1.0 / n as f64;
+        for d in drive.iter_mut() {
+            *d = 1.0 / n as f64;
         }
     }
 
@@ -884,16 +882,16 @@ pub fn evaluate_attractor_metrics(
             PerturbationClass::EdgeSignInversion15Pct
             | PerturbationClass::TelemetryNoiseSigma025 => {
                 // Add noise to distribution
-                for i in 0..n {
-                    x_pert[i] += rand_range(&mut rng, -0.15, 0.15);
-                    x_pert[i] = x_pert[i].max(0.0);
+                for val in x_pert.iter_mut() {
+                    *val += rand_range(&mut rng, -0.15, 0.15);
+                    *val = val.max(0.0);
                 }
             }
             PerturbationClass::ForeignStateInjection => {
                 // Heavy foreign intrusion (50% foreign noise injection)
-                for i in 0..n {
+                for val in x_pert.iter_mut() {
                     let foreign = rand_range(&mut rng, 0.0, 0.5);
-                    x_pert[i] = x_pert[i] * 0.5 + foreign * 0.5;
+                    *val = *val * 0.5 + foreign * 0.5;
                 }
             }
             PerturbationClass::HubSuppressionTop10Pct => {
@@ -958,9 +956,9 @@ pub fn evaluate_attractor_metrics(
         let mut ms_ok = true;
         for _ in 0..3 {
             // Apply shock
-            for i in 0..n {
-                x_ms[i] += rand_range(&mut rng, -0.15, 0.15);
-                x_ms[i] = x_ms[i].max(0.0);
+            for val in x_ms.iter_mut() {
+                *val += rand_range(&mut rng, -0.15, 0.15);
+                *val = val.max(0.0);
             }
             let s_ms: f64 = x_ms.iter().sum();
             for val in x_ms.iter_mut() {
@@ -1029,13 +1027,13 @@ pub fn run_peb2_peb3_attractor_emergence_benchmark(seed: u64) -> Peb2Peb3Benchma
     let mut motif_scales = [0.0f64; 22];
     for k in 0..22 {
         let mut mean = 0.0f64;
-        for i in 0..num_nodes {
-            mean += node_features[i][k];
+        for features in &node_features {
+            mean += features[k];
         }
         mean /= num_nodes as f64;
         let mut var = 0.0f64;
-        for i in 0..num_nodes {
-            let diff = node_features[i][k] - mean;
+        for features in &node_features {
+            let diff = features[k] - mean;
             var += diff * diff;
         }
         motif_scales[k] = (var / (num_nodes - 1) as f64).sqrt().max(0.05);
@@ -1289,8 +1287,8 @@ pub mod tests {
     #[test]
     fn test_jacobi_eigenvalues_and_eigengap_selection() {
         let mut sym_mat = vec![vec![0.0f64; 6]; 6];
-        for i in 0..6 {
-            sym_mat[i][i] = 4.0 + (i as f64);
+        for (i, row) in sym_mat.iter_mut().enumerate() {
+            row[i] = 4.0 + (i as f64);
         }
         sym_mat[0][1] = 1.0;
         sym_mat[1][0] = 1.0;
@@ -1310,7 +1308,7 @@ pub mod tests {
         }
 
         let (best_k, max_gap, gaps) = select_eigengap(&evals, 2, 5);
-        assert!(best_k >= 2 && best_k <= 5);
+        assert!((2..=5).contains(&best_k));
         assert!(max_gap > 0.0);
         assert!(!gaps.is_empty());
     }

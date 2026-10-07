@@ -229,7 +229,7 @@ impl SessionTurn {
     /// Rough token estimate used by progressive replay/digest budgeting.
     #[must_use]
     pub fn estimated_tokens(&self) -> u64 {
-        ((self.content.chars().count() as u64) + 3) / 4 + 4
+        (self.content.chars().count() as u64).div_ceil(4) + 4
     }
 }
 
@@ -548,6 +548,8 @@ impl Substrate {
             if let Ok(file) = std::fs::File::open(&uuid_path) {
                 use std::io::BufRead;
                 let reader = std::io::BufReader::new(file);
+                // flatten() keeps scanning after an unreadable line; map_while would drop the rest of the index.
+                #[allow(clippy::lines_filter_map_ok)]
                 for line in reader.lines().flatten() {
                     if let Ok(entry) = serde_json::from_str::<UuidMapEntry>(&line) {
                         uuid_to_id.insert(entry.uuid, entry.record_id);
@@ -807,7 +809,7 @@ impl Substrate {
                 .as_mut()
                 .ok_or_else(|| "projection: not enabled".to_string())?;
             let vectors = projection.embed(&batch)?;
-            for (slot, vector) in misses.iter().zip(vectors.into_iter()) {
+            for (slot, vector) in misses.iter().zip(vectors) {
                 if !self.store.is_readonly() {
                     self.store
                         .put_embedding_cache(&hashes[*slot], &vector)
@@ -893,7 +895,7 @@ impl Substrate {
             }
             if candidates
                 .as_ref()
-                .map_or(true, |best| ids.len() < best.len())
+                .is_none_or(|best| ids.len() < best.len())
             {
                 candidates = Some(ids);
             }
@@ -1577,6 +1579,8 @@ impl Substrate {
             }
         }
 
+        // Score tuple is local to this loop; a type alias would not make the phases clearer.
+        #[allow(clippy::type_complexity)]
         let mut scored: Vec<(f32, f32, f32, u64, Option<u64>, u8, f32, u64)> = Vec::new();
         for &id in &candidate_ids {
             let Some(&(lex_support, sem_support, _, created_at)) = base_records.get(&id) else {
@@ -1805,6 +1809,8 @@ impl Substrate {
         stats
     }
 
+    // Err carries degraded stats for refusal accounting; boxing would change the internal contract.
+    #[allow(clippy::result_large_err)]
     fn plan_and_commit_sweep(&mut self) -> Result<SweepStats, (String, SweepStats)> {
         let fail = |message: String| (message, SweepStats::default());
         let issuer_label = match self.intake_authority.as_ref() {
@@ -1866,8 +1872,8 @@ impl Substrate {
             .commit_sweep(capability, &request)
             .map_err(|e| fail(e.to_string()))?;
         let receipt = outcome.receipt;
-        let rare_max = ((preflight.records.len() / self.policy.rare_df_divisor.max(1))
-            .max(self.policy.rare_df_floor)) as usize;
+        let rare_max = (preflight.records.len() / self.policy.rare_df_divisor.max(1))
+            .max(self.policy.rare_df_floor);
         Ok(SweepStats {
             sweep: receipt.sweep_id,
             pairs_lexical_candidates: report.pairs_lexical_candidates as usize,
@@ -3197,8 +3203,7 @@ mod tests {
             .expect("journal readable")
             .lines()
             .filter_map(|l| serde_json::from_str::<serde_json::Value>(l).ok())
-            .filter(|e| e["type"] == "selection.decision")
-            .next_back()
+            .rfind(|e| e["type"] == "selection.decision")
             .expect("selection.decision present")
     }
 

@@ -652,12 +652,9 @@ impl TupleSpace {
             std::fs::create_dir_all(parent)?;
         }
         let bytes = if binary_msgpack {
-            self.to_msgpack()
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?
+            self.to_msgpack().map_err(std::io::Error::other)?
         } else {
-            self.to_json()
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?
-                .into_bytes()
+            self.to_json().map_err(std::io::Error::other)?.into_bytes()
         };
         let tmp_path = PathBuf::from(format!("{}.tmp.{}", path.display(), Uuid::new_v4()));
         std::fs::write(&tmp_path, bytes)?;

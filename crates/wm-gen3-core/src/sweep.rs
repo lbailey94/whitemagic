@@ -557,6 +557,8 @@ impl SweepRequest {
     }
 }
 
+// Boxing the payload would change the public enum surface; keep the request inline.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SweepDecision {
     Disabled,
@@ -619,6 +621,8 @@ impl fmt::Display for SweepError {
 impl std::error::Error for SweepError {}
 
 /// Explicit envelope for a fresh-only v5 Store. It must not decode v4 receipt bytes.
+// Variants stay boxed-free to preserve the serialized envelope shape.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CommitReceiptEnvelopeV5 {
     IntakeV2(CommitReceipt),
@@ -1172,6 +1176,8 @@ mod tests {
 
     #[test]
     fn every_bound_is_hard() {
+        // Inline case table; a type alias would not add clarity here.
+        #[allow(clippy::type_complexity)]
         let cases: [(&str, fn(&mut SweepObserved)); 8] = [
             ("records_scanned", |v| v.records_scanned = 11),
             ("raw_record_bytes", |v| v.raw_record_bytes = 1001),

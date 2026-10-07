@@ -99,7 +99,7 @@ impl CausalEvent {
     ) -> String {
         let mut hasher = Sha256::new();
         hasher.update(author.as_bytes());
-        hasher.update(&author_seq.to_be_bytes());
+        hasher.update(author_seq.to_be_bytes());
         let mut sorted_parents = parents.to_vec();
         sorted_parents.sort();
         for p in &sorted_parents {
@@ -153,6 +153,12 @@ impl CausalEvent {
 pub struct CausalDag {
     pub events: HashMap<String, CausalEvent>,
     pub author_sequences: HashMap<String, u64>,
+}
+
+impl Default for CausalDag {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CausalDag {
@@ -595,7 +601,7 @@ pub fn run_peb14b_relativity_benchmark() -> Peb14bReport {
     let perf_refused = perf_res.is_err();
     // Resolve via Root key proof succeeds
     let root_vk = root_signing.verifying_key();
-    let msg = format!("REVOKE_FORK:Root_Alice:8:WINNER:Key_Alice_East");
+    let msg = "REVOKE_FORK:Root_Alice:8:WINNER:Key_Alice_East".to_string();
     let proof_sig = root_signing.sign(msg.as_bytes()).to_bytes().to_vec();
     let root_proof_ok = fork
         .resolve_via_root_proof(&root_vk, "Key_Alice_East", &proof_sig)

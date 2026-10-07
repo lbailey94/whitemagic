@@ -154,7 +154,7 @@ fn test_cyberbrain_baseline_benchmark_suite() {
     // Phase 2: Exact Symbol & Lexical Recall Latency & Precision
     // -------------------------------------------------------------------------
     println!("\n--- [2] Memory Recall: Exact Symbol & Lexical BM25 ---");
-    let test_queries = vec![
+    let test_queries = [
         ("unresolved import symbol `prctl`", "E0000"),
         ("Landlock V5 Mandala Kekkai", "Architectural"),
         ("System One Laya dispatch warm predict", "Laya"),
