@@ -4,7 +4,10 @@
 //! the store's Mandala gate key without touching the substrate. These are
 //! dedicated WM profiles, not a general Continuity Receipt verifier.
 //! `record_outcome` signs an outcome for a subject receipt and journals it to
-//! `<store>/receipts/outcomes.jsonl` for the learning loop.
+//! `<store>/receipts/outcomes.jsonl` for the learning loop; the signed record
+//! carries the subject margin and the success assertion so calibration is not
+//! inert. `gate_key_fingerprint` reports the store gate key's SHA-256
+//! fingerprint and `did:key` form without creating or mutating anything.
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -30,6 +33,62 @@ fn load_verifying_key(store_path: &Path) -> Result<VerifyingKey, String> {
     let mut array = [0u8; 32];
     array.copy_from_slice(&bytes);
     Ok(SigningKey::from_bytes(&array).verifying_key())
+}
+
+/// Fingerprint the store's existing Mandala gate key without creating one.
+///
+/// Returns `(fingerprint, did)` where the fingerprint is the lower-case hex
+/// SHA-256 of the raw bytes stored in `mandala_gate_key.bin`, and the DID is
+/// the Ed25519 `did:key` form (multicodec prefix `0xed01` + public key,
+/// multibase base58btc with the `z` prefix). Read-only: errors clearly when
+/// the key file is missing, unreadable, or not exactly 32 bytes.
+pub fn gate_key_fingerprint(store_path: &Path) -> Result<(String, String), String> {
+    let key_path = store_path.join("mandala_gate_key.bin");
+    let bytes = std::fs::read(&key_path)
+        .map_err(|e| format!("gate key read ({}): {e}", key_path.display()))?;
+    if bytes.len() != 32 {
+        return Err(format!("gate key must be 32 bytes, got {}", bytes.len()));
+    }
+    let fingerprint = hex_encode(&Sha256::digest(&bytes));
+    let mut array = [0u8; 32];
+    array.copy_from_slice(&bytes);
+    let public_key = SigningKey::from_bytes(&array).verifying_key().to_bytes();
+    Ok((fingerprint, ed25519_did_key(&public_key)))
+}
+
+/// Encode an Ed25519 public key as `did:key:z...` (multicodec `0xed01`).
+fn ed25519_did_key(public_key: &[u8; 32]) -> String {
+    let mut multicodec = Vec::with_capacity(34);
+    multicodec.extend_from_slice(&[0xed, 0x01]);
+    multicodec.extend_from_slice(public_key);
+    format!("did:key:z{}", base58btc_encode(&multicodec))
+}
+
+/// Base58btc encode (Bitcoin alphabet), as used by `did:key` multibase.
+fn base58btc_encode(input: &[u8]) -> String {
+    const ALPHABET: &[u8; 58] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    let leading_zeros = input.iter().take_while(|&&byte| byte == 0).count();
+    let mut digits: Vec<u8> = Vec::new();
+    for &byte in &input[leading_zeros..] {
+        let mut carry = u32::from(byte);
+        for digit in &mut digits {
+            carry += u32::from(*digit) << 8;
+            *digit = (carry % 58) as u8;
+            carry /= 58;
+        }
+        while carry > 0 {
+            digits.push((carry % 58) as u8);
+            carry /= 58;
+        }
+    }
+    let mut encoded = String::with_capacity(leading_zeros + digits.len());
+    for _ in 0..leading_zeros {
+        encoded.push('1');
+    }
+    for &digit in digits.iter().rev() {
+        encoded.push(char::from(ALPHABET[usize::from(digit)]));
+    }
+    encoded
 }
 
 /// Verify a supported signed WhiteMagic profile receipt against the store's gate key.
@@ -219,9 +278,12 @@ pub fn verify_receipt_value(value: &Value, store_path: &Path) -> Result<Value, S
         "outcome" => (
             "continuity-receipt/0.5#outcome canonical_signing_bytes",
             vec![],
-            vec!["recorded_at_ms uses its exact integer representation"],
             vec![
-                "signature authenticates the local issuer's outcome assertion only; the referenced subject receipt is not verified here and subject_verified or outcome truth is not independently established",
+                "recorded_at_ms uses its exact integer representation",
+                "margin is signed via its exact f64 bit representation",
+            ],
+            vec![
+                "signature authenticates the local issuer's outcome assertion only; the referenced subject receipt is not verified here and subject_verified or outcome truth is not independently established; signed margin and success are issuer assertions, not independently measured",
             ],
         ),
         _ => unreachable!("profile was matched above"),
@@ -344,6 +406,8 @@ fn check_exact_fields(object: &Map<String, Value>, profile: &str) -> Result<(), 
             "subject_spec",
             "subject_verified",
             "outcome",
+            "margin",
+            "success",
             "corrected_route",
             "note",
             "tenant_id",
@@ -475,6 +539,21 @@ fn check_unambiguous_signed_fields(
             }
         }
     }
+    if profile == "outcome" {
+        if let Some(margin) = object.get("margin") {
+            let value = margin
+                .as_f64()
+                .ok_or_else(|| "outcome field 'margin' must be a JSON number".to_string())?;
+            if !value.is_finite() {
+                return Err("outcome field 'margin' must be finite".to_string());
+            }
+        }
+        if let Some(success) = object.get("success")
+            && !success.is_boolean()
+        {
+            return Err("outcome field 'success' must be a JSON boolean".to_string());
+        }
+    }
     if profile.starts_with("deliberation-") {
         let candidates = object
             .get("candidates")
@@ -563,6 +642,13 @@ pub struct OutcomeRecord {
     pub subject_spec: String,
     pub subject_verified: bool,
     pub outcome: String,
+    /// Subject's top1-top2 margin (shortlist `margin` or deliberation
+    /// `margin_prior`), signed when the subject exposes it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub margin: Option<f64>,
+    /// Issuer's success assertion derived from the recorded outcome value.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub success: Option<bool>,
     #[serde(default)]
     pub corrected_route: Option<String>,
     #[serde(default)]
@@ -582,6 +668,7 @@ impl OutcomeRecord {
         subject_receipt: String,
         subject_spec: String,
         subject_verified: bool,
+        margin: Option<f64>,
         args: &Value,
         issuer_did: String,
     ) -> Result<Self, String> {
@@ -600,6 +687,8 @@ impl OutcomeRecord {
             subject_spec,
             subject_verified,
             outcome: outcome.to_string(),
+            margin: margin.filter(|value| value.is_finite()),
+            success: Some(outcome == "success"),
             corrected_route: args
                 .get("corrected_route")
                 .and_then(Value::as_str)
@@ -652,6 +741,16 @@ impl OutcomeRecord {
         hasher.update(self.recorded_at_ms.to_le_bytes());
         hasher.update(b"|");
         hasher.update(self.issuer_did.as_bytes());
+        // Optional calibration fields are appended only when present so that
+        // outcome records signed before they existed remain verifiable.
+        if let Some(margin) = self.margin {
+            hasher.update(b"|margin:");
+            hasher.update(margin.to_bits().to_le_bytes());
+        }
+        if let Some(success) = self.success {
+            hasher.update(b"|success:");
+            hasher.update([u8::from(success)]);
+        }
         hasher.finalize().to_vec()
     }
 
@@ -674,6 +773,15 @@ impl OutcomeRecord {
         key.verify(&self.canonical_signing_bytes(), &signature)
             .map_err(|e| format!("signature invalid: {e}"))
     }
+}
+
+/// Subject top1-top2 margin: shortlist `margin` or deliberation `margin_prior`.
+fn subject_margin(subject: &Value) -> Option<f64> {
+    subject
+        .get("margin")
+        .and_then(Value::as_f64)
+        .or_else(|| subject.get("margin_prior").and_then(Value::as_f64))
+        .filter(|margin| margin.is_finite())
 }
 
 /// Record an outcome for a subject receipt: sign it, write a sidecar next to
@@ -699,14 +807,17 @@ pub fn record_outcome(args: &Value, store_path: &Path, readonly: bool) -> Result
         .and_then(Value::as_str)
         .unwrap_or("unknown")
         .to_string();
+    if !subject_spec.contains('#') {
+        return Err(format!(
+            "subject receipt spec '{subject_spec}' has no '#profile' segment; \
+             refusing to record an outcome for an unverifiable subject"
+        ));
+    }
 
-    let subject_verified = if subject_spec.contains('#') {
-        verify_receipt_file(&receipt_path, store_path)
-            .map(|report| report["valid"].as_bool().unwrap_or(false))
-            .unwrap_or(false)
-    } else {
-        false
-    };
+    let subject_verified = verify_receipt_file(&receipt_path, store_path)
+        .map(|report| report["valid"].as_bool().unwrap_or(false))
+        .unwrap_or(false);
+    let margin = subject_margin(&subject);
 
     let (signing_key, _) = resolve_or_create_mandala_gate_key(store_path)
         .map_err(|e| format!("gate key error: {e}"))?;
@@ -724,6 +835,7 @@ pub fn record_outcome(args: &Value, store_path: &Path, readonly: bool) -> Result
         subject_receipt.clone(),
         subject_spec,
         subject_verified,
+        margin,
         args,
         gate_did,
     )?;
@@ -793,6 +905,27 @@ mod tests {
         path
     }
 
+    fn signed_deliberation_subject(key: &SigningKey, path: &Path, margin_prior: f64) {
+        let receipt = DeliberationReceipt::sign(
+            key,
+            "route this calibration fixture",
+            &["memory.search".into(), "memory.create".into()],
+            "memory.search",
+            margin_prior,
+            0.05,
+            0.9,
+            1.5,
+            false,
+            "model-sha256",
+            "deliberation-prompt-v2",
+        );
+        std::fs::write(
+            path,
+            serde_json::to_vec(&receipt).expect("serialize subject"),
+        )
+        .expect("write subject receipt");
+    }
+
     #[test]
     fn outcome_sign_and_verify_roundtrip() {
         let args =
@@ -801,6 +934,7 @@ mod tests {
             "abc".to_string(),
             "continuity-receipt/0.5#shortlist".to_string(),
             true,
+            Some(0.25),
             &args,
             "did:key:test".to_string(),
         )
@@ -808,6 +942,8 @@ mod tests {
         let key = SigningKey::from_bytes(&[7u8; 32]);
         record.sign(&key);
         record.verify(&key.verifying_key()).expect("verifies");
+        assert_eq!(record.margin, Some(0.25));
+        assert_eq!(record.success, Some(true));
         record.outcome = "failure".to_string();
         assert!(record.verify(&key.verifying_key()).is_err());
     }
@@ -820,6 +956,7 @@ mod tests {
             "subject".into(),
             "continuity-receipt/0.5#decision".into(),
             true,
+            None,
             &args,
             "did:key:test".into(),
         )
@@ -841,6 +978,7 @@ mod tests {
             "subject-id".into(),
             "continuity-receipt/0.5#decision".into(),
             true,
+            None,
             &args,
             issuer_did,
         )
@@ -1247,6 +1385,7 @@ mod tests {
             "subject".into(),
             "continuity-receipt/0.5#decision".into(),
             true,
+            None,
             &args,
             format!("did:key:{}", hex_encode(&key.verifying_key().to_bytes())),
         )
@@ -1261,5 +1400,302 @@ mod tests {
                 .contains("cannot be empty")
         );
         std::fs::remove_dir_all(store).expect("cleanup fixture store");
+    }
+
+    #[test]
+    fn emitted_outcome_receipts_drive_calibration_tau() {
+        let key = SigningKey::from_bytes(&[71u8; 32]);
+        let store = fixture_store(&key);
+        let gate = crate::deliberation::ConformalGate::new(0.95, 0.05);
+        assert!((gate.calibrate_tau(&store) - 0.05).abs() < 1e-12);
+
+        let success_subject = store.join("deliberation-success.json");
+        let failure_subject = store.join("deliberation-failure.json");
+        signed_deliberation_subject(&key, &success_subject, 0.5);
+        signed_deliberation_subject(&key, &failure_subject, 0.01);
+
+        for _ in 0..10 {
+            let args = json!({
+                "receipt_path": success_subject.display().to_string(),
+                "outcome": "success",
+            });
+            let report = record_outcome(&args, &store, false).expect("emit success outcome");
+            assert_eq!(report["outcome"]["subject_verified"], json!(true));
+            assert_eq!(report["outcome"]["margin"].as_f64(), Some(0.5));
+            assert_eq!(report["outcome"]["success"], json!(true));
+        }
+        for _ in 0..2 {
+            let args = json!({
+                "receipt_path": failure_subject.display().to_string(),
+                "outcome": "failure",
+            });
+            let report = record_outcome(&args, &store, false).expect("emit failure outcome");
+            assert_eq!(report["outcome"]["margin"].as_f64(), Some(0.01));
+            assert_eq!(report["outcome"]["success"], json!(false));
+        }
+
+        let journal = std::fs::read_to_string(store.join("receipts").join("outcomes.jsonl"))
+            .expect("read outcomes journal");
+        assert_eq!(journal.lines().count(), 12);
+        for line in journal.lines() {
+            let value: Value = serde_json::from_str(line).expect("journal line parses");
+            assert!(value.get("margin").is_some(), "margin must be signed");
+            assert!(value.get("success").is_some(), "success must be signed");
+            assert_eq!(
+                verify_receipt_value(&value, &store).expect("journal outcome verifies")["valid"],
+                true
+            );
+        }
+
+        let tau = gate.calibrate_tau(&store);
+        assert!(
+            (tau - 0.5).abs() < 1e-9,
+            "calibration must honor signed margins and success filtering, got {tau}"
+        );
+        std::fs::remove_dir_all(store).expect("cleanup fixture store");
+    }
+
+    #[test]
+    fn tampered_outcome_margin_and_success_fail_verification() {
+        let key = SigningKey::from_bytes(&[72u8; 32]);
+        let store = fixture_store(&key);
+        let subject_path = store.join("deliberation-subject.json");
+        signed_deliberation_subject(&key, &subject_path, 0.42);
+        let args = json!({
+            "receipt_path": subject_path.display().to_string(),
+            "outcome": "success",
+        });
+        let report = record_outcome(&args, &store, false).expect("emit outcome");
+        let record = report["outcome"].clone();
+        let sidecar = PathBuf::from(report["sidecar_path"].as_str().expect("sidecar path"));
+        assert_eq!(
+            verify_receipt_file(&sidecar, &store).expect("sidecar verifies")["valid"],
+            true
+        );
+
+        let mut tampered_margin = record.clone();
+        tampered_margin["margin"] = json!(0.99);
+        assert!(
+            verify_receipt_value(&tampered_margin, &store).is_err(),
+            "tampered margin must fail verification"
+        );
+
+        let mut tampered_success = record.clone();
+        tampered_success["success"] = json!(false);
+        assert!(
+            verify_receipt_value(&tampered_success, &store).is_err(),
+            "tampered success must fail verification"
+        );
+
+        let mut on_disk: Value =
+            serde_json::from_slice(&std::fs::read(&sidecar).expect("read sidecar"))
+                .expect("parse sidecar");
+        on_disk["margin"] = json!(0.99);
+        std::fs::write(
+            &sidecar,
+            serde_json::to_vec(&on_disk).expect("serialize tamper"),
+        )
+        .expect("write tampered sidecar");
+        assert!(verify_receipt_file(&sidecar, &store).is_err());
+        std::fs::remove_dir_all(store).expect("cleanup fixture store");
+    }
+
+    #[test]
+    fn legacy_outcome_without_margin_or_success_still_verifies() {
+        let key = SigningKey::from_bytes(&[73u8; 32]);
+        let store = fixture_store(&key);
+        let mut legacy = OutcomeRecord {
+            spec: "continuity-receipt/0.5#outcome".to_string(),
+            record_id: "legacy-outcome".to_string(),
+            subject_receipt: "subject".to_string(),
+            subject_spec: "continuity-receipt/0.5#shortlist".to_string(),
+            subject_verified: true,
+            outcome: "success".to_string(),
+            margin: None,
+            success: None,
+            corrected_route: None,
+            note: None,
+            tenant_id: "local".to_string(),
+            session_id: "adhoc".to_string(),
+            recorded_at_ms: 1_700_000_000_000,
+            issuer_did: format!("did:key:{}", hex_encode(&key.verifying_key().to_bytes())),
+            signature: None,
+        };
+        legacy.sign(&key);
+        assert!(legacy.verify(&key.verifying_key()).is_ok());
+        let value = serde_json::to_value(&legacy).expect("serialize legacy outcome");
+        assert!(value.get("margin").is_none());
+        assert!(value.get("success").is_none());
+        assert_eq!(
+            verify_receipt_value(&value, &store).expect("legacy outcome verifies")["valid"],
+            true
+        );
+        std::fs::remove_dir_all(store).expect("cleanup fixture store");
+    }
+
+    #[test]
+    fn outcome_flat_spec_subject_is_refused_explicitly() {
+        let key = SigningKey::from_bytes(&[74u8; 32]);
+        let store = fixture_store(&key);
+        let flat_path = store.join("flat-subject.json");
+        std::fs::write(
+            &flat_path,
+            serde_json::to_vec(&json!({
+                "spec": "continuity-receipt/0.5",
+                "receipt_id": "flat-subject",
+                "margin": 0.4,
+            }))
+            .expect("serialize flat subject"),
+        )
+        .expect("write flat subject");
+        let args = json!({
+            "receipt_path": flat_path.display().to_string(),
+            "outcome": "success",
+        });
+        let error = record_outcome(&args, &store, false).unwrap_err();
+        assert!(
+            error.contains("no '#profile' segment"),
+            "unexpected error: {error}"
+        );
+
+        let missing_spec = store.join("missing-spec.json");
+        std::fs::write(
+            &missing_spec,
+            serde_json::to_vec(&json!({"receipt_id": "missing-spec"}))
+                .expect("serialize missing spec"),
+        )
+        .expect("write missing-spec subject");
+        let args = json!({
+            "receipt_path": missing_spec.display().to_string(),
+            "outcome": "success",
+        });
+        assert!(
+            record_outcome(&args, &store, false)
+                .unwrap_err()
+                .contains("no '#profile' segment")
+        );
+        std::fs::remove_dir_all(store).expect("cleanup fixture store");
+    }
+
+    #[test]
+    fn outcome_args_refuse_missing_required_and_tolerate_unknown_keys() {
+        let key = SigningKey::from_bytes(&[75u8; 32]);
+        let store = fixture_store(&key);
+        let subject_path = store.join("deliberation-subject.json");
+        signed_deliberation_subject(&key, &subject_path, 0.3);
+        let args = json!({
+            "receipt_path": subject_path.display().to_string(),
+            "outcome": "corrected",
+            "corrected_route": "memory.create",
+            "unexpected_extension": {"keep": true},
+        });
+        let report = record_outcome(&args, &store, false).expect("unknown extra args tolerated");
+        assert_eq!(report["outcome"]["success"], json!(false));
+
+        let missing = json!({"receipt_path": subject_path.display().to_string()});
+        let error = record_outcome(&missing, &store, false).unwrap_err();
+        assert!(error.contains("missing required field 'outcome'"));
+
+        let mut with_unknown_field = report["outcome"].clone();
+        with_unknown_field["mystery"] = json!(true);
+        assert!(
+            verify_receipt_value(&with_unknown_field, &store)
+                .unwrap_err()
+                .contains("unknown field")
+        );
+        std::fs::remove_dir_all(store).expect("cleanup fixture store");
+    }
+
+    #[test]
+    fn outcome_typed_margin_and_success_refusals_are_explicit() {
+        let key = SigningKey::from_bytes(&[77u8; 32]);
+        let store = fixture_store(&key);
+        let subject_path = store.join("deliberation-subject.json");
+        signed_deliberation_subject(&key, &subject_path, 0.3);
+        let args = json!({
+            "receipt_path": subject_path.display().to_string(),
+            "outcome": "success",
+        });
+        let report = record_outcome(&args, &store, false).expect("emit outcome");
+
+        let mut bad_margin = report["outcome"].clone();
+        bad_margin["margin"] = json!("high");
+        assert!(
+            verify_receipt_value(&bad_margin, &store)
+                .unwrap_err()
+                .contains("JSON number")
+        );
+        let mut bad_success = report["outcome"].clone();
+        bad_success["success"] = json!("yes");
+        assert!(
+            verify_receipt_value(&bad_success, &store)
+                .unwrap_err()
+                .contains("JSON boolean")
+        );
+        std::fs::remove_dir_all(store).expect("cleanup fixture store");
+    }
+
+    #[test]
+    fn gate_key_fingerprint_known_vector_is_read_only() {
+        let key = SigningKey::from_bytes(&[76u8; 32]);
+        let store = fixture_store(&key);
+        let before = std::fs::read(store.join("mandala_gate_key.bin")).expect("read key");
+        let (fingerprint, did) = gate_key_fingerprint(&store).expect("fingerprint");
+        assert_eq!(fingerprint, hex_encode(&Sha256::digest(&before)));
+        assert!(did.starts_with("did:key:z"));
+        let after = std::fs::read(store.join("mandala_gate_key.bin")).expect("read key again");
+        assert_eq!(before, after);
+        assert_eq!(
+            std::fs::read_dir(&store).expect("read store").count(),
+            1,
+            "fingerprinting must not create sidecar files"
+        );
+        std::fs::remove_dir_all(store).expect("cleanup fixture store");
+
+        let missing =
+            std::env::temp_dir().join(format!("wm-gate-missing-{}", uuid::Uuid::new_v4()));
+        let error = gate_key_fingerprint(&missing).unwrap_err();
+        assert!(error.contains("gate key read"), "unexpected error: {error}");
+        assert!(!missing.join("mandala_gate_key.bin").exists());
+        assert!(
+            !missing.exists(),
+            "fingerprinting must not create the store dir"
+        );
+
+        let malformed = fixture_store(&key);
+        std::fs::write(malformed.join("mandala_gate_key.bin"), [0u8; 31]).expect("write short key");
+        let error = gate_key_fingerprint(&malformed).unwrap_err();
+        assert!(error.contains("32 bytes"), "unexpected error: {error}");
+        std::fs::remove_dir_all(malformed).expect("cleanup malformed store");
+    }
+
+    #[test]
+    fn gate_key_fingerprint_matches_known_ed25519_vectors() {
+        let mut seed = [0u8; 32];
+        seed.copy_from_slice(
+            &hex_decode("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60")
+                .expect("seed hex"),
+        );
+        let store = fixture_store(&SigningKey::from_bytes(&seed));
+        let (fingerprint, did) = gate_key_fingerprint(&store).expect("fingerprint");
+        assert_eq!(
+            did,
+            "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw"
+        );
+        assert_eq!(
+            fingerprint,
+            "644d50ab64864c20a12b3c4656d46b4a48f69ef7c47ecdc8415cd28316b22ef5"
+        );
+        std::fs::remove_dir_all(store).expect("cleanup fixture store");
+
+        let public_key =
+            hex_decode("2e6fcce36701dc791488e0d0b1745cc1e33a4c1c9fcc41c63bd343dbbe0970e6")
+                .expect("public key hex");
+        let mut multicodec = vec![0xed, 0x01];
+        multicodec.extend_from_slice(&public_key);
+        assert_eq!(
+            base58btc_encode(&multicodec),
+            "6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"
+        );
     }
 }
