@@ -23,6 +23,10 @@ path = "src/bin/wm.rs"
 name = "wm_benchmark"
 path = "src/bin/wm_benchmark.rs"
 
+[[bin]]
+name = "wm-node"
+path = "src/bin/wm_node.rs"
+
 [features]
 default = ["system05"]
 systemone = ["dep:wm-gen3-systemone"]
