@@ -3,6 +3,7 @@
 
 use serde_json::{Value, json};
 use std::io::{BufRead, BufReader, Read, Write};
+use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -104,6 +105,13 @@ fn spawned_node_serves_protocol_and_shuts_down_gracefully() {
     let mut child = spawn_node(&socket);
     wait_for_socket(&socket, Duration::from_secs(10));
 
+    let mode = std::fs::metadata(&socket)
+        .expect("stat socket")
+        .permissions()
+        .mode()
+        & 0o777;
+    assert_eq!(mode, 0o600, "spawned socket mode {mode:o}, expected 0600");
+
     let status = rpc(&socket, 1, "node.status", json!({}));
     assert_eq!(status["result"]["ok"], true, "status: {status}");
     assert_eq!(status["result"]["protocol"], "wm-node/1");
@@ -166,6 +174,35 @@ fn spawned_second_node_refuses_double_bind() {
     let status_response = rpc(&socket, 1, "node.status", json!({}));
     assert_eq!(status_response["result"]["ok"], true);
     terminate(&mut first);
+}
+
+#[test]
+fn spawned_node_refuses_regular_file_and_leaves_it_intact() {
+    let path = unique_socket("not-a-socket").with_extension("txt");
+    std::fs::write(&path, b"precious notes").expect("write regular file");
+
+    let mut child = spawn_node(&path);
+    let status = wait_for_exit(&mut child, Duration::from_secs(10));
+    let status = match status {
+        Some(status) => status,
+        None => {
+            let _ = child.kill();
+            let _ = wait_for_exit(&mut child, Duration::from_secs(5));
+            panic!("wm-node did not exit after refusing a non-socket path");
+        }
+    };
+    let stderr = read_stderr(&mut child);
+    assert!(
+        !status.success(),
+        "node must fail on a regular file: {status:?}"
+    );
+    assert!(
+        stderr.contains("not a socket"),
+        "expected a clear refusal, got: {stderr}"
+    );
+    assert!(path.exists(), "regular file must survive the refusal");
+    assert_eq!(std::fs::read(&path).expect("read file"), b"precious notes");
+    let _ = std::fs::remove_file(&path);
 }
 
 fn python3_available() -> bool {
