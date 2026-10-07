@@ -1193,20 +1193,7 @@ impl SyncBundle {
         for chunk in items.chunks(100) {
             let mut new_items = Vec::new();
             for item in chunk {
-                let mut hasher = Sha256::new();
-                hasher.update(item.content.as_bytes());
-                let content_hash = format!("{:x}", hasher.finalize());
-                let key = (
-                    content_hash,
-                    item.source.clone(),
-                    match item.kind {
-                        ImportKind::Reported => "reported".to_string(),
-                        ImportKind::System => "system".to_string(),
-                        ImportKind::Simulated => "simulated".to_string(),
-                    },
-                );
-
-                if substrate.identity_map().contains_key(&key) {
+                if substrate.contains_exact(&item.content, &item.source, item.kind) {
                     duplicate_skipped += 1;
                 } else {
                     new_items.push(item.clone());
@@ -1218,7 +1205,10 @@ impl SyncBundle {
                 for res in results {
                     match res {
                         Ok(_) => migrated_count += 1,
-                        Err(e) if e.contains("RefusedByKernel: duplicate record") => {
+                        Err(e)
+                            if e == "duplicate_exact"
+                                || e.contains("RefusedByKernel: duplicate record") =>
+                        {
                             duplicate_skipped += 1;
                         }
                         Err(e) => return Err(MeshError::StoreError(e)),
@@ -1978,20 +1968,7 @@ impl MeshClient {
         for chunk in items.chunks(100) {
             let mut new_items = Vec::new();
             for item in chunk {
-                let mut hasher = Sha256::new();
-                hasher.update(item.content.as_bytes());
-                let content_hash = format!("{:x}", hasher.finalize());
-                let key = (
-                    content_hash,
-                    item.source.clone(),
-                    match item.kind {
-                        ImportKind::Reported => "reported".to_string(),
-                        ImportKind::System => "system".to_string(),
-                        ImportKind::Simulated => "simulated".to_string(),
-                    },
-                );
-
-                if substrate.identity_map().contains_key(&key) {
+                if substrate.contains_exact(&item.content, &item.source, item.kind) {
                     duplicate_skipped += 1;
                 } else {
                     new_items.push(item.clone());
@@ -2003,7 +1980,10 @@ impl MeshClient {
                 for res in results {
                     match res {
                         Ok(_) => migrated_count += 1,
-                        Err(e) if e.contains("RefusedByKernel: duplicate record") => {
+                        Err(e)
+                            if e == "duplicate_exact"
+                                || e.contains("RefusedByKernel: duplicate record") =>
+                        {
                             duplicate_skipped += 1;
                         }
                         Err(e) => return Err(MeshError::StoreError(e)),

@@ -258,6 +258,21 @@ impl EvidenceStore {
     pub fn is_empty(&self) -> bool {
         self.records.is_empty()
     }
+
+    /// Reserve the id watermark without materializing records. Writable
+    /// substrates open with this set to the store's next record id so
+    /// reference-model appends never collide with durable records (lazy
+    /// hydration keeps the store's content out of memory).
+    pub fn reserve_next_id(&mut self, next_id: u64) {
+        self.next_id = self.next_id.max(next_id);
+    }
+
+    /// Bytes of record content currently resident in this process-local view.
+    /// Structural counter for lazy-hydration tests (never a memory-timing probe).
+    #[must_use]
+    pub fn content_bytes(&self) -> usize {
+        self.records.iter().map(|r| r.content().len()).sum()
+    }
 }
 
 #[cfg(test)]

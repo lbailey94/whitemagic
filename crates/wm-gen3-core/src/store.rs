@@ -11,8 +11,10 @@
 use std::borrow::Cow;
 #[cfg(test)]
 use std::cell::Cell;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 use lmdb::{Cursor, Database, Transaction};
 use zeroize::Zeroizing;
@@ -22,7 +24,7 @@ use crate::at_rest::{
 };
 use crate::capability::CommitCapability;
 use crate::evidence::{Class, Domain, EvidenceRecord, RecordStatus};
-use crate::field::Relation;
+use crate::field::{Relation, RelationKind, RelationState};
 use crate::intake::{
     COMMIT_RECEIPT_VERSION, CommitDisposition, CommitOutcome, CommitReceipt,
     FEASIBILITY_CAPABILITY_CLASS, INTAKE_SCOPE, IntakeError, IntakeKind, IntakeRequest,
@@ -221,8 +223,75 @@ pub struct Store {
     at_rest: Option<AtRestState>,
     /// Keyring DBI handle (present iff [`Self::at_rest`] is).
     keyring: Option<Database>,
+    /// Lazily derived relation adjacency for recall. Process-local only (never
+    /// persisted, no cross-process sharing); every relation write invalidates it.
+    cached_relations_view: Mutex<Option<Arc<RelationsView>>>,
     #[cfg(test)]
     fail_after_stage: Cell<Option<u8>>,
+    /// Structural debug counter: stored-record decodes performed by this handle.
+    #[cfg(test)]
+    decode_count: Cell<u64>,
+}
+
+/// Derived in-memory relation adjacency consumed by recall (supersedes pairs,
+/// support sources, and weighted graph edges). Rebuilt lazily and dropped on
+/// relation writes; equality with the recall-side full scan is a test invariant.
+#[derive(Debug, Default)]
+pub(crate) struct RelationsView {
+    pub(crate) superseded_by: HashMap<u64, u64>,
+    pub(crate) sources: HashSet<u64>,
+    pub(crate) graph_edges: HashMap<u64, Vec<(u64, f32)>>,
+}
+
+impl RelationsView {
+    /// Exact old full-scan derivation: cold relations skipped, supersedes pairs
+    /// keyed by destination (id order, later wins), associates/causal edges
+    /// expanded both ways (causal reverse weighted ×0.8).
+    fn derive(relations: &[Relation]) -> Self {
+        let mut view = Self::default();
+        for r in relations {
+            if r.state() == RelationState::Cold {
+                continue;
+            }
+            match r.kind() {
+                RelationKind::Supersedes => {
+                    view.superseded_by.insert(r.dst(), r.id());
+                    view.sources.insert(r.src());
+                }
+                RelationKind::Associates => {
+                    view.graph_edges
+                        .entry(r.src())
+                        .or_default()
+                        .push((r.dst(), r.weight()));
+                    view.graph_edges
+                        .entry(r.dst())
+                        .or_default()
+                        .push((r.src(), r.weight()));
+                }
+                RelationKind::Causal => {
+                    view.graph_edges
+                        .entry(r.src())
+                        .or_default()
+                        .push((r.dst(), r.weight()));
+                    view.graph_edges
+                        .entry(r.dst())
+                        .or_default()
+                        .push((r.src(), r.weight() * 0.8));
+                }
+            }
+        }
+        view
+    }
+}
+
+/// Growth metrics for the LMDB environment backing a store: on-disk data
+/// bytes, the configured map ceiling, and the used fraction. Additive,
+/// read-only snapshot for the growth ledger written by `Substrate::finish`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct StoreMapStats {
+    pub data_bytes: u64,
+    pub map_bytes: u64,
+    pub used_fraction: f64,
 }
 
 /// Outcome of a bounded seal-on-rewrite migration pass (Q39 slice B).
@@ -496,8 +565,11 @@ impl Store {
             readonly,
             at_rest: None,
             keyring: None,
+            cached_relations_view: Mutex::new(None),
             #[cfg(test)]
             fail_after_stage: Cell::new(None),
+            #[cfg(test)]
+            decode_count: Cell::new(0),
         })
     }
 
@@ -593,6 +665,9 @@ impl Store {
     /// DEK (failing closed without one), plaintext values follow the legacy
     /// wire codec.
     fn decode_stored_record(&self, id: u64, stored: &[u8]) -> Result<EvidenceRecord, StoreError> {
+        #[cfg(test)]
+        self.decode_count
+            .set(self.decode_count.get().saturating_add(1));
         if at_rest::is_sealed_record(stored) {
             let opened = self.open_stored_record(id, stored)?;
             decode_record(&opened)
@@ -1285,6 +1360,66 @@ impl Store {
         Ok(())
     }
 
+    /// Reference/test bulk seeder for performance benches: writes records and
+    /// postings in chunked write transactions (no per-record fsync). Production
+    /// ingestion never uses this path.
+    #[cfg(any(test, feature = "reference-models"))]
+    pub(crate) fn seed_records_bulk(&self, records: &[EvidenceRecord]) -> Result<(), StoreError> {
+        self.ensure_writable()?;
+        let mut next_id = 0u64;
+        for chunk in records.chunks(1_000) {
+            let mut txn = self.env.begin_rw_txn()?;
+            for record in chunk {
+                let wire = WireRecord {
+                    id: record.id(),
+                    domain: domain_to_u8(record.domain()),
+                    class: class_to_u8(record.class()),
+                    content: record.content().to_string(),
+                    source: record.source().to_string(),
+                    confidence: record.confidence(),
+                    status: status_to_u8(record.status()),
+                    created_at: record.created_at(),
+                };
+                let value = rmp_serde::to_vec(&wire)?;
+                let stored = self.encode_stored_record(record.id(), record.created_at(), &value)?;
+                txn.put(
+                    self.records,
+                    &bytes_u64(record.id()),
+                    &stored,
+                    lmdb::WriteFlags::NO_OVERWRITE,
+                )?;
+                for term in crate::field::tokenize(record.content()) {
+                    let mut ids: Vec<u64> = match txn.get(self.postings, &term) {
+                        Ok(bytes) => rmp_serde::from_slice(bytes)?,
+                        Err(lmdb::Error::NotFound) => Vec::new(),
+                        Err(e) => return Err(e.into()),
+                    };
+                    if !ids.contains(&record.id()) {
+                        ids.push(record.id());
+                    }
+                    txn.put(
+                        self.postings,
+                        &term,
+                        &rmp_serde::to_vec(&ids)?,
+                        lmdb::WriteFlags::empty(),
+                    )?;
+                }
+                next_id = next_id.max(record.id().saturating_add(1));
+            }
+            txn.commit()?;
+        }
+        let mut txn = self.env.begin_rw_txn()?;
+        let current = read_counter(&txn, self.default, META_NEXT_RECORD)?;
+        txn.put(
+            self.default,
+            &META_NEXT_RECORD,
+            &bytes_u64(current.max(next_id)),
+            lmdb::WriteFlags::empty(),
+        )?;
+        txn.commit()?;
+        Ok(())
+    }
+
     pub fn get_record(&self, id: u64) -> Result<Option<EvidenceRecord>, StoreError> {
         let txn = self.env.begin_ro_txn()?;
         let db = self.records;
@@ -1344,6 +1479,7 @@ impl Store {
         }
         txn.put(db, &key, &value, lmdb::WriteFlags::empty())?;
         txn.commit()?;
+        self.invalidate_relations_view();
         Ok(())
     }
 
@@ -1357,6 +1493,73 @@ impl Store {
             out.push(rmp_serde::from_slice(bytes)?);
         }
         Ok(out)
+    }
+
+    /// Lazily built, process-local relation adjacency for recall. The first
+    /// call scans the relations keyspace once; later calls share the cached
+    /// view until a relation write invalidates it (see
+    /// [`Self::invalidate_relations_view`]). This never persists state: the
+    /// cache lives and dies with the handle.
+    pub(crate) fn relations_view(&self) -> Arc<RelationsView> {
+        if let Some(view) = self
+            .cached_relations_view
+            .lock()
+            .expect("relations view lock")
+            .as_ref()
+        {
+            return Arc::clone(view);
+        }
+        let relations = self.iter_relations().unwrap_or_default();
+        let view = Arc::new(RelationsView::derive(&relations));
+        *self
+            .cached_relations_view
+            .lock()
+            .expect("relations view lock") = Some(Arc::clone(&view));
+        view
+    }
+
+    /// Drop the derived relation adjacency after a relation write.
+    pub(crate) fn invalidate_relations_view(&self) {
+        *self
+            .cached_relations_view
+            .lock()
+            .expect("relations view lock") = None;
+    }
+
+    /// Whether the derived relation adjacency is currently cached (evidence
+    /// helper for invalidation tests).
+    #[cfg(test)]
+    pub(crate) fn relations_view_cached(&self) -> bool {
+        self.cached_relations_view
+            .lock()
+            .expect("relations view lock")
+            .is_some()
+    }
+
+    /// Growth metrics from filesystem metadata plus the configured map size.
+    pub fn map_stats(&self) -> Result<StoreMapStats, String> {
+        let data_path = self.path.join("data.mdb");
+        let data_bytes = std::fs::metadata(&data_path)
+            .map_err(|e| format!("store map stats: {}: {e}", data_path.display()))?
+            .len();
+        let map_bytes = configured_map_size() as u64;
+        let used_fraction = if map_bytes == 0 {
+            0.0
+        } else {
+            data_bytes as f64 / map_bytes as f64
+        };
+        Ok(StoreMapStats {
+            data_bytes,
+            map_bytes,
+            used_fraction,
+        })
+    }
+
+    /// Structural debug counter: stored-record decodes performed by this
+    /// handle (lazy-hydration assertions; never a timing probe).
+    #[cfg(test)]
+    pub(crate) fn decode_count(&self) -> u64 {
+        self.decode_count.get()
     }
 
     /// Record vector by id (L2-normalized f32[384]).
@@ -1832,6 +2035,7 @@ impl Store {
         self.fail_after(5)?;
         self.validate_sweep_receipt_state(&txn, &receipt)?;
         txn.commit()?;
+        self.invalidate_relations_view();
         Ok(SweepOutcome {
             receipt,
             disposition: CommitDisposition::Committed,
