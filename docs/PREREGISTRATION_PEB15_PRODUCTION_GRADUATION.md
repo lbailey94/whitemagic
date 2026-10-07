@@ -229,7 +229,7 @@ All three RED findings and two AMBER findings are resolved and proven in test su
 | Gate | Status | Evidence pointer |
 |---|---|---|
 | Gate 9A — Kernel freeze & type-system encapsulation | **CLOSED, RATIFIED 2026-09-22** | `receipts/GATE_9A_CLOSURE_VERDICT_2026-09-22.md`, `receipts/GATE_9A_RATIFICATION_RECEIPT_2026-09-22.md` |
-| Gate 9B — Compatibility shell (`wm` CLI & daemon) | Engineering-closed, ratification pending | `receipts/GATE_9B_CLOSURE_VERDICT_2026-10-07.md`; release run `37562982195`; closure scans 3/3 |
+| Gate 9B — Compatibility shell (`wm` CLI & daemon) | Engineering-closed, ratification pending; 2026-10-07 addendum: packaged-artifact evidence recorded, legacy CLI audit closed | `receipts/GATE_9B_CLOSURE_VERDICT_2026-10-07.md`; `receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md`; `docs/LEGACY_CLI_AUDIT_2026-10-07.md`; release run `37562982195`; closure scans 3/3 |
 | Gate 9C — Cognitive re-derivation | Engineering-closed (metric caveats), ratification pending | `receipts/GATE_9C_CLOSURE_VERDICT_2026-10-07.md`; gate9c 4/4 local on `2a923b4` + alpha.4 CI run `37537977637` |
 | Gate 9D — Alpha reality test | Engineering-closed (simulation caveats), ratification pending | `receipts/GATE_9D_CLOSURE_VERDICT_2026-10-07.md`; gate9d 4/4 local on `2a923b4` |
 
@@ -238,14 +238,32 @@ All three RED findings and two AMBER findings are resolved and proven in test su
 | Hypothesis | Outcome | Pointer |
 |---|---|---|
 | H15-1 Constitutional encapsulation | Closed (Gate 9A) | 9A verdict §3 |
-| H15-2 Packaging invariance | **Partially evidenced** — full M0–M8 re-run against the packaged artifact still open | 9B verdict §3–4 |
+| H15-2 Packaging invariance | **Substantially evidenced, strictly open** — both the installed and the manifest-verified published alpha.6 artifacts exercised at the CLI/MCP/invariant-audit surface (13 check families incl. 9/9 invariant audit and MCP round-trip); the preregistered M0–M8 driver re-run is structurally impossible (all 18 PEB drivers are `cargo test` harnesses against the source crate), so closure needs a scope amendment or a Gen3-native packaged battery | 9B verdict §3–4; `receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md` |
 | H15-3 Functional re-derivation & Pareto simplification | Closed, with the caveat that the frozen precision/recall thresholds are asserted constructively rather than re-measured | 9C verdict §3–4 |
 | H15-4 Migration safety & reality resilience | Closed, with the caveat that cut-points are simulated (no physical power-cut) | 9D verdict §3–4 |
 
 ### 9.3 Carried open items (ratification conditions)
 
 1. **CI:** the reference-models gate batteries have not yet completed green on `main` — alpha.5 CI run `37562979314` terminated with exit 143 (SIGTERM) before the battery step (no assertion failure recorded).
-2. **H15-2:** the M0–M8 driver battery has not been re-run against the packaged release artifact.
+2. **H15-2:** packaged artifacts are now directly exercised (13 check families on both the
+   installed build and the manifest-verified published alpha.6 asset; `receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md`).
+   Open remainder: the preregistered driver battery cannot be aimed at a binary — all 18 PEB
+   drivers are `cargo test -p wm-gen3-core` harnesses with no binary path — so engine-internal
+   batteries stay source-form until a scope amendment or a Gen3-native packaged battery lands.
 3. **H15-3:** the 9C amendment's numeric thresholds (Precision ≥ 2.12 %, Recall ≥ 85 %, ≥ 50 % candidate reduction) are not directly re-instrumented by the acceptance battery.
 4. **H15-4:** true physical power-loss qualification is not performed; crash consistency is emulated with write-ahead fsync + reopen.
-5. **9B:** no tracked Preserve/Translate/Deprecate/Remove audit of legacy CLI/MCP surfaces.
+5. **9B (CLOSED by addendum, 2026-10-07):** `docs/LEGACY_CLI_AUDIT_2026-10-07.md` tables all 30
+   v9-only commands (Preserve/Translate/Deprecate/Remove) and the 8 drifted shared names. The
+   audit surfaces follow-on gaps, not 9B blockers: no Gen3 whole-store `backup`/`restore`,
+   `wm at-rest` CLI pending, memory source-trust curation partial.
+6. **9B build tooling (new, addendum):** v9-era gates (`scripts/curated_smoke_test.py`,
+   `scripts/longmemeval_bench.py`, `scripts/memorastrict_bench.py`, `scripts/eval_matrix.sh`) pass
+   the removed `serve --max-requests/--rate-limit` flags and the smoke additionally asserts the
+   v9 MCP payload contract; `scripts/eval_all_tools.py` does not exist at this base. A
+   Gen3-native process-level smoke should replace them for packaged-artifact gating.
+7. **Closure scan red at the addendum base (new, discovered during evidence capture):**
+   `bash scripts/check_closures.sh` passes rules 1–2 but fails rule 3 on
+   `crates/wm-gen3-harness/src/bin/wm_node.rs:1036,1159` (Geth Phase 2 `wm-node` transport spawn
+   absent from the scanner allowlist). The alpha.5 "3/3 PASS" citation no longer holds for
+   `ef623fb`; CI is red at this step until the allowlist plus a boundary receipt lands
+   (`receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md` §4a).

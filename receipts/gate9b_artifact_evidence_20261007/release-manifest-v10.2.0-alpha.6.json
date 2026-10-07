@@ -1,0 +1,37 @@
+{
+  "benchmarks": {
+    "raw": "kind=release-mode-library-tests\nrevision=50293ca75a16683f802d5a76ae64463740bebdc4\nevent=push\nrunner=Linux/X64\nrustc 1.98.0 (88d9e12ae 2026-08-18)\nbinary: rustc\ncommit-hash: 88d9e12ae178fab0fb5cc050a94da85685d449ea\ncommit-date: 2026-08-18\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.0\nLLVM version: 22.1.8\ncargo 1.98.0 (797e8a9bc 2026-08-05)\n\u001b[1m\u001b[92m    Updating\u001b[0m crates.io index\n\u001b[1m\u001b[92m Downloading\u001b[0m crates ...\n\u001b[1m\u001b[92m  Downloaded\u001b[0m aead v0.5.2\n\u001b[1m\u001b[92m  Downloaded\u001b[0m argon2 v0.5.3\n\u001b[1m\u001b[92m  Downloaded\u001b[0m blake2 v0.10.6\n\u001b[1m\u001b[92m  Downloaded\u001b[0m chacha20 v0.9.1\n\u001b[1m\u001b[92m  Downloaded\u001b[0m cipher v0.4.4\n\u001b[1m\u001b[92m  Downloaded\u001b[0m chacha20poly1305 v0.10.1\n\u001b[1m\u001b[92m  Downloaded\u001b[0m hmac v0.12.1\n\u001b[1m\u001b[92m  Downloaded\u001b[0m hkdf v0.12.4\n\u001b[1m\u001b[92m  Downloaded\u001b[0m inout v0.1.4\n\u001b[1m\u001b[92m  Downloaded\u001b[0m opaque-debug v0.3.1\n\u001b[1m\u001b[92m  Downloaded\u001b[0m password-hash v0.5.0\n\u001b[1m\u001b[92m  Downloaded\u001b[0m poly1305 v0.8.0\n\u001b[1m\u001b[92m  Downloaded\u001b[0m rand_core v0.6.4\n\u001b[1m\u001b[92m  Downloaded\u001b[0m universal-hash v0.5.1\n\u001b[1m\u001b[92m  Downloaded\u001b[0m zeroize_derive v1.5.0\n\u001b[1m\u001b[92m   Compiling\u001b[0m zeroize_derive v1.5.0\n\u001b[1m\u001b[92m   Compiling\u001b[0m rand_core v0.6.4\n\u001b[1m\u001b[92m   Compiling\u001b[0m inout v0.1.4\n\u001b[1m\u001b[92m   Compiling\u001b[0m opaque-debug v0.3.1\n\u001b[1m\u001b[92m   Compiling\u001b[0m wm-gen3-shm v10.2.0-alpha.6 (/home/runner/work/whitemagic/whitemagic/crates/wm-gen3-shm)\n\u001b[1m\u001b[92m   Compiling\u001b[0m crypto-common v0.1.7\n\u001b[1m\u001b[92m   Compiling\u001b[0m password-hash v0.5.0\n\u001b[1m\u001b[92m   Compiling\u001b[0m digest v0.10.7\n\u001b[1m\u001b[92m   Compiling\u001b[0m universal-hash v0.5.1\n\u001b[1m\u001b[92m   Compiling\u001b[0m poly1305 v0.8.0\n\u001b[1m\u001b[92m   Compiling\u001b[0m blake2 v0.10.6\n\u001b[1m\u001b[92m   Compiling\u001b[0m hmac v0.12.1\n\u001b[1m\u001b[92m   Compiling\u001b[0m aead v0.5.2\n\u001b[1m\u001b[92m   Compiling\u001b[0m zeroize v1.9.0\n\u001b[1m\u001b[92m   Compiling\u001b[0m hkdf v0.12.4\n\u001b[1m\u001b[92m   Compiling\u001b[0m rustls-pki-types v1.15.1\n\u001b[1m\u001b[92m   Compiling\u001b[0m der v0.8.1\n\u001b[1m\u001b[92m   Compiling\u001b[0m cipher v0.4.4\n\u001b[1m\u001b[92m   Compiling\u001b[0m curve25519-dalek v5.0.0\n\u001b[1m\u001b[92m   Compiling\u001b[0m chacha20 v0.9.1\n\u001b[1m\u001b[92m   Compiling\u001b[0m rustls-webpki v0.103.15\n\u001b[1m\u001b[92m   Compiling\u001b[0m webpki-roots v1.0.9\n\u001b[1m\u001b[92m   Compiling\u001b[0m rustls v0.23.45\n\u001b[1m\u001b[92m   Compiling\u001b[0m webpki-root-certs v1.0.9\n\u001b[1m\u001b[92m   Compiling\u001b[0m reqwest v0.12.28\n\u001b[1m\u001b[92m   Compiling\u001b[0m ed25519-dalek v3.0.0\n\u001b[1m\u001b[92m   Compiling\u001b[0m chacha20poly1305 v0.10.1\n\u001b[1m\u001b[92m   Compiling\u001b[0m argon2 v0.5.3\n\u001b[1m\u001b[92m   Compiling\u001b[0m sha2 v0.10.9\n\u001b[1m\u001b[92m   Compiling\u001b[0m ureq v3.4.0\n\u001b[1m\u001b[92m   Compiling\u001b[0m hf-hub v0.5.0\n\u001b[1m\u001b[92m   Compiling\u001b[0m fastembed v5.17.4\n\u001b[1m\u001b[92m   Compiling\u001b[0m wm-gen3-core v10.2.0-alpha.6 (/home/runner/work/whitemagic/whitemagic/crates/wm-gen3-core)\n\u001b[1m\u001b[92m    Finished\u001b[0m `release` profile [optimized] target(s) in 1m 09s\n\u001b[1m\u001b[92m     Running\u001b[0m unittests src/lib.rs (target/release/deps/wm_gen3_core-bf139b80dad3bc13)\n\nrunning 1 test\nAblationNoEvaluate => violations=300, rollback_fails=300, refusal_disc=0, equiv=false, mismatches=386, pairs=1000\nSubstitutionUnboundedMapping => violations=0, rollback_fails=0, refusal_disc=1, equiv=true, mismatches=0, pairs=2257200\nCanonical4Beat => violations=0, rollback_fails=0, refusal_disc=1, equiv=true, mismatches=0, pairs=1000\nAsymmetric3Plus1 => violations=0, rollback_fails=0, refusal_disc=1, equiv=true, mismatches=0, pairs=1000\nMergerConstrainedTransform => violations=0, rollback_fails=0, refusal_disc=0, equiv=false, mismatches=386, pairs=3000\ntest pulse::tests::test_peb0_minimality_benchmark_execution ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 369 filtered out; finished in 1.04s\n\n\u001b[1m\u001b[92m    Finished\u001b[0m `release` profile [optimized] target(s) in 0.21s\n\u001b[1m\u001b[92m     Running\u001b[0m unittests src/lib.rs (target/release/deps/wm_gen3_core-bf139b80dad3bc13)\n\nrunning 1 test\nPEB-0.1 Report => equiv=true, violations=0, refusal_rate=1.00, decoupled_us=0.24, merger_us=0.66, blowup=2.81x, decoupled_backtracks=0, merger_backtracks=413, paraconsistent_blindness=true\ntest pulse::tests::test_peb0_1_intelligent_merger_benchmark_execution ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 369 filtered out; finished in 0.38s",
+    "source": "benchmark_results.txt"
+  },
+  "channel": "open alpha",
+  "crates": 6,
+  "minimum_store_schema": 7,
+  "notes": null,
+  "published": "2026-10-07T05:26:41Z",
+  "schema": 1,
+  "supported_profile": "curated",
+  "targets": {
+    "linux-aarch64": {
+      "install_gated": true,
+      "sha256": "20ac6ca379effe59a4e8cb7b4b76a2166aaf39ec32f13894289e5367932ba5be",
+      "signature": "wm-linux-aarch64.bundle",
+      "size": 47693192,
+      "url": "https://github.com/lbailey94/whitemagic/releases/download/v10.2.0-alpha.6/wm-linux-aarch64"
+    },
+    "linux-x86_64": {
+      "install_gated": true,
+      "sha256": "05de780c2500fa39a6783dfb821c1f8fa960f830732552a9e6efcffaafe4a852",
+      "signature": "wm-linux-x86_64.bundle",
+      "size": 48791336,
+      "url": "https://github.com/lbailey94/whitemagic/releases/download/v10.2.0-alpha.6/wm-linux-x86_64"
+    },
+    "macos-aarch64": {
+      "install_gated": true,
+      "sha256": "a2f74995b6c333fc7956f0d94afd149dc0a6bed3f82278c4aa6b2ef07c883ee7",
+      "signature": "wm-macos-aarch64.bundle",
+      "size": 42830448,
+      "url": "https://github.com/lbailey94/whitemagic/releases/download/v10.2.0-alpha.6/wm-macos-aarch64"
+    }
+  },
+  "version": "10.2.0-alpha.6"
+}

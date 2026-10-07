@@ -1,0 +1,3 @@
+Initializing WhiteMagic substrate at: /tmp/opencode/g9b/mcp-store
+✓ Initialized and seeded starter guide galaxy (6 records committed).
+✓ Status: Ready. Run 'wm grimoire' for full diagnostic pass.

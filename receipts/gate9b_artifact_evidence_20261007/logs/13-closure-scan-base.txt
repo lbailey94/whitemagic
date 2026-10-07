@@ -1,0 +1,9 @@
+$ bash scripts/check_closures.sh   # base ef623fb, docs-only working tree
+[1/3] dependency rule: no Gen2 (wm-*) crate in the Gen3 tree
+      ok
+[2/3] plastic layer / host never reference the constitution mutation surface
+      ok
+[3/3] no authoritative thread spawns outside the physical-I/O transport (Article 4)
+CLOSURE SCAN FAILED: thread spawn outside the physical-I/O transport: crates/wm-gen3-harness/src/bin/wm_node.rs:1036:                std::thread::spawn(move || {
+crates/wm-gen3-harness/src/bin/wm_node.rs:1159:        let handle = std::thread::spawn({
+rc=1

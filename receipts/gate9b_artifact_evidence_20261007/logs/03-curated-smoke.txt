@@ -1,0 +1,16 @@
+$ python3 scripts/curated_smoke_test.py --binary /home/lucas/.local/bin/wm10 --store /tmp/opencode/g9b/smoke-store
+binary: /home/lucas/.local/bin/wm10
+store:  /tmp/opencode/g9b/smoke-store
+Traceback (most recent call last):
+  File "/home/lucas/Desktop/front burner/WHITEMAGIC/worktrees/wt-gate9b/scripts/curated_smoke_test.py", line 806, in <module>
+    main()
+  File "/home/lucas/Desktop/front burner/WHITEMAGIC/worktrees/wt-gate9b/scripts/curated_smoke_test.py", line 677, in main
+    memory_id = run_workflow(server)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucas/Desktop/front burner/WHITEMAGIC/worktrees/wt-gate9b/scripts/curated_smoke_test.py", line 141, in run_workflow
+    init = server.rpc(
+           ^^^^^^^^^^^
+  File "/home/lucas/Desktop/front burner/WHITEMAGIC/worktrees/wt-gate9b/scripts/curated_smoke_test.py", line 111, in rpc
+    raise RuntimeError(f"server closed stdout before responding to {method}")
+RuntimeError: server closed stdout before responding to initialize
+rc=1

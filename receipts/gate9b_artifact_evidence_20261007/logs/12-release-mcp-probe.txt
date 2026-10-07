@@ -1,0 +1,7 @@
+initialize: {"capabilities": {"tools": {}}, "protocolVersion": "2024-11-05", "serverInfo": {"name": "whitemagic-gen3", "profile": "full", "version": "10.2.0-alpha.6"}}
+tools/list: 44 tools; first=wm; has wm=True
+memory.create: isError=False keys=['created_at', 'galaxy', 'id', 'importance', 'kernel_epoch', 'record_id']
+memory.search: isError=False keys=['count', 'query', 'results', 'status']
+search found marker: True
+session.continuity: isError=False keys=['checkpoint', 'content_truncated', 'next_queue', 'open_flags', 'recent_turns', 'session_id']
+server rc: 0

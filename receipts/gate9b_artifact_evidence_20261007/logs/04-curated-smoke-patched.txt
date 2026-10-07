@@ -1,0 +1,44 @@
+$ python3 /tmp/opencode/g9b/patched/curated_smoke_test.py --binary /home/lucas/.local/bin/wm10 --store /tmp/opencode/g9b/smoke-store
+binary: /home/lucas/.local/bin/wm10
+store:  /tmp/opencode/g9b/smoke-store
+[FAIL] initialize: unexpected serverInfo
+       payload: {
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "tools": {}
+    },
+    "serverInfo": {
+      "name": "whitemagic-gen3",
+      "version": "10.2.0-alpha.6",
+      "profile": "full"
+    }
+  }
+}
+[ ok ] tools/list exposes the wm meta-tool at index 0
+[FAIL] tools/list: description does not reflect the curated profile
+       payload: "WhiteMagic meta-tool \u2014 sovereign cognitive kernel and memory hierarchy. Routes via thought=<natural language>, route=<tool id>, or discrete action."
+Traceback (most recent call last):
+  File "/tmp/opencode/g9b/patched/curated_smoke_test.py", line 802, in <module>
+    main()
+  File "/tmp/opencode/g9b/patched/curated_smoke_test.py", line 673, in main
+    memory_id = run_workflow(server)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/opencode/g9b/patched/curated_smoke_test.py", line 166, in run_workflow
+    discovered = server.wm_payload("tools.list", {}, 100)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/opencode/g9b/patched/curated_smoke_test.py", line 121, in wm_payload
+    return json.loads(content[0]["text"])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+rc=1

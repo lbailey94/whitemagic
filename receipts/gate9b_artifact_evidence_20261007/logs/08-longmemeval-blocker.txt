@@ -1,0 +1,27 @@
+$ python3 scripts/longmemeval_bench.py --binary /home/lucas/.local/bin/wm10 --dataset <canonical> --max-questions 1 --output /tmp/opencode/g9b/lme.json --store /tmp/opencode/g9b/lme-store --persistent --route memory.episodic_search
+Composite windows: off
+Contextual indexing: off
+Search route: memory.episodic_search
+Rerank: off
+Limit: 10
+Candidate limit: 100
+Persistent server: on
+T1 subset: 1/50 questions (isolation growing, run t1-2026-10-07)
+
+Dataset: 1 questions
+  single-session-user: 1
+Starting persistent server (loading ONNX model once)...
+Traceback (most recent call last):
+  File "/home/lucas/Desktop/front burner/WHITEMAGIC/worktrees/wt-gate9b/scripts/longmemeval_bench.py", line 1562, in <module>
+    main()
+  File "/home/lucas/Desktop/front burner/WHITEMAGIC/worktrees/wt-gate9b/scripts/longmemeval_bench.py", line 1510, in main
+    result = run_benchmark(
+             ^^^^^^^^^^^^^^
+  File "/home/lucas/Desktop/front burner/WHITEMAGIC/worktrees/wt-gate9b/scripts/longmemeval_bench.py", line 742, in run_benchmark
+    persistent_server.start()
+  File "/home/lucas/Desktop/front burner/WHITEMAGIC/worktrees/wt-gate9b/scripts/longmemeval_bench.py", line 430, in start
+    self._send_recv(json.dumps({
+  File "/home/lucas/Desktop/front burner/WHITEMAGIC/worktrees/wt-gate9b/scripts/longmemeval_bench.py", line 456, in _send_recv
+    self.proc.stdin.flush()
+BrokenPipeError: [Errno 32] Broken pipe
+rc=1
