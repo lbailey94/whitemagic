@@ -9,6 +9,7 @@
 #![recursion_limit = "512"]
 
 use clap::{Parser, Subcommand};
+use serde::{Deserialize, Serialize};
 use std::io::BufRead;
 use std::path::{Path, PathBuf};
 
@@ -476,8 +477,17 @@ enum Commands {
         command: HostGuardCommands,
     },
     /// Compact the LMDB data.mdb and report map usage vs the configured map size
+    ///
+    /// Recovers an interrupted prior compaction from `compact.journal` before
+    /// acting (restores a `.bak` if `data.mdb` is missing, cleans stale copies
+    /// otherwise). Takes an exclusive `<store>/compact.lock` PID lease and
+    /// refuses while any live process has the store mapped or any `/proc/*/maps`
+    /// entry is unreadable — stop the serving unit first
+    /// (e.g. `systemctl --user stop 'wm-serve@*'`). A residual TOCTOU window
+    /// remains: a writer that opens after the scan is not stopped by the lease,
+    /// so compact only a quiesced store.
     Compact {
-        /// Report size and planned action only; consume nothing
+        /// Report size and planned action only; no copy/swap (journal recovery still runs)
         #[arg(long)]
         dry_run: bool,
         /// Output the size report and compaction outcome as JSON
@@ -660,8 +670,8 @@ enum AtRestCommands {
         /// Count plaintext records without writing records or the ledger
         #[arg(long)]
         dry_run: bool,
-        /// Records sealed per transaction batch (default: 100)
-        #[arg(long, default_value_t = 100)]
+        /// Records sealed per transaction batch (default: 256)
+        #[arg(long, default_value_t = 256)]
         batch: usize,
         /// Output the migration report as JSON
         #[arg(long)]
@@ -4351,6 +4361,12 @@ fn firebreak_render_lines() -> Vec<String> {
 // ── Store growth / compaction ───────────────────────────────────────────
 
 const STORE_SIZE_WARN_PERCENT: f64 = 80.0;
+const COMPACT_JOURNAL_FILE: &str = "compact.journal";
+const COMPACT_LOCK_FILE: &str = "compact.lock";
+const COMPACT_BACKUP_PREFIX: &str = "data.mdb.bak.";
+const COMPACT_BACKUP_KEEP: usize = 2;
+/// LMDB meta-page magic (`MDB_MAGIC`) at byte offset 16 of `data.mdb`.
+const LMDB_META_MAGIC: [u8; 4] = [0xde, 0xc0, 0xef, 0xbe];
 
 #[derive(Debug, Clone, PartialEq)]
 struct StoreSizeReport {
@@ -4448,17 +4464,327 @@ fn print_compact_json(value: &serde_json::Value) {
     );
 }
 
+fn compact_tmp_dir(store_path: &Path) -> PathBuf {
+    let mut tmp = store_path.as_os_str().to_os_string();
+    tmp.push(".compact.tmp");
+    PathBuf::from(tmp)
+}
+
+fn compact_timestamp() -> String {
+    chrono::Utc::now().format("%Y%m%dT%H%M%S%.9fZ").to_string()
+}
+
+fn fsync_dir(path: &Path) {
+    if let Ok(dir) = std::fs::File::open(path) {
+        let _ = dir.sync_all();
+    }
+}
+
+/// Durable marker for an in-flight compaction. Written and fsynced before the
+/// copy starts, updated before each swap rename, and removed after the store
+/// is verified: a crash therefore always leaves enough state for the next
+/// `wm compact` to finish deterministically.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct CompactJournal {
+    /// `copy` | `swap_backup` | `swap_installed`.
+    phase: String,
+    tmp: String,
+    #[serde(default)]
+    backup: Option<String>,
+    started_at: String,
+    updated_at: String,
+}
+
+impl CompactJournal {
+    fn copy(tmp: &Path) -> Self {
+        let now = chrono::Utc::now().to_rfc3339();
+        Self {
+            phase: "copy".to_string(),
+            tmp: tmp.display().to_string(),
+            backup: None,
+            started_at: now.clone(),
+            updated_at: now,
+        }
+    }
+
+    fn set_phase(&mut self, phase: &str) {
+        self.phase = phase.to_string();
+        self.updated_at = chrono::Utc::now().to_rfc3339();
+    }
+}
+
+fn write_compact_journal(store_path: &Path, journal: &CompactJournal) -> Result<(), String> {
+    use std::io::Write as _;
+    let path = store_path.join(COMPACT_JOURNAL_FILE);
+    let temp = store_path.join("compact.journal.tmp");
+    let bytes = serde_json::to_vec(journal).map_err(|e| format!("serialize journal: {e}"))?;
+    {
+        let mut file =
+            std::fs::File::create(&temp).map_err(|e| format!("create {}: {e}", temp.display()))?;
+        file.write_all(&bytes)
+            .map_err(|e| format!("write {}: {e}", temp.display()))?;
+        file.sync_all()
+            .map_err(|e| format!("fsync {}: {e}", temp.display()))?;
+    }
+    std::fs::rename(&temp, &path).map_err(|e| format!("rename journal: {e}"))?;
+    fsync_dir(store_path);
+    Ok(())
+}
+
+/// Cheap sanity check for a backup file: nonzero and carrying the LMDB meta
+/// magic at the documented offset. The backup is a byte-for-byte rename of
+/// the pre-swap data file, so this only guards against restoring junk.
+fn backup_looks_like_env(path: &Path) -> bool {
+    use std::io::Read as _;
+    let Ok(mut file) = std::fs::File::open(path) else {
+        return false;
+    };
+    let mut header = [0u8; 20];
+    if file.read_exact(&mut header).is_err() {
+        return false;
+    }
+    header[16..20] == LMDB_META_MAGIC
+}
+
+fn backup_name_is_ours(path: &Path, store_path: &Path) -> bool {
+    path.parent() == Some(store_path)
+        && path
+            .file_name()
+            .is_some_and(|name| name.to_string_lossy().starts_with(COMPACT_BACKUP_PREFIX))
+}
+
+fn newest_compact_backup(store_path: &Path) -> Option<PathBuf> {
+    let entries = std::fs::read_dir(store_path).ok()?;
+    let mut names: Vec<String> = entries
+        .flatten()
+        .filter_map(|entry| entry.file_name().to_str().map(str::to_string))
+        .filter(|name| name.starts_with(COMPACT_BACKUP_PREFIX))
+        .collect();
+    names.sort();
+    names.pop().map(|name| store_path.join(name))
+}
+
+/// Keep only the newest `keep` timestamped backups (names sort
+/// lexicographically because the stamp has fixed-width nanosecond fields).
+fn prune_compact_backups(store_path: &Path, keep: usize) -> Vec<String> {
+    let Ok(entries) = std::fs::read_dir(store_path) else {
+        return Vec::new();
+    };
+    let mut names: Vec<String> = entries
+        .flatten()
+        .filter_map(|entry| entry.file_name().to_str().map(str::to_string))
+        .filter(|name| name.starts_with(COMPACT_BACKUP_PREFIX))
+        .collect();
+    names.sort();
+    if names.len() <= keep {
+        return Vec::new();
+    }
+    let stale: Vec<String> = names.drain(..names.len() - keep).collect();
+    for name in &stale {
+        let _ = std::fs::remove_file(store_path.join(name));
+    }
+    if !stale.is_empty() {
+        fsync_dir(store_path);
+    }
+    stale
+}
+
+fn cleanup_compact_artifacts(store_path: &Path, tmp_dir: &Path) {
+    let _ = std::fs::remove_dir_all(tmp_dir);
+    let _ = std::fs::remove_file(store_path.join(COMPACT_JOURNAL_FILE));
+    fsync_dir(store_path);
+}
+
+/// Complete or roll back a compaction interrupted by a crash.
+///
+/// Deterministic rules:
+/// - `data.mdb` missing (crash between the two swap renames): restore the
+///   journal's backup (or the newest backup) when it looks like an LMDB env,
+///   then drop the stale copy and journal;
+/// - `data.mdb` present (crash during copy or after install): the live file
+///   is consistent either way — drop the stale copy and journal, keep backups.
+fn recover_interrupted_compact(store_path: &Path) -> Result<Option<String>, String> {
+    let journal_path = store_path.join(COMPACT_JOURNAL_FILE);
+    if !journal_path.exists() {
+        return Ok(None);
+    }
+    let data_path = store_path.join("data.mdb");
+    let expected_tmp = compact_tmp_dir(store_path);
+    let journal: Option<CompactJournal> = std::fs::read_to_string(&journal_path)
+        .ok()
+        .and_then(|text| serde_json::from_str(&text).ok());
+    let journal_backup = journal
+        .as_ref()
+        .and_then(|entry| entry.backup.as_deref())
+        .map(PathBuf::from)
+        .filter(|path| backup_name_is_ours(path, store_path));
+
+    if !data_path.is_file() {
+        let candidate = journal_backup
+            .filter(|path| path.is_file())
+            .or_else(|| newest_compact_backup(store_path));
+        let Some(backup) = candidate else {
+            return Err(format!(
+                "data.mdb is missing and {} names no usable backup; manual recovery required",
+                journal_path.display()
+            ));
+        };
+        if !backup_looks_like_env(&backup) {
+            return Err(format!(
+                "data.mdb is missing and candidate backup {} does not look like an LMDB env; \
+                 refusing automatic recovery",
+                backup.display()
+            ));
+        }
+        std::fs::rename(&backup, &data_path)
+            .map_err(|e| format!("restore backup {}: {e}", backup.display()))?;
+        fsync_dir(store_path);
+        if expected_tmp.exists() {
+            let _ = std::fs::remove_dir_all(&expected_tmp);
+        }
+        let _ = std::fs::remove_file(&journal_path);
+        fsync_dir(store_path);
+        return Ok(Some(format!(
+            "restored {} -> data.mdb (crash between swap renames)",
+            backup.display()
+        )));
+    }
+
+    let mut detail = "cleaned up interrupted compaction".to_string();
+    if expected_tmp.exists() {
+        let _ = std::fs::remove_dir_all(&expected_tmp);
+        detail.push_str("; removed stale copy");
+    }
+    if journal.is_none() {
+        detail.push_str(" (journal was unreadable)");
+    }
+    let _ = std::fs::remove_file(&journal_path);
+    fsync_dir(store_path);
+    Ok(Some(detail))
+}
+
+/// Exclusive compaction lease over the whole copy+swap. The workspace forbids
+/// `unsafe` (no `flock(2)` without a new dependency), so this uses an atomic
+/// `O_EXCL` PID lease in the `SentinelLeaseGuard` pattern: only other
+/// `wm compact` runs honor it — serving units do not, which is why the
+/// live-handle refusal is still required (and why the residual race is
+/// documented in the command help).
+struct CompactLock {
+    path: PathBuf,
+}
+
+impl CompactLock {
+    fn acquire(store_path: &Path) -> Result<Self, String> {
+        let path = store_path.join(COMPACT_LOCK_FILE);
+        for attempt in 0..2 {
+            match std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+            {
+                Ok(mut file) => {
+                    use std::io::Write as _;
+                    let _ = writeln!(file, "{}", std::process::id());
+                    let _ = file.sync_all();
+                    return Ok(Self { path });
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                    if attempt == 0 && !compact_lease_holder_alive(&path) {
+                        let _ = std::fs::remove_file(&path);
+                        continue;
+                    }
+                    let holder = compact_lease_holder(&path)
+                        .map_or_else(|| "unknown pid".to_string(), |pid| format!("pid {pid}"));
+                    return Err(format!(
+                        "another compaction holds {} ({holder})",
+                        path.display()
+                    ));
+                }
+                Err(error) => return Err(format!("create {}: {error}", path.display())),
+            }
+        }
+        Err(format!("could not acquire {}", path.display()))
+    }
+}
+
+impl Drop for CompactLock {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+        if let Some(parent) = self.path.parent() {
+            fsync_dir(parent);
+        }
+    }
+}
+
+fn compact_lease_holder(path: &Path) -> Option<u32> {
+    std::fs::read_to_string(path)
+        .ok()?
+        .trim()
+        .parse::<u32>()
+        .ok()
+}
+
+fn compact_lease_holder_alive(path: &Path) -> bool {
+    let Some(pid) = compact_lease_holder(path) else {
+        return false;
+    };
+    #[cfg(target_os = "linux")]
+    {
+        Path::new(&format!("/proc/{pid}")).exists()
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        std::process::Command::new("kill")
+            .arg("-0")
+            .arg(pid.to_string())
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false)
+    }
+}
+
+#[derive(Debug, Default)]
+struct LiveStoreHandles {
+    /// Live processes with `data.mdb` mapped.
+    mapped: Vec<u32>,
+    /// PIDs that could open the store but whose maps could not be read while
+    /// the process still exists (e.g. root-owned under `ptrace_scope`).
+    unverifiable: Vec<(u32, String)>,
+}
+
+/// Parse the four credential uids (`Uid:` line) from `/proc/<pid>/status`,
+/// which — unlike `maps` — is world-readable for every process.
+#[cfg(target_os = "linux")]
+fn proc_status_uids(proc_dir: &Path) -> Option<[u32; 4]> {
+    let text = std::fs::read_to_string(proc_dir.join("status")).ok()?;
+    let line = text.lines().find(|line| line.starts_with("Uid:"))?;
+    let mut uids = [0u32; 4];
+    for (slot, token) in line.split_whitespace().skip(1).take(4).enumerate() {
+        uids[slot] = token.parse().ok()?;
+    }
+    Some(uids)
+}
+
 /// Refuse to compact while any live process (other than this one) has the
 /// store's `data.mdb` mapped: LMDB locks live in `lock.mdb`, so a mapped
-/// handle may be a writer whose lock state cannot be inspected. Being
-/// conservative keeps the rename/swap dance safe.
+/// handle may be a writer whose lock state cannot be inspected. Unreadable
+/// maps entries for processes that could open the store (same uid, root, or
+/// any uid when the store grants group/other access) are treated as possible
+/// writers, not skipped; a process that exited mid-scan is not a writer.
+/// Processes that provably cannot open a 0600 store (other uid, non-root) are
+/// excluded by file-permission proof rather than by a failed read.
 #[cfg(target_os = "linux")]
-fn store_live_handles(store_path: &Path) -> Result<Vec<u32>, String> {
+fn store_live_handles(store_path: &Path) -> Result<LiveStoreHandles, String> {
+    use std::os::unix::fs::MetadataExt as _;
     let data_path = std::fs::canonicalize(store_path.join("data.mdb"))
         .map_err(|e| format!("canonicalize data.mdb: {e}"))?;
+    let metadata =
+        std::fs::metadata(&data_path).map_err(|e| format!("stat {}: {e}", data_path.display()))?;
+    let store_uid = metadata.uid();
+    let group_or_other_accessible = metadata.mode() & 0o077 != 0;
     let needle = data_path.to_string_lossy().into_owned();
     let self_pid = std::process::id();
-    let mut pids = Vec::new();
+    let mut handles = LiveStoreHandles::default();
     let entries = std::fs::read_dir("/proc").map_err(|e| format!("read /proc: {e}"))?;
     for entry in entries {
         let Ok(entry) = entry else { continue };
@@ -4472,24 +4798,66 @@ fn store_live_handles(store_path: &Path) -> Result<Vec<u32>, String> {
         if pid == self_pid {
             continue;
         }
-        let Ok(maps) = std::fs::read_to_string(entry.path().join("maps")) else {
-            continue;
+        let proc_dir = entry.path();
+        let eligible = match proc_status_uids(&proc_dir) {
+            Some(uids) => {
+                group_or_other_accessible || uids.iter().any(|uid| *uid == store_uid || *uid == 0)
+            }
+            // Cannot even determine the owner: treat as a possible writer.
+            None => true,
         };
-        if maps.lines().any(|line| line.contains(&needle)) {
-            pids.push(pid);
+        if !eligible {
+            continue;
+        }
+        match std::fs::read_to_string(proc_dir.join("maps")) {
+            Ok(maps) => {
+                if maps.lines().any(|line| line.contains(&needle)) {
+                    handles.mapped.push(pid);
+                }
+            }
+            Err(error) => {
+                if !proc_dir.exists() {
+                    continue;
+                }
+                handles.unverifiable.push((pid, error.to_string()));
+            }
         }
     }
-    pids.sort_unstable();
-    pids.dedup();
-    Ok(pids)
+    handles.mapped.sort_unstable();
+    handles.mapped.dedup();
+    handles.unverifiable.sort_by_key(|(pid, _)| *pid);
+    handles.unverifiable.dedup_by_key(|(pid, _)| *pid);
+    Ok(handles)
 }
 
 #[cfg(not(target_os = "linux"))]
-fn store_live_handles(_store_path: &Path) -> Result<Vec<u32>, String> {
+fn store_live_handles(_store_path: &Path) -> Result<LiveStoreHandles, String> {
     Err("live-handle inspection is only implemented on Linux".to_string())
 }
 
+/// Test seam: the gated compaction e2e runs in-process on hosts whose root
+/// processes are unreadable maps entries under `ptrace_scope`; production
+/// builds compile the bypass out entirely (`cfg(test)`).
+#[cfg(test)]
+static COMPACT_TEST_SKIP_WRITER_SCAN: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
 fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) -> i32 {
+    // Recovery always runs first so a crash between the two swap renames is
+    // repaired before the store is inspected (even for --dry-run).
+    let recovery = match recover_interrupted_compact(store_path) {
+        Ok(note) => note,
+        Err(error) => {
+            eprintln!("compact: recovery failed: {error}");
+            return 1;
+        }
+    };
+    if let Some(note) = &recovery {
+        if !json {
+            println!("compact: {note}");
+        }
+    }
+
     let data_path = store_path.join("data.mdb");
     if !data_path.is_file() {
         eprintln!(
@@ -4512,6 +4880,7 @@ fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) 
                 serde_json::json!({
                     "dry_run": true,
                     "compact_available": find_on_path("mdb_copy").is_some(),
+                    "recovery": recovery,
                 }),
             ));
         } else {
@@ -4535,7 +4904,10 @@ fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) 
                 store_path,
                 &size,
                 "unavailable",
-                serde_json::json!({ "install_hint": "sudo apt install lmdb-utils" }),
+                serde_json::json!({
+                    "install_hint": "sudo apt install lmdb-utils",
+                    "recovery": recovery,
+                }),
             ));
         }
         eprintln!(
@@ -4544,9 +4916,7 @@ fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) 
         return 3;
     };
 
-    let mut tmp_os = store_path.as_os_str().to_os_string();
-    tmp_os.push(".compact.tmp");
-    let tmp_dir = PathBuf::from(tmp_os);
+    let tmp_dir = compact_tmp_dir(store_path);
     if tmp_dir.exists() {
         eprintln!(
             "compact: temporary path {} already exists; remove it and retry",
@@ -4555,20 +4925,47 @@ fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) 
         return 1;
     }
 
-    match store_live_handles(store_path) {
-        Ok(pids) if !pids.is_empty() => {
-            eprintln!(
-                "compact: refusing to act: {} live process(es) have {} mapped ({pids:?}); \
-                 cannot verify they hold no write lock",
-                pids.len(),
-                data_path.display()
-            );
+    let _lock = match CompactLock::acquire(store_path) {
+        Ok(lock) => lock,
+        Err(error) => {
+            eprintln!("compact: refusing to act: {error}");
             return 1;
         }
-        Ok(_) => {}
-        Err(error) => {
-            eprintln!("compact: refusing to act: cannot verify store lock liveness ({error})");
-            return 1;
+    };
+
+    #[cfg(test)]
+    let test_bypass_writer_scan =
+        COMPACT_TEST_SKIP_WRITER_SCAN.swap(false, std::sync::atomic::Ordering::SeqCst);
+    #[cfg(not(test))]
+    let test_bypass_writer_scan = false;
+    if !test_bypass_writer_scan {
+        match store_live_handles(store_path) {
+            Ok(handles) if !handles.mapped.is_empty() => {
+                eprintln!(
+                    "compact: refusing to act: {} live process(es) have {} mapped ({:?}); \
+                     stop the serving unit first (e.g. systemctl --user stop 'wm-serve@*')",
+                    handles.mapped.len(),
+                    data_path.display(),
+                    handles.mapped
+                );
+                return 1;
+            }
+            Ok(handles) if !handles.unverifiable.is_empty() => {
+                eprintln!(
+                    "compact: refusing to act: {} /proc maps entr(ies) are unreadable for \
+                     processes that could open the store ({:?}); cannot rule out a live \
+                     writer — stop the serving unit first, or run compact with sufficient \
+                     privilege to inspect them",
+                    handles.unverifiable.len(),
+                    handles.unverifiable
+                );
+                return 1;
+            }
+            Ok(_) => {}
+            Err(error) => {
+                eprintln!("compact: refusing to act: cannot verify store lock liveness ({error})");
+                return 1;
+            }
         }
     }
 
@@ -4578,7 +4975,10 @@ fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) 
                 store_path,
                 &size,
                 "available",
-                serde_json::json!({ "mdb_copy": mdb_copy.display().to_string() }),
+                serde_json::json!({
+                    "mdb_copy": mdb_copy.display().to_string(),
+                    "recovery": recovery,
+                }),
             ));
         } else {
             println!("Store data.mdb: {}", render_store_size(&size));
@@ -4605,6 +5005,12 @@ fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) 
         }
     };
 
+    let mut journal = CompactJournal::copy(&tmp_dir);
+    if let Err(error) = write_compact_journal(store_path, &journal) {
+        eprintln!("compact: cannot journal compaction start: {error}");
+        return 1;
+    }
+
     let copy = std::process::Command::new(&mdb_copy)
         .arg("-c")
         .arg(store_path)
@@ -4618,12 +5024,12 @@ fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) 
                 output.status,
                 String::from_utf8_lossy(&output.stderr).trim()
             );
-            let _ = std::fs::remove_dir_all(&tmp_dir);
+            cleanup_compact_artifacts(store_path, &tmp_dir);
             return 1;
         }
-        Err(e) => {
-            eprintln!("compact: failed to run {}: {e}", mdb_copy.display());
-            let _ = std::fs::remove_dir_all(&tmp_dir);
+        Err(error) => {
+            eprintln!("compact: failed to run {}: {error}", mdb_copy.display());
+            cleanup_compact_artifacts(store_path, &tmp_dir);
             return 1;
         }
     }
@@ -4631,15 +5037,15 @@ fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) 
     let tmp_data = tmp_dir.join("data.mdb");
     if !tmp_data.is_file() {
         eprintln!("compact: mdb_copy produced no {}", tmp_data.display());
-        let _ = std::fs::remove_dir_all(&tmp_dir);
+        cleanup_compact_artifacts(store_path, &tmp_dir);
         return 1;
     }
 
     let copied_count = match Store::open_readonly(&tmp_dir).and_then(|store| store.record_count()) {
         Ok(count) => count,
-        Err(e) => {
-            eprintln!("compact: copy verification failed to open: {e}");
-            let _ = std::fs::remove_dir_all(&tmp_dir);
+        Err(error) => {
+            eprintln!("compact: copy verification failed to open: {error}");
+            cleanup_compact_artifacts(store_path, &tmp_dir);
             return 1;
         }
     };
@@ -4647,32 +5053,50 @@ fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) 
         eprintln!(
             "compact: copy verification failed: record count {copied_count} != original {original_count}"
         );
-        let _ = std::fs::remove_dir_all(&tmp_dir);
+        cleanup_compact_artifacts(store_path, &tmp_dir);
         return 1;
     }
 
-    let timestamp = chrono::Utc::now().format("%Y%m%dT%H%M%SZ").to_string();
-    let backup = store_path.join(format!("data.mdb.bak.{timestamp}"));
-    if let Err(e) = std::fs::rename(&data_path, &backup) {
-        eprintln!("compact: backup rename failed: {e}");
-        let _ = std::fs::remove_dir_all(&tmp_dir);
+    let timestamp = compact_timestamp();
+    let backup = store_path.join(format!("{COMPACT_BACKUP_PREFIX}{timestamp}"));
+    journal.backup = Some(backup.display().to_string());
+    journal.set_phase("swap_backup");
+    if let Err(error) = write_compact_journal(store_path, &journal) {
+        eprintln!("compact: cannot journal swap phase: {error}");
+        cleanup_compact_artifacts(store_path, &tmp_dir);
         return 1;
     }
+
+    if let Err(e) = std::fs::rename(&data_path, &backup) {
+        eprintln!("compact: backup rename failed: {e}");
+        cleanup_compact_artifacts(store_path, &tmp_dir);
+        return 1;
+    }
+    fsync_dir(store_path);
     if let Err(e) = std::fs::rename(&tmp_data, &data_path) {
         eprintln!("compact: swap rename failed: {e}; restoring backup");
         let _ = std::fs::rename(&backup, &data_path);
-        let _ = std::fs::remove_dir_all(&tmp_dir);
+        fsync_dir(store_path);
+        cleanup_compact_artifacts(store_path, &tmp_dir);
         return 1;
+    }
+    fsync_dir(store_path);
+    journal.set_phase("swap_installed");
+    if let Err(error) = write_compact_journal(store_path, &journal) {
+        eprintln!("compact: warning: could not record swap phase: {error}");
     }
 
     let verified = Store::open_readonly(store_path).and_then(|store| store.record_count());
     let after_bytes = std::fs::metadata(&data_path)
         .map(|meta| meta.len())
         .unwrap_or(0);
-    let _ = std::fs::remove_dir_all(&tmp_dir);
 
     match verified {
         Ok(count) if count == original_count => {
+            let _ = std::fs::remove_dir_all(&tmp_dir);
+            let _ = std::fs::remove_file(store_path.join(COMPACT_JOURNAL_FILE));
+            fsync_dir(store_path);
+            let pruned = prune_compact_backups(store_path, COMPACT_BACKUP_KEEP);
             if json {
                 print_compact_json(&compact_size_json(
                     store_path,
@@ -4683,6 +5107,8 @@ fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) 
                         "before_bytes": size.data_mdb_bytes,
                         "after_bytes": after_bytes,
                         "records": count,
+                        "backups_pruned": pruned,
+                        "recovery": recovery,
                     }),
                 ));
             } else {
@@ -4691,6 +5117,9 @@ fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) 
                 println!("After:          {}", format_bytes(after_bytes));
                 println!("Records:        {count} (verified)");
                 println!("Backup kept:    {}", backup.display());
+                if !pruned.is_empty() {
+                    println!("Backups pruned: {}", pruned.join(", "));
+                }
             }
             0
         }
@@ -4701,6 +5130,8 @@ fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) 
             let failed = store_path.join(format!("data.mdb.failed.{timestamp}"));
             let _ = std::fs::rename(&data_path, &failed);
             let _ = std::fs::rename(&backup, &data_path);
+            fsync_dir(store_path);
+            cleanup_compact_artifacts(store_path, &tmp_dir);
             1
         }
         Err(e) => {
@@ -4710,6 +5141,8 @@ fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) 
             let failed = store_path.join(format!("data.mdb.failed.{timestamp}"));
             let _ = std::fs::rename(&data_path, &failed);
             let _ = std::fs::rename(&backup, &data_path);
+            fsync_dir(store_path);
+            cleanup_compact_artifacts(store_path, &tmp_dir);
             1
         }
     }
@@ -8911,8 +9344,23 @@ mod cli_surface_tests {
         }
     }
 
+    fn compact_fixture_store(root: &Path, content: &str) -> PathBuf {
+        let store_path = root.join("store");
+        let mut substrate = Substrate::open(&store_path, None, default_view()).expect("open store");
+        substrate.set_intake_authority(RatifiedChannel::mint("wm-compact-test"));
+        let results = substrate.remember_batch(&[RememberItem {
+            content: content.to_string(),
+            source: "system:test".to_string(),
+            kind: ImportKind::System,
+        }]);
+        assert!(matches!(results.first(), Some(Ok(_))));
+        substrate.finish();
+        store_path
+    }
+
     /// E2E compaction runs only where `mdb_copy` is installed
-    /// (`sudo apt install lmdb-utils`); the report math is unit-tested above.
+    /// (`sudo apt install lmdb-utils`); the report math and recovery logic are
+    /// unit-tested above/below.
     #[test]
     fn compact_e2e_when_mdb_copy_available() {
         if find_on_path("mdb_copy").is_none() {
@@ -8920,24 +9368,26 @@ mod cli_surface_tests {
             return;
         }
         let root = std::env::temp_dir().join(format!("wm-compact-e2e-{}", uuid::Uuid::new_v4()));
-        let store_path = root.join("store");
         std::fs::create_dir_all(&root).expect("create root");
-        {
-            let mut substrate =
-                Substrate::open(&store_path, None, default_view()).expect("open store");
-            substrate.set_intake_authority(RatifiedChannel::mint("wm-compact-test"));
-            let results = substrate.remember_batch(&[RememberItem {
-                content: "compact e2e canary".to_string(),
-                source: "system:test".to_string(),
-                kind: ImportKind::System,
-            }]);
-            assert!(matches!(results.first(), Some(Ok(_))));
-            substrate.finish();
-        }
+        let store_path = compact_fixture_store(&root, "compact e2e canary");
 
+        // This process may run on hosts whose root-owned /proc maps entries
+        // are unreadable (ptrace_scope); bypass only the live-handle gate for
+        // the mechanics e2e. The seam is consumed by run_compact_command and
+        // compiled out of production builds.
+        COMPACT_TEST_SKIP_WRITER_SCAN.store(true, std::sync::atomic::Ordering::SeqCst);
         let code = run_compact_command(&store_path, false, true, true);
+        COMPACT_TEST_SKIP_WRITER_SCAN.store(false, std::sync::atomic::Ordering::SeqCst);
         assert_eq!(code, 0, "compact should succeed");
         assert!(store_path.join("data.mdb").is_file());
+        assert!(
+            !store_path.join(COMPACT_JOURNAL_FILE).exists(),
+            "journal must be removed after a verified swap"
+        );
+        assert!(
+            !compact_tmp_dir(&store_path).exists(),
+            "temporary copy must be removed after a verified swap"
+        );
         let backups = std::fs::read_dir(&store_path)
             .expect("read store")
             .filter_map(Result::ok)
@@ -8945,7 +9395,7 @@ mod cli_surface_tests {
                 entry
                     .file_name()
                     .to_string_lossy()
-                    .starts_with("data.mdb.bak.")
+                    .starts_with(COMPACT_BACKUP_PREFIX)
             })
             .count();
         assert_eq!(backups, 1, "one timestamped backup must be kept");
@@ -8953,6 +9403,101 @@ mod cli_surface_tests {
         let reopened = Store::open_readonly(&store_path).expect("reopen compacted store");
         assert_eq!(reopened.record_count().expect("count"), 1);
         drop(reopened);
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn compact_recovery_restores_backup_when_data_missing() {
+        let root =
+            std::env::temp_dir().join(format!("wm-compact-recover-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).expect("create root");
+        let store_path = compact_fixture_store(&root, "compact recovery canary");
+        let data_path = store_path.join("data.mdb");
+
+        // Simulate a crash after `data.mdb -> .bak` but before `.tmp -> data.mdb`.
+        let backup = store_path.join(format!("{COMPACT_BACKUP_PREFIX}20261007T000000.000000000Z"));
+        std::fs::rename(&data_path, &backup).expect("simulate backup rename");
+        let tmp_dir = compact_tmp_dir(&store_path);
+        std::fs::create_dir_all(&tmp_dir).expect("create tmp dir");
+        std::fs::write(tmp_dir.join("data.mdb"), b"partial copy").expect("write partial");
+        let mut journal = CompactJournal::copy(&tmp_dir);
+        journal.backup = Some(backup.display().to_string());
+        journal.set_phase("swap_backup");
+        write_compact_journal(&store_path, &journal).expect("write journal");
+        assert!(!data_path.exists());
+
+        let note = recover_interrupted_compact(&store_path)
+            .expect("recovery succeeds")
+            .expect("recovery note");
+        assert!(note.contains("restored"), "{note}");
+        assert!(data_path.is_file(), "data.mdb must be restored");
+        assert!(!backup.exists(), "backup is renamed into place");
+        assert!(!tmp_dir.exists(), "stale copy is removed");
+        assert!(!store_path.join(COMPACT_JOURNAL_FILE).exists());
+
+        let reopened = Store::open_readonly(&store_path).expect("reopen recovered store");
+        assert_eq!(reopened.record_count().expect("count"), 1);
+        drop(reopened);
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn compact_recovery_cleans_stray_tmp_and_journal() {
+        let root =
+            std::env::temp_dir().join(format!("wm-compact-cleanup-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).expect("create root");
+        let store_path = compact_fixture_store(&root, "compact cleanup canary");
+        let data_path = store_path.join("data.mdb");
+
+        // Simulate a crash mid-copy: data.mdb untouched, journal + tmp remain.
+        let tmp_dir = compact_tmp_dir(&store_path);
+        std::fs::create_dir_all(&tmp_dir).expect("create tmp dir");
+        std::fs::write(tmp_dir.join("data.mdb"), b"partial copy").expect("write partial");
+        let journal = CompactJournal::copy(&tmp_dir);
+        write_compact_journal(&store_path, &journal).expect("write journal");
+
+        let note = recover_interrupted_compact(&store_path)
+            .expect("recovery succeeds")
+            .expect("recovery note");
+        assert!(note.contains("cleaned"), "{note}");
+        assert!(!tmp_dir.exists(), "stale copy is removed");
+        assert!(!store_path.join(COMPACT_JOURNAL_FILE).exists());
+        assert!(data_path.is_file(), "live data.mdb must be untouched");
+
+        let reopened = Store::open_readonly(&store_path).expect("reopen store");
+        assert_eq!(reopened.record_count().expect("count"), 1);
+        drop(reopened);
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn compact_backup_rotation_keeps_newest_two() {
+        let root = std::env::temp_dir().join(format!("wm-compact-prune-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).expect("create root");
+        let stamps = [
+            "20261007T000001.000000001Z",
+            "20261007T000002.000000002Z",
+            "20261007T000003.000000003Z",
+            "20261007T000004.000000004Z",
+        ];
+        for stamp in stamps {
+            std::fs::write(root.join(format!("{COMPACT_BACKUP_PREFIX}{stamp}")), b"bak")
+                .expect("write backup");
+        }
+
+        let removed = prune_compact_backups(&root, COMPACT_BACKUP_KEEP);
+        assert_eq!(removed.len(), 2);
+        assert!(removed[0].ends_with(&stamps[0]), "{removed:?}");
+        assert!(removed[1].ends_with(&stamps[1]), "{removed:?}");
+        let remaining: Vec<String> = std::fs::read_dir(&root)
+            .expect("read root")
+            .filter_map(Result::ok)
+            .map(|entry| entry.file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(remaining.len(), 2);
+        assert!(remaining.iter().any(|name| name.ends_with(&stamps[2])));
+        assert!(remaining.iter().any(|name| name.ends_with(&stamps[3])));
+
         std::fs::remove_dir_all(&root).ok();
     }
 }
