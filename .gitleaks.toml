@@ -59,3 +59,10 @@ regexes = [
     '''FIXTURE_TOKEN''',
     '''SIGNATURE_TOKEN''',
 ]
+
+[[allowlists]]
+description = "2026-10-07: wm-gen3-core Cargo.toml at-rest dependency comment (root-keys prose) tripped generic-api-key in alpha.6 commit 38c78d8; comment reworded in the same release, this exact-line allowlist keeps the historical commit scannable without weakening Cargo.toml coverage"
+regexTarget = "line"
+regexes = [
+    '''Argon2id for passphrase-mode root keys''',
+]
