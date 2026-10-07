@@ -3,6 +3,33 @@
 //! Selection is per-operation; every choice is journaled; nothing here imports
 //! Gen2 behavioral machinery. `recall` is read-only over records/relations
 //! (usage bookkeeping for promotion lives in this process and in the journal).
+//!
+//! ## Store performance (feat/store-perf)
+//!
+//! - **Lazy hydration.** A writable open materializes no record content: the
+//!   `EvidenceStore` starts empty and the identity index is session-local.
+//!   Durable exact-duplicate probes ([`Substrate::exact_duplicate_id`]) decode
+//!   only postings candidates on demand; `get_record`/`recall` hit the store
+//!   per record. `resident_content_bytes()` is the structural counter proving
+//!   no content is retained by open.
+//! - **Relation adjacency cache.** Recall derives relation adjacency once per
+//!   handle ([`Store::relations_view`]) and every relation write invalidates it;
+//!   behaviour is identical to the previous per-query full scan.
+//! - **Growth metrics.** `Substrate::finish` appends one bounded JSON line to
+//!   `<store>/stats_history.jsonl` via [`Substrate::record_stats_snapshot`].
+//!
+//! ### Recall prefilter decision (W4): not enabled
+//!
+//! A "skip vector scoring for records below the BM25 floor" prefilter is **not
+//! provably equivalent** to the registered scorer and is therefore not
+//! implemented. Final support is `max(lexical, semantic)` followed by bounded
+//! graph activation: a record with zero lexical support can be selected on
+//! semantic support alone (`counts` empty, `semantic` non-empty), and graph
+//! propagation can lift a low-support record above the floors. Skipping any
+//! vector whose record fails the lexical floor would therefore change the
+//! candidate population. The lexical pass is already bounded by postings lists
+//! (not a full scan), and the brute-force vector pass stays behind the existing
+//! projection gates (`set_projection_gated`/`set_projection_gate_count`).
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
@@ -11,7 +38,9 @@ use uuid::Uuid;
 
 use crate::constitution::{ConstitutionView, INVARIANTS};
 use crate::evidence::{Domain, EvidenceStore, Refusal};
-use crate::field::{self, Relation, RelationState};
+use crate::field;
+#[cfg(any(test, feature = "operator", feature = "reference-models"))]
+use crate::field::Relation;
 use crate::intake::{CommitDisposition, CommitOutcome, IntakeKind, IntakeRequest, OperationId};
 use crate::journal::{Journal, sha256_hex};
 use crate::projection::{
@@ -498,26 +527,16 @@ impl Substrate {
             Store::open(store_path)
         }
         .map_err(|e| e.to_string())?;
-        let (evidence, identity) = if readonly {
-            (EvidenceStore::new(), HashMap::new())
-        } else {
-            let mut evidence = EvidenceStore::new();
-            let mut identity: HashMap<(String, String, String), u64> = HashMap::new();
-            for record in store.iter_records().map_err(|e| e.to_string())? {
-                identity.insert(
-                    identity_key(
-                        record.content(),
-                        record.source(),
-                        domain_tag(record.domain()),
-                    ),
-                    record.id(),
-                );
-                evidence
-                    .append(record)
-                    .map_err(|e| format!("hydrate: {e:?}"))?;
-            }
-            (evidence, identity)
-        };
+        // Lazy hydration: never materialize record content at open. The
+        // process-local evidence store starts empty (session writes only) and
+        // the identity index is session-local; durable duplicates are found on
+        // demand by `exact_duplicate_id` over postings candidates. Only the id
+        // watermark is reserved so reference-model appends cannot collide.
+        let mut evidence = EvidenceStore::new();
+        if !readonly {
+            evidence.reserve_next_id(store.record_count().map_err(|e| e.to_string())? as u64);
+        }
+        let identity: HashMap<(String, String, String), u64> = HashMap::new();
         let journal = match journal_path {
             Some(p) => Some(Journal::open(p).map_err(|e| e.to_string())?),
             None => None,
@@ -840,9 +859,95 @@ impl Substrate {
         self.journal_ok
     }
 
+    /// Process-local exact-identity index: records observed (written) by this
+    /// handle. Lazy hydration means pre-existing durable records are not
+    /// materialized here; use [`Self::exact_duplicate_id`] for the authoritative
+    /// durable probe.
     #[must_use]
     pub fn identity_map(&self) -> &HashMap<(String, String, String), u64> {
         &self.identity
+    }
+
+    /// Authoritative exact-duplicate probe. Session-local index first, then a
+    /// bounded durable probe over the rarest term's postings list (only
+    /// candidates are decoded; the store is never fully hydrated). Returns the
+    /// latest matching record id, mirroring the old hydrated map's
+    /// cursor-order overwrite semantics. An empty tokenization falls back to a
+    /// full scan (records with no terms, already an edge case).
+    pub fn exact_duplicate_id(
+        &self,
+        content: &str,
+        source: &str,
+        kind: ImportKind,
+    ) -> Result<Option<u64>, String> {
+        let target = identity_key(content, source, kind_tag(kind));
+        if let Some(&id) = self.identity.get(&target) {
+            return Ok(Some(id));
+        }
+        let terms = field::tokenize(content);
+        let mut candidates: Option<Vec<u64>> = None;
+        for term in &terms {
+            let ids = self.store.postings(term).map_err(|e| e.to_string())?;
+            if ids.is_empty() {
+                return Ok(None);
+            }
+            if candidates
+                .as_ref()
+                .map_or(true, |best| ids.len() < best.len())
+            {
+                candidates = Some(ids);
+            }
+        }
+        match candidates {
+            Some(mut ids) => {
+                ids.sort_unstable();
+                let mut found = None;
+                for id in ids {
+                    let Some(record) = self.store.get_record(id).map_err(|e| e.to_string())? else {
+                        continue;
+                    };
+                    let key = identity_key(
+                        record.content(),
+                        record.source(),
+                        domain_tag(record.domain()),
+                    );
+                    if key == target {
+                        found = Some(id);
+                    }
+                }
+                Ok(found)
+            }
+            None => {
+                let mut found = None;
+                for record in self.store.iter_records().map_err(|e| e.to_string())? {
+                    let key = identity_key(
+                        record.content(),
+                        record.source(),
+                        domain_tag(record.domain()),
+                    );
+                    if key == target {
+                        found = Some(record.id());
+                    }
+                }
+                Ok(found)
+            }
+        }
+    }
+
+    /// Best-effort convenience wrapper over [`Self::exact_duplicate_id`]:
+    /// store errors read as "not a duplicate"; the commit path remains the
+    /// authoritative gate.
+    #[must_use]
+    pub fn contains_exact(&self, content: &str, source: &str, kind: ImportKind) -> bool {
+        matches!(self.exact_duplicate_id(content, source, kind), Ok(Some(_)))
+    }
+
+    /// Structural debug/evidence counter: bytes of record content held by this
+    /// process (session-written records only under lazy hydration). The
+    /// lazy-hydration test asserts this is 0 after opening a populated store.
+    #[must_use]
+    pub fn resident_content_bytes(&self) -> usize {
+        self.evidence.content_bytes()
     }
 
     #[must_use]
@@ -938,7 +1043,14 @@ impl Substrate {
                 continue;
             }
             let key = identity_key(&item.content, &item.source, kind_tag(item.kind));
-            if let Some(&existing) = self.identity.get(&key) {
+            let existing = match self.exact_duplicate_id(&item.content, &item.source, item.kind) {
+                Ok(existing) => existing,
+                Err(error) => {
+                    results.push(Err(format!("duplicate probe: {error}")));
+                    continue;
+                }
+            };
+            if let Some(existing) = existing {
                 let mut f = serde_json::Map::new();
                 f.insert("reason".into(), "duplicate_exact".into());
                 f.insert("content_sha256".into(), key.0.clone().into());
@@ -1270,42 +1382,12 @@ impl Substrate {
 
         // State relations are needed by the activation diagnostics below and by
         // the structural selector later; compute them once, before the gate.
-        let all_relations: Vec<Relation> = self.store.iter_relations().unwrap_or_default();
-        let mut superseded_by: HashMap<u64, u64> = HashMap::new();
-        let mut sources: HashSet<u64> = HashSet::new();
-        let mut graph_edges: HashMap<u64, Vec<(u64, f32)>> = HashMap::new();
-
-        for r in all_relations {
-            if r.state() == RelationState::Cold {
-                continue;
-            }
-            match r.kind() {
-                field::RelationKind::Supersedes => {
-                    superseded_by.insert(r.dst(), r.id());
-                    sources.insert(r.src());
-                }
-                field::RelationKind::Associates => {
-                    graph_edges
-                        .entry(r.src())
-                        .or_default()
-                        .push((r.dst(), r.weight()));
-                    graph_edges
-                        .entry(r.dst())
-                        .or_default()
-                        .push((r.src(), r.weight()));
-                }
-                field::RelationKind::Causal => {
-                    graph_edges
-                        .entry(r.src())
-                        .or_default()
-                        .push((r.dst(), r.weight()));
-                    graph_edges
-                        .entry(r.dst())
-                        .or_default()
-                        .push((r.src(), r.weight() * 0.8));
-                }
-            }
-        }
+        // The adjacency is derived by the store handle and shared across queries
+        // until a relation write invalidates it (process-local cache only).
+        let relations_view = self.store.relations_view();
+        let superseded_by = &relations_view.superseded_by;
+        let sources = &relations_view.sources;
+        let graph_edges = &relations_view.graph_edges;
 
         // Activation policy. Floor mode (GEN3-GATED-S-001): fire when max
         // lexical support over lexical candidates is below the declared D2 floor
@@ -1476,7 +1558,7 @@ impl Substrate {
         if !graph_edges.is_empty() {
             for _pass in 0..2 {
                 let mut next_acts = final_support.clone();
-                for (&src_id, neighbors) in &graph_edges {
+                for (&src_id, neighbors) in graph_edges.iter() {
                     if let Some(&src_act) = final_support.get(&src_id) {
                         if src_act > 0.0 {
                             for (dst_id, weight) in neighbors {
@@ -1945,7 +2027,10 @@ impl Substrate {
 
     /// End-of-run event: counts + journal status. Hash of the journal file is
     /// computed by the host after this returns (see `journal::sha256_file`).
+    /// Also appends one bounded growth snapshot line to
+    /// `<store>/stats_history.jsonl` (append-only; read-only handles skip it).
     pub fn finish(&mut self) {
+        let _ = self.record_stats_snapshot();
         let records = self.store.record_count().unwrap_or(0);
         let relations = self.store.iter_relations().map(|v| v.len()).unwrap_or(0);
         let seq = self.journal.as_ref().map_or(0, |j| j.seq());
@@ -1983,6 +2068,36 @@ impl Substrate {
             }),
         );
         self.j("run.end", f);
+    }
+
+    /// Append one growth-metric line to `<store>/stats_history.jsonl`:
+    /// `epoch`, `records`, `data_bytes`, `map_bytes`, `map_used` (used
+    /// fraction), and a UTC timestamp. Append-only and bounded per call;
+    /// read-only handles are no-ops. Returns the store-relative write error
+    /// string when the snapshot cannot be recorded.
+    pub fn record_stats_snapshot(&self) -> Result<(), String> {
+        if self.store.is_readonly() {
+            return Ok(());
+        }
+        let stats = self.store.map_stats()?;
+        let epoch = self.store.epoch().map_err(|e| e.to_string())?;
+        let records = self.store.record_count().map_err(|e| e.to_string())?;
+        let line = serde_json::json!({
+            "epoch": epoch,
+            "records": records,
+            "data_bytes": stats.data_bytes,
+            "map_bytes": stats.map_bytes,
+            "map_used": stats.used_fraction,
+            "ts": chrono::Utc::now().to_rfc3339(),
+        });
+        use std::io::Write;
+        let path = self.store.path().join("stats_history.jsonl");
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .map_err(|e| format!("stats snapshot: {}: {e}", path.display()))?;
+        writeln!(file, "{line}").map_err(|e| format!("stats snapshot: {}: {e}", path.display()))
     }
 
     /// `inspect`: tier map, counts, relations, journal status. Never certifies
@@ -4746,5 +4861,267 @@ mod cache_boundary_tests {
         assert!(!hits.is_empty(), "read-only projection recall must answer");
 
         let _ = std::fs::remove_dir_all(&path);
+    }
+
+    fn substrate(tag: &str) -> Substrate {
+        Substrate::open(&temp_store(tag), None, default_view()).expect("open substrate")
+    }
+
+    fn q(text: &str) -> RecallQuery {
+        RecallQuery {
+            query: text.into(),
+            limit: 10,
+            candidate_limit: 100,
+            include_historical: false,
+            min_score: 0.0,
+            min_coverage: 0.0,
+            scope: None,
+        }
+    }
+
+    /// Priority 1 evidence: a writable open of a populated store retains no
+    /// record content and performs no record decode. Durable duplicate probes
+    /// and recall decode on demand. Structural assertions only (counters), not
+    /// memory-timing probes.
+    #[test]
+    fn lazy_open_keeps_record_content_out_of_memory() {
+        const N: u64 = 48;
+        let marker = "lazy-hydration-marker";
+        let dir = temp_store("lazy-hydration");
+        {
+            let mut seeder = Substrate::open(&dir, None, default_view()).expect("seed open");
+            seeder.set_budget(0);
+            let items: Vec<RememberItem> = (0..N)
+                .map(|i| RememberItem {
+                    content: format!("{marker} synthetic record {i:03} payload"),
+                    source: "fixture:lazy".into(),
+                    kind: ImportKind::Reported,
+                })
+                .collect();
+            let results = seeder.remember_batch(&items);
+            assert!(results.iter().all(Result::is_ok), "seed writes succeed");
+        }
+
+        let mut substrate = Substrate::open(&dir, None, default_view()).expect("open substrate");
+        assert_eq!(substrate.resident_content_bytes(), 0, "no content resident");
+        assert_eq!(substrate.store().decode_count(), 0, "open decodes nothing");
+        assert!(
+            substrate.identity_map().is_empty(),
+            "identity index is session-local (no content-derived hydration)"
+        );
+
+        // On-demand decode materializes exactly one record.
+        let record = substrate.store().get_record(7).unwrap().expect("record 7");
+        assert!(record.content().contains(marker));
+        assert_eq!(substrate.store().decode_count(), 1);
+        assert_eq!(substrate.resident_content_bytes(), 0);
+
+        // The durable duplicate probe is exact and never hydrates the store.
+        let same = format!("{marker} synthetic record 007 payload");
+        assert!(substrate.contains_exact(&same, "fixture:lazy", ImportKind::Reported));
+        assert!(!substrate.contains_exact(&same, "fixture:other", ImportKind::Reported));
+        assert!(!substrate.contains_exact(
+            "absent content payload",
+            "fixture:lazy",
+            ImportKind::Reported
+        ));
+        assert!(substrate.identity_map().is_empty());
+        assert_eq!(substrate.resident_content_bytes(), 0);
+
+        // Recall decodes on demand and still retains no content.
+        let hits = substrate.recall_expect(&q("synthetic payload"));
+        assert!(!hits.is_empty());
+        assert_eq!(substrate.resident_content_bytes(), 0);
+
+        // Session writes are the only content-holding path (process-local view).
+        let outcome = substrate.remember_batch(&[item("hot session content only")]);
+        assert!(matches!(outcome.first(), Some(Ok(_))));
+        assert!(substrate.resident_content_bytes() > 0);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Priority 2 evidence: the cached relation adjacency is byte-for-byte the
+    /// old per-query full-scan derivation, recall results are identical with
+    /// the cache cold and warm, and relation writes invalidate the cache.
+    #[test]
+    fn relation_adjacency_cache_matches_full_scan_and_invalidates() {
+        let mut s = substrate("relation-cache");
+        s.set_budget(0);
+        let ids: Vec<u64> = s
+            .remember_batch(&[
+                item("alpha record one"),
+                item("alpha record two"),
+                item("alpha record three"),
+            ])
+            .into_iter()
+            .filter_map(Result::ok)
+            .collect();
+        assert_eq!(ids.len(), 3);
+        s.add_relation(field::RelationKind::Supersedes, ids[0], ids[1], 0.9)
+            .expect("supersedes writes");
+        s.add_relation(field::RelationKind::Associates, ids[1], ids[2], 0.5)
+            .expect("associates writes");
+
+        // Reference: the exact old full-scan construction.
+        let mut ref_superseded: HashMap<u64, u64> = HashMap::new();
+        let mut ref_sources: HashSet<u64> = HashSet::new();
+        let mut ref_edges: HashMap<u64, Vec<(u64, f32)>> = HashMap::new();
+        for r in s.store().iter_relations().expect("relations") {
+            if r.state() == field::RelationState::Cold {
+                continue;
+            }
+            match r.kind() {
+                field::RelationKind::Supersedes => {
+                    ref_superseded.insert(r.dst(), r.id());
+                    ref_sources.insert(r.src());
+                }
+                field::RelationKind::Associates => {
+                    ref_edges
+                        .entry(r.src())
+                        .or_default()
+                        .push((r.dst(), r.weight()));
+                    ref_edges
+                        .entry(r.dst())
+                        .or_default()
+                        .push((r.src(), r.weight()));
+                }
+                field::RelationKind::Causal => {
+                    ref_edges
+                        .entry(r.src())
+                        .or_default()
+                        .push((r.dst(), r.weight()));
+                    ref_edges
+                        .entry(r.dst())
+                        .or_default()
+                        .push((r.src(), r.weight() * 0.8));
+                }
+            }
+        }
+        let view = s.store().relations_view();
+        assert_eq!(view.superseded_by, ref_superseded);
+        assert_eq!(view.sources, ref_sources);
+        assert_eq!(view.graph_edges, ref_edges);
+        assert!(
+            s.store().relations_view_cached(),
+            "first recall builds the cache"
+        );
+
+        // Recall equality: cached view vs forced full rescan.
+        let snapshot = |hits: &[Hit]| -> Vec<(u64, f32, Option<u64>)> {
+            hits.iter()
+                .map(|h| (h.id, h.score, h.superseded_by))
+                .collect()
+        };
+        let warm = s.recall_expect(&q("alpha"));
+        s.store().invalidate_relations_view();
+        let rescanned = s.recall_expect(&q("alpha"));
+        assert_eq!(snapshot(&warm), snapshot(&rescanned));
+
+        // Relation writes drop the cache; the next recall sees the new edge.
+        assert!(s.store().relations_view_cached());
+        s.add_relation(field::RelationKind::Supersedes, ids[0], ids[2], 0.9)
+            .expect("second supersedes writes");
+        assert!(
+            !s.store().relations_view_cached(),
+            "write invalidates cache"
+        );
+        let updated = s.recall_expect(&q("alpha"));
+        assert!(
+            updated
+                .iter()
+                .any(|h| h.id == ids[2] && h.superseded_by.is_some()),
+            "fresh recall reflects the new supersedes edge"
+        );
+        let _ = std::fs::remove_dir_all(s.store().path());
+    }
+
+    /// Priority 3 evidence: `finish` appends one bounded growth line per call.
+    #[test]
+    fn finish_appends_growth_snapshot_lines() {
+        let dir = temp_store("stats-history");
+        let mut s = Substrate::open(&dir, None, default_view()).expect("open");
+        s.set_budget(0);
+        let outcome = s.remember_batch(&[item("growth snapshot alpha")]);
+        assert!(matches!(outcome.first(), Some(Ok(_))));
+        s.finish();
+        s.finish();
+
+        let raw = std::fs::read_to_string(dir.join("stats_history.jsonl")).expect("stats file");
+        let lines: Vec<&str> = raw.lines().collect();
+        assert_eq!(lines.len(), 2, "append-only: one line per finish");
+        for line in lines {
+            let v: serde_json::Value = serde_json::from_str(line).expect("json line");
+            assert!(v["epoch"].is_u64());
+            assert!(v["records"].is_u64());
+            assert!(v["data_bytes"].is_u64());
+            assert!(v["map_bytes"].is_u64());
+            assert!(v["map_used"].is_f64());
+        }
+        let stats = s.store().map_stats().expect("map stats");
+        assert!(stats.data_bytes > 0);
+        assert!(stats.map_bytes >= stats.data_bytes);
+        assert!(stats.used_fraction > 0.0 && stats.used_fraction < 1.0);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn resident_bytes() -> u64 {
+        let statm = std::fs::read_to_string("/proc/self/statm").unwrap_or_default();
+        let pages: u64 = statm
+            .split_whitespace()
+            .nth(1)
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(0);
+        pages * 4096
+    }
+
+    /// Ignored evidence bench: builds a synthetic 50k-record store and reports
+    /// open time plus a resident-bytes proxy (RSS delta) around the open.
+    /// Run explicitly:
+    /// `cargo test -p wm-gen3-core perf_open_50k_synthetic_store -- --ignored --nocapture`
+    #[test]
+    #[ignore = "perf evidence bench; run explicitly with --ignored --nocapture"]
+    fn perf_open_50k_synthetic_store() {
+        use crate::evidence::{Class, Domain, EvidenceRecord, RecordStatus};
+        const N: u64 = 50_000;
+        let dir = temp_store("perf-open-50k");
+        // Unique tokens keep postings lists at size 1 so seeding is linear
+        // (the bench measures open, not ingest).
+        let records: Vec<EvidenceRecord> = (0..N)
+            .map(|i| {
+                EvidenceRecord::from_wire(
+                    i,
+                    Domain::Reported,
+                    Class::Evidence,
+                    format!("perfrecord{i:06} {}", "x{i}".repeat(64)),
+                    "fixture:perf".to_string(),
+                    1.0,
+                    RecordStatus::Persistent,
+                    i,
+                )
+            })
+            .collect();
+        let seed_started = std::time::Instant::now();
+        {
+            let store = Store::open(&dir).expect("seed store");
+            store.seed_records_bulk(&records).expect("seed records");
+        }
+        let seed_ms = seed_started.elapsed().as_millis();
+        drop(records);
+        let rss_before = resident_bytes();
+        let open_started = std::time::Instant::now();
+        let substrate = Substrate::open(&dir, None, default_view()).expect("perf open");
+        let open_ms = open_started.elapsed().as_millis();
+        let rss_after = resident_bytes();
+        eprintln!(
+            "perf_open_50k_synthetic_store: records={} seed_ms={seed_ms} open_ms={open_ms} \
+             rss_before={rss_before} rss_after={rss_after} rss_delta={} identity_entries={} \
+             resident_content_bytes={}",
+            substrate.store().record_count().unwrap_or(0),
+            rss_after as i64 - rss_before as i64,
+            substrate.identity_map().len(),
+            substrate.resident_content_bytes(),
+        );
+        assert!(substrate.store().record_count().unwrap_or(0) >= N as usize);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -722,12 +722,14 @@ pub fn migrate_gen2_to_gen3_with_authority(
         let items: Vec<RememberItem> = chunk.iter().map(|r| r.to_remember_item()).collect();
         if options.dry_run {
             for (idx, item) in items.iter().enumerate() {
-                let kind_tag = crate::ops::kind_tag(item.kind);
-                let key = crate::ops::identity_key(&item.content, &item.source, kind_tag);
                 let acct = by_record_type
                     .entry(format!("episodic:{}", chunk[idx].kind))
                     .or_default();
-                if substrate.identity_map().contains_key(&key) {
+                let duplicate = substrate
+                    .exact_duplicate_id(&item.content, &item.source, item.kind)
+                    .map_err(CompatError::Msg)?
+                    .is_some();
+                if duplicate {
                     duplicate_skipped += 1;
                     acct.duplicate();
                 } else {
@@ -751,13 +753,14 @@ pub fn migrate_gen2_to_gen3_with_authority(
                     Err(err) if err == "duplicate_exact" => {
                         duplicate_skipped += 1;
                         acct.duplicate();
-                        let kind_tag = crate::ops::kind_tag(items[idx].kind);
-                        let key = crate::ops::identity_key(
-                            &items[idx].content,
-                            &items[idx].source,
-                            kind_tag,
-                        );
-                        if let Some(&existing_id) = substrate.identity_map().get(&key) {
+                        let existing_id = substrate
+                            .exact_duplicate_id(
+                                &items[idx].content,
+                                &items[idx].source,
+                                items[idx].kind,
+                            )
+                            .map_err(CompatError::Msg)?;
+                        if let Some(existing_id) = existing_id {
                             substrate.bind_uuid(orig.id, existing_id);
                         }
                     }
@@ -840,9 +843,11 @@ pub fn migrate_gen2_to_gen3_with_authority(
             let acct = by_record_type.entry(acct_key.clone()).or_default();
             if options.dry_run {
                 for item in &items {
-                    let kind_tag = crate::ops::kind_tag(item.kind);
-                    let key = crate::ops::identity_key(&item.content, &item.source, kind_tag);
-                    if substrate.identity_map().contains_key(&key) {
+                    let duplicate = substrate
+                        .exact_duplicate_id(&item.content, &item.source, item.kind)
+                        .map_err(CompatError::Msg)?
+                        .is_some();
+                    if duplicate {
                         galaxy_duplicates += 1;
                         acct.duplicate();
                     } else {
@@ -863,13 +868,14 @@ pub fn migrate_gen2_to_gen3_with_authority(
                         Err(err) if err == "duplicate_exact" => {
                             galaxy_duplicates += 1;
                             acct.duplicate();
-                            let kind_tag = crate::ops::kind_tag(items[idx].kind);
-                            let key = crate::ops::identity_key(
-                                &items[idx].content,
-                                &items[idx].source,
-                                kind_tag,
-                            );
-                            if let Some(&existing_id) = substrate.identity_map().get(&key) {
+                            let existing_id = substrate
+                                .exact_duplicate_id(
+                                    &items[idx].content,
+                                    &items[idx].source,
+                                    items[idx].kind,
+                                )
+                                .map_err(CompatError::Msg)?;
+                            if let Some(existing_id) = existing_id {
                                 substrate.bind_uuid(orig.id, existing_id);
                             }
                         }

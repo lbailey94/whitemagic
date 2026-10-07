@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::constitution::default_view;
 use crate::dream::LatencyDistribution;
-use crate::ops::{ImportKind, RememberItem, Substrate, identity_key, kind_tag, noise_class};
+use crate::ops::{ImportKind, RememberItem, Substrate, noise_class};
 
 /// The candidate execution architectures subjected to PEB-0 & PEB-0.1 attack.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -393,8 +393,7 @@ pub fn execute_trial(
         CandidateModel::Canonical4Beat => {
             // BEAT 1: SELECT
             // Filters active working set based on query, identity key, and budget.
-            let key = identity_key(&trial.content, &trial.source, kind_tag(trial.kind));
-            let duplicate = substrate.identity_map().contains_key(&key);
+            let duplicate = substrate.contains_exact(&trial.content, &trial.source, trial.kind);
             let noise = noise_class(&trial.content);
             let budget_exceeded = trial.adversarial.exceeds_write_budget;
 
@@ -480,8 +479,7 @@ pub fn execute_trial(
             // Generation logic must internalize constitutional validation.
             // If invalid, the generator simply emits None (no candidate).
             let noise = noise_class(&trial.content);
-            let key = identity_key(&trial.content, &trial.source, kind_tag(trial.kind));
-            let duplicate = substrate.identity_map().contains_key(&key);
+            let duplicate = substrate.contains_exact(&trial.content, &trial.source, trial.kind);
             let budget_exceeded = trial.adversarial.exceeds_write_budget;
             let candidate_cyclic = trial.adversarial.is_circular_supersession;
             let candidate_ungrounded = trial.adversarial.is_ungrounded_evidence;
@@ -525,8 +523,7 @@ pub fn execute_trial(
             // BEAT 2: [TRANSFORM + EVALUATE*] INTELLIGENT MERGER
             // Given every reasonable advantage: internal constraint satisfaction AND typed refusal emission!
             let noise = noise_class(&trial.content);
-            let key = identity_key(&trial.content, &trial.source, kind_tag(trial.kind));
-            let duplicate = substrate.identity_map().contains_key(&key);
+            let duplicate = substrate.contains_exact(&trial.content, &trial.source, trial.kind);
             let budget_exceeded = trial.adversarial.exceeds_write_budget;
             let candidate_cyclic = trial.adversarial.is_circular_supersession;
             let candidate_ungrounded = trial.adversarial.is_ungrounded_evidence;
@@ -573,8 +570,7 @@ pub fn execute_trial(
 
             // BEAT 2: EVALUATE
             let noise = noise_class(&trial.content);
-            let key = identity_key(&trial.content, &trial.source, kind_tag(trial.kind));
-            let duplicate = substrate.identity_map().contains_key(&key);
+            let duplicate = substrate.contains_exact(&trial.content, &trial.source, trial.kind);
             let budget_exceeded = trial.adversarial.exceeds_write_budget;
             let candidate_cyclic = trial.adversarial.is_circular_supersession;
             let candidate_ungrounded = trial.adversarial.is_ungrounded_evidence;
@@ -610,8 +606,7 @@ pub fn execute_trial(
         CandidateModel::Asymmetric3Plus1 => {
             // BEATS 1, 2, 3: REVERSIBLE EPISTEMIC POSSIBILITY [S -> T -> E]
             // Executed in an isolated volatile buffer with complete rollback capability.
-            let key = identity_key(&trial.content, &trial.source, kind_tag(trial.kind));
-            let duplicate = substrate.identity_map().contains_key(&key);
+            let duplicate = substrate.contains_exact(&trial.content, &trial.source, trial.kind);
             let noise = noise_class(&trial.content);
             let budget_exceeded = trial.adversarial.exceeds_write_budget;
             let candidate_cyclic = trial.adversarial.is_circular_supersession;
