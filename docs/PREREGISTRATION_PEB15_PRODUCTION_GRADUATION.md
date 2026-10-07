@@ -213,3 +213,39 @@ Following the independent adversarial audit by the Codex review team (Astra on a
 
 ### 8.3 Ratification Verdict
 All three RED findings and two AMBER findings are resolved and proven in test suites (`tests/adversary_contract.rs`, `capability::tests`, `pulse_compiler::tests`, and `contract::tests`). Gate 9A is formally **RATIFIED, FROZEN, AND COMPLETE**. Advancement to Gate 9B is authorized.
+
+---
+
+## 9. Production graduation / closure addendum (post-freeze, 2026-10-07)
+
+> Appended status addendum. The frozen text of §§1–8 is unchanged; closure
+> outcomes are registered here and in the verdict receipts, following the Gate
+> 9A precedent (errata #68: the frozen preregistration is not edited). All
+> pointers below are evidence, not ratification: the operator's ratification of
+> 9B/9C/9D remains the statutory step.
+
+### 9.1 Gate status
+
+| Gate | Status | Evidence pointer |
+|---|---|---|
+| Gate 9A — Kernel freeze & type-system encapsulation | **CLOSED, RATIFIED 2026-09-22** | `receipts/GATE_9A_CLOSURE_VERDICT_2026-09-22.md`, `receipts/GATE_9A_RATIFICATION_RECEIPT_2026-09-22.md` |
+| Gate 9B — Compatibility shell (`wm` CLI & daemon) | Engineering-closed, ratification pending | `receipts/GATE_9B_CLOSURE_VERDICT_2026-10-07.md`; release run `37562982195`; closure scans 3/3 |
+| Gate 9C — Cognitive re-derivation | Engineering-closed (metric caveats), ratification pending | `receipts/GATE_9C_CLOSURE_VERDICT_2026-10-07.md`; gate9c 4/4 local on `2a923b4` + alpha.4 CI run `37537977637` |
+| Gate 9D — Alpha reality test | Engineering-closed (simulation caveats), ratification pending | `receipts/GATE_9D_CLOSURE_VERDICT_2026-10-07.md`; gate9d 4/4 local on `2a923b4` |
+
+### 9.2 Preregistered hypotheses
+
+| Hypothesis | Outcome | Pointer |
+|---|---|---|
+| H15-1 Constitutional encapsulation | Closed (Gate 9A) | 9A verdict §3 |
+| H15-2 Packaging invariance | **Partially evidenced** — full M0–M8 re-run against the packaged artifact still open | 9B verdict §3–4 |
+| H15-3 Functional re-derivation & Pareto simplification | Closed, with the caveat that the frozen precision/recall thresholds are asserted constructively rather than re-measured | 9C verdict §3–4 |
+| H15-4 Migration safety & reality resilience | Closed, with the caveat that cut-points are simulated (no physical power-cut) | 9D verdict §3–4 |
+
+### 9.3 Carried open items (ratification conditions)
+
+1. **CI:** the reference-models gate batteries have not yet completed green on `main` — alpha.5 CI run `37562979314` terminated with exit 143 (SIGTERM) before the battery step (no assertion failure recorded).
+2. **H15-2:** the M0–M8 driver battery has not been re-run against the packaged release artifact.
+3. **H15-3:** the 9C amendment's numeric thresholds (Precision ≥ 2.12 %, Recall ≥ 85 %, ≥ 50 % candidate reduction) are not directly re-instrumented by the acceptance battery.
+4. **H15-4:** true physical power-loss qualification is not performed; crash consistency is emulated with write-ahead fsync + reopen.
+5. **9B:** no tracked Preserve/Translate/Deprecate/Remove audit of legacy CLI/MCP surfaces.

@@ -20,6 +20,7 @@ use std::time::{Duration, Instant};
 use serde_json::{Value, json};
 
 use wm_gen3_core::compat::Gen2Reader;
+use wm_gen3_core::firebreak::{Firebreak, FirebreakGate};
 use wm_gen3_core::ops::Substrate;
 use wm_gen3_core::{ContextCacheToken, ToolSchemaDefinition};
 
@@ -63,11 +64,13 @@ pub enum McpBackend {
         store_path: PathBuf,
         profile: McpProfile,
         readonly: bool,
+        firebreak: Firebreak,
     },
     Legacy {
         reader: Gen2Reader,
         store_path: PathBuf,
         profile: McpProfile,
+        firebreak: Firebreak,
     },
 }
 
@@ -79,20 +82,33 @@ impl McpBackend {
         profile: McpProfile,
         readonly: bool,
     ) -> Self {
+        let firebreak = Firebreak::promoted();
+        log_firebreak_arm_state(&firebreak);
         Self::Gen3 {
             substrate: Box::new(Mutex::new(substrate)),
             store_path: store_path.to_path_buf(),
             profile,
             readonly,
+            firebreak,
         }
     }
 
     #[must_use]
     pub fn legacy(reader: Gen2Reader, store_path: &Path, profile: McpProfile) -> Self {
+        let firebreak = Firebreak::promoted();
+        log_firebreak_arm_state(&firebreak);
         Self::Legacy {
             reader,
             store_path: store_path.to_path_buf(),
             profile,
+            firebreak,
+        }
+    }
+
+    #[must_use]
+    pub fn firebreak(&self) -> &Firebreak {
+        match self {
+            Self::Gen3 { firebreak, .. } | Self::Legacy { firebreak, .. } => firebreak,
         }
     }
 
@@ -257,6 +273,7 @@ impl McpBackend {
                     store_path,
                     readonly,
                     profile,
+                    firebreak,
                     ..
                 },
             ) => {
@@ -269,15 +286,34 @@ impl McpBackend {
                     .pointer("/params/arguments")
                     .or_else(|| request.pointer("/params/input"))
                     .unwrap_or(&empty_obj);
-                let result = {
-                    // A poisoned substrate mutex must not wedge the server; recover
-                    // the inner guard so later requests still make progress.
-                    let mut guard = substrate.lock().unwrap_or_else(|e| e.into_inner());
-                    execute_hybrid_tool_call(
-                        name, args, &mut guard, store_path, *readonly, *profile,
-                    )
+                // Firebreak seam: forbidden → refuse (even with confirm);
+                // dangerous → require `confirm: true`; caution → pass with
+                // advisories. The gate runs before the bridge is touched.
+                let (verdict, advisories, result) = match firebreak.gate(name, args) {
+                    FirebreakGate::Pass {
+                        verdict,
+                        advisories,
+                    } => {
+                        let result = {
+                            // A poisoned substrate mutex must not wedge the server;
+                            // recover the inner guard so later requests still make
+                            // progress.
+                            let mut guard = substrate.lock().unwrap_or_else(|e| e.into_inner());
+                            execute_hybrid_tool_call(
+                                name, args, &mut guard, store_path, *readonly, *profile,
+                            )
+                        };
+                        (verdict, advisories, result)
+                    }
+                    FirebreakGate::Refuse {
+                        verdict,
+                        message,
+                        advisories,
+                    } => (verdict, advisories, Err(message)),
                 };
-                tool_call_envelope(id, result)
+                let disclosure = Firebreak::is_on_seam(name)
+                    .then(|| firebreak_disclosure(firebreak, verdict, advisories));
+                tool_call_envelope(id, result, disclosure)
             }
             ("tools/call", Self::Legacy { reader, .. }) => {
                 let name = request
@@ -289,7 +325,7 @@ impl McpBackend {
                     .pointer("/params/arguments")
                     .or_else(|| request.pointer("/params/input"))
                     .unwrap_or(&empty_obj);
-                tool_call_envelope(id, execute_legacy_tool_call(name, args, reader))
+                tool_call_envelope(id, execute_legacy_tool_call(name, args, reader), None)
             }
             _ => json!({
                 "jsonrpc": "2.0",
@@ -307,35 +343,59 @@ fn profile_name(profile: McpProfile) -> &'static str {
     }
 }
 
-fn tool_call_envelope(id: Value, result: Result<Value, String>) -> Value {
-    match result {
-        Ok(val) => json!({
-            "jsonrpc": "2.0",
-            "id": id,
-            "result": {
-                "content": [
-                    {
-                        "type": "text",
-                        "text": serde_json::to_string_pretty(&val).unwrap_or_else(|_| val.to_string())
-                    }
-                ],
-                "isError": false
-            }
-        }),
-        Err(err_msg) => json!({
-            "jsonrpc": "2.0",
-            "id": id,
-            "result": {
-                "content": [
-                    {
-                        "type": "text",
-                        "text": format!("Error: {err_msg}")
-                    }
-                ],
-                "isError": true
-            }
-        }),
+/// Startup arm-state line. Disarming (`WM_FIREBREAK=0`) must be loud, never
+/// silent doctrine.
+fn log_firebreak_arm_state(firebreak: &Firebreak) {
+    if firebreak.is_armed() {
+        let (forbidden, dangerous, caution) = firebreak.pattern_counts();
+        eprintln!(
+            "gen3: firebreak armed — {forbidden} forbidden / {dangerous} dangerous / {caution} \
+             caution patterns at the MCP dispatch seam"
+        );
+    } else {
+        eprintln!(
+            "gen3: firebreak DISARMED via WM_FIREBREAK=0 — forbidden-command, dangerous and \
+             caution gating are OFF"
+        );
     }
+}
+
+/// The `firebreak` disclosure object attached to on-seam responses: arm
+/// state, verdict and advisories. A gate that acts silently is a gate nobody
+/// can audit.
+fn firebreak_disclosure(firebreak: &Firebreak, verdict: &str, advisories: Vec<String>) -> Value {
+    json!({
+        "armed": firebreak.is_armed(),
+        "verdict": verdict,
+        "advisories": advisories,
+    })
+}
+
+fn tool_call_envelope(id: Value, result: Result<Value, String>, firebreak: Option<Value>) -> Value {
+    let (text, is_error) = match result {
+        Ok(val) => (
+            serde_json::to_string_pretty(&val).unwrap_or_else(|_| val.to_string()),
+            false,
+        ),
+        Err(err_msg) => (format!("Error: {err_msg}"), true),
+    };
+    let mut result = json!({
+        "content": [
+            {
+                "type": "text",
+                "text": text
+            }
+        ],
+        "isError": is_error
+    });
+    if let Some(disclosure) = firebreak {
+        result["firebreak"] = disclosure;
+    }
+    json!({
+        "jsonrpc": "2.0",
+        "id": id,
+        "result": result
+    })
 }
 
 /// Dispatch one HTTP body: single request or batch. `None` = notifications only.
@@ -1076,5 +1136,182 @@ mod tests {
         handle.join().expect("server thread");
         drop(ctx);
         std::fs::remove_dir_all(store).expect("remove isolated network fixture");
+    }
+
+    fn armed_backend(tag: &str, armed: bool) -> (McpBackend, PathBuf) {
+        let store =
+            std::env::temp_dir().join(format!("wm-firebreak-{tag}-{}", uuid::Uuid::new_v4()));
+        let substrate = Substrate::open(&store, None, wm_gen3_core::constitution::default_view())
+            .expect("open isolated firebreak fixture");
+        let backend = McpBackend::Gen3 {
+            substrate: Box::new(Mutex::new(substrate)),
+            store_path: store.clone(),
+            profile: McpProfile::Full,
+            readonly: false,
+            firebreak: Firebreak::with_armed(armed),
+        };
+        (backend, store)
+    }
+
+    fn call_tool(backend: &McpBackend, id: u64, name: &str, args: Value) -> Value {
+        backend
+            .handle(&json!({
+                "jsonrpc": "2.0",
+                "id": id,
+                "method": "tools/call",
+                "params": { "name": name, "arguments": args }
+            }))
+            .expect("tools/call response")
+    }
+
+    #[test]
+    fn firebreak_seam_gates_forbidden_dangerous_and_caution() {
+        let (backend, store) = armed_backend("gate", true);
+
+        // Recording an incident that quotes a forbidden command must pass,
+        // and off-seam calls carry no firebreak disclosure.
+        let incident = call_tool(
+            &backend,
+            1,
+            "memory.create",
+            json!({ "content": "incident: operator ran rm -rf / on the store" }),
+        );
+        assert_eq!(incident["result"]["isError"], json!(false), "{incident}");
+        assert!(incident["result"].get("firebreak").is_none());
+
+        // Forbidden never passes, even with confirm.
+        let forbidden = call_tool(
+            &backend,
+            2,
+            "mandala.evaluate",
+            json!({ "command": "rm -rf /", "confirm": true }),
+        );
+        assert_eq!(forbidden["result"]["isError"], json!(true), "{forbidden}");
+        assert!(
+            forbidden["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or("")
+                .contains("FORBIDDEN")
+        );
+        assert_eq!(
+            forbidden["result"]["firebreak"]["verdict"],
+            json!("forbidden")
+        );
+        assert_eq!(forbidden["result"]["firebreak"]["armed"], json!(true));
+
+        // Dangerous without confirm is refused before the bridge.
+        let dangerous = call_tool(
+            &backend,
+            3,
+            "mandala.evaluate",
+            json!({ "command": "sudo rm -r /tmp/firebreak-probe" }),
+        );
+        assert_eq!(dangerous["result"]["isError"], json!(true), "{dangerous}");
+        assert!(
+            dangerous["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or("")
+                .contains("confirm")
+        );
+
+        // The same payload with confirm reaches dispatch.
+        let confirmed = call_tool(
+            &backend,
+            4,
+            "mandala.evaluate",
+            json!({ "command": "sudo rm -r /tmp/firebreak-probe", "confirm": true }),
+        );
+        assert_eq!(confirmed["result"]["isError"], json!(false), "{confirmed}");
+        assert_eq!(
+            confirmed["result"]["firebreak"]["verdict"],
+            json!("dangerous-confirmed")
+        );
+
+        // Caution passes with advisories attached to the response.
+        let caution = call_tool(
+            &backend,
+            5,
+            "mandala.evaluate",
+            json!({ "command": "rm /tmp/firebreak-scratch" }),
+        );
+        assert_eq!(caution["result"]["isError"], json!(false), "{caution}");
+        assert_eq!(caution["result"]["firebreak"]["verdict"], json!("caution"));
+        assert!(
+            caution["result"]["firebreak"]["advisories"]
+                .as_array()
+                .is_some_and(|advisories| !advisories.is_empty())
+        );
+
+        drop(backend);
+        std::fs::remove_dir_all(store).expect("remove isolated firebreak fixture");
+    }
+
+    #[test]
+    fn firebreak_router_scans_the_effective_target() {
+        let (backend, store) = armed_backend("router", true);
+
+        // Routed prose stays off-seam.
+        let routed_prose = call_tool(
+            &backend,
+            1,
+            "wm",
+            json!({
+                "route": "memory.create",
+                "args": { "content": "note: rm -rf / was attempted" }
+            }),
+        );
+        assert_eq!(
+            routed_prose["result"]["isError"],
+            json!(false),
+            "{routed_prose}"
+        );
+
+        // Routed exec is still scanned and refused.
+        let routed_exec = call_tool(
+            &backend,
+            2,
+            "wm",
+            json!({
+                "route": "mandala.evaluate",
+                "args": { "command": "rm -rf /", "confirm": true }
+            }),
+        );
+        assert_eq!(
+            routed_exec["result"]["isError"],
+            json!(true),
+            "{routed_exec}"
+        );
+        assert_eq!(
+            routed_exec["result"]["firebreak"]["verdict"],
+            json!("forbidden")
+        );
+
+        // Natural-language thought is prose.
+        let thought = call_tool(
+            &backend,
+            3,
+            "wm",
+            json!({ "thought": "remember that rm -rf / destroys the store" }),
+        );
+        assert_eq!(thought["result"]["isError"], json!(false), "{thought}");
+
+        drop(backend);
+        std::fs::remove_dir_all(store).expect("remove isolated firebreak fixture");
+    }
+
+    #[test]
+    fn firebreak_disarm_is_honored_and_disclosed() {
+        let (backend, store) = armed_backend("disarmed", false);
+        let response = call_tool(
+            &backend,
+            1,
+            "mandala.evaluate",
+            json!({ "command": "rm -rf /", "confirm": true }),
+        );
+        assert_eq!(response["result"]["isError"], json!(false), "{response}");
+        assert_eq!(response["result"]["firebreak"]["armed"], json!(false));
+        assert_eq!(response["result"]["firebreak"]["verdict"], json!("allow"));
+        drop(backend);
+        std::fs::remove_dir_all(store).expect("remove isolated firebreak fixture");
     }
 }
