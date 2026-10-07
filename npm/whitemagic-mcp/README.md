@@ -41,14 +41,14 @@ Or try the binary directly:
 
 ```bash
 npx -y whitemagic-mcp@next selftest   # invariant self-test + host diagnostics
-npx -y whitemagic-mcp@next --version  # wm 10.2.0-alpha.4
+npx -y whitemagic-mcp@next --version  # wm 10.2.0-alpha.5
 npx -y whitemagic-mcp@next doctor     # environment health check
 ```
 
 The binary is cached under `~/.cache/whitemagic/bin/<release-tag>/`
 (respects `XDG_CACHE_HOME`). `@next` tracks the v10 alpha line; unpinned
 `@latest` installs fetch the stable v9 line instead. Pin the exact
-prerelease with `whitemagic-mcp@10.2.0-alpha.4`, or override the release
+prerelease with `whitemagic-mcp@10.2.0-alpha.5`, or override the release
 tag with `WHITEMAGIC_RELEASE`.
 
 ## Try it without installing (hosted read-only lane)

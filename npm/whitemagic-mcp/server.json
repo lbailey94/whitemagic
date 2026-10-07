@@ -9,19 +9,19 @@
     "source": "github",
     "subfolder": "npm/whitemagic-mcp"
   },
-  "version": "10.2.0-alpha.4",
+  "version": "10.2.0-alpha.5",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "whitemagic-mcp",
-      "version": "10.2.0-alpha.4",
+      "version": "10.2.0-alpha.5",
       "transport": {
         "type": "stdio"
       }
     },
     {
       "registryType": "oci",
-      "identifier": "docker.io/lbailey94/whitemagic:10.2.0-alpha.4",
+      "identifier": "docker.io/lbailey94/whitemagic:10.2.0-alpha.5",
       "transport": {
         "type": "stdio"
       }

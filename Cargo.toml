@@ -10,18 +10,18 @@ members = [
 ]
 
 [workspace.package]
-version = "10.2.0-alpha.4"
+version = "10.2.0-alpha.5"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
 authors = ["WhiteMagic Project"]
 
 [workspace.dependencies]
-wm-gen3-core = { path = "crates/wm-gen3-core", version = "10.2.0-alpha.4" }
-wm-gen3-shm = { path = "crates/wm-gen3-shm", version = "10.2.0-alpha.4" }
-wm-gen3-systemone = { path = "crates/wm-gen3-systemone", version = "10.2.0-alpha.4" }
-wm-gen3-vault = { path = "crates/wm-gen3-vault", version = "10.2.0-alpha.4" }
-wm-gen3-zeropointfive = { path = "crates/wm-gen3-zeropointfive", version = "10.2.0-alpha.4" }
+wm-gen3-core = { path = "crates/wm-gen3-core", version = "10.2.0-alpha.5" }
+wm-gen3-shm = { path = "crates/wm-gen3-shm", version = "10.2.0-alpha.5" }
+wm-gen3-systemone = { path = "crates/wm-gen3-systemone", version = "10.2.0-alpha.5" }
+wm-gen3-vault = { path = "crates/wm-gen3-vault", version = "10.2.0-alpha.5" }
+wm-gen3-zeropointfive = { path = "crates/wm-gen3-zeropointfive", version = "10.2.0-alpha.5" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

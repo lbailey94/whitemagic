@@ -5,6 +5,69 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.2.0-alpha.5] — 2026-10-06
+
+Security-hardening wave from an 18-agent audit sweep + adversarial review of the
+merged changes. 310 workspace tests + gated Gate 9A/9D batteries green, closure
+scanner PASS, 144 release-tooling tests OK.
+
+### Security
+- **Mandala signature integrity** — `MandalaPass` canonical bytes now cover
+  `scope_mode`, network policy and all capability lists (length-prefixed, no
+  delimiter ambiguity); `WorkspaceClaim` digest hashes every scope field
+  (paths canonicalized). Partial Landlock enforcement fails closed instead of
+  reporting success. `CapabilityManifest::attenuate` is now monotone for every
+  parent mode, closing an Exclude-parent → Include-child fork escalation.
+  **Behavior:** passes signed by pre-alpha.5 builds are rejected (V2 wire).
+- **Receipts & calibration** — outcome receipts sign `margin`/`success`;
+  `calibrate_tau` verifies every journal line against a gate-signed receipt
+  before trusting it (forged lines are skipped and counted), and a signed
+  margin is only sourced from a verified subject. New read-only
+  `gate_key_fingerprint` helper (sha256 + did:key).
+- **Network surfaces** — `wm serve --transport http|sse` refuses non-loopback
+  binds unless `WM_SERVE_ALLOW_REMOTE=1` **and** `WM_SERVE_TOKEN` is set
+  (constant-time bearer auth on every route, malformed requests answered 400,
+  SIGINT/SIGTERM drain). Mesh defaults to loopback, requires pinned peers via
+  `WM_MESH_PEER_ALLOWLIST` (empty = loopback-only), signs handshakes with a
+  nonce + session id (120 s replay window), verifies every imported record
+  and receipt signature, resolves-and-binds against TOCTOU, and signs gene
+  sync. `WM_MESH_SYNC_ALLOWLIST` gates all dial paths including the CLI.
+- **CLI fail-closed** — `mandala verify-pass` exits 1 on foreign/unsigned
+  passes (and no longer mints a gate key); `mandala record-receipt` verifies
+  the receipt against the store gate key before writing; honest non-zero exit
+  codes on census/organ/peer/galaxy failures; invalid `--profile/--kind/--mode`
+  values are refused instead of silently coerced; `peer add` requires a real
+  key; `grimoire --write` became the honest `--plan`.
+- **Core robustness** — removed panic vectors (quarantine benchmark intake
+  errors are counted; transport locks recover from poisoning; `remember_batch`
+  returns a typed error), journal recovers `seq` and repairs a truncated tail.
+
+### Added
+- **`wm host-guard` core** — structured `HostSignals` (PSI, mem, swap/zram,
+  disk, crash-loop units with NRestarts, enriched process table) and a bounded
+  mitigation policy engine (stop crash-looping units, defer background timers,
+  opt-in orphan SIGTERM) with durable circuit-breaker state, deny-list and
+  dry-run. CLI wiring lands next; `wm selftest` output is unchanged.
+- **CI gates** — Gate 9A-adversary + Gate 9D-reality batteries now run on
+  push (`--features wm-gen3-core/reference-models`), `wm selftest --json`
+  smoke on PRs, `tests-summary` facts artifact for signed manifests, the 144
+  release-tooling Python tests, the tracked closure scanner, clippy
+  `--all-targets`, and run-cancelling concurrency.
+- **Docs** — `docs/SELFTEST_AND_HOST_HEALTH.md`, `docs/INDEX.md`, archive
+  reorganization (Gate 9A / research / legacy) and a front-page truth pass.
+
+### Fixed
+- Host-health crash-loop detection now also flags units that hit StartLimit
+  (`failed`) and reports restart counts; top-process entries carry cmdline,
+  cgroup and start time.
+- Distribution truth: npm onboarding pins `@next`, Dockerfile defaults to the
+  alpha tag with a non-root user, AUR metadata matches published checksums,
+  mcpb tool snapshot regenerated (30 → 43 tools).
+- Fleet ops (not in the binary): trust/backup chain restored (wm9-pinned,
+  non-fatal evidence steps, corrected prescience path, Gen3 + vault coverage,
+  SD retention keep-2, LMDB map raised to 32 GiB); `sangha sentinel`/`brief`
+  and `/api/status` now surface host health; 22 user units gained StartLimit.
+
 ## [10.2.0-alpha.4] — 2026-10-06
 
 ### Added
