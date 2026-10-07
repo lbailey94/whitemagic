@@ -12,6 +12,7 @@ use clap::{Parser, Subcommand};
 use std::io::BufRead;
 use std::path::{Path, PathBuf};
 
+use wm_gen3_core::at_rest::AtRestStatus;
 use wm_gen3_core::compat::{
     Gen2Census, Gen2Reader, MigrationOptions, SessionMigrationOptions, dry_run_migration_census,
     migrate_gen2_sessions_to_gen3, migrate_gen2_sessions_to_gen3_with_options,
@@ -19,6 +20,7 @@ use wm_gen3_core::compat::{
 };
 use wm_gen3_core::constitution::default_view;
 use wm_gen3_core::evidence::RatifiedChannel;
+use wm_gen3_core::firebreak::Firebreak;
 use wm_gen3_core::mandala::{
     CapabilityManifest, ContinuityReceipt05, MandalaPass, MandalaReplayLedger, PassBudget,
     ScopeMode, SigningKey, VerifyingKey, resolve_or_create_mandala_gate_key,
@@ -35,9 +37,11 @@ use wm_gen3_core::peer::{BanCertificate, PeerDirectory, PeerIdentity, PeerTrustT
 use wm_gen3_core::sentinel::{
     SentinelCircuitBreaker, SentinelLeaseGuard, SentinelReport, SentinelStatus,
 };
+use wm_gen3_core::store::Store;
 use wm_gen3_harness::bridge::{
     McpProfile, build_contract_manifest, get_tools_list_for_profile, mesh_sync_peer_allowlist,
 };
+use wm_gen3_harness::host_guard::{self, Action, HostGuardState, Policy, SystemRunner};
 use wm_gen3_harness::mcp_server::{McpBackend, NetworkTransport, serve_network};
 
 /// Build version — single source of truth is the workspace Cargo.toml
@@ -466,6 +470,28 @@ enum Commands {
         #[command(subcommand)]
         command: SentinelCommands,
     },
+    /// Host-guard policy engine: inspect host signals and run bounded mitigations
+    HostGuard {
+        #[command(subcommand)]
+        command: HostGuardCommands,
+    },
+    /// Compact the LMDB data.mdb and report map usage vs the configured map size
+    Compact {
+        /// Report size and planned action only; consume nothing
+        #[arg(long)]
+        dry_run: bool,
+        /// Output the size report and compaction outcome as JSON
+        #[arg(long)]
+        json: bool,
+        /// Perform the compaction (required for the rename/swap step)
+        #[arg(long)]
+        yes: bool,
+    },
+    /// Inspect at-rest sealing state and run the seal-on-rewrite migration
+    AtRest {
+        #[command(subcommand)]
+        command: AtRestCommands,
+    },
     /// Run an invariant self-test and environment diagnostic
     Selftest {
         /// Output results as JSON
@@ -586,6 +612,63 @@ enum SentinelCommands {
         /// Reset the circuit breaker to nominal
         #[arg(long)]
         reset: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum HostGuardCommands {
+    /// Collect host signals, plan (no actions), and render the decision
+    Status {
+        /// Output the severity, reasons, actions, suppressed notes, and a signals summary as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Run one guarded host-guard cycle (single-lease locked, durable state)
+    Run {
+        /// Enable mutations (systemctl stop / SIGTERM); default is report-and-post only
+        #[arg(long)]
+        act: bool,
+        /// Allow terminating orphan inference processes (L3, still gated by policy)
+        #[arg(long)]
+        kill_orphans: bool,
+        /// Plan and report without running commands or consuming breaker/state budget
+        #[arg(long)]
+        dry_run: bool,
+        /// Output the execution report as JSON
+        #[arg(long)]
+        json: bool,
+        /// Allow mutations even while the durable armed flag is disarmed
+        #[arg(long)]
+        force: bool,
+    },
+    /// Durably arm the host guard (mutations permitted)
+    Arm,
+    /// Durably disarm the host guard (mutations refused until re-armed or --force)
+    Disarm,
+}
+
+#[derive(Subcommand)]
+enum AtRestCommands {
+    /// Report at-rest mode, keyring status, wrapped DEKs, and the migration ledger
+    Status {
+        /// Output the at-rest report as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Seal pre-existing plaintext records in bounded batches (seal-on-rewrite)
+    Migrate {
+        /// Count plaintext records without writing records or the ledger
+        #[arg(long)]
+        dry_run: bool,
+        /// Records sealed per transaction batch (default: 100)
+        #[arg(long, default_value_t = 100)]
+        batch: usize,
+        /// Output the migration report as JSON
+        #[arg(long)]
+        json: bool,
+        /// Confirm the write when not --dry-run (required)
+        #[arg(long)]
+        yes: bool,
     },
 }
 
@@ -1207,6 +1290,14 @@ fn main() {
                             "DEGRADED"
                         }
                     );
+                    println!("Firebreak:        {}", firebreak_summary_line());
+                    let size_report = store_size_report(
+                        std::fs::metadata(store_path.join("data.mdb"))
+                            .map(|meta| meta.len())
+                            .unwrap_or(0),
+                        configured_map_size_bytes(),
+                    );
+                    println!("Store Growth:     {}", render_store_size(&size_report));
                     println!("==================================================");
                 }
                 Err(e) => {
@@ -2567,6 +2658,19 @@ fn main() {
         Commands::Organ { command } => run_organ_command(command, &store_path),
         Commands::Peer { command } => run_peer_command(command, &store_path),
         Commands::Sentinel { command } => run_sentinel_command(command, &store_path),
+        Commands::HostGuard { command } => run_host_guard_command(command),
+        Commands::Compact { dry_run, json, yes } => {
+            let code = run_compact_command(&store_path, dry_run, json, yes);
+            if code != 0 {
+                std::process::exit(code);
+            }
+        }
+        Commands::AtRest { command } => {
+            let code = run_at_rest_command(command, &store_path);
+            if code != 0 {
+                std::process::exit(code);
+            }
+        }
         Commands::Selftest { json, strict } => {
             // Install invariants are the persistence probe; host health rides
             // alongside it. The install contract (`status`) stays driven by
@@ -2588,6 +2692,7 @@ fn main() {
                             "host_health".to_string(),
                             serde_json::to_value(&health).unwrap_or(serde_json::Value::Null),
                         );
+                        object.insert("firebreak".to_string(), firebreak_json());
                     }
                     println!(
                         "{}",
@@ -2601,6 +2706,9 @@ fn main() {
                         report["records"], report["journal_events"], WM_VERSION
                     );
                     for line in health.render_lines() {
+                        println!("{line}");
+                    }
+                    for line in firebreak_render_lines() {
                         println!("{line}");
                     }
                 }
@@ -4211,6 +4319,884 @@ fn run_sentinel_command(cmd: SentinelCommands, store_path: &Path) {
                 }
                 println!("==================================================");
             }
+        }
+    }
+}
+
+// ── Firebreak arm-state (selftest / status) ─────────────────────────────
+
+fn firebreak_json() -> serde_json::Value {
+    let firebreak = Firebreak::promoted();
+    let (forbidden, dangerous, caution) = firebreak.pattern_counts();
+    serde_json::json!({
+        "armed": firebreak.is_armed(),
+        "arm_state": firebreak.arm_state(),
+        "forbidden": forbidden,
+        "dangerous": dangerous,
+        "caution": caution,
+    })
+}
+
+fn firebreak_summary_line() -> String {
+    let firebreak = Firebreak::promoted();
+    let (forbidden, dangerous, caution) = firebreak.pattern_counts();
+    format!(
+        "{} — {} forbidden / {} dangerous / {} caution",
+        firebreak.arm_state(),
+        forbidden,
+        dangerous,
+        caution
+    )
+}
+
+fn firebreak_render_lines() -> Vec<String> {
+    vec![format!("firebreak: {}", firebreak_summary_line())]
+}
+
+// ── Store growth / compaction ───────────────────────────────────────────
+
+const STORE_SIZE_WARN_PERCENT: f64 = 80.0;
+
+#[derive(Debug, Clone, PartialEq)]
+struct StoreSizeReport {
+    data_mdb_bytes: u64,
+    map_bytes: u64,
+    used_percent: f64,
+    warn: bool,
+}
+
+fn store_size_report(data_mdb_bytes: u64, map_bytes: u64) -> StoreSizeReport {
+    let used_percent = if map_bytes == 0 {
+        0.0
+    } else {
+        (data_mdb_bytes as f64 / map_bytes as f64) * 100.0
+    };
+    StoreSizeReport {
+        data_mdb_bytes,
+        map_bytes,
+        used_percent,
+        warn: used_percent > STORE_SIZE_WARN_PERCENT,
+    }
+}
+
+/// Mirror `store.rs::configured_map_size`: `WM_MAP_SIZE_GB` (GiB) with a
+/// 16 GiB default. The core store does not consult `WM_DEFAULT_MAP_SIZE`.
+fn parse_map_size_gb(value: Option<&str>) -> u64 {
+    value
+        .and_then(|raw| raw.trim().parse::<u64>().ok())
+        .map(|gb| gb.saturating_mul(1 << 30))
+        .unwrap_or(16 << 30)
+}
+
+fn configured_map_size_bytes() -> u64 {
+    parse_map_size_gb(std::env::var("WM_MAP_SIZE_GB").ok().as_deref())
+}
+
+fn format_bytes(bytes: u64) -> String {
+    const MIB: f64 = 1024.0 * 1024.0;
+    const GIB: f64 = 1024.0 * 1024.0 * 1024.0;
+    let value = bytes as f64;
+    if value >= GIB {
+        format!("{:.2} GiB", value / GIB)
+    } else {
+        format!("{:.2} MiB", value / MIB)
+    }
+}
+
+fn render_store_size(report: &StoreSizeReport) -> String {
+    format!(
+        "{} / {} map ({:.2}% used){}",
+        format_bytes(report.data_mdb_bytes),
+        format_bytes(report.map_bytes),
+        report.used_percent,
+        if report.warn { " [WARN >80%]" } else { "" }
+    )
+}
+
+fn find_on_path(program: &str) -> Option<PathBuf> {
+    let path_var = std::env::var_os("PATH")?;
+    for dir in std::env::split_paths(&path_var) {
+        let candidate = dir.join(program);
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+fn compact_size_json(
+    store_path: &Path,
+    size: &StoreSizeReport,
+    action: &str,
+    extra: serde_json::Value,
+) -> serde_json::Value {
+    let mut value = serde_json::json!({
+        "store": store_path.display().to_string(),
+        "data_mdb_bytes": size.data_mdb_bytes,
+        "map_bytes": size.map_bytes,
+        "used_percent": size.used_percent,
+        "warn": size.warn,
+        "action": action,
+    });
+    if let (Some(destination), Some(source)) = (value.as_object_mut(), extra.as_object()) {
+        for (key, item) in source {
+            destination.insert(key.clone(), item.clone());
+        }
+    }
+    value
+}
+
+fn print_compact_json(value: &serde_json::Value) {
+    println!(
+        "{}",
+        serde_json::to_string_pretty(value).unwrap_or_else(|_| "{}".into())
+    );
+}
+
+/// Refuse to compact while any live process (other than this one) has the
+/// store's `data.mdb` mapped: LMDB locks live in `lock.mdb`, so a mapped
+/// handle may be a writer whose lock state cannot be inspected. Being
+/// conservative keeps the rename/swap dance safe.
+#[cfg(target_os = "linux")]
+fn store_live_handles(store_path: &Path) -> Result<Vec<u32>, String> {
+    let data_path = std::fs::canonicalize(store_path.join("data.mdb"))
+        .map_err(|e| format!("canonicalize data.mdb: {e}"))?;
+    let needle = data_path.to_string_lossy().into_owned();
+    let self_pid = std::process::id();
+    let mut pids = Vec::new();
+    let entries = std::fs::read_dir("/proc").map_err(|e| format!("read /proc: {e}"))?;
+    for entry in entries {
+        let Ok(entry) = entry else { continue };
+        let Some(pid) = entry
+            .file_name()
+            .to_str()
+            .and_then(|name| name.parse::<u32>().ok())
+        else {
+            continue;
+        };
+        if pid == self_pid {
+            continue;
+        }
+        let Ok(maps) = std::fs::read_to_string(entry.path().join("maps")) else {
+            continue;
+        };
+        if maps.lines().any(|line| line.contains(&needle)) {
+            pids.push(pid);
+        }
+    }
+    pids.sort_unstable();
+    pids.dedup();
+    Ok(pids)
+}
+
+#[cfg(not(target_os = "linux"))]
+fn store_live_handles(_store_path: &Path) -> Result<Vec<u32>, String> {
+    Err("live-handle inspection is only implemented on Linux".to_string())
+}
+
+fn run_compact_command(store_path: &Path, dry_run: bool, json: bool, yes: bool) -> i32 {
+    let data_path = store_path.join("data.mdb");
+    if !data_path.is_file() {
+        eprintln!(
+            "compact: no data.mdb at {} (is this a Gen3 store?)",
+            store_path.display()
+        );
+        return 1;
+    }
+    let data_bytes = std::fs::metadata(&data_path)
+        .map(|meta| meta.len())
+        .unwrap_or(0);
+    let size = store_size_report(data_bytes, configured_map_size_bytes());
+
+    if dry_run {
+        if json {
+            print_compact_json(&compact_size_json(
+                store_path,
+                &size,
+                "reported",
+                serde_json::json!({
+                    "dry_run": true,
+                    "compact_available": find_on_path("mdb_copy").is_some(),
+                }),
+            ));
+        } else {
+            println!("Store data.mdb: {}", render_store_size(&size));
+            println!("Data file:      {}", data_path.display());
+            println!(
+                "Compaction tool: {}",
+                if find_on_path("mdb_copy").is_some() {
+                    "mdb_copy available (dry run; nothing copied)"
+                } else {
+                    "mdb_copy missing (install: sudo apt install lmdb-utils)"
+                }
+            );
+        }
+        return 0;
+    }
+
+    let Some(mdb_copy) = find_on_path("mdb_copy") else {
+        if json {
+            print_compact_json(&compact_size_json(
+                store_path,
+                &size,
+                "unavailable",
+                serde_json::json!({ "install_hint": "sudo apt install lmdb-utils" }),
+            ));
+        }
+        eprintln!(
+            "compact: mdb_copy not found on PATH; install it with: sudo apt install lmdb-utils"
+        );
+        return 3;
+    };
+
+    let mut tmp_os = store_path.as_os_str().to_os_string();
+    tmp_os.push(".compact.tmp");
+    let tmp_dir = PathBuf::from(tmp_os);
+    if tmp_dir.exists() {
+        eprintln!(
+            "compact: temporary path {} already exists; remove it and retry",
+            tmp_dir.display()
+        );
+        return 1;
+    }
+
+    match store_live_handles(store_path) {
+        Ok(pids) if !pids.is_empty() => {
+            eprintln!(
+                "compact: refusing to act: {} live process(es) have {} mapped ({pids:?}); \
+                 cannot verify they hold no write lock",
+                pids.len(),
+                data_path.display()
+            );
+            return 1;
+        }
+        Ok(_) => {}
+        Err(error) => {
+            eprintln!("compact: refusing to act: cannot verify store lock liveness ({error})");
+            return 1;
+        }
+    }
+
+    if !yes {
+        if json {
+            print_compact_json(&compact_size_json(
+                store_path,
+                &size,
+                "available",
+                serde_json::json!({ "mdb_copy": mdb_copy.display().to_string() }),
+            ));
+        } else {
+            println!("Store data.mdb: {}", render_store_size(&size));
+            println!(
+                "Compaction available: re-run with --yes to rewrite {} via {} -c",
+                data_path.display(),
+                mdb_copy.display()
+            );
+        }
+        return 0;
+    }
+
+    let original_count = match Store::open_readonly(store_path) {
+        Ok(store) => match store.record_count() {
+            Ok(count) => count,
+            Err(e) => {
+                eprintln!("compact: cannot count records before compaction: {e}");
+                return 1;
+            }
+        },
+        Err(e) => {
+            eprintln!("compact: cannot open store read-only: {e}");
+            return 1;
+        }
+    };
+
+    let copy = std::process::Command::new(&mdb_copy)
+        .arg("-c")
+        .arg(store_path)
+        .arg(&tmp_dir)
+        .output();
+    match copy {
+        Ok(output) if output.status.success() => {}
+        Ok(output) => {
+            eprintln!(
+                "compact: mdb_copy failed ({}): {}",
+                output.status,
+                String::from_utf8_lossy(&output.stderr).trim()
+            );
+            let _ = std::fs::remove_dir_all(&tmp_dir);
+            return 1;
+        }
+        Err(e) => {
+            eprintln!("compact: failed to run {}: {e}", mdb_copy.display());
+            let _ = std::fs::remove_dir_all(&tmp_dir);
+            return 1;
+        }
+    }
+
+    let tmp_data = tmp_dir.join("data.mdb");
+    if !tmp_data.is_file() {
+        eprintln!("compact: mdb_copy produced no {}", tmp_data.display());
+        let _ = std::fs::remove_dir_all(&tmp_dir);
+        return 1;
+    }
+
+    let copied_count = match Store::open_readonly(&tmp_dir).and_then(|store| store.record_count()) {
+        Ok(count) => count,
+        Err(e) => {
+            eprintln!("compact: copy verification failed to open: {e}");
+            let _ = std::fs::remove_dir_all(&tmp_dir);
+            return 1;
+        }
+    };
+    if copied_count != original_count {
+        eprintln!(
+            "compact: copy verification failed: record count {copied_count} != original {original_count}"
+        );
+        let _ = std::fs::remove_dir_all(&tmp_dir);
+        return 1;
+    }
+
+    let timestamp = chrono::Utc::now().format("%Y%m%dT%H%M%SZ").to_string();
+    let backup = store_path.join(format!("data.mdb.bak.{timestamp}"));
+    if let Err(e) = std::fs::rename(&data_path, &backup) {
+        eprintln!("compact: backup rename failed: {e}");
+        let _ = std::fs::remove_dir_all(&tmp_dir);
+        return 1;
+    }
+    if let Err(e) = std::fs::rename(&tmp_data, &data_path) {
+        eprintln!("compact: swap rename failed: {e}; restoring backup");
+        let _ = std::fs::rename(&backup, &data_path);
+        let _ = std::fs::remove_dir_all(&tmp_dir);
+        return 1;
+    }
+
+    let verified = Store::open_readonly(store_path).and_then(|store| store.record_count());
+    let after_bytes = std::fs::metadata(&data_path)
+        .map(|meta| meta.len())
+        .unwrap_or(0);
+    let _ = std::fs::remove_dir_all(&tmp_dir);
+
+    match verified {
+        Ok(count) if count == original_count => {
+            if json {
+                print_compact_json(&compact_size_json(
+                    store_path,
+                    &size,
+                    "compacted",
+                    serde_json::json!({
+                        "backup": backup.display().to_string(),
+                        "before_bytes": size.data_mdb_bytes,
+                        "after_bytes": after_bytes,
+                        "records": count,
+                    }),
+                ));
+            } else {
+                println!("Compaction complete.");
+                println!("Before:         {}", format_bytes(size.data_mdb_bytes));
+                println!("After:          {}", format_bytes(after_bytes));
+                println!("Records:        {count} (verified)");
+                println!("Backup kept:    {}", backup.display());
+            }
+            0
+        }
+        Ok(count) => {
+            eprintln!(
+                "compact: post-swap verification failed: record count {count} != {original_count}; rolling back"
+            );
+            let failed = store_path.join(format!("data.mdb.failed.{timestamp}"));
+            let _ = std::fs::rename(&data_path, &failed);
+            let _ = std::fs::rename(&backup, &data_path);
+            1
+        }
+        Err(e) => {
+            eprintln!(
+                "compact: post-swap verification failed to open: {e}; rolling back to backup"
+            );
+            let failed = store_path.join(format!("data.mdb.failed.{timestamp}"));
+            let _ = std::fs::rename(&data_path, &failed);
+            let _ = std::fs::rename(&backup, &data_path);
+            1
+        }
+    }
+}
+
+// ── Host guard CLI ──────────────────────────────────────────────────────
+
+fn host_guard_state_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("WM_HOST_GUARD_STATE_DIR") {
+        if !dir.trim().is_empty() {
+            return PathBuf::from(dir);
+        }
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        return PathBuf::from(home).join(".local/state/whitemagic/host-guard");
+    }
+    std::env::temp_dir().join("whitemagic-host-guard")
+}
+
+fn host_guard_state_file(state_dir: &Path) -> PathBuf {
+    state_dir.join("host-guard-state.json")
+}
+
+fn load_host_guard_state(state_dir: &Path) -> HostGuardState {
+    let state_file = host_guard_state_file(state_dir);
+    match std::fs::read_to_string(&state_file) {
+        Ok(text) => HostGuardState::from_json_or_default(&text),
+        Err(_) => HostGuardState::default(),
+    }
+}
+
+/// Durable armed flag: missing file means armed (matching the firebreak
+/// promoted default); `host-guard arm|disarm` rewrites it explicitly.
+fn load_host_guard_armed(state_dir: &Path) -> bool {
+    match std::fs::read_to_string(state_dir.join("host-guard.armed")) {
+        Ok(text) => !text.trim().eq_ignore_ascii_case("disarmed"),
+        Err(_) => true,
+    }
+}
+
+fn run_host_guard_set_armed(state_dir: &Path, arm: bool) -> i32 {
+    if let Err(e) = std::fs::create_dir_all(state_dir) {
+        eprintln!(
+            "host-guard: cannot create state dir {}: {e}",
+            state_dir.display()
+        );
+        return 1;
+    }
+    let flag = state_dir.join("host-guard.armed");
+    let body = if arm { "armed\n" } else { "disarmed\n" };
+    match std::fs::write(&flag, body) {
+        Ok(()) => {
+            println!(
+                "Host guard {} — mutations {}.",
+                if arm { "armed" } else { "disarmed" },
+                if arm {
+                    "permitted (still bounded by policy and rate limits)"
+                } else {
+                    "refused until re-armed (--force overrides one run)"
+                }
+            );
+            0
+        }
+        Err(e) => {
+            eprintln!("host-guard: cannot write {}: {e}", flag.display());
+            1
+        }
+    }
+}
+
+fn unix_now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0)
+}
+
+fn signals_summary(signals: &wm_gen3_harness::host_health::HostSignals) -> serde_json::Value {
+    serde_json::json!({
+        "mem_total_kib": signals.mem_total_kib,
+        "mem_available_kib": signals.mem_available_kib,
+        "mem_available_fraction": signals.mem_available_fraction,
+        "psi_memory_full_avg10": signals.psi_memory_full_avg10,
+        "psi_io_full_avg10": signals.psi_io_full_avg10,
+        "swap_total_kib": signals.swap_total_kib,
+        "swap_used_kib": signals.swap_used_kib,
+        "swap_used_fraction": signals.swap_used_fraction,
+        "swap_is_zram": signals.swap_is_zram,
+        "disk_free_gib": signals.disk_free_gib,
+        "disk_used_pct": signals.disk_used_pct,
+        "crash_loop_units": signals.crash_loop_units.len(),
+        "failed_loop_units": signals.failed_loop_units.len(),
+        "top_processes": signals.top_processes.len(),
+        "unit_probe_ok": signals.unit_probe_ok,
+    })
+}
+
+fn run_host_guard_command(cmd: HostGuardCommands) {
+    let state_dir = host_guard_state_dir();
+    match cmd {
+        HostGuardCommands::Status { json } => run_host_guard_status(&state_dir, json),
+        HostGuardCommands::Run {
+            act,
+            kill_orphans,
+            dry_run,
+            json,
+            force,
+        } => {
+            let code = run_host_guard_run(&state_dir, act, kill_orphans, dry_run, json, force);
+            if code != 0 {
+                std::process::exit(code);
+            }
+        }
+        HostGuardCommands::Arm => {
+            let code = run_host_guard_set_armed(&state_dir, true);
+            if code != 0 {
+                std::process::exit(code);
+            }
+        }
+        HostGuardCommands::Disarm => {
+            let code = run_host_guard_set_armed(&state_dir, false);
+            if code != 0 {
+                std::process::exit(code);
+            }
+        }
+    }
+}
+
+fn run_host_guard_status(state_dir: &Path, json: bool) {
+    let signals = wm_gen3_harness::host_health::collect_signals();
+    let state = load_host_guard_state(state_dir);
+    let plan = host_guard::plan(&signals, &state, &Policy::default());
+    if json {
+        let value = serde_json::json!({
+            "severity": plan.severity.as_str(),
+            "reasons": plan.reasons,
+            "actions": plan.actions,
+            "suppressed": plan.suppressed,
+            "signals": signals_summary(&signals),
+            "armed": load_host_guard_armed(state_dir),
+            "state_dir": state_dir.display().to_string(),
+        });
+        print_compact_json(&value);
+    } else {
+        for line in host_guard::render(&signals, &plan) {
+            println!("{line}");
+        }
+    }
+}
+
+fn run_host_guard_run(
+    state_dir: &Path,
+    act: bool,
+    kill_orphans: bool,
+    dry_run: bool,
+    json: bool,
+    force: bool,
+) -> i32 {
+    if let Err(e) = std::fs::create_dir_all(state_dir) {
+        eprintln!(
+            "host-guard: cannot create state dir {}: {e}",
+            state_dir.display()
+        );
+        return 1;
+    }
+    let _guard = match SentinelLeaseGuard::acquire(state_dir.join("host-guard.lock")) {
+        Ok(guard) => guard,
+        Err(e) => {
+            eprintln!("host-guard: lease error: {e}");
+            return 1;
+        }
+    };
+
+    let armed = load_host_guard_armed(state_dir);
+    let mut state = load_host_guard_state(state_dir);
+    let mut policy = Policy::default();
+    policy.kill_orphans = kill_orphans;
+    let signals = wm_gen3_harness::host_health::collect_signals();
+    let now = unix_now_secs();
+    let mut plan = host_guard::plan_at(&signals, &state, &policy, now);
+
+    let mutations = act && (armed || force);
+    if !mutations {
+        let note = if !act {
+            "mutations disabled: pass --act to enable stop/defer/terminate".to_string()
+        } else {
+            "mutations refused: host-guard disarmed (run 'wm host-guard arm' or pass --force)"
+                .to_string()
+        };
+        plan.actions
+            .retain(|action| matches!(action, Action::PostBoard { .. }));
+        plan.suppressed.push(note);
+    }
+
+    let report = host_guard::execute(&plan, &mut state, &SystemRunner, now, dry_run);
+
+    if dry_run {
+        // dry run consumes nothing: no state write, no runner calls.
+    } else {
+        let state_file = host_guard_state_file(state_dir);
+        let tmp_file = state_dir.join("host-guard-state.json.tmp");
+        if let Err(e) = std::fs::write(&tmp_file, state.to_json())
+            .and_then(|()| std::fs::rename(&tmp_file, &state_file))
+        {
+            eprintln!("host-guard: warning: could not persist state: {e}");
+        }
+    }
+
+    if json {
+        let value = serde_json::json!({
+            "severity": report.severity.as_str(),
+            "dry_run": report.dry_run,
+            "mutations": mutations,
+            "armed": armed,
+            "executed": report.executed,
+            "skipped": report.skipped,
+            "failed": report.failed,
+            "reasons": plan.reasons,
+            "suppressed": plan.suppressed,
+            "signals": signals_summary(&signals),
+            "state_dir": state_dir.display().to_string(),
+        });
+        print_compact_json(&value);
+    } else {
+        println!(
+            "Host guard run: severity={}, mutations={}, armed={}, dry_run={}",
+            report.severity.as_str(),
+            if mutations { "enabled" } else { "disabled" },
+            armed,
+            dry_run
+        );
+        for reason in &plan.reasons {
+            println!("  [signal] {reason}");
+        }
+        for note in &plan.suppressed {
+            println!("  [suppressed] {note}");
+        }
+        for action in &report.executed {
+            println!("  [executed] {}", action.label());
+        }
+        for note in &report.skipped {
+            println!("  [skipped] {note}");
+        }
+        for note in &report.failed {
+            println!("  [failed] {note}");
+        }
+    }
+
+    if report.severity == wm_gen3_harness::host_health::Verdict::Critical {
+        1
+    } else {
+        0
+    }
+}
+
+// ── At-rest CLI ─────────────────────────────────────────────────────────
+
+fn run_at_rest_command(cmd: AtRestCommands, store_path: &Path) -> i32 {
+    match cmd {
+        AtRestCommands::Status { json } => run_at_rest_status(store_path, json),
+        AtRestCommands::Migrate {
+            dry_run,
+            batch,
+            json,
+            yes,
+        } => run_at_rest_migrate(store_path, dry_run, batch, json, yes),
+    }
+}
+
+fn run_at_rest_status(store_path: &Path, json: bool) -> i32 {
+    if !store_path.join("data.mdb").is_file() {
+        eprintln!(
+            "at-rest status: no data.mdb at {} (is this a Gen3 store?)",
+            store_path.display()
+        );
+        return 1;
+    }
+    let store = match Store::open_readonly(store_path) {
+        Ok(store) => store,
+        Err(e) => {
+            eprintln!(
+                "at-rest status: cannot open {} read-only: {e}",
+                store_path.display()
+            );
+            return 1;
+        }
+    };
+    let status = store.at_rest_status();
+    let ledger = store.at_rest_migration_ledger();
+
+    if json {
+        let mut value = serde_json::json!({
+            "store": store_path.display().to_string(),
+        });
+        let object = value.as_object_mut().expect("json object");
+        match &status {
+            AtRestStatus::Absent => {
+                object.insert("status".into(), serde_json::json!("absent"));
+                object.insert("mode".into(), serde_json::json!("off"));
+                object.insert("wrapped_deks".into(), serde_json::json!(0));
+            }
+            AtRestStatus::Present(present) => {
+                object.insert("status".into(), serde_json::json!("present"));
+                object.insert("mode".into(), serde_json::json!(present.meta.mode.as_str()));
+                object.insert(
+                    "key_source".into(),
+                    serde_json::json!(present.meta.key_source),
+                );
+                object.insert(
+                    "created_at".into(),
+                    serde_json::json!(present.meta.created_at),
+                );
+                object.insert(
+                    "wrapped_deks".into(),
+                    serde_json::json!(present.wrapped_deks),
+                );
+                object.insert("galaxies".into(), serde_json::json!(present.galaxies));
+                object.insert(
+                    "key_file".into(),
+                    serde_json::json!(
+                        present
+                            .key_file
+                            .as_ref()
+                            .map(|path| path.display().to_string())
+                    ),
+                );
+                object.insert(
+                    "argon2".into(),
+                    serde_json::to_value(&present.meta.argon2).unwrap_or(serde_json::Value::Null),
+                );
+            }
+            AtRestStatus::Malformed { reason } => {
+                object.insert("status".into(), serde_json::json!("malformed"));
+                object.insert("reason".into(), serde_json::json!(reason));
+            }
+        }
+        match &ledger {
+            Ok(Some(ledger)) => {
+                object.insert(
+                    "migration".into(),
+                    serde_json::to_value(ledger).unwrap_or(serde_json::Value::Null),
+                );
+            }
+            Ok(None) => {
+                object.insert("migration".into(), serde_json::Value::Null);
+            }
+            Err(e) => {
+                object.insert("ledger_error".into(), serde_json::json!(e.to_string()));
+            }
+        }
+        print_compact_json(&value);
+        return 0;
+    }
+
+    println!("==================================================");
+    println!("       WhiteMagic Gen3 At-Rest Status             ");
+    println!("==================================================");
+    println!("Store Path:       {}", store_path.display());
+    match &status {
+        AtRestStatus::Absent => {
+            println!("Mode:             off");
+            println!("Keyring:          absent (plaintext pass-through)");
+        }
+        AtRestStatus::Present(present) => {
+            println!("Mode:             {}", present.meta.mode.as_str());
+            println!(
+                "Keyring:          present (source: {}, created: {})",
+                present.meta.key_source, present.meta.created_at
+            );
+            println!("Wrapped DEKs:     {}", present.wrapped_deks);
+            println!("Scopes covered:   {}", present.galaxies);
+            match &present.key_file {
+                Some(path) => println!("Key File:         {}", path.display()),
+                None => println!("Key File:         (env material or passphrase)"),
+            }
+        }
+        AtRestStatus::Malformed { reason } => {
+            println!("Keyring:          MALFORMED — {reason}");
+            println!("                  (writable opens are refused until repaired)");
+        }
+    }
+    match &ledger {
+        Ok(Some(ledger)) => {
+            println!(
+                "Migration Ledger: version {}, updated {}",
+                ledger.version,
+                if ledger.updated_at.is_empty() {
+                    "(never)"
+                } else {
+                    ledger.updated_at.as_str()
+                }
+            );
+            if ledger.galaxies.is_empty() {
+                println!("  records:        no scopes recorded");
+            }
+            for (scope, state) in &ledger.galaxies {
+                println!(
+                    "  {scope}: sealed={}, done={}, cursor={}",
+                    state.encrypted,
+                    state.done,
+                    if state.cursor_hex.is_empty() {
+                        "start"
+                    } else {
+                        state.cursor_hex.as_str()
+                    }
+                );
+            }
+        }
+        Ok(None) => println!("Migration Ledger: none"),
+        Err(e) => println!("Migration Ledger: UNREADABLE ({e})"),
+    }
+    println!("==================================================");
+    0
+}
+
+fn run_at_rest_migrate(
+    store_path: &Path,
+    dry_run: bool,
+    batch: usize,
+    json: bool,
+    yes: bool,
+) -> i32 {
+    if !store_path.join("data.mdb").is_file() {
+        eprintln!(
+            "at-rest migrate: no data.mdb at {} (is this a Gen3 store?)",
+            store_path.display()
+        );
+        return 1;
+    }
+    if !dry_run && !yes {
+        eprintln!("at-rest migrate: refusing to write without --yes (preview with --dry-run)");
+        return 1;
+    }
+    let store = match Store::open(store_path) {
+        Ok(store) => store,
+        Err(e) => {
+            eprintln!(
+                "at-rest migrate: cannot open {} (mode B/C key required): {e}",
+                store_path.display()
+            );
+            return 1;
+        }
+    };
+    match store.migrate_at_rest_records(batch.max(1), dry_run) {
+        Ok(report) => {
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&serde_json::json!({
+                        "store": store_path.display().to_string(),
+                        "dry_run": report.dry_run,
+                        "batch": batch.max(1),
+                        "scanned": report.scanned,
+                        "sealed": report.sealed,
+                        "already_sealed": report.already_sealed,
+                        "skipped": report.skipped,
+                        "done": report.done,
+                    }))
+                    .unwrap_or_default()
+                );
+            } else {
+                println!(
+                    "At-rest migration ({}):",
+                    if report.dry_run {
+                        "dry run"
+                    } else {
+                        "committed"
+                    }
+                );
+                println!("  store:          {}", store_path.display());
+                println!("  batch:          {}", batch.max(1));
+                println!("  scanned:        {}", report.scanned);
+                println!("  sealed:         {}", report.sealed);
+                println!("  already sealed: {}", report.already_sealed);
+                println!("  skipped:        {}", report.skipped);
+                println!("  done:           {}", report.done);
+            }
+            0
+        }
+        Err(e) => {
+            eprintln!("at-rest migrate failed: {e}");
+            1
         }
     }
 }
@@ -7780,5 +8766,192 @@ mod cli_truth_tests {
         assert!(parse_pubkey_hex(&valid).is_ok());
         assert!(Cli::try_parse_from(["wm", "peer", "add", "node-x", "--key", &valid]).is_ok());
         assert!(parse_pubkey_hex("zz").is_err());
+    }
+}
+
+#[cfg(test)]
+mod cli_surface_tests {
+    use super::*;
+
+    #[test]
+    fn store_size_report_computes_used_percent_and_warn_flag() {
+        let report = store_size_report(1 << 30, 16 << 30);
+        assert_eq!(report.used_percent, 6.25);
+        assert!(!report.warn);
+        assert_eq!(
+            render_store_size(&report),
+            "1.00 GiB / 16.00 GiB map (6.25% used)"
+        );
+
+        let warn = store_size_report((13 << 30) + (1 << 20), 16 << 30);
+        assert!(warn.used_percent > 80.0);
+        assert!(warn.warn);
+        assert!(render_store_size(&warn).contains("[WARN >80%]"));
+
+        let empty = store_size_report(0, 0);
+        assert_eq!(empty.used_percent, 0.0);
+        assert!(!empty.warn);
+    }
+
+    #[test]
+    fn map_size_gb_parsing_defaults_to_sixteen_gib() {
+        assert_eq!(parse_map_size_gb(None), 16 << 30);
+        assert_eq!(parse_map_size_gb(Some("1")), 1 << 30);
+        assert_eq!(parse_map_size_gb(Some("2")), 2 << 30);
+        assert_eq!(parse_map_size_gb(Some("bogus")), 16 << 30);
+        assert_eq!(parse_map_size_gb(Some("")), 16 << 30);
+    }
+
+    #[test]
+    fn firebreak_summary_matches_promoted_pattern_counts() {
+        let firebreak = Firebreak::promoted();
+        let (forbidden, dangerous, caution) = firebreak.pattern_counts();
+        assert_eq!(forbidden, 39);
+        assert_eq!(dangerous, 15);
+        assert_eq!(caution, 8);
+        let line = firebreak_summary_line();
+        assert!(
+            line.contains("39 forbidden / 15 dangerous / 8 caution"),
+            "{line}"
+        );
+        let json = firebreak_json();
+        assert_eq!(json["forbidden"], 39);
+        assert_eq!(json["dangerous"], 15);
+        assert_eq!(json["caution"], 8);
+    }
+
+    #[test]
+    fn host_guard_cli_flags_parse() {
+        let cli = Cli::try_parse_from(["wm", "host-guard", "status", "--json"]).expect("status");
+        assert!(matches!(
+            cli.command,
+            Commands::HostGuard {
+                command: HostGuardCommands::Status { json: true }
+            }
+        ));
+
+        let cli = Cli::try_parse_from([
+            "wm",
+            "host-guard",
+            "run",
+            "--act",
+            "--kill-orphans",
+            "--json",
+            "--force",
+        ])
+        .expect("run");
+        match cli.command {
+            Commands::HostGuard {
+                command:
+                    HostGuardCommands::Run {
+                        act,
+                        kill_orphans,
+                        dry_run,
+                        json,
+                        force,
+                    },
+            } => {
+                assert!(act && kill_orphans && json && force);
+                assert!(!dry_run);
+            }
+            _ => panic!("expected host-guard run"),
+        }
+
+        assert!(matches!(
+            Cli::try_parse_from(["wm", "host-guard", "arm"])
+                .expect("arm")
+                .command,
+            Commands::HostGuard {
+                command: HostGuardCommands::Arm
+            }
+        ));
+        assert!(matches!(
+            Cli::try_parse_from(["wm", "host-guard", "disarm"])
+                .expect("disarm")
+                .command,
+            Commands::HostGuard {
+                command: HostGuardCommands::Disarm
+            }
+        ));
+    }
+
+    #[test]
+    fn at_rest_and_compact_cli_flags_parse() {
+        let cli = Cli::try_parse_from([
+            "wm",
+            "at-rest",
+            "migrate",
+            "--dry-run",
+            "--batch",
+            "7",
+            "--json",
+        ])
+        .expect("migrate");
+        match cli.command {
+            Commands::AtRest {
+                command:
+                    AtRestCommands::Migrate {
+                        dry_run,
+                        batch,
+                        json,
+                        yes,
+                    },
+            } => {
+                assert!(dry_run && json && !yes);
+                assert_eq!(batch, 7);
+            }
+            _ => panic!("expected at-rest migrate"),
+        }
+
+        let cli = Cli::try_parse_from(["wm", "compact", "--dry-run", "--json"]).expect("compact");
+        match cli.command {
+            Commands::Compact { dry_run, json, yes } => assert!(dry_run && json && !yes),
+            _ => panic!("expected compact"),
+        }
+    }
+
+    /// E2E compaction runs only where `mdb_copy` is installed
+    /// (`sudo apt install lmdb-utils`); the report math is unit-tested above.
+    #[test]
+    fn compact_e2e_when_mdb_copy_available() {
+        if find_on_path("mdb_copy").is_none() {
+            eprintln!("skipping compact e2e: mdb_copy not installed");
+            return;
+        }
+        let root = std::env::temp_dir().join(format!("wm-compact-e2e-{}", uuid::Uuid::new_v4()));
+        let store_path = root.join("store");
+        std::fs::create_dir_all(&root).expect("create root");
+        {
+            let mut substrate =
+                Substrate::open(&store_path, None, default_view()).expect("open store");
+            substrate.set_intake_authority(RatifiedChannel::mint("wm-compact-test"));
+            let results = substrate.remember_batch(&[RememberItem {
+                content: "compact e2e canary".to_string(),
+                source: "system:test".to_string(),
+                kind: ImportKind::System,
+            }]);
+            assert!(matches!(results.first(), Some(Ok(_))));
+            substrate.finish();
+        }
+
+        let code = run_compact_command(&store_path, false, true, true);
+        assert_eq!(code, 0, "compact should succeed");
+        assert!(store_path.join("data.mdb").is_file());
+        let backups = std::fs::read_dir(&store_path)
+            .expect("read store")
+            .filter_map(Result::ok)
+            .filter(|entry| {
+                entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with("data.mdb.bak.")
+            })
+            .count();
+        assert_eq!(backups, 1, "one timestamped backup must be kept");
+
+        let reopened = Store::open_readonly(&store_path).expect("reopen compacted store");
+        assert_eq!(reopened.record_count().expect("count"), 1);
+        drop(reopened);
+        std::fs::remove_dir_all(&root).ok();
     }
 }
