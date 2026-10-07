@@ -866,7 +866,10 @@ impl Substrate {
                 ImportKind::System => self.evidence.system(&item.content, &item.source),
                 ImportKind::Simulated => self.evidence.simulated(&item.content, &item.source),
             };
-            let record = self.evidence.get(id).expect("record just created").clone();
+            let Some(record) = self.evidence.get(id).cloned() else {
+                results.push(Err(format!("evidence record {id} missing after creation")));
+                continue;
+            };
             let terms = field::tokenize(&item.content);
             // Write vector first: failure leaves no orphaned record in store or identity map (#55a).
             if let Some(vs) = &vectors
