@@ -5,6 +5,46 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.2.0-alpha.6] — 2026-10-07
+
+### Added
+- **Honest MCP surface** — `memory.pin` persists (and unpins), `memory.revisions`
+  lists a real hash-chained revision log with `action=verify`, `memory.aggregate`
+  performs real count/sum/avg/min/max, `memory.ingest` really ingests (with
+  credential redaction), `memory.update` writes a supersede relation + revision
+  entry, `session.replay` implements full/selective/progressive, and
+  `receipts.emit` signs real session / state-transition receipts (output confined
+  to `<store>/receipts/`). Previously-advertised args that were dropped now return
+  `deprecated_args` warnings instead of hard errors.
+- **Session continuity unified** — MCP continuity merges the latest checkpoint
+  (commit/branch/tests/queue/flags), honors `since`/`until`/`n`, and emits
+  `briefing.text`; `session.record` honors `supersedes`/`track`; `session.list`
+  returns per-lane metadata; new `session.digest` (MCP tool + `wm session digest`).
+- **At-rest encryption (opt-in, Q39 slices A–B)** — keyring modes
+  `off | keyfile | passphrase`, XChaCha20-Poly1305 record sealing with AAD
+  binding, wrong-key fails closed, `off` mode is byte-identical to today
+  (default). CLI surface (`wm at-rest`) lands next.
+- **Firebreak guardrail** — the forbidden/dangerous/caution command classes
+  (39/15/8) are enforced at the MCP dispatch seam, including NLU-resolved
+  routes; prose/content fields are exempt; `WM_FIREBREAK=0` disarms loudly.
+- **Geth Phase 2** — `wm-node` Unix-socket listener (tuple/signal/proposal
+  spaces, ~9 verbs) + stdlib `scripts/wm_client.py`; sockets are `0600` and a
+  non-socket path is never deleted.
+- **Migration completion** — galaxy-DBI ingestion with a documented v9→Gen3
+  mapping, legacy msgpack/session-record decoding (heritage 28,080 / vault
+  97,084 / opencode 18,188 previously-skipped rows now accepted), per-type
+  accounting, short rows quarantined, and pure `--dry-run`.
+- Gate 9B/9C/9D closure verdicts (with explicit caveats), `docs/DEVELOPER_GUIDE.md`,
+  `docs/STORE_LAYOUT.md`; continuity-receipt second-producer qualification
+  (gated-flow emits 0.5; qualifier PASS) closes that readiness row.
+
+### Fixed
+- `receipts.emit` path confinement (no writes outside `<store>/receipts/`);
+  revision-sidecar crash safety (atomic append, tail salvage, cached counter);
+  firebreak oversized-string/shell-wrapped/prefix-boundary handling; wm-node
+  stale-file safety + socket permission enforcement; migration dry runs write
+  nothing and never create the target store.
+
 ## [10.2.0-alpha.5] — 2026-10-06
 
 Security-hardening wave from an 18-agent audit sweep + adversarial review of the

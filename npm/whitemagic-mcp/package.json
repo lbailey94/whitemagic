@@ -1,6 +1,6 @@
 {
   "name": "whitemagic-mcp",
-  "version": "10.2.0-alpha.5",
+  "version": "10.2.0-alpha.6",
   "description": "Local-first sovereign cognitive kernel and memory for AI coding agents over MCP - pure Rust, zero-telemetry, Landlock LSM sandbox.",
   "license": "MIT",
   "bin": {
