@@ -4,6 +4,10 @@ Portable-package manifests for the Windows CLI (`wm` → `wm-windows-x86_64.exe`
 from the checksum-verified GitHub release). No `lbailey94.WhiteMagic` package
 exists in `microsoft/winget-pkgs` as of 2026-10-04.
 
+**Stable-only by design:** winget tracks the stable Gen 2 line only (9.3.4);
+the v10 alpha line ships via npm (`whitemagic-mcp@next`), prerelease Docker
+tags, and the AUR `whitemagic-bin` package.
+
 ## First-time submission (one PR)
 
 ```bash

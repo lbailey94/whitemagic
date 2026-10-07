@@ -21,7 +21,7 @@
     },
     {
       "registryType": "oci",
-      "identifier": "docker.io/lbailey94/whitemagic:9",
+      "identifier": "docker.io/lbailey94/whitemagic:10.2.0-alpha.4",
       "transport": {
         "type": "stdio"
       }

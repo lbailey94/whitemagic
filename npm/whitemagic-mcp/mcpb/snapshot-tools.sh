@@ -8,7 +8,10 @@ here="$(cd "$(dirname "$0")" && pwd)"
 ver="${1:-$(python3 -c "import json;print(json.load(open('$here/../package.json'))['version'])")}"
 bin="${WM_BIN:-${HOME}/.cache/whitemagic/bin/v${ver}/wm-linux-x86_64-musl}"
 store="$(mktemp -d -p "${TMPDIR:-/tmp}" wm-snapshot-XXXXXX)"  # dotless path: sanitizer-friendly
-trap 'rm -rf "$store"' EXIT
+# Keep the response log out of the store dir: wm treats any file there as a
+# pre-existing store and refuses to initialize it on v10.
+out="$(mktemp -p "${TMPDIR:-/tmp}" wm-snapshot-out-XXXXXX)"
+trap 'rm -rf "$store" "$out"' EXIT
 if [ ! -x "$bin" ]; then
   echo "binary not cached: $bin — run npx whitemagic-mcp --version first" >&2
   exit 1
@@ -17,8 +20,8 @@ printf '%s\n%s\n%s\n' \
   '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"snapshot","version":"0"}}}' \
   '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
   '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
-  | "$bin" serve --profile curated --store "$store" 2>/dev/null > "$store/out.jsonl"
-python3 - "$store/out.jsonl" "$here/tools.snapshot.json" <<'PY'
+  | "$bin" serve --profile curated --store "$store" 2>/dev/null > "$out"
+python3 - "$out" "$here/tools.snapshot.json" <<'PY'
 import json, re, sys
 tools = None
 for line in open(sys.argv[1]):

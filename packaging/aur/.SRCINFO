@@ -1,6 +1,6 @@
 pkgbase = whitemagic-bin
 	pkgdesc = Local-first memory, recall, and continuity engine for AI agents (prebuilt)
-	pkgver = 9.3.4
+	pkgver = 10.2.0_alpha.4
 	pkgrel = 1
 	url = https://whitemagic.dev
 	arch = x86_64
@@ -9,9 +9,9 @@ pkgbase = whitemagic-bin
 	provides = whitemagic
 	conflicts = whitemagic
 	options = !strip
-	source_x86_64 = whitemagic-bin-9.3.4-x86_64::https://github.com/lbailey94/whitemagic/releases/download/v9.3.4/wm-linux-x86_64
-	sha256sums_x86_64 = 0e7e666552d865c1c2bec9f5761ad449e5fe258d2eff3da65dc3bd85c9af57c5
-	source_aarch64 = whitemagic-bin-9.3.4-aarch64::https://github.com/lbailey94/whitemagic/releases/download/v9.3.4/wm-linux-aarch64
-	sha256sums_aarch64 = d7b889f24aef0ce43c3818f4e7f7044ec007c923abb17b407b8f2cf620f6ee95
+	source_x86_64 = whitemagic-bin-10.2.0_alpha.4-x86_64.gz::https://github.com/lbailey94/whitemagic/releases/download/v10.2.0-alpha.4/wm-linux-x86_64.gz
+	sha256sums_x86_64 = d558c7fa67ee68439c1c2dcc55a68e01dd57206ca9614a382822df2cd64dbbed
+	source_aarch64 = whitemagic-bin-10.2.0_alpha.4-aarch64.gz::https://github.com/lbailey94/whitemagic/releases/download/v10.2.0-alpha.4/wm-linux-aarch64.gz
+	sha256sums_aarch64 = ac749a0bfff2434c165abedc58ce412edb5891ce14449304c087e3a7f27cd0c2
 
 pkgname = whitemagic-bin
