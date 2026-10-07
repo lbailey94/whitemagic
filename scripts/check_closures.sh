@@ -42,12 +42,14 @@ echo "[3/3] no authoritative thread spawns outside the physical-I/O transport (A
 #   - transport.rs: frame I/O
 #   - mesh.rs:      TCP listener accept loop + per-connection frame handler
 #   - mcp_server.rs (harness): the HTTP/TCP serve_network accept loop (transport host)
+#   - bin/wm_node.rs (harness): the wm-node Unix-socket accept loop (transport host)
 # The mesh allowlist is a ratified boundary decision (2026-09-27 macOS port report):
-# receipts/BOUNDARY_MESH_TRANSPORT_SPAWNS_2026-09-27.md. Tests that genuinely need a
+# receipts/BOUNDARY_MESH_TRANSPORT_SPAWNS_2026-09-27.md; wm-node's extension is
+# receipts/BOUNDARY_WM_NODE_TRANSPORT_SPAWNS_2026-10-07.md. Tests that genuinely need a
 # thread must extend this rule deliberately (with a receipt), not by relaxing the scan.
 SPAWN_HITS=$(grep -rnE 'thread::spawn|rayon::spawn' crates/wm-gen3-core/src crates/wm-gen3-harness/src --include='*.rs' || true)
 if [ -n "$SPAWN_HITS" ]; then
-  BAD=$(echo "$SPAWN_HITS" | grep -vE '^crates/wm-gen3-core/src/(transport|mesh)\.rs:|^crates/wm-gen3-harness/src/mcp_server\.rs:' || true)
+  BAD=$(echo "$SPAWN_HITS" | grep -vE '^crates/wm-gen3-core/src/(transport|mesh)\.rs:|^crates/wm-gen3-harness/src/(mcp_server\.rs|bin/wm_node\.rs):' || true)
   if [ -n "$BAD" ]; then
     fail "thread spawn outside the physical-I/O transport: $BAD"
   fi
