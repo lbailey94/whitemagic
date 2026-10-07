@@ -283,6 +283,20 @@ pub struct Peb8BenchmarkReport {
     pub summary: String,
 }
 
+/// Applies one intake outcome to the benchmark accumulators. Intake errors are
+/// counted, never panicked on: a benchmark must never abort its host.
+fn record_intake_outcome(
+    outcome: Result<Option<String>, String>,
+    quarantined_ids: &mut Vec<String>,
+    intake_errors: &mut usize,
+) {
+    match outcome {
+        Ok(None) => {}
+        Ok(Some(qid)) => quarantined_ids.push(qid),
+        Err(_) => *intake_errors += 1,
+    }
+}
+
 /// Executes the PEB-8 Reversible Quarantine & Autoimmunity Benchmark.
 pub fn run_peb8_quarantine_benchmark(seed: u64) -> Peb8BenchmarkReport {
     let (mut substrate, _s, _j) = crate::pulse::make_temp_substrate("peb8_quarantine_test");
@@ -293,6 +307,7 @@ pub fn run_peb8_quarantine_benchmark(seed: u64) -> Peb8BenchmarkReport {
     let mut valid_count = 0usize;
     let mut corrupt_count = 0usize;
     let mut quarantined_ids = Vec::new();
+    let mut intake_errors = 0usize;
 
     for i in 0..total_candidates {
         let is_corrupt = i % 2 == 1; // 250 valid, 250 adversarial
@@ -337,15 +352,11 @@ pub fn run_peb8_quarantine_benchmark(seed: u64) -> Peb8BenchmarkReport {
             }
         };
 
-        match safe_intake(&mut substrate, &mut quarantine, item.clone()) {
-            // Committed to the primary store.
-            Ok(None) => {}
-            // Safely quarantined; keep the exact id for the reversibility pass.
-            Ok(Some(qid)) => quarantined_ids.push(qid),
-            Err(e) => {
-                panic!("Unhandled intake error encountered: {}", e);
-            }
-        }
+        record_intake_outcome(
+            safe_intake(&mut substrate, &mut quarantine, item.clone()),
+            &mut quarantined_ids,
+            &mut intake_errors,
+        );
     }
 
     // Verify Primary Store Integrity:
@@ -397,7 +408,7 @@ pub fn run_peb8_quarantine_benchmark(seed: u64) -> Peb8BenchmarkReport {
         valid_candidates_committed: valid_count,
         corrupt_candidates_quarantined: corrupt_count,
         memory_corruption_detected: primary_has_corruption || !primary_count_matches,
-        panics_encountered: 0,
+        panics_encountered: intake_errors,
         rehabilitated_candidates: rehabilitated_count,
         reversibility_verified,
         summary: format!(
@@ -462,6 +473,27 @@ mod tests {
             report.reversibility_verified,
             "Quarantine must be non-destructive and fully reversible"
         );
+    }
+
+    #[test]
+    fn test_intake_errors_are_counted_not_panicked() {
+        let mut quarantined_ids = Vec::new();
+        let mut intake_errors = 0usize;
+
+        record_intake_outcome(
+            Err("substrate refused".to_string()),
+            &mut quarantined_ids,
+            &mut intake_errors,
+        );
+        record_intake_outcome(
+            Ok(Some("qid-1".to_string())),
+            &mut quarantined_ids,
+            &mut intake_errors,
+        );
+        record_intake_outcome(Ok(None), &mut quarantined_ids, &mut intake_errors);
+
+        assert_eq!(intake_errors, 1, "intake errors must be counted, not panic");
+        assert_eq!(quarantined_ids, vec!["qid-1".to_string()]);
     }
 
     #[test]

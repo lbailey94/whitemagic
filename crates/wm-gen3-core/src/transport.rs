@@ -647,15 +647,24 @@ impl PhysicalSanghaNode {
 
         self.bound_addr = Some(addr);
         self.listener = Some(listener);
-        *self.is_running.lock().unwrap() = true;
+        *self.is_running.lock().unwrap_or_else(|e| e.into_inner()) = true;
 
         let running_flag = Arc::clone(&self.is_running);
         let queue_ref = Arc::clone(&self.queue);
         let boundary_ref = Arc::clone(&self.boundary);
-        let listener_clone = self.listener.as_ref().unwrap().try_clone()?;
+        let listener_clone = self
+            .listener
+            .as_ref()
+            .ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::AddrNotAvailable,
+                    "listener missing after bind",
+                )
+            })?
+            .try_clone()?;
 
         std::thread::spawn(move || {
-            while *running_flag.lock().unwrap() {
+            while *running_flag.lock().unwrap_or_else(|e| e.into_inner()) {
                 match listener_clone.accept() {
                     Ok((mut stream, _client_addr)) => {
                         let q = Arc::clone(&queue_ref);
@@ -672,7 +681,7 @@ impl PhysicalSanghaNode {
                                 DEFAULT_FRAME_ASSEMBLY_TIMEOUT,
                             ) {
                                 Ok(bytes) => {
-                                    let mut b_guard = b.lock().unwrap();
+                                    let mut b_guard = b.lock().unwrap_or_else(|e| e.into_inner());
                                     match b_guard.ingress_raw_bytes(&bytes) {
                                         Ok(envelope) => {
                                             match b_guard.authenticate_identity(&envelope) {
@@ -689,7 +698,8 @@ impl PhysicalSanghaNode {
                                                         }
                                                         _ => PriorityLane::OrdinaryStimulus,
                                                     };
-                                                    let mut q_guard = q.lock().unwrap();
+                                                    let mut q_guard =
+                                                        q.lock().unwrap_or_else(|e| e.into_inner());
                                                     let _ = q_guard.enqueue(lane, envelope);
                                                     let _ = stream.write_all(b"OK\n");
                                                 }
@@ -726,7 +736,7 @@ impl PhysicalSanghaNode {
     }
 
     pub fn stop(&mut self) {
-        *self.is_running.lock().unwrap() = false;
+        *self.is_running.lock().unwrap_or_else(|e| e.into_inner()) = false;
         self.listener = None;
     }
 }
@@ -1961,5 +1971,38 @@ mod tests {
         };
         let token_mutated = ContextCacheToken::compute(&[tool_a, tool_b_mutated], &const_hash, 100);
         assert_ne!(token_1.cache_hash, token_mutated.cache_hash);
+    }
+
+    #[test]
+    fn test_start_stop_restart_survives_poisoned_locks() {
+        let boundary = SovereignBoundary::new("Local");
+        let mut node = PhysicalSanghaNode::new("Local", boundary);
+
+        let first = node.start_listener(0).expect("first bind");
+        assert_eq!(node.bound_addr, Some(first));
+        node.stop();
+
+        let second = node.start_listener(0).expect("restart bind");
+        assert_eq!(node.bound_addr, Some(second));
+        node.stop();
+
+        // Poison both mutexes on purpose: start/stop must recover the guard
+        // instead of panicking on the poisoned lock.
+        let flag = Arc::clone(&node.is_running);
+        let _ = std::thread::spawn(move || {
+            let _guard = flag.lock().unwrap();
+            panic!("intentional poison");
+        })
+        .join();
+        let queue = Arc::clone(&node.queue);
+        let _ = std::thread::spawn(move || {
+            let _guard = queue.lock().unwrap();
+            panic!("intentional poison");
+        })
+        .join();
+
+        let third = node.start_listener(0).expect("bind after poisoned locks");
+        assert_eq!(node.bound_addr, Some(third));
+        node.stop();
     }
 }
