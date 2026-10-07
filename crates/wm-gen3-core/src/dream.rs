@@ -1012,8 +1012,8 @@ pub fn run_peb4_continuous_dream_benchmark(seed: u64) -> Peb4BenchmarkReport {
             source: "ground_truth".to_string(),
             kind: ImportKind::Reported,
         };
-        sub_base.remember_batch(&[item.clone()]);
-        sub_sham.remember_batch(&[item.clone()]);
+        sub_base.remember_batch(std::slice::from_ref(&item));
+        sub_sham.remember_batch(std::slice::from_ref(&item));
         sub_dream.remember_batch(&[item]);
     }
 

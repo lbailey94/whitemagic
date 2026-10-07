@@ -1033,7 +1033,7 @@ impl Store {
                             candidate_ids = Some(Vec::new());
                             break;
                         }
-                        if candidate_ids.as_ref().map_or(true, |c| ids.len() < c.len()) {
+                        if candidate_ids.as_ref().is_none_or(|c| ids.len() < c.len()) {
                             candidate_ids = Some(ids);
                         }
                     }

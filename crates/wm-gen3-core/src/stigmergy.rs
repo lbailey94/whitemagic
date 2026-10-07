@@ -302,9 +302,7 @@ impl StigmergicField {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let json = self
-            .to_json()
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        let json = self.to_json().map_err(std::io::Error::other)?;
         let tmp_path = PathBuf::from(format!("{}.tmp.{}", path.display(), Uuid::new_v4()));
         std::fs::write(&tmp_path, json)?;
         std::fs::rename(tmp_path, path)?;

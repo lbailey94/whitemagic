@@ -291,7 +291,7 @@ impl MemoryProjection {
         hasher.update(canonical_digest.as_bytes());
         hasher.update(b":");
         for c in q_coords {
-            hasher.update(&c.to_le_bytes()); // Explicit Little-Endian encoding across all architectures
+            hasher.update(c.to_le_bytes()); // Explicit Little-Endian encoding across all architectures
         }
         format!("{:x}", hasher.finalize())
     }
@@ -373,6 +373,12 @@ pub struct RadiantHologram {
     pub total_projections_indexed: usize,
 }
 
+impl Default for RadiantHologram {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RadiantHologram {
     pub fn new() -> Self {
         Self {
@@ -395,7 +401,7 @@ impl RadiantHologram {
     /// ```
     pub fn index_projection(&mut self, projection: MemoryProjection) {
         let bin = projection.quantized_coords;
-        let entry = self.projections_by_bin.entry(bin).or_insert_with(Vec::new);
+        let entry = self.projections_by_bin.entry(bin).or_default();
 
         // Check if exact same projection_id is already indexed (idempotent)
         if !entry
@@ -472,6 +478,12 @@ pub struct ReciprocityAccountant {
     pub locally_verified_capacities: HashMap<String, u64>,
     pub donated_compute_units: HashMap<String, u64>,
     pub consumed_compute_units: HashMap<String, u64>,
+}
+
+impl Default for ReciprocityAccountant {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ReciprocityAccountant {

@@ -197,7 +197,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let t0 = Instant::now();
     let mut _take_hits = 0;
     for _ in 0..n_tuples {
-        if let Some(_) = ts.in_matching(&pattern, now_ms) {
+        if ts.in_matching(&pattern, now_ms).is_some() {
             _take_hits += 1;
         }
     }
@@ -266,8 +266,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // =========================================================================
     println!("─── [4/6] Tacit Continuity Vault Associative Retrieval (DIR-08) ────────────────");
     let vault_db_path = PathBuf::from("/home/lucas/.local/share/whitemagic/vault/tacit_vault.db");
-    if vault_db_path.exists() && organ_arc.is_some() {
-        let organ = organ_arc.unwrap();
+    if let Some(organ) = organ_arc.filter(|_| vault_db_path.exists()) {
         let vault_conn = open_vault_db(&vault_db_path).map_err(|e| format!("{e}"))?;
 
         let chunk_ids: Vec<String> = {
@@ -339,8 +338,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cold_db_path =
         PathBuf::from("/home/lucas/.local/share/whitemagic/cold_catalog/cold_catalog.db");
     if cold_db_path.exists() {
-        let cold_engine =
-            ColdStorageEngine::new(&cold_db_path, None).map_err(|e| format!("{e}"))?;
+        let cold_engine = ColdStorageEngine::new(&cold_db_path, None).map_err(|e| e.to_string())?;
         let t0 = Instant::now();
         let query = "whitemagic";
         let cold_results = cold_engine

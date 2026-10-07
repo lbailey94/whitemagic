@@ -26,6 +26,11 @@ unsafe impl<'a> Sync for ShmMpmcQueue<'a> {}
 
 impl<'a> ShmMpmcQueue<'a> {
     /// Format and initialize the ring buffer memory.
+    ///
+    /// # Safety
+    ///
+    /// `header` must point to a writable [`MpmcQueueHeader`] and `cells` to `capacity`
+    /// writable [`RingCell`] slots in shared memory valid for this process's lifetime.
     pub unsafe fn init(header: *mut MpmcQueueHeader, cells: *mut RingCell, capacity: usize) {
         assert!(capacity.is_power_of_two(), "Capacity must be power of two");
         unsafe {

@@ -199,6 +199,12 @@ pub struct LocalCalibrationPool {
     local_residuals: Vec<f64>,
 }
 
+impl Default for LocalCalibrationPool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LocalCalibrationPool {
     pub fn new() -> Self {
         Self {

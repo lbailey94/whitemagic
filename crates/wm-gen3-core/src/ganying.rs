@@ -146,9 +146,9 @@ impl RotationProof {
         let mut hasher = Sha256::new();
         hasher.update(b"WM-ROTATION-PROOF-V1:");
         hasher.update(self.peer_id.as_bytes());
-        hasher.update(&self.from_epoch.to_be_bytes());
-        hasher.update(&self.to_epoch.to_be_bytes());
-        hasher.update(&self.new_active_key);
+        hasher.update(self.from_epoch.to_be_bytes());
+        hasher.update(self.to_epoch.to_be_bytes());
+        hasher.update(self.new_active_key);
         hasher.finalize().into()
     }
 }
@@ -309,9 +309,9 @@ impl SignedEnvelope {
         hasher.update(self.sender_id.as_bytes());
         hasher.update(b"->");
         hasher.update(self.recipient_id.as_bytes());
-        hasher.update(&self.epoch.to_be_bytes());
-        hasher.update(&self.seq_id.to_be_bytes());
-        hasher.update(&self.timestamp_ns.to_be_bytes());
+        hasher.update(self.epoch.to_be_bytes());
+        hasher.update(self.seq_id.to_be_bytes());
+        hasher.update(self.timestamp_ns.to_be_bytes());
         hasher.update(self.action.as_bytes());
         hasher.update(&self.payload);
         hasher.finalize().into()
@@ -445,11 +445,7 @@ impl ReciprocityRecord {
     /// Freeloaders (< 30% reciprocity after consuming > 10,000 cycles) are throttled on surplus,
     /// but their essential standing is never degraded.
     pub fn is_eligible_for_surplus_offload(&self) -> bool {
-        if self.cycles_consumed > 10_000 && self.reciprocity_ratio() < 0.30 {
-            false
-        } else {
-            true
-        }
+        !(self.cycles_consumed > 10_000 && self.reciprocity_ratio() < 0.30)
     }
 }
 
@@ -869,6 +865,12 @@ pub struct HostileVirtualMesh {
     pub dropped_packets_count: usize,
     pub replayed_packets_count: usize,
     pub tampered_packets_count: usize,
+}
+
+impl Default for HostileVirtualMesh {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl HostileVirtualMesh {

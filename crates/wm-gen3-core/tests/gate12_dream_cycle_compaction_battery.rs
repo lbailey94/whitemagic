@@ -39,8 +39,10 @@ fn gate12_continuous_regime_vector_dynamics() {
 
 #[test]
 fn gate12_homeostatic_thermal_and_battery_throttling() {
-    let mut hw_critical = HardwareTelemetry::default();
-    hw_critical.cpu_temp_c = 92.0; // Severe thermal stress
+    let hw_critical = HardwareTelemetry {
+        cpu_temp_c: 92.0, // Severe thermal stress
+        ..Default::default()
+    };
 
     let (regime, should_incubate, reason) = RegimeVector::from_quiescence_with_homeostasis(
         1.0,
@@ -57,9 +59,11 @@ fn gate12_homeostatic_thermal_and_battery_throttling() {
     assert_eq!(regime.quiescence, 0.0);
 
     // Battery conserving check (< 25% battery on DC power)
-    let mut hw_dc_low = HardwareTelemetry::default();
-    hw_dc_low.on_ac_power = false;
-    hw_dc_low.battery_pct = Some(18.0);
+    let hw_dc_low = HardwareTelemetry {
+        on_ac_power: false,
+        battery_pct: Some(18.0),
+        ..Default::default()
+    };
 
     let (_, should_incubate_dc, dc_reason) = RegimeVector::from_quiescence_with_homeostasis(
         1.0,

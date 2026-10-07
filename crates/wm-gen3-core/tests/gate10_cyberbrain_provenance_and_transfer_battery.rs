@@ -262,7 +262,10 @@ fn cb_3_execution_provenance_full_support_budget_benchmark() {
 
     // Benchmark Full Support @ Budget B:
     // Does the complete supporting chain fit inside token budgets: 256, 512, 1024, 2048?
-    let total_tokens: usize = hits_linked.iter().map(|h| (h.content.len() + 3) / 4).sum();
+    let total_tokens: usize = hits_linked
+        .iter()
+        .map(|h| h.content.len().div_ceil(4))
+        .sum();
 
     for budget in [256, 512, 1024, 2048] {
         let full_support = total_tokens <= budget;
