@@ -13,10 +13,11 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::path::Path;
 use std::str::FromStr;
+use std::sync::OnceLock;
 use uuid::Uuid;
 
 use wm_gen3_core::compat::{Gen2EpisodicRecord, Gen2Reader};
@@ -229,6 +230,104 @@ pub fn get_tools_list_for_profile(profile: McpProfile, readonly: bool) -> Value 
     match profile {
         McpProfile::Cyberbrain => get_cyberbrain_tools_list(readonly),
         McpProfile::Full => get_full_curated_tools_list(readonly),
+    }
+}
+
+fn profile_label(profile: McpProfile) -> &'static str {
+    match profile {
+        McpProfile::Cyberbrain => "cyberbrain",
+        McpProfile::Full => "full",
+    }
+}
+
+/// Canonical capability key for every route accepted by the hybrid dispatch.
+///
+/// Aliases (underscore/legacy spellings) collapse onto the canonical dot name so
+/// the MCP profile allowlist can be enforced at dispatch time, including through
+/// the `wm` meta-tool and its alias routes. Unknown names return `None` and fall
+/// through to the dispatch's own unknown-tool error.
+fn canonical_route(name: &str) -> Option<&'static str> {
+    Some(match name {
+        "wm" | "whitemagic" => "wm",
+        "memory.create" | "memory_create" | "memory_remember" | "remember" => "memory.create",
+        "memory.search" | "memory_search" | "memory_recall" | "recall" | "memory.hybrid_recall" => {
+            "memory.search"
+        }
+        "memory.read" | "memory_read" | "memory.get" | "memory_get" | "get" => "memory.read",
+        "memory.list" | "memory_list" => "memory.list",
+        "memory.count" => "memory.count",
+        "memory.stats" | "memory_stats" | "stats" => "memory.stats",
+        "memory.pin" => "memory.pin",
+        "memory.search_batch" => "memory.search_batch",
+        "memory.batch_read" => "memory.batch_read",
+        "memory.update" => "memory.update",
+        "memory.revisions" => "memory.revisions",
+        "memory.associations" => "memory.associations",
+        "memory.tags" => "memory.tags",
+        "memory.aggregate" => "memory.aggregate",
+        "memory.query" | "memory.filter" => "memory.query",
+        "memory.ingest" => "memory.ingest",
+        "session.record" | "session_record" => "session.record",
+        "session.continuity" | "session_continuity" => "session.continuity",
+        "session.checkpoint" | "session_checkpoint" => "session.checkpoint",
+        "session.start" => "session.start",
+        "session.list" | "session_list" => "session.list",
+        "session.recall" | "session.replay" => "session.recall",
+        "receipts.emit" => "receipts.emit",
+        "receipts.verify" => "receipts.verify",
+        "mandala.status" => "mandala.status",
+        "mandala.triage" => "mandala.triage",
+        "mandala.evaluate" => "mandala.evaluate",
+        "systemone.decide" | "systemone_decide" => "systemone.decide",
+        "decision.shortlist" | "system05.shortlist" | "system05_shortlist" => "decision.shortlist",
+        "decision.deliberate" | "system15.deliberate" | "deliberate" => "decision.deliberate",
+        "decision.outcome" | "receipts.outcome" => "decision.outcome",
+        "mesh_sync" | "sync" => "mesh_sync",
+        "sweep" => "sweep",
+        "inspect" => "inspect",
+        "gnosis.status" | "gnosis.explain" | "gnosis" => "gnosis.status",
+        "sangha.status" | "sangha_status" => "sangha.status",
+        "sangha.inbox" | "sangha_inbox" => "sangha.inbox",
+        "sangha.post" | "sangha_post" | "sangha.chat" => "sangha.post",
+        "galaxy.list" | "galaxy_list" => "galaxy.list",
+        "galaxy.fork" | "galaxy_fork" | "galaxy.branch" | "galaxy_branch" => "galaxy.fork",
+        "galaxy.create" | "galaxy_create" => "galaxy.create",
+        _ => return None,
+    })
+}
+
+fn advertised_profile_keys(profile: McpProfile) -> HashSet<&'static str> {
+    get_tools_list_for_profile(profile, false)
+        .as_array()
+        .map(|tools| {
+            tools
+                .iter()
+                .filter_map(|tool| tool.get("name").and_then(Value::as_str))
+                .filter_map(canonical_route)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn allowed_profile_keys(profile: McpProfile) -> &'static HashSet<&'static str> {
+    static CYBERBRAIN: OnceLock<HashSet<&'static str>> = OnceLock::new();
+    static FULL: OnceLock<HashSet<&'static str>> = OnceLock::new();
+    match profile {
+        McpProfile::Cyberbrain => CYBERBRAIN.get_or_init(|| {
+            let mut keys = advertised_profile_keys(McpProfile::Cyberbrain);
+            // The cyberbrain `wm` schema documents these legacy action selectors.
+            keys.insert("sweep");
+            keys.insert("inspect");
+            keys
+        }),
+        McpProfile::Full => FULL.get_or_init(|| advertised_profile_keys(McpProfile::Full)),
+    }
+}
+
+fn profile_allows_tool(profile: McpProfile, name: &str) -> bool {
+    match canonical_route(name) {
+        Some(key) => allowed_profile_keys(profile).contains(key),
+        None => false,
     }
 }
 
@@ -1010,10 +1109,20 @@ pub fn execute_hybrid_tool_call(
     substrate: &mut Substrate,
     store_path: &Path,
     readonly: bool,
+    profile: McpProfile,
 ) -> Result<Value, String> {
+    // Dispatch-time profile enforcement: reject routes outside the active
+    // profile's allowlist, including aliases reached through the `wm` meta-tool.
+    if canonical_route(name).is_some() && !profile_allows_tool(profile, name) {
+        return Err(format!(
+            "tool '{name}' is not permitted by the active '{}' MCP profile",
+            profile_label(profile)
+        ));
+    }
+
     match name {
         // ── Unified WhiteMagic Router ──────────────────────────────────────
-        "wm" | "whitemagic" => handle_wm_router(args, substrate, store_path, readonly),
+        "wm" | "whitemagic" => handle_wm_router(args, substrate, store_path, readonly, profile),
 
         // ── Memory Operations ──────────────────────────────────────────────
         "memory.create" | "memory_create" | "memory_remember" | "remember" => {
@@ -1117,12 +1226,15 @@ fn handle_wm_router(
     substrate: &mut Substrate,
     store_path: &Path,
     readonly: bool,
+    profile: McpProfile,
 ) -> Result<Value, String> {
     // 1. Explicit Route Dispatch (e.g. route="memory.create", args={...})
     if let Some(route) = args.get("route").and_then(Value::as_str) {
         if !route.is_empty() {
             let pass_args = args.get("args").unwrap_or(args);
-            return execute_hybrid_tool_call(route, pass_args, substrate, store_path, readonly);
+            return execute_hybrid_tool_call(
+                route, pass_args, substrate, store_path, readonly, profile,
+            );
         }
     }
 
@@ -1156,6 +1268,7 @@ fn handle_wm_router(
                 substrate,
                 store_path,
                 readonly,
+                profile,
             );
         }
     }
@@ -1163,7 +1276,9 @@ fn handle_wm_router(
     // 3. Legacy Action Selector (Gen3 cyberbrain style: action="recall")
     if let Some(action) = args.get("action").and_then(Value::as_str) {
         if !action.is_empty() {
-            return execute_hybrid_tool_call(action, args, substrate, store_path, readonly);
+            return execute_hybrid_tool_call(
+                action, args, substrate, store_path, readonly, profile,
+            );
         }
     }
 
@@ -2891,6 +3006,33 @@ fn handle_mandala_evaluate(
 
 // ── Mesh & Infrastructure Handlers ─────────────────────────────────────────
 
+/// Validate a `mesh_sync` dial target against the comma-separated
+/// `WM_MESH_SYNC_ALLOWLIST` (host:port entries). An empty allowlist refuses.
+fn mesh_sync_peer_allowlist(allowlist_raw: &str, addr: std::net::SocketAddr) -> Result<(), String> {
+    let allowlist: Vec<std::net::SocketAddr> = allowlist_raw
+        .split(',')
+        .map(str::trim)
+        .filter(|entry| !entry.is_empty())
+        .map(|entry| {
+            entry
+                .parse::<std::net::SocketAddr>()
+                .map_err(|e| format!("Invalid WM_MESH_SYNC_ALLOWLIST entry '{entry}': {e}"))
+        })
+        .collect::<Result<_, _>>()?;
+    if allowlist.is_empty() {
+        return Err(
+            "mesh_sync refused: WM_MESH_SYNC_ALLOWLIST is empty; set it to a comma-separated list of allowed host:port peers (e.g. '127.0.0.1:7369')"
+                .to_string(),
+        );
+    }
+    if !allowlist.contains(&addr) {
+        return Err(format!(
+            "mesh_sync refused: peer {addr} is not in WM_MESH_SYNC_ALLOWLIST"
+        ));
+    }
+    Ok(())
+}
+
 fn handle_mesh_sync(
     args: &Value,
     substrate: &mut Substrate,
@@ -2912,6 +3054,12 @@ fn handle_mesh_sync(
     let addr: std::net::SocketAddr = peer
         .parse()
         .map_err(|e| format!("Invalid peer address '{peer}': {e}"))?;
+
+    // Dial allowlist: mesh_sync may only reach peers explicitly named in
+    // WM_MESH_SYNC_ALLOWLIST (comma-separated host:port). Empty = refuse.
+    let allowlist_raw = std::env::var("WM_MESH_SYNC_ALLOWLIST").unwrap_or_default();
+    mesh_sync_peer_allowlist(&allowlist_raw, addr)?;
+
     let (signing_key, _) = resolve_or_create_mesh_key(store_path)
         .map_err(|e| format!("Failed to resolve mesh key: {e}"))?;
     let mut client = MeshClient::connect(addr, "mcp-agent", signing_key)
@@ -3834,5 +3982,148 @@ mod receipt_truth_tests {
                 .contains("no generic signed receipt profile")
         );
         assert!(!store.exists());
+    }
+}
+
+#[cfg(test)]
+mod profile_and_allowlist_tests {
+    use super::*;
+
+    fn test_substrate(tag: &str) -> (Substrate, std::path::PathBuf) {
+        let dir = std::env::temp_dir().join(format!("wm-profile-{tag}-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("open substrate");
+        substrate.set_budget(1_000_000);
+        substrate.set_noise_enabled(false);
+        (substrate, dir)
+    }
+
+    #[test]
+    fn every_advertised_tool_is_allowed_by_its_profile() {
+        for profile in [McpProfile::Cyberbrain, McpProfile::Full] {
+            let tools = get_tools_list_for_profile(profile, false);
+            for tool in tools.as_array().expect("tool array") {
+                let name = tool["name"].as_str().expect("tool name");
+                assert!(
+                    profile_allows_tool(profile, name),
+                    "advertised tool '{name}' must be allowed by {profile:?}"
+                );
+            }
+        }
+        for full_only in [
+            "receipts.emit",
+            "receipts.verify",
+            "memory.ingest",
+            "memory.update",
+            "decision.deliberate",
+            "mandala.evaluate",
+            "mandala.triage",
+        ] {
+            assert!(
+                !profile_allows_tool(McpProfile::Cyberbrain, full_only),
+                "cyberbrain must reject '{full_only}'"
+            );
+            assert!(
+                profile_allows_tool(McpProfile::Full, full_only),
+                "full must accept '{full_only}'"
+            );
+        }
+    }
+
+    #[test]
+    fn profile_allowlist_rejects_full_only_routes_on_cyberbrain() {
+        let (mut substrate, dir) = test_substrate("matrix");
+        let full_only = "mandala.triage";
+
+        assert!(
+            execute_hybrid_tool_call(
+                full_only,
+                &json!({"inquiry": "x"}),
+                &mut substrate,
+                &dir,
+                false,
+                McpProfile::Full,
+            )
+            .is_ok(),
+            "full profile accepts an advertised full-only tool"
+        );
+        let err = execute_hybrid_tool_call(
+            full_only,
+            &json!({"inquiry": "x"}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect_err("cyberbrain rejects a full-only tool");
+        assert!(err.contains("not permitted"), "{err}");
+
+        assert!(
+            execute_hybrid_tool_call(
+                "memory_stats",
+                &json!({}),
+                &mut substrate,
+                &dir,
+                false,
+                McpProfile::Cyberbrain,
+            )
+            .is_ok(),
+            "advertised cyberbrain tool stays callable"
+        );
+
+        let err = execute_hybrid_tool_call(
+            "wm",
+            &json!({"route": full_only, "args": {"inquiry": "x"}}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect_err("wm alias route must not bypass the profile allowlist");
+        assert!(err.contains("not permitted"), "{err}");
+        assert!(
+            execute_hybrid_tool_call(
+                "wm",
+                &json!({"route": full_only, "args": {"inquiry": "x"}}),
+                &mut substrate,
+                &dir,
+                false,
+                McpProfile::Full,
+            )
+            .is_ok(),
+            "full profile reaches the same route through wm"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn mesh_sync_allowlist_refuses_empty_and_unlisted_peers() {
+        let loopback: std::net::SocketAddr = "127.0.0.1:7369".parse().expect("addr");
+        let other: std::net::SocketAddr = "10.0.0.5:7369".parse().expect("addr");
+
+        let err = mesh_sync_peer_allowlist("", loopback).expect_err("empty allowlist refuses");
+        assert!(err.contains("WM_MESH_SYNC_ALLOWLIST"), "{err}");
+
+        mesh_sync_peer_allowlist("127.0.0.1:7369,10.0.0.5:7369", loopback)
+            .expect("listed peer accepted");
+        mesh_sync_peer_allowlist("127.0.0.1:7369", other)
+            .expect_err("unlisted peer must be refused");
+        mesh_sync_peer_allowlist("not-an-address", loopback)
+            .expect_err("malformed allowlist entry must fail loudly");
+
+        let (mut substrate, dir) = test_substrate("mesh-allow");
+        if std::env::var("WM_MESH_SYNC_ALLOWLIST").is_err() {
+            let err = handle_mesh_sync(
+                &json!({"peer": "127.0.0.1:7369"}),
+                &mut substrate,
+                &dir,
+                false,
+            )
+            .expect_err("handler refuses without an allowlist");
+            assert!(err.contains("WM_MESH_SYNC_ALLOWLIST"), "{err}");
+        }
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

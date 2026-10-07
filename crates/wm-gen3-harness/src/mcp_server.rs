@@ -13,9 +13,9 @@ use std::collections::HashMap;
 use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
@@ -217,7 +217,9 @@ impl McpBackend {
                 let const_hash = [0u8; 32];
                 let epoch = substrate
                     .lock()
-                    .map(|s| s.store().epoch().unwrap_or(0))
+                    .unwrap_or_else(|e| e.into_inner())
+                    .store()
+                    .epoch()
                     .unwrap_or(0);
                 let cache_token = ContextCacheToken::compute(&tool_schemas, &const_hash, epoch);
 
@@ -254,6 +256,7 @@ impl McpBackend {
                     substrate,
                     store_path,
                     readonly,
+                    profile,
                     ..
                 },
             ) => {
@@ -267,8 +270,12 @@ impl McpBackend {
                     .or_else(|| request.pointer("/params/input"))
                     .unwrap_or(&empty_obj);
                 let result = {
-                    let mut guard = substrate.lock().expect("substrate mutex poisoned");
-                    execute_hybrid_tool_call(name, args, &mut guard, store_path, *readonly)
+                    // A poisoned substrate mutex must not wedge the server; recover
+                    // the inner guard so later requests still make progress.
+                    let mut guard = substrate.lock().unwrap_or_else(|e| e.into_inner());
+                    execute_hybrid_tool_call(
+                        name, args, &mut guard, store_path, *readonly, *profile,
+                    )
                 };
                 tool_call_envelope(id, result)
             }
@@ -374,14 +381,74 @@ struct ServerCtx {
     backend: Arc<McpBackend>,
     sessions: Mutex<HashMap<String, mpsc::Sender<String>>>,
     active: AtomicUsize,
+    auth_token: Option<String>,
 }
 
-/// Serve a backend over TCP until the process exits.
+/// Loopback-default bind policy for the network transports.
+///
+/// A non-loopback bind is refused unless `WM_SERVE_ALLOW_REMOTE=1` *and* a
+/// bearer token is configured via `WM_SERVE_TOKEN`.
+fn validate_network_bind(
+    bind: SocketAddr,
+    allow_remote: bool,
+    has_token: bool,
+) -> Result<(), String> {
+    if bind.ip().is_loopback() {
+        return Ok(());
+    }
+    if allow_remote && has_token {
+        return Ok(());
+    }
+    Err(format!(
+        "refusing non-loopback bind {bind}: set WM_SERVE_ALLOW_REMOTE=1 and WM_SERVE_TOKEN=<token> to expose the MCP server remotely"
+    ))
+}
+
+/// Constant-time byte comparison (length is not secret).
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut diff = 0u8;
+    for (x, y) in a.iter().zip(b.iter()) {
+        diff |= x ^ y;
+    }
+    diff == 0
+}
+
+/// `Authorization: Bearer <token>` check on the constant-time comparison path.
+fn authorization_matches(header: Option<&str>, expected: &str) -> bool {
+    let Some(value) = header else {
+        return false;
+    };
+    let Some((scheme, credentials)) = value.split_once(' ') else {
+        return false;
+    };
+    scheme.eq_ignore_ascii_case("bearer")
+        && constant_time_eq(credentials.trim().as_bytes(), expected.as_bytes())
+}
+
+/// Serve a backend over TCP until SIGINT/SIGTERM or process exit.
+///
+/// On shutdown the listener stops accepting, in-flight connections are given a
+/// short grace period to drain, and the process exits cleanly.
 pub fn serve_network(backend: McpBackend, bind: SocketAddr, transport: NetworkTransport) -> ! {
+    let token = std::env::var("WM_SERVE_TOKEN")
+        .ok()
+        .filter(|token| !token.is_empty());
+    let allow_remote = std::env::var("WM_SERVE_ALLOW_REMOTE")
+        .map(|v| v == "1")
+        .unwrap_or(false);
+    if let Err(e) = validate_network_bind(bind, allow_remote, token.is_some()) {
+        eprintln!("gen3: {e}");
+        std::process::exit(2);
+    }
+
     let ctx = Arc::new(ServerCtx {
         backend: Arc::new(backend),
         sessions: Mutex::new(HashMap::new()),
         active: AtomicUsize::new(0),
+        auth_token: token,
     });
     let listener = match TcpListener::bind(bind) {
         Ok(listener) => listener,
@@ -390,34 +457,74 @@ pub fn serve_network(backend: McpBackend, bind: SocketAddr, transport: NetworkTr
             std::process::exit(1);
         }
     };
+    if let Err(e) = listener.set_nonblocking(true) {
+        eprintln!("gen3: cannot configure listener: {e}");
+        std::process::exit(1);
+    }
     eprintln!(
-        "gen3: serve transport={} bind={} mode={} profile={} store={}",
+        "gen3: serve transport={} bind={} posture={} auth={} mode={} profile={} store={}",
         transport.name(),
         bind,
+        if bind.ip().is_loopback() {
+            "loopback"
+        } else {
+            "remote"
+        },
+        if ctx.auth_token.is_some() {
+            "bearer-required"
+        } else {
+            "none"
+        },
         ctx.backend.mode_name(),
         profile_name(ctx.backend.profile()),
         ctx.backend.store_path().display()
     );
-    for stream in listener.incoming() {
-        let Ok(stream) = stream else { continue };
-        if ctx.active.load(Ordering::SeqCst) >= MAX_CONNECTIONS {
-            let mut stream = stream;
-            let _ = write_response(
-                &mut stream,
-                "503 Service Unavailable",
-                "application/json",
-                br#"{"error":"connection limit reached"}"#,
-            );
-            continue;
-        }
-        ctx.active.fetch_add(1, Ordering::SeqCst);
-        let ctx = Arc::clone(&ctx);
-        std::thread::spawn(move || {
-            let _ = handle_conn(stream, &ctx, transport);
-            ctx.active.fetch_sub(1, Ordering::SeqCst);
-        });
+
+    let shutdown = Arc::new(AtomicBool::new(false));
+    #[cfg(unix)]
+    {
+        let _ = signal_hook::flag::register(signal_hook::consts::SIGINT, Arc::clone(&shutdown));
+        let _ = signal_hook::flag::register(signal_hook::consts::SIGTERM, Arc::clone(&shutdown));
     }
-    unreachable!("listener loop only exits on process termination")
+
+    while !shutdown.load(Ordering::SeqCst) {
+        match listener.accept() {
+            Ok((stream, _peer)) => {
+                if ctx.active.load(Ordering::SeqCst) >= MAX_CONNECTIONS {
+                    let mut stream = stream;
+                    let _ = write_response(
+                        &mut stream,
+                        "503 Service Unavailable",
+                        "application/json",
+                        br#"{"error":"connection limit reached"}"#,
+                    );
+                    continue;
+                }
+                ctx.active.fetch_add(1, Ordering::SeqCst);
+                let ctx = Arc::clone(&ctx);
+                std::thread::spawn(move || {
+                    let _ = handle_conn(stream, &ctx, transport);
+                    ctx.active.fetch_sub(1, Ordering::SeqCst);
+                });
+            }
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            Err(e) => {
+                eprintln!("gen3: accept failed: {e}");
+                std::thread::sleep(Duration::from_millis(50));
+            }
+        }
+    }
+
+    let in_flight = ctx.active.load(Ordering::SeqCst);
+    eprintln!("gen3: shutdown signal received; draining {in_flight} in-flight connection(s)");
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while ctx.active.load(Ordering::SeqCst) > 0 && Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    eprintln!("gen3: shutdown complete");
+    std::process::exit(0);
 }
 
 fn handle_conn(
@@ -428,9 +535,36 @@ fn handle_conn(
     stream.set_read_timeout(Some(IO_TIMEOUT))?;
     stream.set_write_timeout(Some(IO_TIMEOUT))?;
 
-    let Some((method, target, headers)) = read_head(&mut stream)? else {
-        return Ok(());
+    let (method, target, headers) = match read_head(&mut stream) {
+        Ok(Some(head)) => head,
+        Ok(None) => return Ok(()),
+        Err(e) => {
+            let msg = json!({
+                "jsonrpc": "2.0",
+                "id": null,
+                "error": { "code": -32600, "message": format!("bad request: {e}") }
+            })
+            .to_string();
+            return write_response(
+                &mut stream,
+                "400 Bad Request",
+                "application/json",
+                msg.as_bytes(),
+            );
+        }
     };
+
+    if let Some(token) = &ctx.auth_token {
+        if !authorization_matches(headers.get("authorization").map(String::as_str), token) {
+            return write_response(
+                &mut stream,
+                "401 Unauthorized",
+                "application/json",
+                br#"{"error":"missing or invalid bearer token"}"#,
+            );
+        }
+    }
+
     let path = target.split('?').next().unwrap_or("");
     let query = target.split_once('?').map_or("", |(_, query)| query);
 
@@ -508,8 +642,9 @@ fn handle_conn(
             let sender = ctx
                 .sessions
                 .lock()
-                .ok()
-                .and_then(|sessions| sessions.get(&session_id).cloned());
+                .unwrap_or_else(|e| e.into_inner())
+                .get(&session_id)
+                .cloned();
             match sender {
                 None => write_response(
                     &mut stream,
@@ -537,11 +672,10 @@ fn handle_conn(
 fn handle_sse_stream(mut stream: TcpStream, ctx: &ServerCtx) -> io::Result<()> {
     let session_id = uuid::Uuid::new_v4().to_string();
     let (sender, receiver) = mpsc::channel::<String>();
-    if let Ok(mut sessions) = ctx.sessions.lock() {
-        sessions.insert(session_id.clone(), sender);
-    } else {
-        return Ok(());
-    }
+    ctx.sessions
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .insert(session_id.clone(), sender);
 
     stream.write_all(
         b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\n\r\n",
@@ -574,9 +708,10 @@ fn handle_sse_stream(mut stream: TcpStream, ctx: &ServerCtx) -> io::Result<()> {
         }
     }
 
-    if let Ok(mut sessions) = ctx.sessions.lock() {
-        sessions.remove(&session_id);
-    }
+    ctx.sessions
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .remove(&session_id);
     Ok(())
 }
 
@@ -781,5 +916,165 @@ mod tests {
 
         let notification_only = br#"[{"jsonrpc":"2.0","method":"notifications/initialized"}]"#;
         assert!(dispatch_json(&backend, notification_only).is_none());
+    }
+
+    fn test_backend(tag: &str) -> (McpBackend, PathBuf) {
+        let store = std::env::temp_dir().join(format!("wm-network-{tag}-{}", uuid::Uuid::new_v4()));
+        let substrate = Substrate::open(&store, None, wm_gen3_core::constitution::default_view())
+            .expect("open isolated network fixture");
+        (
+            McpBackend::gen3(substrate, &store, McpProfile::Full, false),
+            store,
+        )
+    }
+
+    fn test_ctx(backend: McpBackend, auth_token: Option<String>) -> Arc<ServerCtx> {
+        Arc::new(ServerCtx {
+            backend: Arc::new(backend),
+            sessions: Mutex::new(HashMap::new()),
+            active: AtomicUsize::new(0),
+            auth_token,
+        })
+    }
+
+    #[test]
+    fn bind_guard_and_bearer_auth_policy() {
+        let loopback: SocketAddr = "127.0.0.1:8787".parse().expect("addr");
+        let wildcard: SocketAddr = "0.0.0.0:8787".parse().expect("addr");
+        assert!(validate_network_bind(loopback, false, false).is_ok());
+        assert!(
+            validate_network_bind(wildcard, false, true).is_err(),
+            "remote bind refused without WM_SERVE_ALLOW_REMOTE"
+        );
+        assert!(
+            validate_network_bind(wildcard, true, false).is_err(),
+            "remote bind refused without a token"
+        );
+        assert!(validate_network_bind(wildcard, true, true).is_ok());
+
+        assert!(authorization_matches(Some("Bearer s3cret"), "s3cret"));
+        assert!(authorization_matches(Some("bearer s3cret"), "s3cret"));
+        assert!(!authorization_matches(Some("Bearer wrong"), "s3cret"));
+        assert!(!authorization_matches(Some("Basic s3cret"), "s3cret"));
+        assert!(!authorization_matches(
+            Some("Bearer s3cret-extra"),
+            "s3cret"
+        ));
+        assert!(!authorization_matches(None, "s3cret"));
+
+        assert!(constant_time_eq(b"same", b"same"));
+        assert!(!constant_time_eq(b"same", b"diff"));
+        assert!(!constant_time_eq(b"short", b"longer"));
+    }
+
+    #[test]
+    fn poisoned_substrate_mutex_is_recovered() {
+        let (backend, store) = test_backend("poison");
+        if let McpBackend::Gen3 { substrate, .. } = &backend {
+            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let _guard = substrate.lock().expect("first lock");
+                panic!("poison the substrate mutex");
+            }));
+            assert!(substrate.is_poisoned(), "fixture must poison the mutex");
+        } else {
+            panic!("expected Gen3 backend");
+        }
+
+        let response = backend
+            .handle(&json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": { "name": "memory.count", "arguments": {} }
+            }))
+            .expect("response after poison");
+        assert_eq!(response["result"]["isError"], json!(false), "{response}");
+
+        let list = backend
+            .handle(&json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list"}))
+            .expect("tools list after poison");
+        assert!(
+            list["result"]["tools"]
+                .as_array()
+                .map(|tools| !tools.is_empty())
+                .unwrap_or(false)
+        );
+
+        drop(backend);
+        std::fs::remove_dir_all(store).expect("remove isolated network fixture");
+    }
+
+    #[test]
+    fn malformed_request_line_gets_http_400() {
+        let (backend, store) = test_backend("malformed");
+        let ctx = test_ctx(backend, None);
+        let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+        let addr = listener.local_addr().expect("addr");
+        let server_ctx = Arc::clone(&ctx);
+        let handle = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().expect("accept");
+            let _ = handle_conn(stream, &server_ctx, NetworkTransport::Http);
+        });
+
+        let mut client = TcpStream::connect(addr).expect("connect");
+        client
+            .write_all(b"GARBAGE\r\n\r\n")
+            .expect("write malformed request");
+        let mut response = String::new();
+        client.read_to_string(&mut response).expect("read response");
+        handle.join().expect("server thread");
+
+        assert!(
+            response.starts_with("HTTP/1.1 400 Bad Request"),
+            "malformed request lines must be answered, got: {response}"
+        );
+        drop(ctx);
+        std::fs::remove_dir_all(store).expect("remove isolated network fixture");
+    }
+
+    #[test]
+    fn bearer_token_gates_every_http_request() {
+        let (backend, store) = test_backend("auth");
+        let ctx = test_ctx(backend, Some("s3cret".to_string()));
+        let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+        let addr = listener.local_addr().expect("addr");
+        let server_ctx = Arc::clone(&ctx);
+        let handle = std::thread::spawn(move || {
+            for _ in 0..2 {
+                let (stream, _) = listener.accept().expect("accept");
+                let _ = handle_conn(stream, &server_ctx, NetworkTransport::Http);
+            }
+        });
+
+        let mut client = TcpStream::connect(addr).expect("connect");
+        client
+            .write_all(b"GET /health HTTP/1.1\r\nHost: local\r\n\r\n")
+            .expect("write");
+        let mut unauthorized = String::new();
+        client
+            .read_to_string(&mut unauthorized)
+            .expect("read response");
+        assert!(
+            unauthorized.starts_with("HTTP/1.1 401 Unauthorized"),
+            "missing token must be rejected, got: {unauthorized}"
+        );
+
+        let mut client = TcpStream::connect(addr).expect("connect");
+        client
+            .write_all(
+                b"GET /health HTTP/1.1\r\nHost: local\r\nAuthorization: Bearer s3cret\r\n\r\n",
+            )
+            .expect("write");
+        let mut authorized = String::new();
+        client
+            .read_to_string(&mut authorized)
+            .expect("read response");
+        assert!(
+            authorized.starts_with("HTTP/1.1 200 OK"),
+            "valid token must be accepted, got: {authorized}"
+        );
+        handle.join().expect("server thread");
+        drop(ctx);
+        std::fs::remove_dir_all(store).expect("remove isolated network fixture");
     }
 }
