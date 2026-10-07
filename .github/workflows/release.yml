@@ -147,8 +147,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install cargo-cyclonedx
-        run: cargo install --locked cargo-cyclonedx
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-cyclonedx
       - name: Generate SBOMs for the workspace
         run: cargo cyclonedx --all --format json
       - name: Collect SBOMs
