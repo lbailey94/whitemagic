@@ -33,6 +33,7 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
+use std::sync::OnceLock;
 use std::time::Instant;
 use uuid::Uuid;
 
@@ -452,6 +453,21 @@ pub(crate) fn embed_cache_key(text: &str, version: u8) -> String {
     format!("{MODEL_ID}:v{version}:{}", sha256_hex(text.as_bytes()))
 }
 
+/// Version marker of the postings index used by [`Substrate::exact_duplicate_id`]'s
+/// fast path. Format `"<format>:<tokenizer-id>"`; the tokenizer id is a stable
+/// behaviour fingerprint of `field::tokenize` over a fixed probe, so a
+/// tokenizer change (which can make existing postings lists incomplete for the
+/// current terms) invalidates the fast path automatically. Bump the leading
+/// format number for structural changes to the marker itself.
+pub(crate) fn identity_index_version() -> &'static str {
+    static VERSION: OnceLock<String> = OnceLock::new();
+    VERSION.get_or_init(|| {
+        const PROBE: &str = "identity probe 2.1: Alpha BETA gamma-delta foo.bar42 x";
+        let tokens = field::tokenize(PROBE);
+        format!("1:{}", sha256_hex(format!("{tokens:?}").as_bytes()))
+    })
+}
+
 /// Persistent bijective map entry between legacy Gen2 UUID and Gen3 numeric record ID.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct UuidMapEntry {
@@ -494,6 +510,12 @@ pub struct Substrate {
     /// Next `RevisionEntry.revision` to assign; `None` until first use, then
     /// cached so repeated updates do not rescan `revisions.jsonl`.
     revision_counter: Option<u64>,
+    /// Tokenizer-version guard for the postings-based duplicate probe: true
+    /// when the store's postings-index marker is missing or differs from
+    /// [`identity_index_version`]. In that case dedupe falls back to the
+    /// tokenizer-independent full-content scan (correctness first) for this
+    /// handle, and healthy opens backfill the marker.
+    dedupe_full_scan: bool,
 }
 
 impl Substrate {
@@ -537,6 +559,24 @@ impl Substrate {
             evidence.reserve_next_id(store.record_count().map_err(|e| e.to_string())? as u64);
         }
         let identity: HashMap<(String, String, String), u64> = HashMap::new();
+        // Tokenizer-version guard: the postings fast path assumes the store's
+        // index was built by this binary's tokenizer. A mismatched marker (or a
+        // missing marker on a store that already carries records) falls back to
+        // the full-content scan and is backfilled so later opens on this binary
+        // can use the fast path. An empty store is trivially current.
+        let stored_marker = store.identity_index_marker();
+        let dedupe_full_scan = match &stored_marker {
+            Ok(Some(marker)) => marker != identity_index_version(),
+            Ok(None) => store.record_count().map(|count| count > 0).unwrap_or(true),
+            // A marker read failure must not fail the open; degrade to the
+            // correctness-first path for this handle.
+            Err(_) => true,
+        };
+        let marker_current =
+            matches!(&stored_marker, Ok(Some(marker)) if marker == identity_index_version());
+        if !marker_current && !readonly {
+            let _ = store.set_identity_index_marker(identity_index_version());
+        }
         let journal = match journal_path {
             Some(p) => Some(Journal::open(p).map_err(|e| e.to_string())?),
             None => None,
@@ -590,6 +630,7 @@ impl Substrate {
             uuid_to_id,
             id_to_uuid,
             revision_counter: None,
+            dedupe_full_scan,
         })
     }
 
@@ -874,8 +915,13 @@ impl Substrate {
     /// bounded durable probe over the rarest term's postings list (only
     /// candidates are decoded; the store is never fully hydrated). Returns the
     /// latest matching record id, mirroring the old hydrated map's
-    /// cursor-order overwrite semantics. An empty tokenization falls back to a
-    /// full scan (records with no terms, already an edge case).
+    /// cursor-order overwrite semantics.
+    ///
+    /// When the store's postings-index marker is missing or differs from
+    /// [`identity_index_version`] (tokenizer-version guard), the postings path
+    /// is unsound — existing lists may have been built by another tokenizer —
+    /// so the probe uses the tokenizer-independent full-content scan instead.
+    /// An empty tokenization always takes the full scan (already an edge case).
     pub fn exact_duplicate_id(
         &self,
         content: &str,
@@ -885,6 +931,9 @@ impl Substrate {
         let target = identity_key(content, source, kind_tag(kind));
         if let Some(&id) = self.identity.get(&target) {
             return Ok(Some(id));
+        }
+        if self.dedupe_full_scan {
+            return self.full_scan_duplicate_id(&target);
         }
         let terms = field::tokenize(content);
         let mut candidates: Option<Vec<u64>> = None;
@@ -919,21 +968,37 @@ impl Substrate {
                 }
                 Ok(found)
             }
-            None => {
-                let mut found = None;
-                for record in self.store.iter_records().map_err(|e| e.to_string())? {
-                    let key = identity_key(
-                        record.content(),
-                        record.source(),
-                        domain_tag(record.domain()),
-                    );
-                    if key == target {
-                        found = Some(record.id());
-                    }
-                }
-                Ok(found)
+            None => self.full_scan_duplicate_id(&target),
+        }
+    }
+
+    /// Tokenizer-independent duplicate probe: decode every record and compare
+    /// the exact `(content sha256, source, domain tag)` identity, keeping the
+    /// latest match (cursor order). Used for tokenizer-guard fallback and for
+    /// content with no postings terms.
+    fn full_scan_duplicate_id(
+        &self,
+        target: &(String, String, String),
+    ) -> Result<Option<u64>, String> {
+        let mut found = None;
+        for record in self.store.iter_records().map_err(|e| e.to_string())? {
+            let key = identity_key(
+                record.content(),
+                record.source(),
+                domain_tag(record.domain()),
+            );
+            if key == *target {
+                found = Some(record.id());
             }
         }
+        Ok(found)
+    }
+
+    /// Whether this handle is on the tokenizer-guard full-scan dedupe path
+    /// (evidence helper for guard tests).
+    #[cfg(test)]
+    pub(crate) fn dedupe_full_scan(&self) -> bool {
+        self.dedupe_full_scan
     }
 
     /// Best-effort convenience wrapper over [`Self::exact_duplicate_id`]:
@@ -1246,6 +1311,29 @@ impl Substrate {
             f.insert("existing_id".into(), existing.into());
             self.j("remember.refusal", f);
             return Err("duplicate_exact".to_string());
+        }
+        // Tokenizer-version guard: a mismatched index marker means the
+        // postings candidate probe (inside commit_intake) cannot be trusted
+        // for pre-existing records, so the authoritative refusal runs here on
+        // the tokenizer-independent full scan.
+        if self.dedupe_full_scan {
+            let import_kind = match request.kind() {
+                IntakeKind::Reported => ImportKind::Reported,
+                IntakeKind::System => ImportKind::System,
+                IntakeKind::Simulated => ImportKind::Simulated,
+            };
+            if let Some(existing) = self
+                .exact_duplicate_id(request.content(), request.source(), import_kind)
+                .map_err(|error| error.to_string())?
+            {
+                let mut f = serde_json::Map::new();
+                f.insert("reason".into(), "duplicate_exact".into());
+                f.insert("content_sha256".into(), key.0.clone().into());
+                f.insert("source".into(), request.source().to_string().into());
+                f.insert("existing_id".into(), existing.into());
+                self.j("remember.refusal", f);
+                return Err("duplicate_exact".to_string());
+            }
         }
 
         let writes_after_commit = self
@@ -5066,6 +5154,79 @@ mod cache_boundary_tests {
         assert!(stats.data_bytes > 0);
         assert!(stats.map_bytes >= stats.data_bytes);
         assert!(stats.used_fraction > 0.0 && stats.used_fraction < 1.0);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Wave-3 fix: the postings-based duplicate probe is guarded by a stored
+    /// tokenizer/format marker. A mismatched marker forces the
+    /// tokenizer-independent full-content scan (duplicates still refused on
+    /// ingest) and is backfilled; a matching marker takes the fast path.
+    #[test]
+    fn tokenizer_version_guard_falls_back_and_backfills() {
+        let dir = temp_store("dedupe-guard");
+        {
+            let mut seeder = Substrate::open(&dir, None, default_view()).expect("seed open");
+            seeder.set_budget(0);
+            let items = vec![
+                item("guard target record alpha"),
+                item("guard other record beta"),
+                item("guard third record gamma"),
+            ];
+            assert!(seeder.remember_batch(&items).iter().all(Result::is_ok));
+        }
+        // Simulate a store whose postings index was built by another tokenizer.
+        {
+            let s = Substrate::open(&dir, None, default_view()).expect("open");
+            s.store()
+                .set_identity_index_marker("1:mismatched-tokenizer")
+                .expect("write mismatched marker");
+        }
+        // Mismatch: full-scan fallback, duplicates still refused, marker
+        // backfilled for later opens.
+        {
+            let mut s = Substrate::open(&dir, None, default_view()).expect("open");
+            s.set_budget(0);
+            assert!(s.dedupe_full_scan(), "mismatched marker falls back");
+            assert_eq!(
+                s.store().identity_index_marker().unwrap().as_deref(),
+                Some(identity_index_version()),
+                "open backfills the marker"
+            );
+            let refused = s.remember_batch(&[item("guard target record alpha")]);
+            assert_eq!(
+                refused.first().and_then(|r| r.as_ref().err().cloned()),
+                Some("duplicate_exact".to_string()),
+                "ingest still refuses the duplicate under fallback"
+            );
+            // Structural proof of the full scan: an absent-term probe decodes
+            // every record (the postings fast path would decode none).
+            let before = s.store().decode_count();
+            assert!(!s.contains_exact(
+                "absentterm only content",
+                "fixture:cache",
+                ImportKind::Reported
+            ));
+            assert!(
+                s.store().decode_count() > before,
+                "fallback decodes the corpus"
+            );
+        }
+        // Matching marker: fast path, no full decode.
+        {
+            let s = Substrate::open(&dir, None, default_view()).expect("open");
+            assert!(!s.dedupe_full_scan(), "matching marker takes the fast path");
+            let before = s.store().decode_count();
+            assert!(!s.contains_exact(
+                "absentterm only content",
+                "fixture:cache",
+                ImportKind::Reported
+            ));
+            assert_eq!(
+                s.store().decode_count(),
+                before,
+                "fast path decodes nothing for an absent term"
+            );
+        }
         let _ = std::fs::remove_dir_all(&dir);
     }
 
