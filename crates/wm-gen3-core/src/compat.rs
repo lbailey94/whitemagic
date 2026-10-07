@@ -634,6 +634,10 @@ pub struct MigrationReceipt {
     /// `episodic:<kind>`; galaxy rows as `galaxy:<v9-dbi>`.
     #[serde(default)]
     pub by_record_type: BTreeMap<String, RecordTypeAccounting>,
+    /// True when this receipt describes a simulation: nothing was written to
+    /// the target store and no quarantine file was created.
+    #[serde(default)]
+    pub dry_run: bool,
 }
 
 impl MigrationReceipt {
@@ -894,20 +898,24 @@ pub fn migrate_gen2_to_gen3_with_authority(
     }
     substrate.set_budget(old_budget);
 
-    if let Some(q_path) = &options.quarantine_path {
-        if !quarantined.is_empty() {
-            if let Some(parent) = q_path.parent() {
-                let _ = std::fs::create_dir_all(parent);
-            }
-            if let Ok(mut file) = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(q_path)
-            {
-                use std::io::Write;
-                for q in &quarantined {
-                    if let Ok(line) = serde_json::to_string(q) {
-                        let _ = writeln!(file, "{line}");
+    // Dry runs accumulate quarantine rows in memory/report only: no file is
+    // created and no directory is touched.
+    if !options.dry_run {
+        if let Some(q_path) = &options.quarantine_path {
+            if !quarantined.is_empty() {
+                if let Some(parent) = q_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                if let Ok(mut file) = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(q_path)
+                {
+                    use std::io::Write;
+                    for q in &quarantined {
+                        if let Ok(line) = serde_json::to_string(q) {
+                            let _ = writeln!(file, "{line}");
+                        }
                     }
                 }
             }
@@ -943,7 +951,45 @@ pub fn migrate_gen2_to_gen3_with_authority(
         galaxy_decode_skipped,
         galaxy_quarantined,
         by_record_type,
+        dry_run: options.dry_run,
     })
+}
+
+/// Target-safe dry-run census: simulate the full migration without creating
+/// the target store and without writing anything.
+///
+/// Unlike the general migration entry point, this function never opens a
+/// store it could create: it requires `<target_store>/data.mdb` to already
+/// exist and returns `CompatError::Msg` containing `target missing` otherwise
+/// ("a nonzero-result dry run reports 'target missing' instead of creating").
+/// No quarantine file is written; per-type skip accounting still rides in the
+/// returned receipt.
+#[cfg(any(test, feature = "operator"))]
+pub fn dry_run_migration_census(
+    reader: &Gen2Reader,
+    target_store: &Path,
+    options: &MigrationOptions,
+) -> Result<MigrationReceipt, CompatError> {
+    let data_mdb = target_store.join("data.mdb");
+    if !data_mdb.is_file() {
+        return Err(CompatError::Msg(format!(
+            "target missing: {} does not contain data.mdb; dry-run never creates the target store",
+            target_store.display()
+        )));
+    }
+
+    // Open without a journal so no journal file is created, and force the
+    // options into dry-run mode.
+    let mut substrate = Substrate::open(target_store, None, crate::constitution::default_view())
+        .map_err(CompatError::Msg)?;
+    let mut dry_options = options.clone();
+    dry_options.dry_run = true;
+    dry_options.quarantine_path = None;
+    #[cfg(test)]
+    let authority = crate::evidence::RatifiedChannel::stub("wm-dry-run-census");
+    #[cfg(not(test))]
+    let authority = crate::evidence::RatifiedChannel::mint("wm-dry-run-census");
+    migrate_gen2_to_gen3_with_authority(reader, &mut substrate, &dry_options, authority)
 }
 
 /// Project one v9 galaxy record onto a Gen3 `RememberItem`, routed through the
@@ -1119,9 +1165,7 @@ struct V9LegacyMemory {
 }
 
 /// Frozen pre-`70495ef` positional metadata schema, ported from the v9 codec's
-/// `LegacyMemory`. Fields are read by fixed position; later v9 stores appended
-/// two extra trailing fields, so the visitor drains any remainder instead of
-/// failing on a sequence longer than the frozen 30. The exact order is
+/// `LegacyMemory`. Fields are read by fixed position. The exact order is
 /// load-bearing and must not be edited.
 struct V9LegacyMetadata {
     id: Uuid,
@@ -1147,7 +1191,10 @@ impl<'de> Deserialize<'de> for V9LegacyMetadata {
             type Value = V9LegacyMetadata;
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(f, "a v9 legacy positional metadata array (>= 30 fields)")
+                write!(
+                    f,
+                    "a v9 legacy positional metadata array (at least 26 fields)"
+                )
             }
 
             fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
@@ -1155,26 +1202,38 @@ impl<'de> Deserialize<'de> for V9LegacyMetadata {
                 A: serde::de::SeqAccess<'de>,
             {
                 use serde::de::Error as _;
-                let id: Uuid = seq
-                    .next_element::<Uuid>()?
-                    .ok_or_else(|| A::Error::invalid_length(0, &self))?;
-                let _galaxy = seq.next_element::<serde::de::IgnoredAny>()?;
-                let _content_hash = seq.next_element::<serde::de::IgnoredAny>()?;
-                let tags = seq.next_element::<Vec<String>>()?.unwrap_or_default();
-                let importance = seq.next_element::<f32>()?.unwrap_or(0.0);
-                let created_at = seq.next_element::<Option<String>>()?.flatten();
-                for _ in 0..10 {
-                    seq.next_element::<serde::de::IgnoredAny>()?;
+                // Positions 0..=25 are required. A truncated array must fail
+                // (and be quarantined) rather than silently defaulting
+                // `tags`/`importance`; nil is still accepted for the
+                // `Option`-typed positions because the v9 schema stores them
+                // as nullable, so only element *presence* is mandatory.
+                // Positions 26+ (`tier`, `class`, `dup_count`,
+                // `revision_count`) are optional tail fields and are drained.
+                macro_rules! required {
+                    ($idx:expr, $ty:ty) => {
+                        seq.next_element::<$ty>()?
+                            .ok_or_else(|| A::Error::invalid_length($idx, &self))?
+                    };
                 }
-                let is_private = seq.next_element::<bool>()?.unwrap_or(false);
-                let model_exclude = seq.next_element::<bool>()?.unwrap_or(false);
-                let source = seq.next_element::<Option<String>>()?.flatten();
-                for _ in 0..4 {
-                    seq.next_element::<serde::de::IgnoredAny>()?;
+
+                let id: Uuid = required!(0, Uuid);
+                let _galaxy = required!(1, serde::de::IgnoredAny);
+                let _content_hash = required!(2, serde::de::IgnoredAny);
+                let tags: Vec<String> = required!(3, Vec<String>);
+                let importance: f32 = required!(4, f32);
+                let created_at: Option<String> = required!(5, Option<String>);
+                for idx in 6..16 {
+                    required!(idx, serde::de::IgnoredAny);
                 }
-                let agent_id = seq.next_element::<Option<String>>()?.flatten();
-                let title = seq.next_element::<Option<String>>()?.flatten();
-                let topic = seq.next_element::<Option<String>>()?.flatten();
+                let is_private: bool = required!(16, bool);
+                let model_exclude: bool = required!(17, bool);
+                let source: Option<String> = required!(18, Option<String>);
+                for idx in 19..23 {
+                    required!(idx, serde::de::IgnoredAny);
+                }
+                let agent_id: Option<String> = required!(23, Option<String>);
+                let title: Option<String> = required!(24, Option<String>);
+                let topic: Option<String> = required!(25, Option<String>);
                 while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
                 Ok(V9LegacyMetadata {
                     id,
@@ -1319,6 +1378,10 @@ pub struct SessionMigrationReceipt {
     /// any were written.
     #[serde(default)]
     pub quarantine_log: Option<PathBuf>,
+    /// True when this receipt describes a simulation: neither the session log
+    /// nor a quarantine file was created.
+    #[serde(default)]
+    pub dry_run: bool,
 }
 
 impl SessionMigrationReceipt {
@@ -1586,10 +1649,17 @@ fn decode_galaxy_record(
     key: &[u8],
     value: &[u8],
 ) -> Result<Gen2GalaxyRecord, CompatError> {
-    // Legacy positional layout: fixarray(3) whose first element is an array of
-    // metadata fields (30 in the frozen schema, 32 in later v9 stores) —
-    // array16/array32 msgpack headers. Modern writes are named maps.
-    if value.starts_with(&[0x93, 0xdc]) || value.starts_with(&[0x93, 0xdd]) {
+    // Legacy positional layout: fixarray(3) whose first element is the
+    // metadata array (fixarray <16 fields when truncated/corrupt, array16
+    // for the frozen 30, array32 for later 32-field stores). Detecting short
+    // arrays too means a truncated row fails the positional visitor's
+    // minimum-length check and is quarantined with a precise reason instead
+    // of being mis-decoded as a named map. Modern writes are named maps.
+    if value.starts_with(&[0x93])
+        && value
+            .get(1)
+            .is_some_and(|b| matches!(b, 0x90..=0x9f | 0xdc | 0xdd))
+    {
         let legacy: V9LegacyMemory = rmp_serde::from_slice(value)?;
         if legacy.content.trim().is_empty() {
             return Err(CompatError::Msg(format!(
@@ -1662,6 +1732,17 @@ fn decode_galaxy_record(
     })
 }
 
+/// Options controlling v9 session-record migration.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SessionMigrationOptions {
+    /// Simulate only: neither the session log nor a quarantine file is
+    /// written; the receipt still carries would-migrate and skip accounting.
+    pub dry_run: bool,
+    /// Override for the forensic quarantine log. Defaults to
+    /// `session_quarantine.jsonl` next to the session log.
+    pub quarantine_path: Option<PathBuf>,
+}
+
 /// Migrate v9 session records into a Gen3 store's `session_log.jsonl` — the
 /// source of truth for Gen3 `session.continuity` and `session.recall`.
 ///
@@ -1680,6 +1761,21 @@ fn decode_galaxy_record(
 pub fn migrate_gen2_sessions_to_gen3(
     reader: &Gen2Reader,
     session_log_path: &Path,
+) -> Result<SessionMigrationReceipt, CompatError> {
+    migrate_gen2_sessions_to_gen3_with_options(
+        reader,
+        session_log_path,
+        &SessionMigrationOptions::default(),
+    )
+}
+
+/// [`migrate_gen2_sessions_to_gen3`] with explicit options. When
+/// `options.dry_run` is set, nothing is written: no session log, no quarantine
+/// file, no parent directories.
+pub fn migrate_gen2_sessions_to_gen3_with_options(
+    reader: &Gen2Reader,
+    session_log_path: &Path,
+    options: &SessionMigrationOptions,
 ) -> Result<SessionMigrationReceipt, CompatError> {
     use std::collections::{BTreeSet, HashSet};
 
@@ -1784,7 +1880,7 @@ pub fn migrate_gen2_sessions_to_gen3(
         acct.migrate();
     }
 
-    if migrated > 0 {
+    if migrated > 0 && !options.dry_run {
         if let Some(parent) = session_log_path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
@@ -1798,12 +1894,14 @@ pub fn migrate_gen2_sessions_to_gen3(
             .map_err(|e| CompatError::Msg(format!("session log append failed: {e}")))?;
     }
 
-    let quarantine_path = session_log_path
-        .parent()
-        .map(|p| p.join("session_quarantine.jsonl"))
-        .unwrap_or_else(|| PathBuf::from("session_quarantine.jsonl"));
+    let quarantine_path = options.quarantine_path.clone().unwrap_or_else(|| {
+        session_log_path
+            .parent()
+            .map(|p| p.join("session_quarantine.jsonl"))
+            .unwrap_or_else(|| PathBuf::from("session_quarantine.jsonl"))
+    });
     let mut quarantine_log = None;
-    if !quarantined_rows.is_empty() {
+    if !options.dry_run && !quarantined_rows.is_empty() {
         if let Some(parent) = quarantine_path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
@@ -1848,6 +1946,7 @@ pub fn migrate_gen2_sessions_to_gen3(
         by_type,
         skipped_by_reason,
         quarantine_log,
+        dry_run: options.dry_run,
     })
 }
 
@@ -2016,6 +2115,106 @@ mod tests {
         );
         rmp_serde::to_vec(&(meta, content.to_string(), Option::<u8>::None))
             .expect("encode legacy positional record")
+    }
+
+    /// A deliberately truncated positional row (10 metadata fields, far below
+    /// the required 26) that must be quarantined, not silently defaulted.
+    #[derive(serde::Serialize)]
+    struct LegacyMetaTruncated(
+        Uuid,
+        String,
+        String,
+        Vec<String>,
+        f32,
+        String,
+        String,
+        u64,
+        Vec<f32>,
+        Vec<f32>,
+    );
+
+    fn synthetic_legacy_truncated(id: Uuid, content: &str) -> Vec<u8> {
+        let meta = LegacyMetaTruncated(
+            id,
+            "codex".to_string(),
+            "legacy-hash".to_string(),
+            vec!["t".to_string()],
+            0.9,
+            "2026-01-02T03:04:05Z".to_string(),
+            "2026-01-02T03:04:05Z".to_string(),
+            0,
+            Vec::new(),
+            Vec::new(),
+        );
+        rmp_serde::to_vec(&(meta, content.to_string(), Option::<u8>::None))
+            .expect("encode truncated positional record")
+    }
+
+    /// The minimum complete positional row (26 metadata fields: everything
+    /// through `topic`). The documented optional tail (`tier`, `class`,
+    /// `dup_count`, `revision_count`) is omitted and must still decode.
+    #[derive(serde::Serialize)]
+    #[allow(clippy::type_complexity)]
+    struct LegacyMetaMinimum(
+        Uuid,
+        String,
+        String,
+        Vec<String>,
+        f32,
+        String,
+        String,
+        u64,
+        Vec<f32>,
+        Vec<f32>,
+        String,
+        f32,
+        f32,
+        f32,
+        f32,
+        bool,
+        bool,
+        bool,
+        String,
+        f32,
+        f32,
+        u64,
+        u64,
+        String,
+        Option<String>,
+        Option<String>,
+    );
+
+    fn synthetic_legacy_minimum(id: Uuid, content: &str) -> Vec<u8> {
+        let meta = LegacyMetaMinimum(
+            id,
+            "codex".to_string(),
+            "legacy-hash".to_string(),
+            vec!["min".to_string()],
+            0.7,
+            "2026-03-04T05:06:07Z".to_string(),
+            "2026-03-04T05:06:07Z".to_string(),
+            0,
+            Vec::new(),
+            Vec::new(),
+            "long_term".to_string(),
+            0.5,
+            1.0,
+            0.0,
+            0.0,
+            false,
+            false,
+            false,
+            "agent".to_string(),
+            0.7,
+            30.0,
+            0,
+            1,
+            "system".to_string(),
+            None,
+            None,
+        );
+        rmp_serde::to_vec(&(meta, content.to_string(), Option::<u8>::None))
+            .expect("encode minimum positional record")
     }
 
     /// Build a synthetic named-field v9 store with optional raw session values
@@ -2589,6 +2788,237 @@ mod tests {
             .expect("session quarantine log");
         assert!(session_log.contains("GalaxyDecodeError[sessions]"));
         drop(substrate);
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn truncated_legacy_rows_are_quarantined_and_minimum_rows_decode() {
+        let tmp = std::env::temp_dir().join(format!("wm-gen3-shortrows-{}", Uuid::new_v4()));
+        let src_copy = tmp.join("gen2");
+        std::fs::create_dir_all(&src_copy).expect("create temp gen2 dir");
+        let truncated_id = Uuid::new_v4();
+        let minimum_id = Uuid::new_v4();
+        write_synthetic_store_full(
+            &src_copy,
+            &[],
+            &[],
+            &[(
+                "codex",
+                vec![
+                    synthetic_legacy_truncated(truncated_id, "truncated row content"),
+                    synthetic_legacy_minimum(minimum_id, "minimum row content"),
+                ],
+            )],
+        );
+
+        let reader = Gen2Reader::open(&src_copy).expect("open synthetic store");
+        let scan = reader
+            .scan_galaxy_db("codex", None)
+            .expect("scan short rows");
+        assert_eq!(
+            scan.records.len(),
+            1,
+            "only the minimum complete row decodes"
+        );
+        assert_eq!(scan.decode_skipped, 1, "truncated row must be quarantined");
+        let decoded = &scan.records[0];
+        assert_eq!(decoded.id, minimum_id);
+        assert_eq!(decoded.content, "minimum row content");
+        assert_eq!(decoded.tags, vec!["min".to_string()]);
+        assert_eq!(decoded.importance, 0.7, "importance must never default");
+        assert_eq!(decoded.created_at.to_rfc3339(), "2026-03-04T05:06:07+00:00");
+        assert!(
+            scan.quarantined[0]
+                .reason
+                .contains("GalaxyDecodeError[codex]"),
+            "truncation reason: {}",
+            scan.quarantined[0].reason
+        );
+        assert!(
+            scan.quarantined[0].reason.contains("invalid length"),
+            "truncation reason names the length failure: {}",
+            scan.quarantined[0].reason
+        );
+
+        let target = tmp.join("gen3");
+        let journal = target.join("journal.jsonl");
+        let quarantine = tmp.join("quarantine.jsonl");
+        let mut substrate = crate::ops::Substrate::open(
+            &target,
+            Some(&journal),
+            crate::constitution::default_view(),
+        )
+        .expect("open target");
+        let receipt = migrate_gen2_to_gen3_with_authority(
+            &reader,
+            &mut substrate,
+            &MigrationOptions {
+                batch_size: 4,
+                quarantine_path: Some(quarantine.clone()),
+                ..MigrationOptions::default()
+            },
+            crate::evidence::RatifiedChannel::stub("wm-migration-test"),
+        )
+        .expect("migration");
+        assert_eq!(receipt.galaxy_migrated, 1);
+        assert_eq!(receipt.galaxy_decode_skipped, 1);
+        assert_eq!(
+            receipt.by_record_type["galaxy:codex"].skipped["decode_error"],
+            1
+        );
+        let log = std::fs::read_to_string(&quarantine).expect("quarantine log");
+        assert!(log.contains("invalid length"));
+        drop(substrate);
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn dry_run_writes_nothing_and_requires_existing_target() {
+        let tmp = std::env::temp_dir().join(format!("wm-gen3-dryrun-{}", Uuid::new_v4()));
+        let src_copy = tmp.join("gen2");
+        std::fs::create_dir_all(&src_copy).expect("create temp gen2 dir");
+        write_synthetic_store_full(
+            &src_copy,
+            &[synthetic_episodic("dry run episodic", 1)],
+            &[vec![0xc1u8, 0x00, 0xde]],
+            &[(
+                "codex",
+                vec![synthetic_named_memory(
+                    Uuid::new_v4(),
+                    "dry run galaxy",
+                    "codex",
+                    &["d"],
+                )],
+            )],
+        );
+        let reader = Gen2Reader::open(&src_copy).expect("open synthetic store");
+
+        let target = tmp.join("gen3");
+        let journal = target.join("journal.jsonl");
+        // The target must pre-exist for a dry run; create it once.
+        {
+            let substrate = crate::ops::Substrate::open(
+                &target,
+                Some(&journal),
+                crate::constitution::default_view(),
+            )
+            .expect("pre-create target");
+            drop(substrate);
+        }
+        assert!(target.join("data.mdb").is_file());
+
+        let quarantine = tmp.join("quarantine.jsonl");
+        let options = MigrationOptions {
+            batch_size: 4,
+            dry_run: true,
+            validate_hashes: true,
+            allow_noise: false,
+            quarantine_path: Some(quarantine.clone()),
+        };
+        let mut substrate = crate::ops::Substrate::open(
+            &target,
+            Some(&journal),
+            crate::constitution::default_view(),
+        )
+        .expect("open target");
+        let receipt = migrate_gen2_to_gen3_with_authority(
+            &reader,
+            &mut substrate,
+            &options,
+            crate::evidence::RatifiedChannel::stub("wm-migration-test"),
+        )
+        .expect("dry-run migration");
+        assert!(receipt.dry_run);
+        assert_eq!(receipt.migrated_count, 1);
+        assert_eq!(receipt.galaxy_migrated, 1);
+        assert_eq!(
+            receipt.galaxy_decode_skipped, 1,
+            "dry run still accounts undecodable rows in memory"
+        );
+        assert!(
+            !quarantine.exists(),
+            "dry run must not write the quarantine file"
+        );
+        assert_eq!(
+            substrate.store().record_count().unwrap(),
+            0,
+            "dry run must not mutate the target store"
+        );
+        drop(substrate);
+
+        // A missing target is reported, never created.
+        let missing = tmp.join("missing-target");
+        let err = dry_run_migration_census(&reader, &missing, &options).expect_err("refuse");
+        assert!(
+            err.to_string().contains("target missing"),
+            "error names the missing target: {err}"
+        );
+        assert!(
+            !missing.exists(),
+            "dry-run census must never create the target store"
+        );
+
+        // An existing target simulates without writes.
+        let census = dry_run_migration_census(&reader, &target, &options).expect("census");
+        assert!(census.dry_run);
+        assert_eq!(census.migrated_count, 1);
+        assert_eq!(census.galaxy_migrated, 1);
+        assert!(!quarantine.exists());
+        let reopened = crate::ops::Substrate::open(
+            &target,
+            Some(&journal),
+            crate::constitution::default_view(),
+        )
+        .expect("reopen target");
+        assert_eq!(reopened.store().record_count().unwrap(), 0);
+        drop(reopened);
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn session_dry_run_writes_nothing() {
+        let tmp = std::env::temp_dir().join(format!("wm-gen3-sess-dry-{}", Uuid::new_v4()));
+        let src_copy = tmp.join("gen2");
+        std::fs::create_dir_all(&src_copy).expect("create temp gen2 dir");
+        write_synthetic_store_full(
+            &src_copy,
+            &[],
+            &[synthetic_memory(
+                &synthetic_turn("sess-dry", 1, "dry turn").to_string(),
+            )],
+            &[],
+        );
+        let reader = Gen2Reader::open(&src_copy).expect("open synthetic store");
+        let log = tmp.join("session_log.jsonl");
+
+        let receipt = migrate_gen2_sessions_to_gen3_with_options(
+            &reader,
+            &log,
+            &SessionMigrationOptions {
+                dry_run: true,
+                quarantine_path: None,
+            },
+        )
+        .expect("dry-run session migration");
+        assert!(receipt.dry_run);
+        assert_eq!(receipt.migrated, 1, "dry run reports would-migrate");
+        assert!(!log.exists(), "dry run must not write the session log");
+        assert!(
+            !tmp.join("session_quarantine.jsonl").exists(),
+            "dry run must not write a quarantine file"
+        );
+
+        let live = migrate_gen2_sessions_to_gen3(&reader, &log).expect("live session migration");
+        assert!(!live.dry_run);
+        assert_eq!(live.migrated, 1);
+        assert!(log.exists());
+
+        let rerun = migrate_gen2_sessions_to_gen3(&reader, &log).expect("live rerun");
+        assert_eq!(rerun.migrated, 0, "live rerun stays idempotent");
+        assert_eq!(rerun.duplicates_skipped, 1);
 
         let _ = std::fs::remove_dir_all(&tmp);
     }
