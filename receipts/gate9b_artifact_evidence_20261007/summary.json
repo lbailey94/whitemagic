@@ -49,11 +49,21 @@
       "id": "closure_scan_red_at_ef623fb",
       "command": "bash scripts/check_closures.sh",
       "result": "rc=1: rule 3 fails on crates/wm-gen3-harness/src/bin/wm_node.rs:1036 and :1159 (std::thread::spawn not in the transport allowlist)",
-      "classification": "scanner allowlist gap for the new Geth Phase 2 wm-node Unix-socket transport host; the 1036 spawn is an accept-loop physical-I/O site (Article 4-compliant in intent), but the tracked scanner and CI step are red at this base",
+      "classification": "scanner allowlist gap for the new Geth Phase 2 wm-node Unix-socket transport host; the 1036 spawn is an accept-loop physical-I/O site (Article 4-compliant in intent), but the tracked scanner and CI step were red at the addendum base",
+      "resolution": "FIXED on main by ef24101 (scanner allowlist + receipts/BOUNDARY_WM_NODE_TRANSPORT_SPAWNS_2026-10-07.md); re-run at merge base 80b34c2: closure static scans: PASS (3/3)",
       "log": "logs/13-closure-scan-base.txt",
       "introduced_by_this_lane": false
     }
   ],
+  "rev2": {
+    "date": "2026-10-07",
+    "merge_base": "80b34c2",
+    "changes": [
+      "command-presence log is 63 names (GATE_9B_ARTIFACT_EVIDENCE text corrected)",
+      "wm at-rest status|migrate and wm host-guard status|run|arm|disarm covered (88ac66a) - legacy audit rev.2",
+      "closure scan red at ef623fb repaired (ef24101)"
+    ]
+  },
   "version_truth": {"command": "python3 scripts/version_truth.py --check", "result": "all surfaces agree on 10.2.0-alpha.6", "log": "logs/14-version-truth.txt"},
   "evidence_bundle": "receipts/gate9b_artifact_evidence_20261007/"
 }
