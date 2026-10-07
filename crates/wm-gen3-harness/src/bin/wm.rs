@@ -25,7 +25,10 @@ use wm_gen3_core::mesh::{
     DEFAULT_MESH_PORT, MESH_PROTOCOL_VERSION, MeshClient, MeshServer, SyncBundle,
     resolve_or_create_mesh_key,
 };
-use wm_gen3_core::ops::{ImportKind, RecallQuery, RememberItem, SessionCheckpoint, Substrate};
+use wm_gen3_core::ops::{
+    ImportKind, RecallQuery, RememberItem, SessionCheckpoint, SessionTurn, Substrate,
+    compose_session_digest,
+};
 use wm_gen3_core::peer::{BanCertificate, PeerDirectory, PeerIdentity, PeerTrustTier};
 use wm_gen3_core::sentinel::{
     SentinelCircuitBreaker, SentinelLeaseGuard, SentinelReport, SentinelStatus,
@@ -637,6 +640,21 @@ enum SessionCommands {
         /// Optional ContextCache token
         #[arg(long)]
         context_token: Option<String>,
+        /// Optional track slug persisted with the checkpoint
+        #[arg(long)]
+        track: Option<String>,
+        /// Commit hash persisted with the checkpoint
+        #[arg(long)]
+        commit: Option<String>,
+        /// Branch name persisted with the checkpoint
+        #[arg(long)]
+        branch: Option<String>,
+        /// Whether the test suite was green at checkpoint time
+        #[arg(long, num_args = 0..=1, default_missing_value = "true")]
+        tests_green: Option<bool>,
+        /// Claimed scope lease_id that remains held at this handoff
+        #[arg(long)]
+        lease_id: Option<String>,
         /// Autonomously evolve action skeletons and consolidate dream insights after checkpoint (default: true)
         #[arg(long, num_args = 0..=1, default_missing_value = "true")]
         evolve: Option<bool>,
@@ -663,6 +681,18 @@ enum SessionCommands {
     },
     /// List all active session IDs in the substrate
     List,
+    /// Compose a read-only digest from typed session turns and the latest checkpoint
+    Digest {
+        /// Optional session identifier filter (default: most recent lane)
+        #[arg(long)]
+        session_id: Option<String>,
+        /// Maximum turns to include (default: 20)
+        #[arg(long, default_value_t = 20)]
+        n: usize,
+        /// Print only the JSON digest
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand, Debug, Clone)]
@@ -4194,6 +4224,11 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
             next_queue,
             open_flags,
             context_token,
+            track,
+            commit,
+            branch,
+            tests_green,
+            lease_id,
             evolve,
             no_evolve,
         } => {
@@ -4218,7 +4253,14 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                 representation: None,
                 timestamp_iso: Some(chrono::Utc::now().to_rfc3339()),
             };
-            match substrate.session_checkpoint(&cp) {
+            let meta = serde_json::json!({
+                "track": track,
+                "commit": commit,
+                "branch": branch,
+                "tests_green": tests_green,
+                "lease_id": lease_id,
+            });
+            match substrate.session_checkpoint_enriched(&cp, &meta) {
                 Ok(id) => {
                     let epoch = substrate.store().epoch().unwrap_or(0);
                     println!("Session checkpoint committed successfully.");
@@ -4227,6 +4269,21 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                     println!("Session ID:      {}", cp.session_id);
                     println!("Checkpoint Type: {}", cp.checkpoint_type);
                     println!("Summary:         {}", cp.summary);
+                    if let Some(track) = &track {
+                        println!("Track:           {track}");
+                    }
+                    if let Some(commit) = &commit {
+                        println!("Commit:          {commit}");
+                    }
+                    if let Some(branch) = &branch {
+                        println!("Branch:          {branch}");
+                    }
+                    if let Some(tests_green) = tests_green {
+                        println!("Tests Green:     {tests_green}");
+                    }
+                    if let Some(lease_id) = &lease_id {
+                        println!("Lease ID:        {lease_id}");
+                    }
 
                     if evolve {
                         println!("--------------------------------------------------");
@@ -4340,6 +4397,21 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                         println!("Timestamp:       {}", ts);
                     }
                     println!("Summary:         {}", view.summary);
+                    if let Some(track) = &view.track {
+                        println!("Track:           {track}");
+                    }
+                    if let Some(commit) = &view.commit {
+                        println!("Commit:          {commit}");
+                    }
+                    if let Some(branch) = &view.branch {
+                        println!("Branch:          {branch}");
+                    }
+                    if let Some(tests_green) = view.tests_green {
+                        println!("Tests Green:     {tests_green}");
+                    }
+                    if let Some(lease_id) = &view.lease_id {
+                        println!("Lease ID:        {lease_id}");
+                    }
                     if !view.next_queue.is_empty() {
                         println!("\nNext Queue:");
                         for item in &view.next_queue {
@@ -4425,6 +4497,82 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                     eprintln!("Error listing sessions: {e}");
                     std::process::exit(1);
                 }
+            }
+        }
+        SessionCommands::Digest {
+            session_id,
+            n,
+            json,
+        } => {
+            let substrate =
+                match Substrate::open_readonly(store_path, Some(&journal_path), default_view()) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("Error opening store at {}: {e}", store_path.display());
+                        std::process::exit(1);
+                    }
+                };
+
+            let mut turns: Vec<SessionTurn> = Vec::new();
+            if let Ok(content) = std::fs::read_to_string(store_path.join("session_log.jsonl")) {
+                for line in content.lines() {
+                    let trimmed = line.trim();
+                    if trimmed.is_empty() {
+                        continue;
+                    }
+                    if let Ok(mut turn) = serde_json::from_str::<SessionTurn>(trimmed) {
+                        turn.superseded_by = None;
+                        turns.push(turn);
+                    }
+                }
+            }
+            let links: Vec<(String, String)> = turns
+                .iter()
+                .filter_map(|turn| {
+                    turn.supersedes
+                        .as_ref()
+                        .map(|prior| (prior.clone(), turn.turn_id.clone()))
+                })
+                .collect();
+            for (prior, new) in links {
+                for turn in turns.iter_mut() {
+                    if turn.turn_id == prior {
+                        turn.superseded_by = Some(new.clone());
+                    }
+                }
+            }
+
+            let effective = session_id.clone().or_else(|| {
+                turns
+                    .iter()
+                    .rev()
+                    .map(|turn| turn.session_id.clone())
+                    .find(|lane| !lane.is_empty())
+            });
+            let label = effective.clone().unwrap_or_else(|| "all".to_string());
+            let mut selected: Vec<SessionTurn> = turns
+                .into_iter()
+                .filter(|turn| !turn.is_start_marker())
+                .filter(|turn| {
+                    effective
+                        .as_deref()
+                        .is_none_or(|lane| turn.session_id == lane)
+                })
+                .filter(|turn| turn.superseded_by.is_none())
+                .collect();
+            if selected.len() > n {
+                selected.drain(..selected.len() - n);
+            }
+            let checkpoint = substrate
+                .session_continuity(effective.as_deref())
+                .ok()
+                .flatten();
+            let (markdown, json_digest) =
+                compose_session_digest(&label, &selected, checkpoint.as_ref());
+            if json {
+                println!("{json_digest}");
+            } else {
+                print!("{markdown}");
             }
         }
     }
@@ -7268,6 +7416,81 @@ mod ingest_meta_tests {
         let meta = parse_ingest_meta(&value).expect("meta present");
         assert_eq!(meta.tags, vec!["a"]);
         assert_eq!(meta.importance, 0.0);
+    }
+}
+
+#[cfg(test)]
+mod session_cli_tests {
+    use super::*;
+
+    #[test]
+    fn digest_and_checkpoint_metadata_flags_parse() {
+        let cli = Cli::try_parse_from([
+            "wm",
+            "session",
+            "digest",
+            "--session-id",
+            "lane",
+            "--n",
+            "5",
+            "--json",
+        ])
+        .expect("parse digest");
+        match cli.command {
+            Commands::Session {
+                command:
+                    SessionCommands::Digest {
+                        session_id,
+                        n,
+                        json,
+                    },
+            } => {
+                assert_eq!(session_id.as_deref(), Some("lane"));
+                assert_eq!(n, 5);
+                assert!(json);
+            }
+            _ => panic!("expected session digest command"),
+        }
+
+        let cli = Cli::try_parse_from([
+            "wm",
+            "session",
+            "checkpoint",
+            "--session-id",
+            "s",
+            "--summary",
+            "x",
+            "--track",
+            "mission-a",
+            "--commit",
+            "abc123",
+            "--branch",
+            "feat/mcp-truth",
+            "--tests-green",
+            "--lease-id",
+            "lease-1",
+        ])
+        .expect("parse checkpoint metadata");
+        match cli.command {
+            Commands::Session {
+                command:
+                    SessionCommands::Checkpoint {
+                        track,
+                        commit,
+                        branch,
+                        tests_green,
+                        lease_id,
+                        ..
+                    },
+            } => {
+                assert_eq!(track.as_deref(), Some("mission-a"));
+                assert_eq!(commit.as_deref(), Some("abc123"));
+                assert_eq!(branch.as_deref(), Some("feat/mcp-truth"));
+                assert_eq!(tests_green, Some(true));
+                assert_eq!(lease_id.as_deref(), Some("lease-1"));
+            }
+            _ => panic!("expected session checkpoint command"),
+        }
     }
 }
 
