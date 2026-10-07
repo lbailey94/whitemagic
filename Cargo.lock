@@ -5003,6 +5003,7 @@ dependencies = [
  "memchr",
  "proptest",
  "rayon",
+ "regex",
  "rlimit",
  "rmp-serde",
  "serde",
