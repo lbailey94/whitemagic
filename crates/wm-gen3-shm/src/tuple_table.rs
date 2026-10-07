@@ -33,6 +33,11 @@ unsafe impl<'a> Sync for ShmTupleTable<'a> {}
 
 impl<'a> ShmTupleTable<'a> {
     /// Format and initialize the tuple table memory.
+    ///
+    /// # Safety
+    ///
+    /// `slots` must point to `count` writable [`ShmTupleSlot`] entries in shared
+    /// memory valid for this process's lifetime.
     pub unsafe fn init(slots: *mut ShmTupleSlot, count: usize) {
         unsafe {
             for i in 0..count {

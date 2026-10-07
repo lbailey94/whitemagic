@@ -930,14 +930,14 @@ impl SyncBundle {
                 .collect();
 
             while current_hashes.len() > 1 {
-                let mut next_level = Vec::with_capacity((current_hashes.len() + 1) / 2);
+                let mut next_level = Vec::with_capacity(current_hashes.len().div_ceil(2));
                 for chunk in current_hashes.chunks(2) {
                     let mut hasher = Sha256::new();
-                    hasher.update(&chunk[0]);
+                    hasher.update(chunk[0]);
                     if chunk.len() > 1 {
-                        hasher.update(&chunk[1]);
+                        hasher.update(chunk[1]);
                     } else {
-                        hasher.update(&chunk[0]);
+                        hasher.update(chunk[0]);
                     }
                     next_level.push(hasher.finalize().into());
                 }
@@ -949,8 +949,8 @@ impl SyncBundle {
 
         let records_root = Self::compute_merkle_root(records);
         let mut hasher = Sha256::new();
-        hasher.update(&records_root);
-        hasher.update(&(receipts.len() as u64).to_le_bytes());
+        hasher.update(records_root);
+        hasher.update((receipts.len() as u64).to_le_bytes());
         for r in receipts {
             hasher.update(r.receipt_id.as_bytes());
             hasher.update(r.workspace_claim_digest.as_bytes());
@@ -958,7 +958,7 @@ impl SyncBundle {
                 hasher.update(s);
             }
         }
-        hasher.update(&(negative_signatures.len() as u64).to_le_bytes());
+        hasher.update((negative_signatures.len() as u64).to_le_bytes());
         for s in negative_signatures {
             hasher.update(s.as_bytes());
         }
@@ -969,13 +969,13 @@ impl SyncBundle {
     pub fn sign_with(&mut self, key: &SigningKey) {
         let mut hasher = Sha256::new();
         hasher.update(self.header.magic.as_bytes());
-        hasher.update(&self.header.timestamp.to_le_bytes());
+        hasher.update(self.header.timestamp.to_le_bytes());
         hasher.update(self.header.author_id.as_bytes());
-        hasher.update(&self.header.author_pubkey);
-        hasher.update(&self.header.from_epoch.to_le_bytes());
-        hasher.update(&self.header.to_epoch.to_le_bytes());
-        hasher.update(&self.header.record_count.to_le_bytes());
-        hasher.update(&self.merkle_root);
+        hasher.update(self.header.author_pubkey);
+        hasher.update(self.header.from_epoch.to_le_bytes());
+        hasher.update(self.header.to_epoch.to_le_bytes());
+        hasher.update(self.header.record_count.to_le_bytes());
+        hasher.update(self.merkle_root);
         let digest = hasher.finalize();
 
         let sig: Signature = key.sign(&digest);
@@ -1025,13 +1025,13 @@ impl SyncBundle {
 
         let mut hasher = Sha256::new();
         hasher.update(self.header.magic.as_bytes());
-        hasher.update(&self.header.timestamp.to_le_bytes());
+        hasher.update(self.header.timestamp.to_le_bytes());
         hasher.update(self.header.author_id.as_bytes());
-        hasher.update(&self.header.author_pubkey);
-        hasher.update(&self.header.from_epoch.to_le_bytes());
-        hasher.update(&self.header.to_epoch.to_le_bytes());
-        hasher.update(&self.header.record_count.to_le_bytes());
-        hasher.update(&self.merkle_root);
+        hasher.update(self.header.author_pubkey);
+        hasher.update(self.header.from_epoch.to_le_bytes());
+        hasher.update(self.header.to_epoch.to_le_bytes());
+        hasher.update(self.header.record_count.to_le_bytes());
+        hasher.update(self.merkle_root);
         let digest = hasher.finalize();
 
         verifying_key
@@ -1227,9 +1227,9 @@ impl SyncBundle {
             let mut hasher = Sha256::new();
             hasher.update(bundle_path_str.as_bytes());
             hasher.update(self.header.author_id.as_bytes());
-            hasher.update(&(migrated_count as u64).to_le_bytes());
-            hasher.update(&(duplicate_skipped as u64).to_le_bytes());
-            hasher.update(&target_epoch.to_le_bytes());
+            hasher.update((migrated_count as u64).to_le_bytes());
+            hasher.update((duplicate_skipped as u64).to_le_bytes());
+            hasher.update(target_epoch.to_le_bytes());
             format!("{:x}", hasher.finalize())
         };
 
@@ -1290,8 +1290,7 @@ pub fn resolve_or_create_mesh_key(store_dir: &Path) -> io::Result<(SigningKey, [
         Ok((signing, pubkey))
     } else {
         let mut bytes = [0u8; 32];
-        getrandom::fill(&mut bytes)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+        getrandom::fill(&mut bytes).map_err(|e| io::Error::other(e.to_string()))?;
         let signing = SigningKey::from_bytes(&bytes);
         let pubkey = signing.verifying_key().to_bytes();
 

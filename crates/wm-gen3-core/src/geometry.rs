@@ -104,6 +104,12 @@ pub struct EuclideanModel {
     pub scale: f64,
 }
 
+impl Default for EuclideanModel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EuclideanModel {
     pub fn new() -> Self {
         Self { scale: 1.0 }
@@ -367,7 +373,7 @@ impl SyntheticWorldGenerator {
                     let angle_v = (v as f64) * std::f64::consts::TAU / (n_nodes as f64);
                     let from = vec![angle_u.cos(), angle_u.sin()];
                     let to = vec![angle_v.cos(), angle_v.sin()];
-                    let diff = (u as i64 - v as i64).abs() as usize;
+                    let diff = (u as i64 - v as i64).unsigned_abs() as usize;
                     let hops = diff.min(n_nodes - diff);
                     let cost = (hops as f64) * 0.40;
                     (from, to, cost)

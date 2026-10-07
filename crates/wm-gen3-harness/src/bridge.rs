@@ -1403,10 +1403,8 @@ fn handle_wm_router(
                         extracted_args["query"] = json!(trimmed);
                     }
                 }
-                "mandala.triage" => {
-                    if extracted_args.get("inquiry").is_none() {
-                        extracted_args["inquiry"] = json!(trimmed);
-                    }
+                "mandala.triage" if extracted_args.get("inquiry").is_none() => {
+                    extracted_args["inquiry"] = json!(trimmed);
                 }
                 _ => {}
             }
@@ -2615,6 +2613,8 @@ fn handle_memory_ingest(
         );
     }
 
+    // Batch-candidate tuple is local to this intake path; a type alias would not add clarity.
+    #[allow(clippy::type_complexity)]
     let mut candidates: Vec<(RememberItem, Option<(Vec<String>, Option<f64>)>)> = Vec::new();
 
     if let Some(items) = args.get("items") {
@@ -4647,14 +4647,13 @@ fn handle_mandala_triage(args: &Value) -> Result<Value, String> {
 
     // Dynamic Homeostatic Throttling:
     // If system is Stressed/Critical, heavy unverified mutations or deep compute are demoted
-    let tier = if regime >= wm_gen3_core::homeostasis::HomeostaticRegime::Critical
+    // Throttled to kekkai to protect hardware longevity.
+    let tier = if (regime >= wm_gen3_core::homeostasis::HomeostaticRegime::Critical
         && base_tier == "direct_execute"
-        && (c > 0.10 || r > 0.10)
-    {
-        "sandboxed_kekkai" // Throttled to kekkai to protect hardware longevity
-    } else if regime >= wm_gen3_core::homeostasis::HomeostaticRegime::Stressed
-        && base_tier == "direct_execute"
-        && c > 0.25
+        && (c > 0.10 || r > 0.10))
+        || (regime >= wm_gen3_core::homeostasis::HomeostaticRegime::Stressed
+            && base_tier == "direct_execute"
+            && c > 0.25)
     {
         "sandboxed_kekkai"
     } else {

@@ -83,32 +83,27 @@ pub fn validate_speculative_fast(
         // 3. Language syntactic heuristics
         match skeleton.language {
             SkeletonLanguage::Python => {
-                if delta.action_type == AstActionType::AddFunction
-                    || delta.action_type == AstActionType::ModifySignature
+                if (delta.action_type == AstActionType::AddFunction
+                    || delta.action_type == AstActionType::ModifySignature)
+                    && !sig.windows(4).any(|w| w == b"def ")
+                    && !sig.windows(6).any(|w| w == b"class ")
                 {
-                    if !sig.windows(4).any(|w| w == b"def ")
-                        && !sig.windows(6).any(|w| w == b"class ")
-                    {
-                        conflicts.push(format!(
-                            "Python signature '{}' missing def/class",
-                            delta.target_symbol
-                        ));
-                    }
+                    conflicts.push(format!(
+                        "Python signature '{}' missing def/class",
+                        delta.target_symbol
+                    ));
                 }
             }
-            SkeletonLanguage::Rust => {
-                if delta.action_type == AstActionType::AddFunction
-                    || delta.action_type == AstActionType::ModifySignature
-                {
-                    if !sig.windows(3).any(|w| w == b"fn ")
-                        && !sig.windows(7).any(|w| w == b"pub fn ")
-                    {
-                        conflicts.push(format!(
-                            "Rust signature '{}' missing fn",
-                            delta.target_symbol
-                        ));
-                    }
-                }
+            SkeletonLanguage::Rust
+                if (delta.action_type == AstActionType::AddFunction
+                    || delta.action_type == AstActionType::ModifySignature)
+                    && !sig.windows(3).any(|w| w == b"fn ")
+                    && !sig.windows(7).any(|w| w == b"pub fn ") =>
+            {
+                conflicts.push(format!(
+                    "Rust signature '{}' missing fn",
+                    delta.target_symbol
+                ));
             }
             _ => {}
         }

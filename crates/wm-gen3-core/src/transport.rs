@@ -236,6 +236,12 @@ pub struct SocketPriorityQueue {
     pub dropped_lane_3_count: u64,
 }
 
+impl Default for SocketPriorityQueue {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SocketPriorityQueue {
     pub fn new() -> Self {
         Self {
@@ -272,10 +278,7 @@ impl SocketPriorityQueue {
                         "Lane 0 total capacity (64) reached".into(),
                     ));
                 }
-                let peer_queue = self
-                    .lane_0_by_peer
-                    .entry(peer.clone())
-                    .or_insert_with(VecDeque::new);
+                let peer_queue = self.lane_0_by_peer.entry(peer.clone()).or_default();
                 if peer_queue.is_empty() {
                     self.lane_0_senders.push_back(peer);
                 }
@@ -1207,10 +1210,10 @@ impl RepresentationTransport {
     #[must_use]
     pub fn estimated_tokens(&self) -> usize {
         match self {
-            Self::Text { text, .. } => (text.len() + 3) / 4,
+            Self::Text { text, .. } => text.len().div_ceil(4),
             Self::StructuredEvent { payload, .. } => {
                 let s = serde_json::to_string(payload).unwrap_or_default();
-                (s.len() + 3) / 4
+                s.len().div_ceil(4)
             }
             Self::Vector { .. } => 0,
             Self::GraphState { nodes, edges } => (nodes.len() + edges.len()) * 6,
@@ -1321,7 +1324,7 @@ impl ContextCacheToken {
         }
 
         let prefix_bytes = canonical_prefix.len();
-        let estimated_tokens = (prefix_bytes + 3) / 4;
+        let estimated_tokens = prefix_bytes.div_ceil(4);
 
         Self {
             cache_hash: hash,

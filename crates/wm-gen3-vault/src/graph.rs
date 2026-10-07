@@ -166,7 +166,7 @@ impl CausalGraphBuilder {
             }
 
             // 4. Extract concept nodes
-            mine_concept_associations(&turn, &mut nodes, &mut edges);
+            mine_concept_associations(turn, &mut nodes, &mut edges);
         }
 
         (nodes, edges)

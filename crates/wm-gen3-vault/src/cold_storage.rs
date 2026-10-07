@@ -258,7 +258,7 @@ impl ColdStorageEngine {
                     // Binary or bulk payload: derive coordinate from path + size + mtime
                     let mut hasher = Sha256::new();
                     hasher.update(path_str.as_bytes());
-                    hasher.update(&size.to_le_bytes());
+                    hasher.update(size.to_le_bytes());
                     let hash_bytes = hasher.finalize();
                     content_hash = format!("{:x}", hash_bytes);
                     coords = compute_6d_coords(&hash_bytes, mtime, &path_str);
@@ -396,33 +396,37 @@ impl ColdStorageEngine {
             let decoder =
                 ZstdDecoder::new(file).map_err(|e| format!("Zstd decoder init failed: {e}"))?;
             let mut tar = TarArchive::new(decoder);
-            for entry_res in tar.entries().map_err(|e| format!("Tar error: {e}"))? {
-                if let Ok(mut entry) = entry_res {
-                    if let Ok(p) = entry.path() {
-                        if p.display().to_string() == path_in_archive {
-                            let mut buf = Vec::new();
-                            entry
-                                .read_to_end(&mut buf)
-                                .map_err(|e| format!("Read entry: {e}"))?;
-                            target_bytes = Some(buf);
-                            break;
-                        }
+            for mut entry in tar
+                .entries()
+                .map_err(|e| format!("Tar error: {e}"))?
+                .flatten()
+            {
+                if let Ok(p) = entry.path() {
+                    if p.display().to_string() == path_in_archive {
+                        let mut buf = Vec::new();
+                        entry
+                            .read_to_end(&mut buf)
+                            .map_err(|e| format!("Read entry: {e}"))?;
+                        target_bytes = Some(buf);
+                        break;
                     }
                 }
             }
         } else {
             let mut tar = TarArchive::new(file);
-            for entry_res in tar.entries().map_err(|e| format!("Tar error: {e}"))? {
-                if let Ok(mut entry) = entry_res {
-                    if let Ok(p) = entry.path() {
-                        if p.display().to_string() == path_in_archive {
-                            let mut buf = Vec::new();
-                            entry
-                                .read_to_end(&mut buf)
-                                .map_err(|e| format!("Read entry: {e}"))?;
-                            target_bytes = Some(buf);
-                            break;
-                        }
+            for mut entry in tar
+                .entries()
+                .map_err(|e| format!("Tar error: {e}"))?
+                .flatten()
+            {
+                if let Ok(p) = entry.path() {
+                    if p.display().to_string() == path_in_archive {
+                        let mut buf = Vec::new();
+                        entry
+                            .read_to_end(&mut buf)
+                            .map_err(|e| format!("Read entry: {e}"))?;
+                        target_bytes = Some(buf);
+                        break;
                     }
                 }
             }

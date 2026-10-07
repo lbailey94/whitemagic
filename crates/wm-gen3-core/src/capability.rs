@@ -247,6 +247,8 @@ impl VerifiedWarrant {
     /// 1. `epistemic_status == EpistemicStatus::Affirmed` (K1 warrant)
     /// 2. `composite_margin >= 0.85` (High utility and success probability)
     /// 3. `estimated_risk <= 0.10` (Low operational risk)
+    // Sealed mint mirrors the warrant fields one-to-one; grouping them would obscure the audit surface.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn mint_from_arbitration(
         _seal: crate::pulse_compiler::CompilerSeal,
         candidate_id: u64,
@@ -354,6 +356,8 @@ impl VerifiedWarrant {
         self.authorized_digest
     }
 
+    // Tuple is the feasibility basis itself; a type alias would just rename the same fields.
+    #[allow(clippy::type_complexity)]
     fn feasibility(&self) -> Option<(OperationId, [u8; 16], u64, [u8; 32], u8)> {
         match &self.basis {
             WarrantBasis::Arbitrated | WarrantBasis::Mandala { .. } => None,
@@ -472,7 +476,6 @@ pub struct CommitCapability {
 
 impl CommitCapability {
     /// Claims a CommitCapability from a valid `VerifiedWarrant`.
-    #[must_use]
     pub fn claim(warrant: VerifiedWarrant) -> Self {
         Self {
             warrant,
@@ -526,7 +529,6 @@ impl CommitCapability {
         self.warrant.mandala_pass_info()
     }
 
-    #[must_use]
     pub fn nullifier_key(&self) -> Result<NullifierKey, CapabilityError> {
         let arbitration = self.warrant.arbitration()?;
         Ok(NullifierKey {
@@ -1018,6 +1020,8 @@ pub mod tests {
 
         // Restore write permissions for cleanup
         let mut perms = std::fs::metadata(&log_path).unwrap().permissions();
+        // Clearing the read-only bit is intentional cleanup before directory removal.
+        #[allow(clippy::permissions_set_readonly_false)]
         perms.set_readonly(false);
         let _ = std::fs::set_permissions(&log_path, perms);
         let _ = std::fs::remove_dir_all(&temp_dir);

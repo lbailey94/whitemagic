@@ -600,6 +600,8 @@ impl StructuralCausalModel {
 
     /// Evaluates an action candidate through Pearl's Layer 2 ($do(X = x)$) and Layer 3 (Counterfactual) inference
     /// to generate an unconfounded, risk-bounded input for the JEV Decision Tensor.
+    // clamp() would propagate NaN where max().min() maps it to 0.0; keep explicit bounds.
+    #[allow(clippy::manual_clamp)]
     pub fn evaluate_action_candidate(
         &self,
         treatment: &str,

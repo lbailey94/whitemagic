@@ -461,7 +461,7 @@ impl HomeostaticController {
     /// the runtime MUST either:
     /// 1. Maintain $K \ge K_{\text{cov}}$ and formally declare the SLA breach, OR
     /// 2. Contract $K$ to satisfy SLA, but explicitly WITHDRAW the coverage claim.
-    /// In both cases, a formal friction event is logged and `silent_violation_committed == false`.
+    ///    In both cases, a formal friction event is logged and `silent_violation_committed == false`.
     #[must_use]
     pub fn arbitrate_sla_vs_coverage(
         &self,
