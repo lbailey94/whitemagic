@@ -2,7 +2,7 @@
 
 **Effective Date**: 2026-08-13
 **Last updated**: 2026-09-18 (optional install funnel disclosed)
-**Version**: 9.3.4
+**Version**: current release (see `wm --version`; version numbers live in the release surfaces, not in this policy)
 
 ## Summary
 
