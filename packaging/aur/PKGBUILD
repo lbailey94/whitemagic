@@ -1,8 +1,10 @@
 # Maintainer: Lucas Bailey <lbailey94@protonmail.com>
 # Prebuilt-binary package; the v10 line is glibc-only (ONNX runtime), so the
-# gnu assets are used. Bump pkgver + both checksums when a stable tag ships.
+# gnu assets are used. AUR pkgver cannot contain hyphens, hence the
+# underscore in prereleases; the release tag uses the dash form. Bump
+# pkgver + both checksums when a new tag ships.
 pkgname=whitemagic-bin
-pkgver=10.2.0
+pkgver=10.2.0_alpha.4
 pkgrel=1
 pkgdesc="Local-first memory, recall, and continuity engine for AI agents (prebuilt)"
 arch=('x86_64' 'aarch64')
@@ -11,11 +13,14 @@ license=('MIT')
 provides=('whitemagic')
 conflicts=('whitemagic')
 options=('!strip')
-source_x86_64=("${pkgname}-${pkgver}-x86_64::https://github.com/lbailey94/whitemagic/releases/download/v${pkgver}/wm-linux-x86_64")
-source_aarch64=("${pkgname}-${pkgver}-aarch64::https://github.com/lbailey94/whitemagic/releases/download/v${pkgver}/wm-linux-aarch64")
-sha256sums_x86_64=('0e7e666552d865c1c2bec9f5761ad449e5fe258d2eff3da65dc3bd85c9af57c5')
-sha256sums_aarch64=('d7b889f24aef0ce43c3818f4e7f7044ec007c923abb17b407b8f2cf620f6ee95')
+_tag="v${pkgver//_/-}"
+source_x86_64=("${pkgname}-${pkgver}-x86_64.gz::https://github.com/lbailey94/whitemagic/releases/download/${_tag}/wm-linux-x86_64.gz")
+source_aarch64=("${pkgname}-${pkgver}-aarch64.gz::https://github.com/lbailey94/whitemagic/releases/download/${_tag}/wm-linux-aarch64.gz")
+sha256sums_x86_64=('d558c7fa67ee68439c1c2dcc55a68e01dd57206ca9614a382822df2cd64dbbed')
+sha256sums_aarch64=('ac749a0bfff2434c165abedc58ce412edb5891ce14449304c087e3a7f27cd0c2')
 
 package() {
-  install -Dm755 "${srcdir}/${pkgname}-${pkgver}-${CARCH}" "${pkgdir}/usr/bin/wm"
+  install -d "${pkgdir}/usr/bin"
+  gzip -dc "${srcdir}/${pkgname}-${pkgver}-${CARCH}.gz" > "${pkgdir}/usr/bin/wm"
+  chmod 755 "${pkgdir}/usr/bin/wm"
 }

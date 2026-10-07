@@ -22,19 +22,20 @@ cd /tmp/whitemagic-bin
 # On an Arch host (or archlinux container): makepkg --printsrcinfo > .SRCINFO
 # — regenerate whenever PKGBUILD changes so the two never drift.
 git add PKGBUILD .SRCINFO
-git commit -m "whitemagic-bin 9.3.4-1"
+git commit -m "whitemagic-bin 10.2.0_alpha.4-1"
 git push origin master
 ```
 
 The AUR runs `makepkg --printsrcinfo` server-side and rejects a mismatched
 `.SRCINFO`, so regenerate it after any PKGBUILD edit.
 
-## Bump on a stable release
+## Bump on a release
 
-1. `pkgver=<new version>`, `pkgrel=1`.
-2. Replace both `sha256sums_*` from the tag's release assets
-   (`wm-linux-x86_64.sha256`, `wm-linux-aarch64.sha256`).
-3. Regenerate `.SRCINFO`, commit, push.
+1. `pkgver=<new version>` (underscore form for prereleases:
+   `v10.2.0-alpha.4` → `10.2.0_alpha.4`), `pkgrel=1`.
+2. Replace both `sha256sums_*` from the tag's `.gz` release assets
+   (`wm-linux-x86_64.gz.sha256`, `wm-linux-aarch64.gz.sha256`).
+3. Regenerate `.SRCINFO` (`makepkg --printsrcinfo > .SRCINFO`), commit, push.
 
 The `wm` binary self-reports the version; smoke it with
 `makepkg -f && pacman -U whitemagic-bin-*.pkg.tar.zst && wm --version`.

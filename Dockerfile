@@ -5,14 +5,16 @@
 # the static musl build on Alpine; the v10 matrix no longer builds musl
 # (5d9b03d). See docs/DOCKER_HUB_RUNBOOK.md.
 #
-#   docker build --build-arg WM_VERSION=v10.0.0-alpha -t whitemagic:alpha .
+#   docker build --build-arg WM_VERSION=v10.2.0-alpha.4 -t whitemagic:alpha .
 #   docker buildx build --platform linux/amd64,linux/arm64 --push \
-#     --build-arg WM_VERSION=v10.0.0-alpha -t whitemagic:alpha .
+#     --build-arg WM_VERSION=v10.2.0-alpha.4 -t whitemagic:alpha .
 #   docker run --rm whitemagic:alpha --version
 ARG UBUNTU_VERSION=24.04
-FROM ubuntu:${UBUNTU_VERSION}
+# Digest pinned 2026-10-06 (multi-arch index digest of ubuntu:24.04); bump
+# together with UBUNTU_VERSION.
+FROM ubuntu:${UBUNTU_VERSION}@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
 
-ARG WM_VERSION=v9.3.4
+ARG WM_VERSION=v10.2.0-alpha.4
 # Explicit arch override for classic `docker build`; with buildx, TARGETARCH
 # is mapped automatically (amd64 -> x86_64, arm64 -> aarch64).
 ARG WM_ARCH=
@@ -50,6 +52,14 @@ RUN set -eu; \
 # Local install-funnel attribution: the binary records `docker` as the
 # arrival channel on-device only (scope 1 — no transport, nothing sent).
 ENV WM_INSTALL_CHANNEL=docker
+ENV HOME=/home/wm
+
+# Run unprivileged: the MCP stdio server needs no root (no package installs,
+# no ports to bind). /workspace stays writable for the memory store.
+RUN useradd --create-home --user-group --shell /usr/sbin/nologin wm \
+    && mkdir -p /workspace \
+    && chown wm:wm /workspace
+USER wm
 
 WORKDIR /workspace
 ENTRYPOINT ["/usr/local/bin/wm"]
