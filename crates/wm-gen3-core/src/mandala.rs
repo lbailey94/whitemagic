@@ -222,7 +222,25 @@ impl CapabilityManifest {
         }
     }
 
-    /// Verifies that a child manifest strictly attenuates (never escalates) this parent manifest.
+    /// Boolean mirror of [`Self::is_allowed`] used for attenuation proofs.
+    ///
+    /// `Include` and `Exclude` both permit exactly `allowed_operations - denied_operations`
+    /// in this implementation; `All` permits everything not explicitly denied.
+    fn permits(&self, operation: &str) -> bool {
+        if self.denied_operations.contains(operation) {
+            return false;
+        }
+        match self.scope_mode {
+            ScopeMode::All => true,
+            ScopeMode::Include | ScopeMode::Exclude => self.allowed_operations.contains(operation),
+        }
+    }
+
+    /// Verifies that a child manifest monotonically attenuates (never escalates) this parent.
+    ///
+    /// Invariant: `Permitted(child) ⊆ Permitted(parent)` for every scope mode, where the
+    /// permitted set of an `Include`/`Exclude` manifest is `allowed_operations` minus
+    /// `denied_operations`, and `All` permits everything not explicitly denied.
     pub fn attenuate(&self, child: &CapabilityManifest) -> Result<(), MandalaError> {
         // Child must be network restricted if parent is network restricted
         if self.network_restricted && !child.network_restricted {
@@ -239,21 +257,24 @@ impl CapabilityManifest {
             )));
         }
 
-        // Parent denials MUST be preserved in child
-        for denied in &self.denied_operations {
-            if child.allowed_operations.contains(denied) {
-                return Err(MandalaError::IllegalForkAttenuation(format!(
-                    "Child cannot allow operation '{denied}' which is denied by parent"
-                )));
-            }
-        }
-
-        // If parent is Include mode, child cannot allow operations outside parent's allowed list
-        if self.scope_mode == ScopeMode::Include {
-            for allowed in &child.allowed_operations {
-                if !self.allowed_operations.contains(allowed) {
+        if self.scope_mode == ScopeMode::All && child.scope_mode == ScopeMode::All {
+            // Both permit the virtual universal set, so the child may only add denials.
+            for denied in &self.denied_operations {
+                if !child.denied_operations.contains(denied) {
                     return Err(MandalaError::IllegalForkAttenuation(format!(
-                        "Child cannot grant operation '{allowed}' outside parent's Include manifest"
+                        "Child All-scope manifest drops parent denial of '{denied}'"
+                    )));
+                }
+            }
+        } else {
+            // Prove each operation the child effectively permits is also permitted by the
+            // parent. This covers Exclude parents, which the previous Include-only subset
+            // check silently allowed to escalate.
+            for op in &child.allowed_operations {
+                if child.permits(op) && !self.permits(op) {
+                    return Err(MandalaError::IllegalForkAttenuation(format!(
+                        "Child permits operation '{op}' which parent {:?} does not permit",
+                        self.scope_mode
                     )));
                 }
             }
@@ -2326,5 +2347,165 @@ mod tests {
                 SandboxEnforcement::NotEnforced
             );
         }
+    }
+
+    fn mk_manifest(mode: ScopeMode, allowed: &[&str], denied: &[&str]) -> CapabilityManifest {
+        CapabilityManifest {
+            scope_mode: mode,
+            allowed_operations: allowed.iter().map(|s| s.to_string()).collect(),
+            denied_operations: denied.iter().map(|s| s.to_string()).collect(),
+            network_restricted: true,
+        }
+    }
+
+    #[test]
+    fn test_exclude_parent_rejects_include_escalation() {
+        let parent = mk_manifest(ScopeMode::Exclude, &["read:data"], &[]);
+        let escalating = mk_manifest(ScopeMode::Include, &["write:data"], &[]);
+        assert!(matches!(
+            parent.attenuate(&escalating).unwrap_err(),
+            MandalaError::IllegalForkAttenuation(_)
+        ));
+        assert!(!parent.permits("write:data"));
+        assert!(escalating.permits("write:data"));
+
+        // End-to-end through fork_child: the child may not gain write the parent lacks.
+        let parent_pass = MandalaPass {
+            pass_id: "pass-exclude-parent".to_string(),
+            slot_id: "slot-exp".to_string(),
+            tenant_id: "tenant-exclude".to_string(),
+            agent_id: "agent-parent".to_string(),
+            principal_id: None,
+            jti: "jti-exclude-parent".to_string(),
+            parent_jti: None,
+            fork_depth: 0,
+            created_at: 1000,
+            expires_at: 2000,
+            budget: PassBudget::default(),
+            manifest: parent.clone(),
+            mandate_ref: None,
+            signature: None,
+        };
+        let child_budget = PassBudget {
+            max_operations: 5,
+            operations_used: 0,
+            max_compute_ms: 1_000,
+            max_memory_mb: 128,
+        };
+        assert!(matches!(
+            parent_pass
+                .fork_child(
+                    "pass-exclude-child",
+                    "slot-ec",
+                    "agent-child",
+                    "jti-ec",
+                    escalating,
+                    child_budget,
+                    1800,
+                    1200,
+                )
+                .unwrap_err(),
+            MandalaError::IllegalForkAttenuation(_)
+        ));
+        assert!(
+            parent_pass
+                .fork_child(
+                    "pass-exclude-child-2",
+                    "slot-ec2",
+                    "agent-child",
+                    "jti-ec2",
+                    mk_manifest(ScopeMode::Include, &["read:data"], &[]),
+                    child_budget,
+                    1800,
+                    1200,
+                )
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn test_exclude_child_widening_permitted_set_rejected() {
+        // Parent permitted set is {read:data} (write is explicitly denied).
+        let parent = mk_manifest(
+            ScopeMode::Exclude,
+            &["read:data", "write:data"],
+            &["write:data"],
+        );
+        // Child excludes less (drops the denial), so its permitted set is a superset.
+        let wider = mk_manifest(ScopeMode::Exclude, &["read:data", "write:data"], &[]);
+        assert!(matches!(
+            parent.attenuate(&wider).unwrap_err(),
+            MandalaError::IllegalForkAttenuation(_)
+        ));
+        assert!(wider.permits("write:data"));
+        assert!(!parent.permits("write:data"));
+
+        // A child that only narrows the permitted set attenuates cleanly.
+        let narrower = mk_manifest(ScopeMode::Exclude, &["read:data"], &[]);
+        assert!(parent.attenuate(&narrower).is_ok());
+    }
+
+    #[test]
+    fn test_all_parent_attenuation_and_denial_preservation() {
+        let parent_all = mk_manifest(ScopeMode::All, &[], &["secret:exfil"]);
+
+        // Parent All -> child Include is fine when the child adds no denied permission.
+        assert!(
+            parent_all
+                .attenuate(&mk_manifest(ScopeMode::Include, &["read:data"], &[]))
+                .is_ok()
+        );
+
+        // Child cannot permit an operation the parent explicitly denies.
+        assert!(matches!(
+            parent_all
+                .attenuate(&mk_manifest(ScopeMode::Include, &["secret:exfil"], &[]))
+                .unwrap_err(),
+            MandalaError::IllegalForkAttenuation(_)
+        ));
+
+        // Child All-scope may not drop the parent's denial.
+        assert!(matches!(
+            parent_all
+                .attenuate(&mk_manifest(ScopeMode::All, &[], &[]))
+                .unwrap_err(),
+            MandalaError::IllegalForkAttenuation(_)
+        ));
+        assert!(
+            parent_all
+                .attenuate(&mk_manifest(ScopeMode::All, &[], &["secret:exfil"]))
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn test_multi_level_attenuation_chains() {
+        // Include chain: each level narrows the permitted set.
+        let root = mk_manifest(ScopeMode::Include, &["a", "b", "c"], &[]);
+        let mid = mk_manifest(ScopeMode::Include, &["a", "b"], &[]);
+        let leaf = mk_manifest(ScopeMode::Include, &["a"], &[]);
+        assert!(root.attenuate(&mid).is_ok());
+        assert!(mid.attenuate(&leaf).is_ok());
+
+        // Escalation at any link in the chain is rejected.
+        let escalated = mk_manifest(ScopeMode::Include, &["a", "d"], &[]);
+        assert!(matches!(
+            mid.attenuate(&escalated).unwrap_err(),
+            MandalaError::IllegalForkAttenuation(_)
+        ));
+
+        // Mixed chain: Exclude root -> narrower Include descendants.
+        let exclude_root = mk_manifest(ScopeMode::Exclude, &["a", "b"], &[]);
+        assert!(
+            exclude_root
+                .attenuate(&mk_manifest(ScopeMode::Include, &["a"], &[]))
+                .is_ok()
+        );
+        assert!(matches!(
+            exclude_root
+                .attenuate(&mk_manifest(ScopeMode::Include, &["c"], &[]))
+                .unwrap_err(),
+            MandalaError::IllegalForkAttenuation(_)
+        ));
     }
 }
