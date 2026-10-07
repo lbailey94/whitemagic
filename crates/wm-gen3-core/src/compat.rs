@@ -310,6 +310,29 @@ impl Gen2Reader {
         Ok(count)
     }
 
+    /// Count rows in a named galaxy DBI without decoding them.
+    ///
+    /// Returns `Ok(None)` when the DBI is absent. Used for non-memory and
+    /// sealed lanes where an exact volume count is needed for accounting but
+    /// per-row decoding is neither safe nor useful.
+    pub fn count_galaxy_db(&self, db_name: &str) -> Result<Option<u64>, CompatError> {
+        let db = match self.env.open_db(Some(db_name)) {
+            Ok(db) => db,
+            Err(lmdb::Error::NotFound) => return Ok(None),
+            Err(e) => return Err(CompatError::Lmdb(e)),
+        };
+        let tx = self.env.begin_ro_txn()?;
+        let mut count = 0u64;
+        {
+            let mut cursor = tx.open_ro_cursor(db)?;
+            for _ in cursor.iter() {
+                count += 1;
+            }
+        }
+        tx.commit()?;
+        Ok(Some(count))
+    }
+
     /// Read a single record by its 16-byte UUID.
     pub fn get_record(&self, id: Uuid) -> Result<Option<Gen2EpisodicRecord>, CompatError> {
         let tx = self.env.begin_ro_txn()?;
@@ -550,6 +573,34 @@ impl Default for MigrationOptions {
     }
 }
 
+/// Per-record-type accounting so no migrated, duplicated, or skipped record is
+/// silent. `skipped` is keyed by normalized reason (for example
+/// `decode_error`, `empty_content`, `non_memory_lane`, `sealed`,
+/// `duplicate_exact`, `noise_class`, `refused_by_kernel`).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct RecordTypeAccounting {
+    #[serde(default)]
+    pub migrated: usize,
+    #[serde(default)]
+    pub duplicates: usize,
+    #[serde(default)]
+    pub skipped: BTreeMap<String, usize>,
+}
+
+impl RecordTypeAccounting {
+    fn migrate(&mut self) {
+        self.migrated += 1;
+    }
+
+    fn duplicate(&mut self) {
+        self.duplicates += 1;
+    }
+
+    fn skip(&mut self, reason: &str) {
+        *self.skipped.entry(reason.to_string()).or_default() += 1;
+    }
+}
+
 /// Cryptographically verifiable receipt certifying a migration execution.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MigrationReceipt {
@@ -562,6 +613,27 @@ pub struct MigrationReceipt {
     pub target_epoch: u64,
     pub timestamp: DateTime<Utc>,
     pub receipt_digest: String,
+    /// v9 galaxy-substrate rows scanned (decoded + undecodable), across all
+    /// discovered galaxy DBIs. Reported separately from the episodic
+    /// `total_scanned` aggregate to preserve the historical receipt contract.
+    #[serde(default)]
+    pub galaxy_total_scanned: usize,
+    /// v9 galaxy rows newly ingested into Gen3 galaxies.
+    #[serde(default)]
+    pub galaxy_migrated: usize,
+    /// v9 galaxy rows already present (exact-content dedupe).
+    #[serde(default)]
+    pub galaxy_duplicates: usize,
+    /// v9 galaxy rows a best-effort decoder could not read (quarantined).
+    #[serde(default)]
+    pub galaxy_decode_skipped: usize,
+    /// v9 galaxy rows quarantined after decode (refusals, noise, emptiness).
+    #[serde(default)]
+    pub galaxy_quarantined: usize,
+    /// Per-type migrated/duplicate/skip accounting. Episodic records appear as
+    /// `episodic:<kind>`; galaxy rows as `galaxy:<v9-dbi>`.
+    #[serde(default)]
+    pub by_record_type: BTreeMap<String, RecordTypeAccounting>,
 }
 
 impl MigrationReceipt {
@@ -610,6 +682,14 @@ pub fn migrate_gen2_to_gen3(
 }
 
 /// Migrate a legacy Gen2 LMDB store into a Gen3 Substrate using an explicitly provided intake authority.
+///
+/// Migrates both the v6 episodic lane (`episodic_records`) and every v9 galaxy
+/// DBI discovered through [`GEN2_GALAXY_DBS`]. Galaxy rows are routed to their
+/// Gen3 destination via [`gen3_galaxy_for_gen2_db`] using the canonical
+/// `corpus:<galaxy>:<tags>` source convention, with the original v9 DBI kept
+/// as a `v9db:<name>` tag. The migration is additive and idempotent: exact
+/// content/source dedupe makes reruns no-ops, and undecodable galaxy rows are
+/// quarantined with per-type accounting instead of being silently dropped.
 pub fn migrate_gen2_to_gen3_with_authority(
     reader: &Gen2Reader,
     substrate: &mut Substrate,
@@ -630,33 +710,43 @@ pub fn migrate_gen2_to_gen3_with_authority(
 
     let mut migrated_count = 0;
     let mut duplicate_skipped = 0;
+    let mut by_record_type: BTreeMap<String, RecordTypeAccounting> = BTreeMap::new();
 
     substrate.set_intake_authority(authority);
 
     for chunk in valid_records.chunks(options.batch_size.max(1)) {
         let items: Vec<RememberItem> = chunk.iter().map(|r| r.to_remember_item()).collect();
         if options.dry_run {
-            for item in &items {
+            for (idx, item) in items.iter().enumerate() {
                 let kind_tag = crate::ops::kind_tag(item.kind);
                 let key = crate::ops::identity_key(&item.content, &item.source, kind_tag);
+                let acct = by_record_type
+                    .entry(format!("episodic:{}", chunk[idx].kind))
+                    .or_default();
                 if substrate.identity_map().contains_key(&key) {
                     duplicate_skipped += 1;
+                    acct.duplicate();
                 } else {
                     migrated_count += 1;
+                    acct.migrate();
                 }
             }
         } else {
             let outcomes = substrate.remember_batch(&items);
             for (idx, outcome) in outcomes.into_iter().enumerate() {
+                let orig = &chunk[idx];
+                let acct = by_record_type
+                    .entry(format!("episodic:{}", orig.kind))
+                    .or_default();
                 match outcome {
                     Ok(record_id) => {
                         migrated_count += 1;
-                        let orig = &chunk[idx];
+                        acct.migrate();
                         substrate.bind_uuid(orig.id, record_id);
                     }
                     Err(err) if err == "duplicate_exact" => {
                         duplicate_skipped += 1;
-                        let orig = &chunk[idx];
+                        acct.duplicate();
                         let kind_tag = crate::ops::kind_tag(items[idx].kind);
                         let key = crate::ops::identity_key(
                             &items[idx].content,
@@ -668,13 +758,131 @@ pub fn migrate_gen2_to_gen3_with_authority(
                         }
                     }
                     Err(err) => {
-                        let orig = &chunk[idx];
+                        acct.skip(if err == "noise_class" {
+                            "noise_class"
+                        } else {
+                            "refused_by_kernel"
+                        });
                         quarantined.push(QuarantinedGen2Record {
                             raw_key_hex: orig.id.as_hyphenated().to_string(),
                             raw_val_len: orig.content.len(),
                             reason: format!("RefusedByKernel: {err}"),
                             timestamp: Utc::now(),
                         });
+                    }
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // v9 galaxy DBI ingestion (additive; per-DB accounting; idempotent).
+    // ------------------------------------------------------------------
+    let mut galaxy_total_scanned = 0usize;
+    let mut galaxy_migrated = 0usize;
+    let mut galaxy_duplicates = 0usize;
+    let mut galaxy_decode_skipped = 0usize;
+    let mut galaxy_quarantined = 0usize;
+
+    for db in GEN2_GALAXY_DBS {
+        let acct_key = format!("galaxy:{db}");
+        if !is_memory_galaxy_db(db) {
+            if let Some(count) = reader.count_galaxy_db(db)? {
+                galaxy_total_scanned += count as usize;
+                let acct = by_record_type.entry(acct_key).or_default();
+                *acct
+                    .skipped
+                    .entry("non_memory_lane".to_string())
+                    .or_default() += count as usize;
+            }
+            continue;
+        }
+
+        let scan = match reader.scan_galaxy_db(db, None) {
+            Ok(scan) => scan,
+            Err(CompatError::Msg(msg)) if msg.starts_with("sealed") => {
+                let count = reader.count_galaxy_db(db)?.unwrap_or(0) as usize;
+                galaxy_total_scanned += count;
+                let acct = by_record_type.entry(acct_key).or_default();
+                *acct.skipped.entry("sealed".to_string()).or_default() += count;
+                continue;
+            }
+            Err(err) => {
+                let acct = by_record_type.entry(acct_key).or_default();
+                acct.skip("scan_error");
+                quarantined.push(QuarantinedGen2Record {
+                    raw_key_hex: format!("<{db}>"),
+                    raw_val_len: 0,
+                    reason: format!("GalaxyScanError[{db}]: {err}"),
+                    timestamp: Utc::now(),
+                });
+                continue;
+            }
+        };
+
+        galaxy_total_scanned += scan.records.len() + scan.decode_skipped;
+        galaxy_decode_skipped += scan.decode_skipped;
+        galaxy_quarantined += scan.decode_skipped;
+        {
+            let acct = by_record_type.entry(acct_key.clone()).or_default();
+            if scan.decode_skipped > 0 {
+                *acct.skipped.entry("decode_error".to_string()).or_default() += scan.decode_skipped;
+            }
+        }
+        quarantined.extend(scan.quarantined);
+
+        for chunk in scan.records.chunks(options.batch_size.max(1)) {
+            let items: Vec<RememberItem> = chunk.iter().map(galaxy_record_to_item).collect();
+            let acct = by_record_type.entry(acct_key.clone()).or_default();
+            if options.dry_run {
+                for item in &items {
+                    let kind_tag = crate::ops::kind_tag(item.kind);
+                    let key = crate::ops::identity_key(&item.content, &item.source, kind_tag);
+                    if substrate.identity_map().contains_key(&key) {
+                        galaxy_duplicates += 1;
+                        acct.duplicate();
+                    } else {
+                        galaxy_migrated += 1;
+                        acct.migrate();
+                    }
+                }
+            } else {
+                let outcomes = substrate.remember_batch(&items);
+                for (idx, outcome) in outcomes.into_iter().enumerate() {
+                    let orig = &chunk[idx];
+                    match outcome {
+                        Ok(record_id) => {
+                            galaxy_migrated += 1;
+                            acct.migrate();
+                            substrate.bind_uuid(orig.id, record_id);
+                        }
+                        Err(err) if err == "duplicate_exact" => {
+                            galaxy_duplicates += 1;
+                            acct.duplicate();
+                            let kind_tag = crate::ops::kind_tag(items[idx].kind);
+                            let key = crate::ops::identity_key(
+                                &items[idx].content,
+                                &items[idx].source,
+                                kind_tag,
+                            );
+                            if let Some(&existing_id) = substrate.identity_map().get(&key) {
+                                substrate.bind_uuid(orig.id, existing_id);
+                            }
+                        }
+                        Err(err) => {
+                            galaxy_quarantined += 1;
+                            acct.skip(if err == "noise_class" {
+                                "noise_class"
+                            } else {
+                                "refused_by_kernel"
+                            });
+                            quarantined.push(QuarantinedGen2Record {
+                                raw_key_hex: orig.id.as_hyphenated().to_string(),
+                                raw_val_len: orig.content.len(),
+                                reason: format!("RefusedByKernel[{db}]: {err}"),
+                                timestamp: Utc::now(),
+                            });
+                        }
                     }
                 }
             }
@@ -729,7 +937,97 @@ pub fn migrate_gen2_to_gen3_with_authority(
         target_epoch,
         timestamp: now,
         receipt_digest: digest,
+        galaxy_total_scanned,
+        galaxy_migrated,
+        galaxy_duplicates,
+        galaxy_decode_skipped,
+        galaxy_quarantined,
+        by_record_type,
     })
+}
+
+/// Project one v9 galaxy record onto a Gen3 `RememberItem`, routed through the
+/// canonical `corpus:<gen3-galaxy>:<tags>` source convention.
+fn galaxy_record_to_item(record: &Gen2GalaxyRecord) -> RememberItem {
+    let galaxy = gen3_galaxy_for_gen2_db(&record.db);
+    let mut tags: Vec<String> = record
+        .tags
+        .iter()
+        .map(|t| t.trim().to_string())
+        .filter(|t| !t.is_empty())
+        .collect();
+    tags.push(format!("v9db:{}", record.db));
+    RememberItem {
+        content: record.content.clone(),
+        source: format!("corpus:{galaxy}:{}", tags.join(",")),
+        kind: ImportKind::Reported,
+    }
+}
+
+/// Map a v9 galaxy sub-database name to its Gen3 destination galaxy.
+///
+/// Gen3 decodes the destination from a record's `source` using the canonical
+/// `corpus:<galaxy>:<tags>` convention (`starter_galaxy::extract_galaxy_from_source`),
+/// so migration writes `corpus:<mapped>:<tags>,v9db:<original>`. The `v9db:`
+/// tag keeps the provenance of the original lane visible even when it is
+/// normalized away.
+///
+/// Mapping table (everything unmapped defaults to `codex`):
+///
+/// | v9 DBI      | Gen3 galaxy | rationale                                        |
+/// |-------------|-------------|--------------------------------------------------|
+/// | `codex`     | `codex`     | canonical long-term store                        |
+/// | `journals`  | `journals`  | journaling lane has a natural Gen3 counterpart   |
+/// | `dreams`    | `dreams`    | dream-cycle artifacts stay together              |
+/// | `research`  | `research`  | research lane has a natural Gen3 counterpart     |
+/// | `sessions`  | `sessions`  | session evidence stays addressable per session   |
+/// | `universal` | `universal` | shared foundational corpus                       |
+/// | `tutorial`  | `guide`     | v9 tutorial content is the Gen3 starter guide    |
+/// | `substrate` | `codex`     | v9-internal substrate lane folds into `codex`    |
+/// | `aria`      | `codex`     | v9-only feeling-tone lane folds into `codex`     |
+/// | `citta`     | `codex`     | v9-only mental-factor lane folds into `codex`    |
+///
+/// Infrastructure lanes carried in `GEN2_GALAXY_DBS` but not memory-bearing
+/// (`associations`, `embeddings`, `karma`, `dharma`, `valkyrie`, `receipts`)
+/// are recorded under `non_memory_lane` accounting rather than being force-
+/// decoded as memories; see [`is_memory_galaxy_db`].
+#[must_use]
+pub fn gen3_galaxy_for_gen2_db(db: &str) -> &'static str {
+    match db {
+        "codex" => "codex",
+        "journals" => "journals",
+        "dreams" => "dreams",
+        "research" => "research",
+        "sessions" => "sessions",
+        "universal" => "universal",
+        "tutorial" => "guide",
+        "substrate" | "aria" | "citta" => "codex",
+        _ => "codex",
+    }
+}
+
+/// Whether a v9 galaxy DBI is expected to contain `Memory` wrapper records.
+///
+/// The declared non-memory lanes are counted with an explicit
+/// `non_memory_lane` skip reason and are never decoded as memories, which
+/// keeps multi-million-row infrastructure tables (e.g. `karma`) from being
+/// quarantined row-by-row.
+#[must_use]
+pub fn is_memory_galaxy_db(db: &str) -> bool {
+    matches!(
+        db,
+        "aria"
+            | "citta"
+            | "codex"
+            | "dreams"
+            | "journals"
+            | "research"
+            | "sessions"
+            | "substrate"
+            | "telemetry"
+            | "tutorial"
+            | "universal"
+    )
 }
 
 /// Known v9-era galaxy LMDB sub-databases (`Galaxy::db_name()` vocabulary).
@@ -778,6 +1076,14 @@ struct V9MetadataLite {
     model_exclude: bool,
     #[serde(default)]
     is_private: bool,
+    #[serde(default)]
+    source: Option<String>,
+    #[serde(default)]
+    agent_id: Option<String>,
+    #[serde(default)]
+    title: Option<String>,
+    #[serde(default)]
+    topic: Option<String>,
 }
 
 /// Accept a UUID encoded either as msgpack bytes (non-human-readable v9
@@ -812,39 +1118,81 @@ struct V9LegacyMemory {
     _embedding: Option<serde::de::IgnoredAny>,
 }
 
-#[derive(Deserialize)]
-#[allow(dead_code)]
+/// Frozen pre-`70495ef` positional metadata schema, ported from the v9 codec's
+/// `LegacyMemory`. Fields are read by fixed position; later v9 stores appended
+/// two extra trailing fields, so the visitor drains any remainder instead of
+/// failing on a sequence longer than the frozen 30. The exact order is
+/// load-bearing and must not be edited.
 struct V9LegacyMetadata {
     id: Uuid,
-    _galaxy: serde::de::IgnoredAny,
-    _content_hash: serde::de::IgnoredAny,
     tags: Vec<String>,
-    _importance: serde::de::IgnoredAny,
-    _created_at: serde::de::IgnoredAny,
-    _accessed_at: serde::de::IgnoredAny,
-    _access_count: serde::de::IgnoredAny,
-    _coords: serde::de::IgnoredAny,
-    _coord5d: serde::de::IgnoredAny,
-    _memory_type: serde::de::IgnoredAny,
-    _neuro_score: serde::de::IgnoredAny,
-    _novelty_score: serde::de::IgnoredAny,
-    _emotional_valence: serde::de::IgnoredAny,
-    _emotional_weight: serde::de::IgnoredAny,
-    _is_protected: serde::de::IgnoredAny,
+    importance: f32,
+    created_at: Option<String>,
     is_private: bool,
     model_exclude: bool,
-    _source: serde::de::IgnoredAny,
-    _source_trust: serde::de::IgnoredAny,
-    _half_life_days: serde::de::IgnoredAny,
-    _recall_count: serde::de::IgnoredAny,
-    _version: serde::de::IgnoredAny,
-    _agent_id: serde::de::IgnoredAny,
-    _title: serde::de::IgnoredAny,
-    _topic: serde::de::IgnoredAny,
-    _tier: serde::de::IgnoredAny,
-    _class: serde::de::IgnoredAny,
-    _dup_count: serde::de::IgnoredAny,
-    _revision_count: serde::de::IgnoredAny,
+    source: Option<String>,
+    agent_id: Option<String>,
+    title: Option<String>,
+    topic: Option<String>,
+}
+
+impl<'de> Deserialize<'de> for V9LegacyMetadata {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct LegacyVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for LegacyVisitor {
+            type Value = V9LegacyMetadata;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "a v9 legacy positional metadata array (>= 30 fields)")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                use serde::de::Error as _;
+                let id: Uuid = seq
+                    .next_element::<Uuid>()?
+                    .ok_or_else(|| A::Error::invalid_length(0, &self))?;
+                let _galaxy = seq.next_element::<serde::de::IgnoredAny>()?;
+                let _content_hash = seq.next_element::<serde::de::IgnoredAny>()?;
+                let tags = seq.next_element::<Vec<String>>()?.unwrap_or_default();
+                let importance = seq.next_element::<f32>()?.unwrap_or(0.0);
+                let created_at = seq.next_element::<Option<String>>()?.flatten();
+                for _ in 0..10 {
+                    seq.next_element::<serde::de::IgnoredAny>()?;
+                }
+                let is_private = seq.next_element::<bool>()?.unwrap_or(false);
+                let model_exclude = seq.next_element::<bool>()?.unwrap_or(false);
+                let source = seq.next_element::<Option<String>>()?.flatten();
+                for _ in 0..4 {
+                    seq.next_element::<serde::de::IgnoredAny>()?;
+                }
+                let agent_id = seq.next_element::<Option<String>>()?.flatten();
+                let title = seq.next_element::<Option<String>>()?.flatten();
+                let topic = seq.next_element::<Option<String>>()?.flatten();
+                while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                Ok(V9LegacyMetadata {
+                    id,
+                    tags,
+                    importance,
+                    created_at,
+                    is_private,
+                    model_exclude,
+                    source,
+                    agent_id,
+                    title,
+                    topic,
+                })
+            }
+        }
+
+        deserializer.deserialize_seq(LegacyVisitor)
+    }
 }
 
 /// One decoded v9 galaxy record (extracted fields; unknown v9 fields skipped).
@@ -858,14 +1206,25 @@ pub struct Gen2GalaxyRecord {
     pub importance: f32,
     pub is_private: bool,
     pub model_exclude: bool,
+    #[serde(default)]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub agent_id: Option<String>,
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub topic: Option<String>,
 }
 
 /// A galaxy scan: decoded records plus the count of undecodable records
-/// (legacy positional encodings outside the named-field schema).
+/// (legacy positional encodings outside the named-field schema) and the
+/// forensic quarantine rows for those undecodable records.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Gen2GalaxyScan {
     pub records: Vec<Gen2GalaxyRecord>,
     pub decode_skipped: usize,
+    #[serde(default)]
+    pub quarantined: Vec<QuarantinedGen2Record>,
 }
 
 /// One v9 `session_turn` record (parsed from a Sessions-galaxy record body).
@@ -897,6 +1256,45 @@ fn default_turn_role() -> String {
     "user".to_string()
 }
 
+/// One decoded v9 session-galaxy record of any accepted type.
+///
+/// `record_type` is the normalized Gen3 lane (`session_turn`, `session_start`,
+/// `checkpoint`, `session_end`, `message`); `source_type` preserves the
+/// literal v9 `type` string (empty when the payload was untyped or raw text).
+/// `record_id` is the stable v9 LMDB record UUID, used for exact idempotence
+/// and as the session-lane fallback when the payload carries no session id.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Gen2SessionRecord {
+    pub record_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub tags: Vec<String>,
+    pub record_type: String,
+    pub source_type: String,
+    pub session_id: String,
+    pub sequence: u64,
+    pub role: String,
+    pub turn_id: String,
+    pub content: String,
+    pub parsed: Option<serde_json::Value>,
+    pub timestamp: u64,
+    pub importance: f64,
+    pub track: Option<String>,
+    pub encoding: String,
+}
+
+/// Normalize a v9 session payload `type` into a Gen3 session lane. Unknown
+/// typed payloads are preserved as `message` (their literal type survives in
+/// [`Gen2SessionRecord::source_type`]) so nothing is silently dropped.
+fn normalize_session_type(raw: &str) -> &'static str {
+    match raw {
+        "session_turn" | "turn" => "session_turn",
+        "session_start" | "start" => "session_start",
+        "checkpoint" | "session_checkpoint" | "session_summary" | "summary" => "checkpoint",
+        "session_end" | "session_close" => "session_end",
+        _ => "message",
+    }
+}
+
 /// Receipt for a v9 session-turn migration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionMigrationReceipt {
@@ -910,6 +1308,17 @@ pub struct SessionMigrationReceipt {
     pub sessions: usize,
     pub timestamp: DateTime<Utc>,
     pub receipt_digest: String,
+    /// Per-lane migrated/duplicate/skip accounting (`session_turn`,
+    /// `session_start`, `checkpoint`, `session_end`, `message`).
+    #[serde(default)]
+    pub by_type: BTreeMap<String, RecordTypeAccounting>,
+    /// Aggregate skip reasons across every lane.
+    #[serde(default)]
+    pub skipped_by_reason: BTreeMap<String, usize>,
+    /// Path of the forensic quarantine log for undecodable session rows, when
+    /// any were written.
+    #[serde(default)]
+    pub quarantine_log: Option<PathBuf>,
 }
 
 impl SessionMigrationReceipt {
@@ -961,6 +1370,7 @@ impl Gen2Reader {
                 return Ok(Gen2GalaxyScan {
                     records: Vec::new(),
                     decode_skipped: 0,
+                    quarantined: Vec::new(),
                 });
             }
             Err(e) => return Err(CompatError::Lmdb(e)),
@@ -968,7 +1378,7 @@ impl Gen2Reader {
 
         let tx = self.env.begin_ro_txn()?;
         let mut records = Vec::new();
-        let mut decode_skipped = 0usize;
+        let mut quarantined: Vec<QuarantinedGen2Record> = Vec::new();
         let mut sealed = false;
         let max = limit.unwrap_or(usize::MAX);
         {
@@ -983,7 +1393,12 @@ impl Gen2Reader {
                 }
                 match decode_galaxy_record(db_name, key, val) {
                     Ok(record) => records.push(record),
-                    Err(_) => decode_skipped += 1,
+                    Err(e) => quarantined.push(QuarantinedGen2Record {
+                        raw_key_hex: bytes_to_hex(key),
+                        raw_val_len: val.len(),
+                        reason: format!("GalaxyDecodeError[{db_name}]: {e}"),
+                        timestamp: Utc::now(),
+                    }),
                 }
             }
         }
@@ -996,7 +1411,8 @@ impl Gen2Reader {
         }
         Ok(Gen2GalaxyScan {
             records,
-            decode_skipped,
+            decode_skipped: quarantined.len(),
+            quarantined,
         })
     }
 
@@ -1008,11 +1424,13 @@ impl Gen2Reader {
         let mut all = Gen2GalaxyScan {
             records: Vec::new(),
             decode_skipped: 0,
+            quarantined: Vec::new(),
         };
         for db in GEN2_GALAXY_DBS {
             let scan = self.scan_galaxy_db(db, limit_per_db)?;
             all.records.extend(scan.records);
             all.decode_skipped += scan.decode_skipped;
+            all.quarantined.extend(scan.quarantined);
         }
         Ok(all)
     }
@@ -1046,6 +1464,121 @@ impl Gen2Reader {
         });
         Ok((turns, skipped))
     }
+
+    /// Parse every accepted v9 session record from the Sessions galaxy.
+    ///
+    /// Accepts `session_turn`, `session_start`, `checkpoint`/`session_summary`,
+    /// `session_end`, and `message` payloads (typed JSON), plus untyped JSON
+    /// and raw-text rows as best-effort `message` records. Rows that cannot be
+    /// decoded at all are returned as forensic quarantine entries instead of
+    /// aborting the scan. Records sort by (timestamp, session_id, sequence) so
+    /// replay order is stable even when records were written concurrently.
+    ///
+    /// Returns `(records, quarantine)`; `quarantine.len()` is the count of
+    /// undecodable rows.
+    pub fn session_records(
+        &self,
+    ) -> Result<(Vec<Gen2SessionRecord>, Vec<QuarantinedGen2Record>), CompatError> {
+        let scan = self.scan_galaxy_db("sessions", None)?;
+        let mut quarantined = scan.quarantined;
+        let mut records = Vec::new();
+
+        for wrapper in scan.records {
+            if wrapper.content.trim().is_empty() {
+                quarantined.push(QuarantinedGen2Record {
+                    raw_key_hex: wrapper.id.as_hyphenated().to_string(),
+                    raw_val_len: wrapper.content.len(),
+                    reason: format!("EmptySessionContent[{}]", wrapper.db),
+                    timestamp: Utc::now(),
+                });
+                continue;
+            }
+
+            let parsed = serde_json::from_str::<serde_json::Value>(&wrapper.content).ok();
+            let object = parsed.as_ref().and_then(|v| v.as_object());
+            let source_type = object
+                .and_then(|o| o.get("type"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            let record_type = normalize_session_type(&source_type);
+            let encoding = if parsed.is_some() { "json" } else { "text" };
+
+            let string_field = |key: &str| -> Option<String> {
+                object
+                    .and_then(|o| o.get(key))
+                    .and_then(|v| v.as_str())
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(str::to_string)
+            };
+
+            let session_id = string_field("session_id")
+                .or_else(|| string_field("session"))
+                .or_else(|| string_field("id"))
+                .or_else(|| string_field("cascadeId"))
+                .unwrap_or_else(|| wrapper.id.as_hyphenated().to_string());
+
+            let turn_id =
+                string_field("turn_id").unwrap_or_else(|| wrapper.id.as_hyphenated().to_string());
+
+            let mut timestamp = object
+                .and_then(|o| o.get("timestamp"))
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0);
+            // v9 mixed seconds and milliseconds; normalize ms to seconds.
+            if timestamp > 100_000_000_000 {
+                timestamp /= 1000;
+            }
+            if timestamp == 0 {
+                timestamp = wrapper.created_at.timestamp().max(0) as u64;
+            }
+
+            let sequence = object
+                .and_then(|o| o.get("sequence"))
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0);
+
+            let role = string_field("role").unwrap_or_else(|| match record_type {
+                "session_start" | "checkpoint" | "session_end" => "system".to_string(),
+                _ => "user".to_string(),
+            });
+
+            let importance = object
+                .and_then(|o| o.get("importance"))
+                .and_then(serde_json::Value::as_f64)
+                .unwrap_or(wrapper.importance as f64);
+
+            let track = string_field("track");
+
+            records.push(Gen2SessionRecord {
+                record_id: wrapper.id,
+                created_at: wrapper.created_at,
+                tags: wrapper.tags,
+                record_type: record_type.to_string(),
+                source_type,
+                session_id,
+                sequence,
+                role,
+                turn_id,
+                content: wrapper.content,
+                parsed,
+                timestamp,
+                importance,
+                track,
+                encoding: encoding.to_string(),
+            });
+        }
+
+        records.sort_by(|a, b| {
+            a.timestamp
+                .cmp(&b.timestamp)
+                .then_with(|| a.session_id.cmp(&b.session_id))
+                .then_with(|| a.sequence.cmp(&b.sequence))
+        });
+        Ok((records, quarantined))
+    }
 }
 
 fn decode_galaxy_record(
@@ -1053,19 +1586,35 @@ fn decode_galaxy_record(
     key: &[u8],
     value: &[u8],
 ) -> Result<Gen2GalaxyRecord, CompatError> {
-    // Legacy positional layout: fixarray(3), array16(30) — the exact prefix the
-    // v9 codec's fallback keys on. Modern writes are named maps.
-    if value.starts_with(&[0x93, 0xdc, 0, 30]) {
+    // Legacy positional layout: fixarray(3) whose first element is an array of
+    // metadata fields (30 in the frozen schema, 32 in later v9 stores) —
+    // array16/array32 msgpack headers. Modern writes are named maps.
+    if value.starts_with(&[0x93, 0xdc]) || value.starts_with(&[0x93, 0xdd]) {
         let legacy: V9LegacyMemory = rmp_serde::from_slice(value)?;
+        if legacy.content.trim().is_empty() {
+            return Err(CompatError::Msg(format!(
+                "legacy galaxy record in '{db_name}' has empty content"
+            )));
+        }
+        let created_at = legacy
+            .metadata
+            .created_at
+            .as_deref()
+            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+            .map_or_else(Utc::now, |d| d.with_timezone(&Utc));
         return Ok(Gen2GalaxyRecord {
             db: db_name.to_string(),
             id: legacy.metadata.id,
             content: legacy.content,
-            created_at: Utc::now(),
+            created_at,
             tags: legacy.metadata.tags,
-            importance: 0.5,
+            importance: legacy.metadata.importance,
             is_private: legacy.metadata.is_private,
             model_exclude: legacy.metadata.model_exclude,
+            source: legacy.metadata.source,
+            agent_id: legacy.metadata.agent_id,
+            title: legacy.metadata.title,
+            topic: legacy.metadata.topic,
         });
     }
 
@@ -1084,6 +1633,12 @@ fn decode_galaxy_record(
             ))
         })?;
 
+    if lite.content.trim().is_empty() {
+        return Err(CompatError::Msg(format!(
+            "galaxy record in '{db_name}' has empty content"
+        )));
+    }
+
     let created_at = lite
         .metadata
         .created_at
@@ -1100,24 +1655,37 @@ fn decode_galaxy_record(
         importance: lite.metadata.importance,
         is_private: lite.metadata.is_private,
         model_exclude: lite.metadata.model_exclude,
+        source: lite.metadata.source,
+        agent_id: lite.metadata.agent_id,
+        title: lite.metadata.title,
+        topic: lite.metadata.topic,
     })
 }
 
-/// Migrate v9 session turns into a Gen3 store's `session_log.jsonl` — the
+/// Migrate v9 session records into a Gen3 store's `session_log.jsonl` — the
 /// source of truth for Gen3 `session.continuity` and `session.recall`.
+///
+/// Accepts `session_turn`, `session_start`, `checkpoint`/`session_summary`,
+/// `session_end`, and `message` payloads. Untyped JSON and raw-text rows are
+/// preserved as best-effort `message` records keyed by their stable v9 record
+/// UUID, so nothing is dropped without accounting. Every lane is counted in
+/// [`SessionMigrationReceipt::by_type`]; undecodable rows are written to
+/// `session_quarantine.jsonl` next to the log.
 ///
 /// Read-only over the legacy store; idempotent via (turn_id) and
 /// (session_id, sequence) keys. Substrate evidence ingestion of migrated
-/// turns is intentionally not part of this path: continuity/recall read the
-/// log directly, and ingesting tens of thousands of evidence records is a
-/// separate, resumable batch job (exact-content dedupe makes it re-runnable).
+/// records is intentionally not part of this path: continuity/recall read the
+/// log directly, and the galaxy-DBI path ingests the Sessions DBI into the
+/// Substrate separately.
 pub fn migrate_gen2_sessions_to_gen3(
     reader: &Gen2Reader,
     session_log_path: &Path,
 ) -> Result<SessionMigrationReceipt, CompatError> {
     use std::collections::{BTreeSet, HashSet};
 
-    let (turns, decode_skipped) = reader.session_turns()?;
+    let (records, quarantined_rows) = reader.session_records()?;
+    let decode_skipped = quarantined_rows.len();
+    let total_records = records.len();
 
     let mut existing: HashSet<String> = HashSet::new();
     if let Ok(content) = std::fs::read_to_string(session_log_path) {
@@ -1127,10 +1695,19 @@ pub fn migrate_gen2_sessions_to_gen3(
                     .get("session_id")
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
-                let seq = value.get("sequence").and_then(|v| v.as_u64()).unwrap_or(0);
                 let tid = value.get("turn_id").and_then(|v| v.as_str()).unwrap_or("");
                 existing.insert(format!("id:{tid}"));
-                existing.insert(format!("seq:{sid}:{seq}"));
+                // Only turns carry a meaningful (session_id, sequence) key;
+                // legacy entries without an explicit `type` are turns.
+                let is_turn = value
+                    .get("type")
+                    .and_then(|v| v.as_str())
+                    .is_none_or(|t| t == "session_turn");
+                if is_turn {
+                    if let Some(seq) = value.get("sequence").and_then(|v| v.as_u64()) {
+                        existing.insert(format!("seq:{sid}:{seq}"));
+                    }
+                }
             }
         }
     }
@@ -1140,39 +1717,71 @@ pub fn migrate_gen2_sessions_to_gen3(
     let mut duplicates_skipped = 0usize;
     let mut quarantined = 0usize;
     let mut sessions: BTreeSet<String> = BTreeSet::new();
+    let mut by_type: BTreeMap<String, RecordTypeAccounting> = BTreeMap::new();
+    let mut skipped_by_reason: BTreeMap<String, usize> = BTreeMap::new();
 
-    for turn in &turns {
-        if turn.session_id.is_empty() {
+    if decode_skipped > 0 {
+        let acct = by_type.entry("unknown".to_string()).or_default();
+        *acct.skipped.entry("decode_error".to_string()).or_default() += decode_skipped;
+        *skipped_by_reason
+            .entry("decode_error".to_string())
+            .or_default() += decode_skipped;
+    }
+
+    for record in &records {
+        let acct = by_type.entry(record.record_type.clone()).or_default();
+        if record.session_id.is_empty() {
             quarantined += 1;
+            acct.skip("missing_session_id");
+            *skipped_by_reason
+                .entry("missing_session_id".to_string())
+                .or_default() += 1;
             continue;
         }
-        let turn_id = turn
-            .turn_id
-            .clone()
-            .unwrap_or_else(|| format!("{}:{}", turn.session_id, turn.sequence));
-        if existing.contains(&format!("id:{turn_id}"))
-            || existing.contains(&format!("seq:{}:{}", turn.session_id, turn.sequence))
-        {
+        let is_turn = record.record_type == "session_turn";
+        let duplicate = existing.contains(&format!("id:{}", record.turn_id))
+            || (is_turn
+                && record.sequence > 0
+                && existing.contains(&format!("seq:{}:{}", record.session_id, record.sequence)));
+        if duplicate {
             duplicates_skipped += 1;
+            acct.duplicate();
             continue;
         }
 
-        let entry = serde_json::json!({
-            "turn_id": turn_id,
-            "session_id": turn.session_id,
-            "role": turn.role,
-            "turn_type": turn.turn_type,
-            "content": turn.content,
-            "importance": turn.importance,
-            "timestamp": turn.timestamp,
-            "sequence": turn.sequence,
-            "track": turn.track,
-            "migrated_from": "gen2"
-        });
-        entries.push_str(&entry.to_string());
+        let content = record
+            .parsed
+            .clone()
+            .unwrap_or_else(|| serde_json::Value::String(record.content.clone()));
+
+        let mut entry = serde_json::Map::new();
+        entry.insert("turn_id".into(), record.turn_id.clone().into());
+        entry.insert("session_id".into(), record.session_id.clone().into());
+        entry.insert("role".into(), record.role.clone().into());
+        entry.insert("turn_type".into(), record.record_type.clone().into());
+        entry.insert("type".into(), record.record_type.clone().into());
+        entry.insert("content".into(), content);
+        entry.insert("importance".into(), record.importance.into());
+        entry.insert("timestamp".into(), record.timestamp.into());
+        if is_turn {
+            entry.insert("sequence".into(), record.sequence.into());
+        }
+        if let Some(track) = &record.track {
+            entry.insert("track".into(), track.clone().into());
+        }
+        if !record.source_type.is_empty() && record.source_type != record.record_type {
+            entry.insert("legacy_type".into(), record.source_type.clone().into());
+        }
+        if record.encoding != "json" {
+            entry.insert("legacy_encoding".into(), record.encoding.clone().into());
+        }
+        entry.insert("migrated_from".into(), "gen2".into());
+
+        entries.push_str(&serde_json::Value::Object(entry).to_string());
         entries.push('\n');
-        sessions.insert(turn.session_id.clone());
+        sessions.insert(record.session_id.clone());
         migrated += 1;
+        acct.migrate();
     }
 
     if migrated > 0 {
@@ -1189,11 +1798,35 @@ pub fn migrate_gen2_sessions_to_gen3(
             .map_err(|e| CompatError::Msg(format!("session log append failed: {e}")))?;
     }
 
+    let quarantine_path = session_log_path
+        .parent()
+        .map(|p| p.join("session_quarantine.jsonl"))
+        .unwrap_or_else(|| PathBuf::from("session_quarantine.jsonl"));
+    let mut quarantine_log = None;
+    if !quarantined_rows.is_empty() {
+        if let Some(parent) = quarantine_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Ok(mut file) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&quarantine_path)
+        {
+            use std::io::Write;
+            for q in &quarantined_rows {
+                if let Ok(line) = serde_json::to_string(q) {
+                    let _ = writeln!(file, "{line}");
+                }
+            }
+            quarantine_log = Some(quarantine_path);
+        }
+    }
+
     let ts = Utc::now();
     let receipt_digest = SessionMigrationReceipt::compute_digest(
         reader.path(),
         session_log_path,
-        turns.len(),
+        total_records,
         migrated,
         duplicates_skipped,
         quarantined,
@@ -1204,7 +1837,7 @@ pub fn migrate_gen2_sessions_to_gen3(
     Ok(SessionMigrationReceipt {
         source_store: reader.path().to_path_buf(),
         target_session_log: session_log_path.to_path_buf(),
-        total_turns: turns.len(),
+        total_turns: total_records,
         migrated,
         duplicates_skipped,
         quarantined,
@@ -1212,6 +1845,9 @@ pub fn migrate_gen2_sessions_to_gen3(
         sessions: sessions.len(),
         timestamp: ts,
         receipt_digest,
+        by_type,
+        skipped_by_reason,
+        quarantine_log,
     })
 }
 
@@ -1280,11 +1916,115 @@ mod tests {
         assert_eq!(original, decoded);
     }
 
-    /// Build a synthetic named-field v9 store (no host fixture dependency).
-    fn write_synthetic_gen2_store(
+    /// Build a synthetic named-field v9 `Memory` wrapper (no host fixture
+    /// dependency). `content` is stored verbatim so raw-text and JSON payloads
+    /// can both be exercised.
+    fn synthetic_named_memory(id: Uuid, content: &str, galaxy: &str, tags: &[&str]) -> Vec<u8> {
+        let memory = serde_json::json!({
+            "metadata": {
+                "id": id.to_string(),
+                "galaxy": galaxy,
+                "content_hash": "",
+                "tags": tags,
+                "importance": 0.8,
+                "created_at": Utc::now().to_rfc3339(),
+                "model_exclude": false,
+                "is_private": false
+            },
+            "content": content,
+        });
+        rmp_serde::to_vec_named(&memory).expect("encode synthetic memory")
+    }
+
+    fn synthetic_memory(content: &str) -> Vec<u8> {
+        synthetic_named_memory(Uuid::new_v4(), content, "sessions", &["synthetic"])
+    }
+
+    /// Synthetic v9 positional (`fixarray(3)`, 32-field metadata array) record
+    /// bytes, matching the legacy encoding the named-field reader skips.
+    #[derive(serde::Serialize)]
+    #[allow(clippy::type_complexity)]
+    struct LegacyMetaSeq(
+        Uuid,
+        String,
+        String,
+        Vec<String>,
+        f32,
+        String,
+        String,
+        u64,
+        Vec<f32>,
+        Vec<f32>,
+        String,
+        f32,
+        f32,
+        f32,
+        f32,
+        bool,
+        bool,
+        bool,
+        String,
+        f32,
+        f32,
+        u64,
+        u64,
+        String,
+        Option<String>,
+        Option<String>,
+        String,
+        String,
+        u64,
+        Vec<String>,
+        Vec<String>,
+        u64,
+    );
+
+    fn synthetic_legacy_positional(id: Uuid, content: &str, tags: &[&str]) -> Vec<u8> {
+        let meta = LegacyMetaSeq(
+            id,
+            "codex".to_string(),
+            "legacy-hash".to_string(),
+            tags.iter().map(|t| (*t).to_string()).collect(),
+            0.9,
+            "2026-01-02T03:04:05Z".to_string(),
+            "2026-01-02T03:04:05Z".to_string(),
+            0,
+            Vec::new(),
+            Vec::new(),
+            "long_term".to_string(),
+            0.5,
+            1.0,
+            0.0,
+            0.0,
+            false,
+            false,
+            false,
+            "agent".to_string(),
+            0.7,
+            30.0,
+            0,
+            1,
+            "system".to_string(),
+            None,
+            None,
+            "working".to_string(),
+            "dialogue".to_string(),
+            0,
+            Vec::<String>::new(),
+            Vec::<String>::new(),
+            0,
+        );
+        rmp_serde::to_vec(&(meta, content.to_string(), Option::<u8>::None))
+            .expect("encode legacy positional record")
+    }
+
+    /// Build a synthetic named-field v9 store with optional raw session values
+    /// and galaxy DBIs (no host fixture dependency).
+    fn write_synthetic_store_full(
         dir: &Path,
         episodic: &[Gen2EpisodicRecord],
-        turns: &[serde_json::Value],
+        session_values: &[Vec<u8>],
+        galaxies: &[(&str, Vec<Vec<u8>>)],
     ) {
         std::fs::create_dir_all(dir).expect("create synthetic store dir");
         let env = lmdb::Environment::new()
@@ -1310,36 +2050,48 @@ mod tests {
             tx.commit().expect("commit episodic");
         }
 
-        if !turns.is_empty() {
+        if !session_values.is_empty() {
             let db = env
                 .create_db(Some("sessions"), lmdb::DatabaseFlags::default())
                 .expect("create sessions db");
             let mut tx = env.begin_rw_txn().expect("rw txn");
-            for turn in turns {
+            for value in session_values {
                 let id = Uuid::new_v4();
-                let memory = serde_json::json!({
-                    "metadata": {
-                        "id": id.to_string(),
-                        "galaxy": "sessions",
-                        "content_hash": "",
-                        "tags": ["synthetic"],
-                        "importance": 0.8,
-                        "created_at": Utc::now().to_rfc3339(),
-                        "model_exclude": false,
-                        "is_private": false
-                    },
-                    "content": turn.to_string(),
-                });
-                let value = rmp_serde::to_vec_named(&memory).expect("encode turn");
-                tx.put(db, id.as_bytes(), &value, lmdb::WriteFlags::default())
-                    .expect("put turn");
+                tx.put(db, id.as_bytes(), value, lmdb::WriteFlags::default())
+                    .expect("put session value");
             }
-            tx.commit().expect("commit turns");
+            tx.commit().expect("commit sessions");
+        }
+
+        for (name, values) in galaxies {
+            let db = env
+                .create_db(Some(name), lmdb::DatabaseFlags::default())
+                .expect("create galaxy db");
+            let mut tx = env.begin_rw_txn().expect("rw txn");
+            for value in values {
+                let id = Uuid::new_v4();
+                tx.put(db, id.as_bytes(), value, lmdb::WriteFlags::default())
+                    .expect("put galaxy value");
+            }
+            tx.commit().expect("commit galaxy db");
         }
 
         // Drop the env before any compat reader opens the same path (LMDB
         // allows one environment per path per process).
         drop(env);
+    }
+
+    /// Build a synthetic named-field v9 store (no host fixture dependency).
+    fn write_synthetic_gen2_store(
+        dir: &Path,
+        episodic: &[Gen2EpisodicRecord],
+        turns: &[serde_json::Value],
+    ) {
+        let session_values: Vec<Vec<u8>> = turns
+            .iter()
+            .map(|turn| synthetic_memory(&turn.to_string()))
+            .collect();
+        write_synthetic_store_full(dir, episodic, &session_values, &[]);
     }
 
     fn synthetic_episodic(content: &str, sequence: u64) -> Gen2EpisodicRecord {
@@ -1477,6 +2229,366 @@ mod tests {
             lines, first.migrated,
             "session log holds exactly the migrated turns"
         );
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn galaxy_dbi_records_route_to_mapped_gen3_galaxy_and_are_idempotent() {
+        let tmp = std::env::temp_dir().join(format!("wm-gen3-galaxy-{}", Uuid::new_v4()));
+        let src_copy = tmp.join("gen2");
+        std::fs::create_dir_all(&src_copy).expect("create temp gen2 dir");
+        let journals_id = Uuid::new_v4();
+        let tutorial_id = Uuid::new_v4();
+        write_synthetic_store_full(
+            &src_copy,
+            &[],
+            &[],
+            &[
+                (
+                    "journals",
+                    vec![synthetic_named_memory(
+                        journals_id,
+                        "journal entry alpha",
+                        "journals",
+                        &["j1", "j2"],
+                    )],
+                ),
+                (
+                    "tutorial",
+                    vec![synthetic_named_memory(
+                        tutorial_id,
+                        "guide lesson beta",
+                        "tutorial",
+                        &["t1"],
+                    )],
+                ),
+            ],
+        );
+
+        let reader = Gen2Reader::open(&src_copy).expect("open synthetic store");
+        let target = tmp.join("gen3");
+        let journal = target.join("journal.jsonl");
+        let options = MigrationOptions {
+            batch_size: 8,
+            quarantine_path: Some(tmp.join("quarantine.jsonl")),
+            ..MigrationOptions::default()
+        };
+
+        let mut substrate = crate::ops::Substrate::open(
+            &target,
+            Some(&journal),
+            crate::constitution::default_view(),
+        )
+        .expect("open target");
+        let first = migrate_gen2_to_gen3_with_authority(
+            &reader,
+            &mut substrate,
+            &options,
+            crate::evidence::RatifiedChannel::stub("wm-migration-test"),
+        )
+        .expect("first migration");
+        assert_eq!(first.galaxy_total_scanned, 2);
+        assert_eq!(first.galaxy_migrated, 2);
+        assert_eq!(first.galaxy_duplicates, 0);
+        assert_eq!(first.galaxy_decode_skipped, 0);
+        assert_eq!(first.by_record_type["galaxy:journals"].migrated, 1);
+        assert_eq!(first.by_record_type["galaxy:tutorial"].migrated, 1);
+        assert_eq!(substrate.store().record_count().unwrap(), 2);
+        assert!(
+            substrate.lookup_id_by_uuid(&journals_id).is_some(),
+            "galaxy record id must bind to its Gen3 record"
+        );
+        assert!(substrate.lookup_id_by_uuid(&tutorial_id).is_some());
+
+        let mut sources: Vec<String> = substrate
+            .store()
+            .iter_records()
+            .expect("iter records")
+            .iter()
+            .map(|r| r.source().to_string())
+            .collect();
+        sources.sort();
+        assert_eq!(
+            sources,
+            vec![
+                "corpus:guide:t1,v9db:tutorial".to_string(),
+                "corpus:journals:j1,j2,v9db:journals".to_string(),
+            ]
+        );
+        drop(substrate);
+
+        let mut substrate = crate::ops::Substrate::open(
+            &target,
+            Some(&journal),
+            crate::constitution::default_view(),
+        )
+        .expect("reopen target");
+        let second = migrate_gen2_to_gen3_with_authority(
+            &reader,
+            &mut substrate,
+            &options,
+            crate::evidence::RatifiedChannel::stub("wm-migration-test"),
+        )
+        .expect("second migration");
+        assert_eq!(second.galaxy_migrated, 0, "galaxy rerun must not duplicate");
+        assert_eq!(
+            second.galaxy_duplicates, 2,
+            "galaxy rerun classifies both rows as duplicates"
+        );
+        assert_eq!(substrate.store().record_count().unwrap(), 2);
+        drop(substrate);
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn legacy_positional_galaxy_rows_are_recovered() {
+        let tmp = std::env::temp_dir().join(format!("wm-gen3-legacy-{}", Uuid::new_v4()));
+        let src_copy = tmp.join("gen2");
+        std::fs::create_dir_all(&src_copy).expect("create temp gen2 dir");
+        let legacy_id = Uuid::new_v4();
+        write_synthetic_store_full(
+            &src_copy,
+            &[],
+            &[],
+            &[(
+                "codex",
+                vec![synthetic_legacy_positional(
+                    legacy_id,
+                    "legacy recovered content",
+                    &["legacy"],
+                )],
+            )],
+        );
+
+        let reader = Gen2Reader::open(&src_copy).expect("open synthetic store");
+        let scan = reader
+            .scan_galaxy_db("codex", None)
+            .expect("scan legacy galaxy");
+        assert_eq!(scan.decode_skipped, 0, "legacy positional rows must decode");
+        assert_eq!(scan.records.len(), 1);
+        let record = &scan.records[0];
+        assert_eq!(record.id, legacy_id);
+        assert_eq!(record.content, "legacy recovered content");
+        assert_eq!(record.tags, vec!["legacy".to_string()]);
+        assert_eq!(record.importance, 0.9);
+        assert_eq!(
+            record.created_at.to_rfc3339(),
+            "2026-01-02T03:04:05+00:00",
+            "legacy created_at survives the positional decode"
+        );
+
+        let target = tmp.join("gen3");
+        let journal = target.join("journal.jsonl");
+        let mut substrate = crate::ops::Substrate::open(
+            &target,
+            Some(&journal),
+            crate::constitution::default_view(),
+        )
+        .expect("open target");
+        let receipt = migrate_gen2_to_gen3_with_authority(
+            &reader,
+            &mut substrate,
+            &MigrationOptions {
+                batch_size: 4,
+                quarantine_path: Some(tmp.join("quarantine.jsonl")),
+                ..MigrationOptions::default()
+            },
+            crate::evidence::RatifiedChannel::stub("wm-migration-test"),
+        )
+        .expect("migration");
+        assert_eq!(receipt.galaxy_migrated, 1);
+        assert!(receipt.by_record_type["galaxy:codex"].skipped.is_empty());
+        drop(substrate);
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn session_record_types_migrate_with_fields() {
+        let tmp = std::env::temp_dir().join(format!("wm-gen3-seshapes-{}", Uuid::new_v4()));
+        let src_copy = tmp.join("gen2");
+        std::fs::create_dir_all(&src_copy).expect("create temp gen2 dir");
+
+        let start = serde_json::json!({
+            "type": "session_start",
+            "session_id": "sess-1",
+            "title": "Start lane",
+            "user": "opencode",
+            "timestamp": 900u64
+        });
+        let checkpoint = serde_json::json!({
+            "type": "checkpoint",
+            "session_id": "sess-1",
+            "label": "handoff",
+            "handoff": {
+                "next_queue": ["finish migration", "report"],
+                "open_flags": ["flag-a"]
+            },
+            "timestamp": 1100u64
+        });
+        let turn = synthetic_turn("sess-1", 1, "hello world");
+        let end = serde_json::json!({
+            "type": "session_end",
+            "session_id": "sess-1",
+            "summary": "done",
+            "timestamp": 1200u64
+        });
+        let untyped_with_sid = serde_json::json!({"foo": "bar", "session_id": "sess-2"});
+        let untyped_no_sid = serde_json::json!({"artifactType": "PLAN", "summary": "detached"});
+
+        write_synthetic_store_full(
+            &src_copy,
+            &[],
+            &[
+                synthetic_memory(&start.to_string()),
+                synthetic_memory(&checkpoint.to_string()),
+                synthetic_memory(&turn.to_string()),
+                synthetic_memory(&end.to_string()),
+                synthetic_memory("plain transcript text"),
+                synthetic_memory(&untyped_with_sid.to_string()),
+                synthetic_memory(&untyped_no_sid.to_string()),
+            ],
+            &[],
+        );
+
+        let reader = Gen2Reader::open(&src_copy).expect("open synthetic store");
+        let (records, quarantine) = reader.session_records().expect("session records");
+        assert_eq!(records.len(), 7);
+        assert!(quarantine.is_empty());
+
+        let log = tmp.join("session_log.jsonl");
+        let first = migrate_gen2_sessions_to_gen3(&reader, &log).expect("first run");
+        assert_eq!(first.migrated, 7, "every accepted record migrates");
+        assert_eq!(first.duplicates_skipped, 0);
+        assert_eq!(first.quarantined, 0);
+        assert_eq!(first.decode_skipped, 0);
+        assert_eq!(first.by_type["session_turn"].migrated, 1);
+        assert_eq!(first.by_type["session_start"].migrated, 1);
+        assert_eq!(first.by_type["checkpoint"].migrated, 1);
+        assert_eq!(first.by_type["session_end"].migrated, 1);
+        assert_eq!(first.by_type["message"].migrated, 3);
+        assert_eq!(first.sessions, 4, "sess-1, sess-2, and two orphan lanes");
+
+        let content = std::fs::read_to_string(&log).expect("read log");
+        let lines: Vec<serde_json::Value> = content
+            .lines()
+            .map(|l| serde_json::from_str(l).expect("log line json"))
+            .collect();
+        assert_eq!(lines.len(), 7);
+
+        let checkpoint_line = lines
+            .iter()
+            .find(|l| l["type"] == "checkpoint")
+            .expect("checkpoint line present");
+        assert_eq!(checkpoint_line["turn_type"], "checkpoint");
+        assert_eq!(
+            checkpoint_line["content"]["handoff"]["next_queue"],
+            serde_json::json!(["finish migration", "report"])
+        );
+        assert_eq!(
+            checkpoint_line["content"]["handoff"]["open_flags"],
+            serde_json::json!(["flag-a"])
+        );
+        assert!(
+            checkpoint_line.get("sequence").is_none(),
+            "non-turn lanes must not claim the (session_id, sequence) dedupe key"
+        );
+
+        let start_line = lines
+            .iter()
+            .find(|l| l["type"] == "session_start")
+            .expect("start line present");
+        assert_eq!(start_line["content"]["title"], "Start lane");
+
+        let raw_line = lines
+            .iter()
+            .find(|l| l["content"] == "plain transcript text")
+            .expect("raw text message preserved");
+        assert_eq!(raw_line["turn_type"], "message");
+        assert_eq!(raw_line["legacy_encoding"], "text");
+
+        let second = migrate_gen2_sessions_to_gen3(&reader, &log).expect("second run");
+        assert_eq!(second.migrated, 0, "rerun must not append duplicates");
+        assert_eq!(second.duplicates_skipped, 7);
+        let line_count = std::fs::read_to_string(&log)
+            .expect("read log")
+            .lines()
+            .count();
+        assert_eq!(line_count, 7, "log holds exactly one copy of each record");
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn undecodable_rows_land_in_skip_accounting_and_quarantine() {
+        let tmp = std::env::temp_dir().join(format!("wm-gen3-undecodable-{}", Uuid::new_v4()));
+        let src_copy = tmp.join("gen2");
+        std::fs::create_dir_all(&src_copy).expect("create temp gen2 dir");
+
+        let garbage_session = vec![0xc1u8, 0x00, 0xde, 0xad, 0xbe, 0xef];
+        let garbage_galaxy = vec![0xc1u8, 0x99, 0x01, 0xff];
+        write_synthetic_store_full(
+            &src_copy,
+            &[],
+            &[garbage_session],
+            &[("codex", vec![garbage_galaxy])],
+        );
+
+        let reader = Gen2Reader::open(&src_copy).expect("open synthetic store");
+        let (records, quarantine) = reader.session_records().expect("session records");
+        assert_eq!(records.len(), 0);
+        assert_eq!(quarantine.len(), 1, "garbage session row is quarantined");
+        assert!(quarantine[0].reason.contains("GalaxyDecodeError[sessions]"));
+
+        let target = tmp.join("gen3");
+        let journal = target.join("journal.jsonl");
+        let main_quarantine = tmp.join("quarantine.jsonl");
+        let mut substrate = crate::ops::Substrate::open(
+            &target,
+            Some(&journal),
+            crate::constitution::default_view(),
+        )
+        .expect("open target");
+        let receipt = migrate_gen2_to_gen3_with_authority(
+            &reader,
+            &mut substrate,
+            &MigrationOptions {
+                batch_size: 4,
+                quarantine_path: Some(main_quarantine.clone()),
+                ..MigrationOptions::default()
+            },
+            crate::evidence::RatifiedChannel::stub("wm-migration-test"),
+        )
+        .expect("migration");
+        assert_eq!(
+            receipt.galaxy_decode_skipped, 2,
+            "codex garbage plus the garbage row in the sessions memory lane"
+        );
+        assert_eq!(
+            receipt.by_record_type["galaxy:codex"].skipped["decode_error"],
+            1
+        );
+        let main_log = std::fs::read_to_string(&main_quarantine).expect("main quarantine");
+        assert!(main_log.contains("GalaxyDecodeError[codex]"));
+
+        let log = tmp.join("session_log.jsonl");
+        let session_receipt = migrate_gen2_sessions_to_gen3(&reader, &log).expect("session run");
+        assert_eq!(session_receipt.decode_skipped, 1);
+        assert_eq!(
+            session_receipt.by_type["unknown"].skipped["decode_error"],
+            1
+        );
+        assert_eq!(session_receipt.skipped_by_reason["decode_error"], 1);
+        assert_eq!(
+            session_receipt.quarantine_log,
+            Some(tmp.join("session_quarantine.jsonl"))
+        );
+        let session_log = std::fs::read_to_string(tmp.join("session_quarantine.jsonl"))
+            .expect("session quarantine log");
+        assert!(session_log.contains("GalaxyDecodeError[sessions]"));
+        drop(substrate);
 
         let _ = std::fs::remove_dir_all(&tmp);
     }
