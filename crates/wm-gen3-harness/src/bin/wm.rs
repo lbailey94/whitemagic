@@ -30,7 +30,9 @@ use wm_gen3_core::peer::{BanCertificate, PeerDirectory, PeerIdentity, PeerTrustT
 use wm_gen3_core::sentinel::{
     SentinelCircuitBreaker, SentinelLeaseGuard, SentinelReport, SentinelStatus,
 };
-use wm_gen3_harness::bridge::{McpProfile, build_contract_manifest, get_tools_list_for_profile};
+use wm_gen3_harness::bridge::{
+    McpProfile, build_contract_manifest, get_tools_list_for_profile, mesh_sync_peer_allowlist,
+};
 use wm_gen3_harness::mcp_server::{McpBackend, NetworkTransport, serve_network};
 
 /// Build version — single source of truth is the workspace Cargo.toml
@@ -2855,6 +2857,24 @@ mod runtime_truth_tests {
             "Drop guard retries cleanup"
         );
         std::fs::remove_dir(root).expect("cleanup temp root");
+    }
+
+    #[test]
+    fn mesh_cli_dial_allowlist_refuses_empty_and_unlisted_peers() {
+        let err = enforce_mesh_sync_dial_allowlist("", "127.0.0.1:7369")
+            .expect_err("empty allowlist must refuse");
+        assert!(err.contains("WM_MESH_SYNC_ALLOWLIST"), "{err}");
+
+        enforce_mesh_sync_dial_allowlist("127.0.0.1:7369", "127.0.0.1:7369")
+            .expect("listed peer accepted");
+        assert!(
+            enforce_mesh_sync_dial_allowlist("127.0.0.1:7369", "10.0.0.5:7369").is_err(),
+            "unlisted peer must be refused"
+        );
+        assert!(
+            enforce_mesh_sync_dial_allowlist("127.0.0.1:7369", "not-an-address").is_err(),
+            "malformed peer address must fail loudly"
+        );
     }
 }
 
@@ -5951,6 +5971,19 @@ fn hex_decode(s: &str) -> Result<Vec<u8>, String> {
         .collect()
 }
 
+/// CLI dial guard: `wm mesh sync` / `sync-genes` may only reach peers listed
+/// in `WM_MESH_SYNC_ALLOWLIST` (empty allowlist refuses).
+fn enforce_mesh_sync_dial_allowlist(allowlist_raw: &str, peer: &str) -> Result<(), String> {
+    let addr: std::net::SocketAddr = peer
+        .parse()
+        .map_err(|e| format!("Invalid peer address '{peer}': {e}"))?;
+    mesh_sync_peer_allowlist(allowlist_raw, addr)
+}
+
+fn mesh_sync_allowlist_env() -> String {
+    std::env::var("WM_MESH_SYNC_ALLOWLIST").unwrap_or_default()
+}
+
 fn run_mesh_command(command: MeshCommands, store_path: &Path) {
     match command {
         MeshCommands::Status => {
@@ -6015,7 +6048,7 @@ fn run_mesh_command(command: MeshCommands, store_path: &Path) {
             println!("Sovereign transport listening on {}", bound);
             println!("Running in foreground. Press Ctrl+C to terminate.");
 
-            while *server.is_running.lock().unwrap() {
+            while *server.is_running.lock().unwrap_or_else(|e| e.into_inner()) {
                 std::thread::sleep(std::time::Duration::from_millis(500));
             }
         }
@@ -6074,6 +6107,10 @@ fn run_mesh_command(command: MeshCommands, store_path: &Path) {
                     std::process::exit(1);
                 }
             };
+            if let Err(e) = enforce_mesh_sync_dial_allowlist(&mesh_sync_allowlist_env(), &peer) {
+                eprintln!("{e}");
+                std::process::exit(2);
+            }
 
             let journal_path = store_path.join("journal.jsonl");
             let mut substrate =
@@ -6229,6 +6266,10 @@ fn run_mesh_command(command: MeshCommands, store_path: &Path) {
                     std::process::exit(1);
                 }
             };
+            if let Err(e) = enforce_mesh_sync_dial_allowlist(&mesh_sync_allowlist_env(), &peer) {
+                eprintln!("{e}");
+                std::process::exit(2);
+            }
 
             let vault_path = store_path.join("vault.jsonl");
             let mut vault = wm_gen3_core::bicameral::GeneseedVault::load_or_init(&vault_path);

@@ -10,6 +10,7 @@
 //! 5. Sneakernet Portability: Live TCP sync and air-gapped `.wmpack` bundles use
 //!    identical cryptographic validation and deduplication semantics.
 
+use std::collections::HashMap;
 use std::fmt;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Write};
@@ -112,6 +113,60 @@ pub struct MeshHandshake {
     pub record_count: u64,
     pub head_hash: String,
     pub protocol_version: u32,
+    /// Client liveness challenge; echoed by the server ack. Zero = legacy unsigned.
+    #[serde(default)]
+    pub nonce: [u8; 32],
+    /// Server signature over the canonical ack payload (empty on client requests).
+    #[serde(default)]
+    pub signature: Vec<u8>,
+}
+
+impl MeshHandshake {
+    /// Canonical payload covered by the responder's Ed25519 handshake signature.
+    pub fn signing_payload(&self) -> Vec<u8> {
+        format!(
+            "WHITEMAGIC:MESH_HANDSHAKE_ACK:v1|node:{}|pubkey:{}|epoch:{}|records:{}|head:{}|proto:{}|nonce:{}",
+            self.node_id,
+            hex_encode_key(&self.public_key),
+            self.epoch,
+            self.record_count,
+            self.head_hash,
+            self.protocol_version,
+            hex_encode_key(&self.nonce)
+        )
+        .into_bytes()
+    }
+
+    /// Sign this handshake ack in place with the responder's sovereign mesh key.
+    pub fn sign_with(&mut self, signing_key: &SigningKey) {
+        self.public_key = signing_key.verifying_key().to_bytes();
+        let payload = self.signing_payload();
+        self.signature = signing_key.sign(&payload).to_bytes().to_vec();
+    }
+
+    /// Verify the ack signature and that it echoes the client's challenge nonce.
+    pub fn verify(&self, expected_nonce: &[u8; 32]) -> Result<(), MeshError> {
+        if &self.nonce != expected_nonce {
+            return Err(MeshError::Unauthorized(
+                "handshake ack nonce does not match the client challenge".to_string(),
+            ));
+        }
+        if self.signature.is_empty() {
+            return Err(MeshError::Unauthorized(
+                "handshake ack carries no signature".to_string(),
+            ));
+        }
+        let sig_bytes: [u8; 64] = self.signature.as_slice().try_into().map_err(|_| {
+            MeshError::Unauthorized("handshake ack signature length != 64 bytes".to_string())
+        })?;
+        let verifying_key = VerifyingKey::from_bytes(&self.public_key)
+            .map_err(|e| MeshError::Unauthorized(format!("invalid handshake key: {e}")))?;
+        verifying_key
+            .verify(&self.signing_payload(), &Signature::from_bytes(&sig_bytes))
+            .map_err(|e| {
+                MeshError::Unauthorized(format!("handshake ack signature verification failed: {e}"))
+            })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -190,6 +245,143 @@ fn hex_encode_key(key: &[u8; 32]) -> String {
     key.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
+/// Maximum accepted age/skew of a signed sync response (defense-in-depth on
+/// top of the handshake-nonce binding).
+pub const MESH_RESPONSE_MAX_AGE_MS: u64 = 120_000;
+
+fn now_millis() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64
+}
+
+fn now_secs() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
+}
+
+fn random_nonce() -> [u8; 32] {
+    let mut bytes = [0u8; 32];
+    if getrandom::fill(&mut bytes).is_err() {
+        // A zero nonce is refused by peers, so fail closed rather than reuse it.
+        bytes = [0u8; 32];
+    }
+    bytes
+}
+
+fn random_session_id() -> String {
+    uuid::Uuid::new_v4().to_string()
+}
+
+/// Parse `WM_MESH_PEER_ALLOWLIST`: comma-separated peer node ids or 32-byte
+/// pubkey hex. Empty entries are ignored; matching is case-insensitive.
+fn parse_peer_allowlist(raw: &str) -> Vec<String> {
+    raw.split(',')
+        .map(str::trim)
+        .filter(|entry| !entry.is_empty())
+        .map(|entry| entry.to_ascii_lowercase())
+        .collect()
+}
+
+fn mesh_peer_allowlist() -> Vec<String> {
+    parse_peer_allowlist(&std::env::var("WM_MESH_PEER_ALLOWLIST").unwrap_or_default())
+}
+
+fn peer_allowed(allowlist: &[String], node_id: &str, public_key: &[u8; 32]) -> bool {
+    let node_id = node_id.to_ascii_lowercase();
+    let key_hex = hex_encode_key(public_key);
+    allowlist
+        .iter()
+        .any(|entry| entry == &node_id || entry == &key_hex)
+}
+
+/// Peer-pinning policy: an empty allowlist means loopback-only sync; a
+/// non-empty allowlist requires the peer node id or pubkey to be listed.
+fn check_peer_allowlist(
+    allowlist: &[String],
+    is_loopback: bool,
+    node_id: &str,
+    public_key: &[u8; 32],
+) -> Result<(), MeshError> {
+    if allowlist.is_empty() {
+        return if is_loopback {
+            Ok(())
+        } else {
+            Err(MeshError::Unauthorized(format!(
+                "refusing remote mesh peer '{node_id}' ({}): WM_MESH_PEER_ALLOWLIST is empty; loopback-only sync",
+                hex_encode_key(public_key)
+            )))
+        };
+    }
+    if peer_allowed(allowlist, node_id, public_key) {
+        Ok(())
+    } else {
+        Err(MeshError::UntrustedSigner(format!(
+            "peer '{node_id}' ({}) is not in WM_MESH_PEER_ALLOWLIST",
+            hex_encode_key(public_key)
+        )))
+    }
+}
+
+/// Shared authorization gate for signed sync requests: handshake binding,
+/// peer pinning, and replay protection.
+#[allow(clippy::too_many_arguments)]
+fn authorize_signed_request(
+    label: &str,
+    handshake_nonce: Option<[u8; 32]>,
+    nonce: [u8; 32],
+    requester_id: &str,
+    requester_pubkey: &[u8; 32],
+    session_id: &str,
+    is_loopback: bool,
+    allowlist: &[String],
+    replay: &ReplayCache,
+) -> Result<(), MeshError> {
+    match handshake_nonce {
+        Some(expected) if nonce == expected => {}
+        Some(_) => {
+            return Err(MeshError::Unauthorized(format!(
+                "{label}: nonce does not match handshake challenge"
+            )));
+        }
+        None => {
+            return Err(MeshError::Unauthorized(format!(
+                "{label}: handshake required before sync"
+            )));
+        }
+    }
+    check_peer_allowlist(allowlist, is_loopback, requester_id, requester_pubkey)?;
+    let replay_key = format!("{}:{}", hex_encode_key(requester_pubkey), session_id);
+    replay.observe(&replay_key, now_secs())
+}
+
+/// Bounded replay cache for signed requests, keyed by requester pubkey + session id.
+#[derive(Default)]
+struct ReplayCache {
+    seen: Mutex<HashMap<String, u64>>,
+}
+
+impl ReplayCache {
+    fn observe(&self, key: &str, now_secs: u64) -> Result<(), MeshError> {
+        let mut seen = self.seen.lock().unwrap_or_else(|e| e.into_inner());
+        seen.retain(|_, first_seen| {
+            now_secs.saturating_sub(*first_seen) <= MESH_REPLAY_WINDOW_SECS
+        });
+        if seen.contains_key(key) {
+            return Err(MeshError::Unauthorized(format!(
+                "replayed mesh request for session '{key}' refused"
+            )));
+        }
+        seen.insert(key.to_string(), now_secs);
+        Ok(())
+    }
+}
+
+const MESH_REPLAY_WINDOW_SECS: u64 = MESH_RESPONSE_MAX_AGE_MS / 1000;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyncRequest {
     pub requester_id: String,
@@ -201,47 +393,84 @@ pub struct SyncRequest {
     /// Ed25519 signature over the canonical request payload.
     #[serde(default)]
     pub signature: Vec<u8>,
+    /// Handshake challenge nonce this request is bound to.
+    #[serde(default)]
+    pub nonce: [u8; 32],
+    /// Per-request session id (replay cache key).
+    #[serde(default)]
+    pub session_id: String,
 }
 
 impl SyncRequest {
     /// Canonical payload covered by the requester's Ed25519 signature.
-    pub fn signing_payload(
-        requester_id: &str,
-        requester_pubkey: &[u8; 32],
-        since_epoch: u64,
-        limit: usize,
-    ) -> Vec<u8> {
+    pub fn signing_payload(&self) -> Vec<u8> {
         format!(
-            "WHITEMAGIC:MESH_SYNC_REQ:v1|requester:{}|pubkey:{}|since:{}|limit:{}",
-            requester_id,
-            hex_encode_key(requester_pubkey),
-            since_epoch,
-            limit
+            "WHITEMAGIC:MESH_SYNC_REQ:v2|requester:{}|pubkey:{}|since:{}|limit:{}|nonce:{}|session:{}",
+            self.requester_id,
+            hex_encode_key(&self.requester_pubkey),
+            self.since_epoch,
+            self.limit,
+            hex_encode_key(&self.nonce),
+            self.session_id
         )
         .into_bytes()
     }
 
-    /// Build a signed sync request with the caller's sovereign mesh identity.
+    /// Build a signed sync request with the caller's sovereign mesh identity,
+    /// generating a fresh nonce and session id.
     pub fn signed(
         requester_id: &str,
         since_epoch: u64,
         limit: usize,
         signing_key: &SigningKey,
     ) -> Self {
-        let requester_pubkey = signing_key.verifying_key().to_bytes();
-        let payload = Self::signing_payload(requester_id, &requester_pubkey, since_epoch, limit);
-        let signature = signing_key.sign(&payload).to_bytes().to_vec();
-        Self {
+        Self::signed_with(
+            requester_id,
+            since_epoch,
+            limit,
+            random_nonce(),
+            &random_session_id(),
+            signing_key,
+        )
+    }
+
+    /// Build a signed sync request bound to an explicit handshake nonce/session.
+    pub fn signed_with(
+        requester_id: &str,
+        since_epoch: u64,
+        limit: usize,
+        nonce: [u8; 32],
+        session_id: &str,
+        signing_key: &SigningKey,
+    ) -> Self {
+        let mut req = Self {
             requester_id: requester_id.to_string(),
             since_epoch,
             limit,
-            requester_pubkey,
-            signature,
-        }
+            requester_pubkey: signing_key.verifying_key().to_bytes(),
+            signature: Vec::new(),
+            nonce,
+            session_id: session_id.to_string(),
+        };
+        let payload = req.signing_payload();
+        req.signature = signing_key.sign(&payload).to_bytes().to_vec();
+        req
     }
 
     /// Verify the embedded signed peer identity. Unsigned or invalid requests fail closed.
     pub fn verify(&self) -> Result<(), MeshError> {
+        if self.nonce == [0u8; 32] {
+            return Err(MeshError::Unauthorized(format!(
+                "sync_request from '{}' carries no handshake nonce",
+                self.requester_id
+            )));
+        }
+        if self.session_id.is_empty() {
+            return Err(MeshError::Unauthorized(format!(
+                "sync_request from '{}' carries no session id",
+                self.requester_id
+            )));
+        }
         if self.signature.is_empty() {
             return Err(MeshError::Unauthorized(format!(
                 "sync_request from '{}' carries no signature",
@@ -253,14 +482,8 @@ impl SyncRequest {
         })?;
         let verifying_key = VerifyingKey::from_bytes(&self.requester_pubkey)
             .map_err(|e| MeshError::Unauthorized(format!("invalid requester key: {e}")))?;
-        let payload = Self::signing_payload(
-            &self.requester_id,
-            &self.requester_pubkey,
-            self.since_epoch,
-            self.limit,
-        );
         verifying_key
-            .verify(&payload, &Signature::from_bytes(&sig_bytes))
+            .verify(&self.signing_payload(), &Signature::from_bytes(&sig_bytes))
             .map_err(|e| {
                 MeshError::Unauthorized(format!(
                     "sync_request signature verification failed for '{}': {}",
@@ -282,6 +505,15 @@ pub struct SyncResponse {
     /// Ed25519 signature over the canonical response payload (including the record Merkle root).
     #[serde(default)]
     pub signature: Vec<u8>,
+    /// Echo of the request handshake nonce.
+    #[serde(default)]
+    pub nonce: [u8; 32],
+    /// Echo of the request session id.
+    #[serde(default)]
+    pub session_id: String,
+    /// Responder wall-clock time (ms) at signing; bounded freshness window.
+    #[serde(default)]
+    pub timestamp_ms: u64,
 }
 
 impl SyncResponse {
@@ -289,12 +521,15 @@ impl SyncResponse {
     pub fn signing_payload(&self) -> Vec<u8> {
         let record_root = SyncBundle::compute_merkle_root(&self.records);
         format!(
-            "WHITEMAGIC:MESH_SYNC_RESP:v1|responder:{}|epoch:{}|has_more:{}|records:{}|root:{}",
+            "WHITEMAGIC:MESH_SYNC_RESP:v2|responder:{}|epoch:{}|has_more:{}|records:{}|root:{}|nonce:{}|session:{}|ts:{}",
             self.responder_id,
             self.current_epoch,
             self.has_more,
             self.records.len(),
-            hex_encode_key(&record_root)
+            hex_encode_key(&record_root),
+            hex_encode_key(&self.nonce),
+            self.session_id,
+            self.timestamp_ms
         )
         .into_bytes()
     }
@@ -306,13 +541,35 @@ impl SyncResponse {
         self.signature = signing_key.sign(&payload).to_bytes().to_vec();
     }
 
-    /// Verify the response signature against the peer identity established by the handshake.
-    pub fn verify(&self, expected_pubkey: &[u8; 32]) -> Result<(), MeshError> {
+    /// Verify signature, peer identity, nonce/session binding, and freshness.
+    pub fn verify(
+        &self,
+        expected_pubkey: &[u8; 32],
+        expected_nonce: &[u8; 32],
+        expected_session: &str,
+        now_ms: u64,
+    ) -> Result<(), MeshError> {
         if &self.responder_pubkey != expected_pubkey {
             return Err(MeshError::UntrustedSigner(format!(
                 "sync_response responder key {} does not match handshake key {}",
                 hex_encode_key(&self.responder_pubkey),
                 hex_encode_key(expected_pubkey)
+            )));
+        }
+        if &self.nonce != expected_nonce {
+            return Err(MeshError::Unauthorized(
+                "sync_response nonce does not match the handshake challenge".to_string(),
+            ));
+        }
+        if self.session_id != expected_session {
+            return Err(MeshError::Unauthorized(
+                "sync_response session id does not match the request".to_string(),
+            ));
+        }
+        if self.timestamp_ms == 0 || now_ms.abs_diff(self.timestamp_ms) > MESH_RESPONSE_MAX_AGE_MS {
+            return Err(MeshError::Unauthorized(format!(
+                "stale sync_response (timestamp {} vs now {}; window {} ms)",
+                self.timestamp_ms, now_ms, MESH_RESPONSE_MAX_AGE_MS
             )));
         }
         if self.signature.is_empty() {
@@ -370,12 +627,191 @@ impl GeneBundle {
 pub struct GeneSyncRequest {
     pub requester_id: String,
     pub since_version: u32,
+    /// Ed25519 public key of the requester (zeroed on legacy unsigned clients).
+    #[serde(default)]
+    pub requester_pubkey: [u8; 32],
+    /// Ed25519 signature over the canonical request payload.
+    #[serde(default)]
+    pub signature: Vec<u8>,
+    /// Handshake challenge nonce this request is bound to.
+    #[serde(default)]
+    pub nonce: [u8; 32],
+    /// Per-request session id (replay cache key).
+    #[serde(default)]
+    pub session_id: String,
+}
+
+impl GeneSyncRequest {
+    pub fn signing_payload(&self) -> Vec<u8> {
+        format!(
+            "WHITEMAGIC:MESH_GENE_SYNC_REQ:v1|requester:{}|pubkey:{}|since_version:{}|nonce:{}|session:{}",
+            self.requester_id,
+            hex_encode_key(&self.requester_pubkey),
+            self.since_version,
+            hex_encode_key(&self.nonce),
+            self.session_id
+        )
+        .into_bytes()
+    }
+
+    /// Build a signed gene sync request bound to an explicit handshake nonce/session.
+    pub fn signed_with(
+        requester_id: &str,
+        since_version: u32,
+        nonce: [u8; 32],
+        session_id: &str,
+        signing_key: &SigningKey,
+    ) -> Self {
+        let mut req = Self {
+            requester_id: requester_id.to_string(),
+            since_version,
+            requester_pubkey: signing_key.verifying_key().to_bytes(),
+            signature: Vec::new(),
+            nonce,
+            session_id: session_id.to_string(),
+        };
+        let payload = req.signing_payload();
+        req.signature = signing_key.sign(&payload).to_bytes().to_vec();
+        req
+    }
+
+    /// Verify the embedded signed peer identity. Unsigned or invalid requests fail closed.
+    pub fn verify(&self) -> Result<(), MeshError> {
+        if self.nonce == [0u8; 32] {
+            return Err(MeshError::Unauthorized(format!(
+                "gene_sync_request from '{}' carries no handshake nonce",
+                self.requester_id
+            )));
+        }
+        if self.session_id.is_empty() {
+            return Err(MeshError::Unauthorized(format!(
+                "gene_sync_request from '{}' carries no session id",
+                self.requester_id
+            )));
+        }
+        if self.signature.is_empty() {
+            return Err(MeshError::Unauthorized(format!(
+                "gene_sync_request from '{}' carries no signature",
+                self.requester_id
+            )));
+        }
+        let sig_bytes: [u8; 64] = self.signature.as_slice().try_into().map_err(|_| {
+            MeshError::Unauthorized("gene_sync_request signature length != 64 bytes".to_string())
+        })?;
+        let verifying_key = VerifyingKey::from_bytes(&self.requester_pubkey)
+            .map_err(|e| MeshError::Unauthorized(format!("invalid requester key: {e}")))?;
+        verifying_key
+            .verify(&self.signing_payload(), &Signature::from_bytes(&sig_bytes))
+            .map_err(|e| {
+                MeshError::Unauthorized(format!(
+                    "gene_sync_request signature verification failed for '{}': {}",
+                    self.requester_id, e
+                ))
+            })
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeneSyncResponse {
     pub responder_id: String,
     pub genes: Vec<GeneBundle>,
+    /// Ed25519 public key of the responder (zeroed on legacy unsigned servers).
+    #[serde(default)]
+    pub responder_pubkey: [u8; 32],
+    /// Ed25519 signature over the canonical response payload (including the gene digest).
+    #[serde(default)]
+    pub signature: Vec<u8>,
+    /// Echo of the request handshake nonce.
+    #[serde(default)]
+    pub nonce: [u8; 32],
+    /// Echo of the request session id.
+    #[serde(default)]
+    pub session_id: String,
+    /// Responder wall-clock time (ms) at signing; bounded freshness window.
+    #[serde(default)]
+    pub timestamp_ms: u64,
+}
+
+fn gene_bundle_digest(genes: &[GeneBundle]) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+    hasher.update((genes.len() as u64).to_le_bytes());
+    for gene in genes {
+        hasher.update(&gene.signature);
+        hasher.update(serde_json::to_vec(&gene.skeleton).unwrap_or_default());
+    }
+    hasher.finalize().into()
+}
+
+impl GeneSyncResponse {
+    pub fn signing_payload(&self) -> Vec<u8> {
+        format!(
+            "WHITEMAGIC:MESH_GENE_SYNC_RESP:v1|responder:{}|genes:{}|digest:{}|nonce:{}|session:{}|ts:{}",
+            self.responder_id,
+            self.genes.len(),
+            hex_encode_key(&gene_bundle_digest(&self.genes)),
+            hex_encode_key(&self.nonce),
+            self.session_id,
+            self.timestamp_ms
+        )
+        .into_bytes()
+    }
+
+    /// Sign this response in place with the responder's sovereign mesh key.
+    pub fn sign_with(&mut self, signing_key: &SigningKey) {
+        self.responder_pubkey = signing_key.verifying_key().to_bytes();
+        let payload = self.signing_payload();
+        self.signature = signing_key.sign(&payload).to_bytes().to_vec();
+    }
+
+    /// Verify signature, peer identity, nonce/session binding, and freshness.
+    pub fn verify(
+        &self,
+        expected_pubkey: &[u8; 32],
+        expected_nonce: &[u8; 32],
+        expected_session: &str,
+        now_ms: u64,
+    ) -> Result<(), MeshError> {
+        if &self.responder_pubkey != expected_pubkey {
+            return Err(MeshError::UntrustedSigner(format!(
+                "gene_sync_response responder key {} does not match handshake key {}",
+                hex_encode_key(&self.responder_pubkey),
+                hex_encode_key(expected_pubkey)
+            )));
+        }
+        if &self.nonce != expected_nonce {
+            return Err(MeshError::Unauthorized(
+                "gene_sync_response nonce does not match the handshake challenge".to_string(),
+            ));
+        }
+        if self.session_id != expected_session {
+            return Err(MeshError::Unauthorized(
+                "gene_sync_response session id does not match the request".to_string(),
+            ));
+        }
+        if self.timestamp_ms == 0 || now_ms.abs_diff(self.timestamp_ms) > MESH_RESPONSE_MAX_AGE_MS {
+            return Err(MeshError::Unauthorized(format!(
+                "stale gene_sync_response (timestamp {} vs now {}; window {} ms)",
+                self.timestamp_ms, now_ms, MESH_RESPONSE_MAX_AGE_MS
+            )));
+        }
+        if self.signature.is_empty() {
+            return Err(MeshError::Unauthorized(
+                "gene_sync_response carries no signature".to_string(),
+            ));
+        }
+        let sig_bytes: [u8; 64] = self.signature.as_slice().try_into().map_err(|_| {
+            MeshError::Unauthorized("gene_sync_response signature length != 64 bytes".to_string())
+        })?;
+        let verifying_key = VerifyingKey::from_bytes(&self.responder_pubkey)
+            .map_err(|e| MeshError::Unauthorized(format!("invalid responder key: {e}")))?;
+        verifying_key
+            .verify(&self.signing_payload(), &Signature::from_bytes(&sig_bytes))
+            .map_err(|e| {
+                MeshError::Unauthorized(format!(
+                    "gene_sync_response signature verification failed: {e}"
+                ))
+            })
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -715,6 +1151,34 @@ impl SyncBundle {
             record.verify_integrity()?;
         }
 
+        // Continuity receipts must carry a valid signature from the bundle
+        // author before they are appended to the local ledger. Legacy unsigned
+        // receipts are refused (prefer refuse over skipped-verification).
+        let author_verifying_key = VerifyingKey::from_bytes(&self.header.author_pubkey)
+            .map_err(|e| MeshError::InvalidSignature(format!("invalid bundle author key: {e}")))?;
+        for receipt in &self.receipts {
+            if receipt.signature.is_none() {
+                return Err(MeshError::BundleCorrupted(format!(
+                    "receipt '{}' carries no signature; refusing unverified import",
+                    receipt.receipt_id
+                )));
+            }
+            receipt.verify(&author_verifying_key).map_err(|e| {
+                MeshError::InvalidSignature(format!(
+                    "receipt '{}' signature verification failed: {e}",
+                    receipt.receipt_id
+                ))
+            })?;
+        }
+        for signature in &self.negative_signatures {
+            if signature.trim().is_empty() {
+                return Err(MeshError::BundleCorrupted(
+                    "negative knowledge entry carries an empty signature; refusing import"
+                        .to_string(),
+                ));
+            }
+        }
+
         let old_noise = substrate.noise_enabled();
         substrate.set_noise_enabled(false);
         let old_budget = substrate.budget();
@@ -862,20 +1326,22 @@ pub fn resolve_or_create_mesh_key(store_dir: &Path) -> io::Result<(SigningKey, [
     }
 }
 
+fn mesh_allow_remote() -> bool {
+    std::env::var("WM_MESH_ALLOW_REMOTE")
+        .map(|v| v == "1")
+        .unwrap_or(false)
+}
+
 /// Validate a mesh bind host against the loopback-default policy.
 ///
 /// Non-loopback binds are refused unless `WM_MESH_ALLOW_REMOTE=1` is set.
 pub fn validate_mesh_bind(bind_host: &str) -> Result<(), MeshError> {
-    let allow_remote = std::env::var("WM_MESH_ALLOW_REMOTE")
-        .map(|v| v == "1")
-        .unwrap_or(false);
-    validate_mesh_bind_with(allow_remote, bind_host)
+    validate_mesh_bind_with(mesh_allow_remote(), bind_host)
 }
 
-fn validate_mesh_bind_with(allow_remote: bool, bind_host: &str) -> Result<(), MeshError> {
-    if allow_remote {
-        return Ok(());
-    }
+/// Resolve a bind host exactly once to a `SocketAddr` (fixing IPv6 formatting
+/// like `::1` and removing the resolve-then-rebind TOCTOU window).
+pub fn resolve_mesh_bind(bind_host: &str, port: u16) -> Result<SocketAddr, MeshError> {
     let host = bind_host.trim();
     if host.is_empty() {
         return Err(MeshError::Unauthorized(
@@ -883,34 +1349,35 @@ fn validate_mesh_bind_with(allow_remote: bool, bind_host: &str) -> Result<(), Me
                 .to_string(),
         ));
     }
-    let parsed = if let Ok(ip) = host.parse::<IpAddr>() {
-        Some(ip)
-    } else if host.eq_ignore_ascii_case("localhost") {
-        Some(IpAddr::V4(Ipv4Addr::LOCALHOST))
-    } else {
-        None
-    };
-    match parsed {
-        Some(ip) if ip.is_loopback() => Ok(()),
-        Some(ip) => Err(MeshError::Unauthorized(format!(
-            "refusing non-loopback mesh bind {ip}: set WM_MESH_ALLOW_REMOTE=1 to permit remote mesh listeners"
-        ))),
-        None => {
-            let resolved: Vec<SocketAddr> = (host, 0)
-                .to_socket_addrs()
-                .map_err(|e| {
-                    MeshError::IoError(format!("cannot resolve mesh bind host '{host}': {e}"))
-                })?
-                .collect();
-            if !resolved.is_empty() && resolved.iter().all(|a| a.ip().is_loopback()) {
-                Ok(())
-            } else {
-                Err(MeshError::Unauthorized(format!(
-                    "refusing non-loopback mesh bind '{host}': set WM_MESH_ALLOW_REMOTE=1 to permit remote mesh listeners"
-                )))
-            }
-        }
+    let bare = host
+        .strip_prefix('[')
+        .and_then(|inner| inner.strip_suffix(']'))
+        .unwrap_or(host);
+    if let Ok(ip) = bare.parse::<IpAddr>() {
+        return Ok(SocketAddr::new(ip, port));
     }
+    if host.eq_ignore_ascii_case("localhost") {
+        return Ok(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port));
+    }
+    (host, port)
+        .to_socket_addrs()
+        .map_err(|e| MeshError::IoError(format!("cannot resolve mesh bind host '{host}': {e}")))?
+        .next()
+        .ok_or_else(|| MeshError::IoError(format!("cannot resolve mesh bind host '{host}'")))
+}
+
+fn validate_resolved_bind(allow_remote: bool, addr: SocketAddr) -> Result<(), MeshError> {
+    if addr.ip().is_loopback() || allow_remote {
+        return Ok(());
+    }
+    Err(MeshError::Unauthorized(format!(
+        "refusing non-loopback mesh bind {addr}: set WM_MESH_ALLOW_REMOTE=1 to permit remote mesh listeners"
+    )))
+}
+
+fn validate_mesh_bind_with(allow_remote: bool, bind_host: &str) -> Result<(), MeshError> {
+    let addr = resolve_mesh_bind(bind_host, 0)?;
+    validate_resolved_bind(allow_remote, addr)
 }
 
 const DEFAULT_MESH_MAX_CONNS: usize = 16;
@@ -958,13 +1425,30 @@ impl MeshServer {
     /// Start listening on specified port.
     ///
     /// Fails closed before binding when `bind_host` is non-loopback and
-    /// `WM_MESH_ALLOW_REMOTE=1` is not set.
+    /// `WM_MESH_ALLOW_REMOTE=1` is not set. The bind host is resolved exactly
+    /// once and the actually-bound address is re-checked against the policy.
     pub fn listen(&mut self, port: u16, bind_host: &str) -> io::Result<SocketAddr> {
-        validate_mesh_bind(bind_host)
+        self.listen_with_peer_allowlist(port, bind_host, mesh_peer_allowlist())
+    }
+
+    fn listen_with_peer_allowlist(
+        &mut self,
+        port: u16,
+        bind_host: &str,
+        peer_allowlist: Vec<String>,
+    ) -> io::Result<SocketAddr> {
+        let allow_remote = mesh_allow_remote();
+        let requested = resolve_mesh_bind(bind_host, port)
+            .map_err(|e| io::Error::new(io::ErrorKind::PermissionDenied, e.to_string()))?;
+        validate_resolved_bind(allow_remote, requested)
             .map_err(|e| io::Error::new(io::ErrorKind::PermissionDenied, e.to_string()))?;
 
-        let listener = TcpListener::bind(format!("{}:{}", bind_host, port))?;
+        let listener = TcpListener::bind(requested)?;
         let addr = listener.local_addr()?;
+        // Re-check the socket that actually exists (guards against resolver
+        // rebinding / interface changes between resolve and bind).
+        validate_resolved_bind(allow_remote, addr)
+            .map_err(|e| io::Error::new(io::ErrorKind::PermissionDenied, e.to_string()))?;
         listener.set_nonblocking(true)?;
 
         self.bound_addr = Some(addr);
@@ -978,11 +1462,13 @@ impl MeshServer {
         let sub_path = self.substrate_path.clone();
         let max_conns = mesh_max_connections();
         let active = Arc::new(AtomicUsize::new(0));
+        let peer_allowlist = Arc::new(peer_allowlist);
+        let replay_cache = Arc::new(ReplayCache::default());
 
         std::thread::spawn(move || {
             while *running_flag.lock().unwrap_or_else(|e| e.into_inner()) {
                 match listener_clone.accept() {
-                    Ok((mut stream, _client_addr)) => {
+                    Ok((mut stream, client_addr)) => {
                         if active.load(Ordering::SeqCst) >= max_conns {
                             let _ = stream.set_nonblocking(false);
                             let err = MeshEnvelope::Error(format!(
@@ -998,9 +1484,12 @@ impl MeshServer {
                         let node_id_inner = node_id.clone();
                         let sub_path_inner = sub_path.clone();
                         let signing_key_inner = Arc::clone(&signing_key);
+                        let peer_allowlist_inner = Arc::clone(&peer_allowlist);
+                        let replay_cache_inner = Arc::clone(&replay_cache);
 
                         std::thread::spawn(move || {
                             let _conn_slot = conn_slot;
+                            let mut handshake_nonce: Option<[u8; 32]> = None;
                             let _ = stream.set_nonblocking(false);
                             let _ = stream.set_read_timeout(Some(DEFAULT_FRAME_ASSEMBLY_TIMEOUT));
                             let _ = stream.set_write_timeout(Some(DEFAULT_FRAME_ASSEMBLY_TIMEOUT));
@@ -1040,7 +1529,26 @@ impl MeshServer {
                                             );
                                         }
                                     }
-                                    Ok(MeshEnvelope::Handshake(_client_hs)) => {
+                                    Ok(MeshEnvelope::Handshake(client_hs)) => {
+                                        // Legacy/unsigned handshakes carry no challenge nonce
+                                        // and are refused; every sync is nonce-bound.
+                                        if client_hs.nonce == [0u8; 32]
+                                            || client_hs.public_key == [0u8; 32]
+                                        {
+                                            let err = MeshEnvelope::Error(
+                                                "handshake refused: missing client nonce or identity (unsigned/legacy handshake)"
+                                                    .to_string(),
+                                            );
+                                            if let Ok(resp_bytes) = serde_json::to_vec(&err) {
+                                                let _ = PhysicalFrameCodec::write_frame(
+                                                    &mut stream,
+                                                    &resp_bytes,
+                                                );
+                                            }
+                                            continue;
+                                        }
+                                        handshake_nonce = Some(client_hs.nonce);
+
                                         // Open read-only view of store for stats
                                         let (epoch, count, head_hash) =
                                             match Substrate::open_readonly(
@@ -1058,16 +1566,18 @@ impl MeshServer {
                                                 Err(_) => (0, 0, "0".to_string()),
                                             };
 
-                                        let resp = MeshEnvelope::HandshakeAck(MeshHandshake {
+                                        let mut ack = MeshHandshake {
                                             node_id: node_id_inner.clone(),
-                                            public_key: signing_key_inner
-                                                .verifying_key()
-                                                .to_bytes(),
+                                            public_key: [0u8; 32],
                                             epoch,
                                             record_count: count,
                                             head_hash,
                                             protocol_version: MESH_PROTOCOL_VERSION,
-                                        });
+                                            nonce: client_hs.nonce,
+                                            signature: Vec::new(),
+                                        };
+                                        ack.sign_with(&signing_key_inner);
+                                        let resp = MeshEnvelope::HandshakeAck(ack);
 
                                         if let Ok(resp_bytes) = serde_json::to_vec(&resp) {
                                             let _ = PhysicalFrameCodec::write_frame(
@@ -1081,6 +1591,28 @@ impl MeshServer {
                                         // mis-signed sync requests are refused loudly and
                                         // no records are served.
                                         if let Err(e) = req.verify() {
+                                            let err = MeshEnvelope::Error(format!(
+                                                "sync_request refused: {e}"
+                                            ));
+                                            if let Ok(resp_bytes) = serde_json::to_vec(&err) {
+                                                let _ = PhysicalFrameCodec::write_frame(
+                                                    &mut stream,
+                                                    &resp_bytes,
+                                                );
+                                            }
+                                            continue;
+                                        }
+                                        if let Err(e) = authorize_signed_request(
+                                            "sync_request",
+                                            handshake_nonce,
+                                            req.nonce,
+                                            &req.requester_id,
+                                            &req.requester_pubkey,
+                                            &req.session_id,
+                                            client_addr.ip().is_loopback(),
+                                            &peer_allowlist_inner,
+                                            &replay_cache_inner,
+                                        ) {
                                             let err = MeshEnvelope::Error(format!(
                                                 "sync_request refused: {e}"
                                             ));
@@ -1124,6 +1656,9 @@ impl MeshServer {
                                             has_more,
                                             responder_pubkey: [0u8; 32],
                                             signature: Vec::new(),
+                                            nonce: req.nonce,
+                                            session_id: req.session_id.clone(),
+                                            timestamp_ms: now_millis(),
                                         };
                                         sync_resp.sign_with(&signing_key_inner);
                                         let resp = MeshEnvelope::SyncResp(sync_resp);
@@ -1136,6 +1671,40 @@ impl MeshServer {
                                         }
                                     }
                                     Ok(MeshEnvelope::GeneSyncReq(req)) => {
+                                        if let Err(e) = req.verify() {
+                                            let err = MeshEnvelope::Error(format!(
+                                                "gene_sync_request refused: {e}"
+                                            ));
+                                            if let Ok(resp_bytes) = serde_json::to_vec(&err) {
+                                                let _ = PhysicalFrameCodec::write_frame(
+                                                    &mut stream,
+                                                    &resp_bytes,
+                                                );
+                                            }
+                                            continue;
+                                        }
+                                        if let Err(e) = authorize_signed_request(
+                                            "gene_sync_request",
+                                            handshake_nonce,
+                                            req.nonce,
+                                            &req.requester_id,
+                                            &req.requester_pubkey,
+                                            &req.session_id,
+                                            client_addr.ip().is_loopback(),
+                                            &peer_allowlist_inner,
+                                            &replay_cache_inner,
+                                        ) {
+                                            let err = MeshEnvelope::Error(format!(
+                                                "gene_sync_request refused: {e}"
+                                            ));
+                                            if let Ok(resp_bytes) = serde_json::to_vec(&err) {
+                                                let _ = PhysicalFrameCodec::write_frame(
+                                                    &mut stream,
+                                                    &resp_bytes,
+                                                );
+                                            }
+                                            continue;
+                                        }
                                         let vault_path = sub_path_inner.join("vault.jsonl");
                                         let vault = GeneseedVault::load_or_init(&vault_path);
                                         let genes: Vec<GeneBundle> = vault
@@ -1153,10 +1722,17 @@ impl MeshServer {
                                             })
                                             .collect();
 
-                                        let resp = MeshEnvelope::GeneSyncResp(GeneSyncResponse {
+                                        let mut gene_resp = GeneSyncResponse {
                                             responder_id: node_id_inner.clone(),
                                             genes,
-                                        });
+                                            responder_pubkey: [0u8; 32],
+                                            signature: Vec::new(),
+                                            nonce: req.nonce,
+                                            session_id: req.session_id.clone(),
+                                            timestamp_ms: now_millis(),
+                                        };
+                                        gene_resp.sign_with(&signing_key_inner);
+                                        let resp = MeshEnvelope::GeneSyncResp(gene_resp);
 
                                         if let Ok(resp_bytes) = serde_json::to_vec(&resp) {
                                             let _ = PhysicalFrameCodec::write_frame(
@@ -1202,14 +1778,32 @@ pub struct MeshClient {
     pub stream: TcpStream,
     pub client_node_id: String,
     pub signing_key: SigningKey,
+    /// Remote peer address (loopback-only policy anchor).
+    pub peer_addr: SocketAddr,
+    /// Pinned peer allowlist (`WM_MESH_PEER_ALLOWLIST`); empty = loopback-only.
+    peer_allowlist: Vec<String>,
 }
 
 impl MeshClient {
-    /// Connect to remote mesh server.
+    /// Connect to remote mesh server, pinning peers from `WM_MESH_PEER_ALLOWLIST`.
     pub fn connect(
         peer_addr: SocketAddr,
         client_node_id: &str,
         signing_key: SigningKey,
+    ) -> Result<Self, MeshError> {
+        Self::connect_with_peer_allowlist(
+            peer_addr,
+            client_node_id,
+            signing_key,
+            mesh_peer_allowlist(),
+        )
+    }
+
+    fn connect_with_peer_allowlist(
+        peer_addr: SocketAddr,
+        client_node_id: &str,
+        signing_key: SigningKey,
+        peer_allowlist: Vec<String>,
     ) -> Result<Self, MeshError> {
         let stream = TcpStream::connect_timeout(&peer_addr, DEFAULT_CONNECT_TIMEOUT)?;
         stream.set_read_timeout(Some(DEFAULT_FRAME_ASSEMBLY_TIMEOUT))?;
@@ -1219,15 +1813,24 @@ impl MeshClient {
             stream,
             client_node_id: client_node_id.to_string(),
             signing_key,
+            peer_addr,
+            peer_allowlist,
         })
     }
 
-    /// Perform mutual handshake with peer.
+    /// Perform a nonce-challenged handshake and verify the pinned server identity.
     pub fn handshake(
         &mut self,
         local_epoch: u64,
         local_count: u64,
     ) -> Result<MeshHandshake, MeshError> {
+        if self.peer_allowlist.is_empty() && !self.peer_addr.ip().is_loopback() {
+            return Err(MeshError::Unauthorized(format!(
+                "refusing remote mesh sync to {}: WM_MESH_PEER_ALLOWLIST is empty; loopback-only sync",
+                self.peer_addr
+            )));
+        }
+        let nonce = random_nonce();
         let hs = MeshHandshake {
             node_id: self.client_node_id.clone(),
             public_key: self.signing_key.verifying_key().to_bytes(),
@@ -1235,6 +1838,8 @@ impl MeshClient {
             record_count: local_count,
             head_hash: format!("{:x}", local_epoch),
             protocol_version: MESH_PROTOCOL_VERSION,
+            nonce,
+            signature: Vec::new(),
         };
 
         let req = MeshEnvelope::Handshake(hs);
@@ -1252,7 +1857,16 @@ impl MeshClient {
             .map_err(|e| MeshError::FramingError(e.to_string()))?;
 
         match env {
-            MeshEnvelope::HandshakeAck(server_hs) => Ok(server_hs),
+            MeshEnvelope::HandshakeAck(server_hs) => {
+                server_hs.verify(&nonce)?;
+                check_peer_allowlist(
+                    &self.peer_allowlist,
+                    self.peer_addr.ip().is_loopback(),
+                    &server_hs.node_id,
+                    &server_hs.public_key,
+                )?;
+                Ok(server_hs)
+            }
             MeshEnvelope::Error(e) => Err(MeshError::HandshakeFailed(e)),
             _ => Err(MeshError::HandshakeFailed(
                 "Unexpected response during handshake".to_string(),
@@ -1303,11 +1917,14 @@ impl MeshClient {
 
         let hs = self.handshake(prev_epoch, prev_count)?;
 
-        // Signed peer identity: the request is signed with the sovereign mesh key.
-        let req = MeshEnvelope::SyncReq(SyncRequest::signed(
+        // Signed peer identity bound to the handshake nonce + fresh session id.
+        let session_id = random_session_id();
+        let req = MeshEnvelope::SyncReq(SyncRequest::signed_with(
             &self.client_node_id,
             prev_epoch,
             batch_limit,
+            hs.nonce,
+            &session_id,
             &self.signing_key,
         ));
 
@@ -1336,9 +1953,10 @@ impl MeshClient {
             }
         };
 
-        // Verify the responder's signed identity (bound to the handshake key)
-        // and each record digest before any ingest mutation.
-        sync_resp.verify(&hs.public_key)?;
+        // Verify the responder's signed identity (bound to the handshake key),
+        // nonce/session binding, freshness, and each record digest before any
+        // ingest mutation.
+        sync_resp.verify(&hs.public_key, &hs.nonce, &session_id, now_millis())?;
         for record in &sync_resp.records {
             record.verify_integrity()?;
         }
@@ -1418,10 +2036,14 @@ impl MeshClient {
     ) -> Result<GeneSyncStats, MeshError> {
         let hs = self.handshake(0, 0)?;
 
-        let req = MeshEnvelope::GeneSyncReq(GeneSyncRequest {
-            requester_id: self.client_node_id.clone(),
+        let session_id = random_session_id();
+        let req = MeshEnvelope::GeneSyncReq(GeneSyncRequest::signed_with(
+            &self.client_node_id,
             since_version,
-        });
+            hs.nonce,
+            &session_id,
+            &self.signing_key,
+        ));
 
         let req_bytes =
             serde_json::to_vec(&req).map_err(|e| MeshError::FramingError(e.to_string()))?;
@@ -1448,6 +2070,10 @@ impl MeshClient {
                 ));
             }
         };
+
+        // Verify the responder's signed identity (bound to the handshake key),
+        // nonce/session binding, and freshness before accepting any genes.
+        gene_resp.verify(&hs.public_key, &hs.nonce, &session_id, now_millis())?;
 
         let total_received = gene_resp.genes.len();
         let mut genes_promoted = 0;
@@ -1857,6 +2483,8 @@ mod tests {
             limit: 100,
             requester_pubkey: [0u8; 32],
             signature: Vec::new(),
+            nonce: [0u8; 32],
+            session_id: String::new(),
         });
         let bytes = serde_json::to_vec(&unsigned).expect("encode");
         PhysicalFrameCodec::write_frame(&mut stream, &bytes).expect("write frame");
@@ -1871,7 +2499,10 @@ mod tests {
         match env {
             MeshEnvelope::Error(msg) => {
                 assert!(msg.contains("refused"), "unexpected error: {msg}");
-                assert!(msg.contains("no signature"), "unexpected error: {msg}");
+                assert!(
+                    msg.contains("no handshake nonce"),
+                    "unexpected error: {msg}"
+                );
             }
             other => panic!("unsigned request must be refused, got {other:?}"),
         }
@@ -1881,6 +2512,9 @@ mod tests {
     #[test]
     fn mesh_signed_sync_response_rejects_tampering_and_bad_identity() {
         let (key, pubkey) = keypair(31);
+        let nonce = [9u8; 32];
+        let session = "session-a";
+        let now = now_millis();
         let records = vec![SyncRecord {
             record_id: 1,
             content: "authentic".to_string(),
@@ -1896,23 +2530,378 @@ mod tests {
             has_more: false,
             responder_pubkey: [0u8; 32],
             signature: Vec::new(),
+            nonce,
+            session_id: session.to_string(),
+            timestamp_ms: now,
         };
         resp.sign_with(&key);
-        resp.verify(&pubkey).expect("signed response verifies");
+        resp.verify(&pubkey, &nonce, session, now)
+            .expect("signed response verifies");
 
         let mut forged = resp.clone();
         forged.responder_pubkey = keypair(32).1;
         assert!(matches!(
-            forged.verify(&pubkey),
+            forged.verify(&pubkey, &nonce, session, now),
             Err(MeshError::UntrustedSigner(_))
         ));
 
         let mut tampered = resp.clone();
         tampered.records[0].content = "malicious".to_string();
         assert!(matches!(
-            tampered.verify(&pubkey),
+            tampered.verify(&pubkey, &nonce, session, now),
             Err(MeshError::Unauthorized(_))
         ));
+    }
+
+    #[test]
+    fn mesh_unsigned_handshake_refused_over_wire() {
+        let dir = TempDir::new("unsigned-hs");
+        let (server_key, _) = keypair(64);
+        let mut server = MeshServer::new("hs-server", server_key, dir.path());
+        let addr = server.listen(0, "127.0.0.1").expect("bind");
+
+        let mut stream = TcpStream::connect(addr).expect("connect");
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .expect("read timeout");
+        let legacy = MeshEnvelope::Handshake(MeshHandshake {
+            node_id: "legacy".to_string(),
+            public_key: [7u8; 32],
+            epoch: 0,
+            record_count: 0,
+            head_hash: "0".to_string(),
+            protocol_version: MESH_PROTOCOL_VERSION,
+            nonce: [0u8; 32],
+            signature: Vec::new(),
+        });
+        let bytes = serde_json::to_vec(&legacy).expect("encode");
+        PhysicalFrameCodec::write_frame(&mut stream, &bytes).expect("write frame");
+
+        let resp = PhysicalFrameCodec::read_frame(
+            &mut stream,
+            Instant::now(),
+            DEFAULT_FRAME_ASSEMBLY_TIMEOUT,
+        )
+        .expect("server answers instead of dropping");
+        let env: MeshEnvelope = serde_json::from_slice(&resp).expect("decode");
+        match env {
+            MeshEnvelope::Error(msg) => {
+                assert!(msg.contains("handshake refused"), "unexpected error: {msg}");
+            }
+            other => panic!("unsigned handshake must be refused, got {other:?}"),
+        }
+        server.stop();
+    }
+
+    #[test]
+    fn mesh_forged_handshake_ack_refused_by_pinned_client() {
+        let (attacker_key, _) = keypair(61);
+        let (_, expected_pub) = keypair(62);
+        let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+        let addr = listener.local_addr().expect("addr");
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept");
+            let bytes = PhysicalFrameCodec::read_frame(
+                &mut stream,
+                Instant::now(),
+                DEFAULT_FRAME_ASSEMBLY_TIMEOUT,
+            )
+            .expect("read handshake");
+            let env: MeshEnvelope = serde_json::from_slice(&bytes).expect("decode");
+            let client_nonce = match env {
+                MeshEnvelope::Handshake(hs) => hs.nonce,
+                other => panic!("expected handshake, got {other:?}"),
+            };
+            let mut ack = MeshHandshake {
+                node_id: "forged-server".to_string(),
+                public_key: [0u8; 32],
+                epoch: 0,
+                record_count: 0,
+                head_hash: "0".to_string(),
+                protocol_version: MESH_PROTOCOL_VERSION,
+                nonce: client_nonce,
+                signature: Vec::new(),
+            };
+            ack.sign_with(&attacker_key);
+            let bytes = serde_json::to_vec(&MeshEnvelope::HandshakeAck(ack)).expect("encode");
+            PhysicalFrameCodec::write_frame(&mut stream, &bytes).expect("write ack");
+        });
+
+        let mut client = MeshClient::connect_with_peer_allowlist(
+            addr,
+            "pinned-client",
+            keypair(63).0,
+            vec![hex_encode_key(&expected_pub)],
+        )
+        .expect("connect");
+        let err = client
+            .handshake(0, 0)
+            .expect_err("forged ack key must be refused");
+        assert!(matches!(err, MeshError::UntrustedSigner(_)), "{err}");
+        server.join().expect("fake server thread");
+    }
+
+    #[test]
+    fn mesh_server_refuses_unlisted_requester() {
+        let dir = TempDir::new("server-allow");
+        let (server_key, _) = keypair(71);
+        let mut server = MeshServer::new("server", server_key, dir.path());
+        let addr = server
+            .listen_with_peer_allowlist(0, "127.0.0.1", vec!["authorized-node".to_string()])
+            .expect("bind with pinned allowlist");
+        let (client_key, _) = keypair(72);
+
+        let mut stream = TcpStream::connect(addr).expect("connect");
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .expect("read timeout");
+        let nonce = [5u8; 32];
+        let hs = MeshEnvelope::Handshake(MeshHandshake {
+            node_id: "mallory".to_string(),
+            public_key: client_key.verifying_key().to_bytes(),
+            epoch: 0,
+            record_count: 0,
+            head_hash: "0".to_string(),
+            protocol_version: MESH_PROTOCOL_VERSION,
+            nonce,
+            signature: Vec::new(),
+        });
+        let bytes = serde_json::to_vec(&hs).expect("encode handshake");
+        PhysicalFrameCodec::write_frame(&mut stream, &bytes).expect("write handshake");
+        let ack = PhysicalFrameCodec::read_frame(
+            &mut stream,
+            Instant::now(),
+            DEFAULT_FRAME_ASSEMBLY_TIMEOUT,
+        )
+        .expect("read handshake ack");
+        let ack: MeshEnvelope = serde_json::from_slice(&ack).expect("decode ack");
+        match ack {
+            MeshEnvelope::HandshakeAck(ack) => ack.verify(&nonce).expect("signed ack"),
+            other => panic!("expected signed handshake ack, got {other:?}"),
+        }
+
+        let req = MeshEnvelope::SyncReq(SyncRequest::signed_with(
+            "mallory",
+            0,
+            10,
+            nonce,
+            "session-unlisted",
+            &client_key,
+        ));
+        let bytes = serde_json::to_vec(&req).expect("encode request");
+        PhysicalFrameCodec::write_frame(&mut stream, &bytes).expect("write request");
+        let resp = PhysicalFrameCodec::read_frame(
+            &mut stream,
+            Instant::now(),
+            DEFAULT_FRAME_ASSEMBLY_TIMEOUT,
+        )
+        .expect("read response");
+        let resp: MeshEnvelope = serde_json::from_slice(&resp).expect("decode response");
+        match resp {
+            MeshEnvelope::Error(msg) => {
+                assert!(
+                    msg.contains("WM_MESH_PEER_ALLOWLIST"),
+                    "unexpected error: {msg}"
+                );
+            }
+            other => panic!("unlisted requester must be refused, got {other:?}"),
+        }
+        server.stop();
+    }
+
+    #[test]
+    fn mesh_replay_cache_and_stale_response_refused() {
+        let (key, pubkey) = keypair(65);
+        let nonce = [9u8; 32];
+        let session = "session-replay";
+        let now = now_millis();
+        let records = vec![SyncRecord {
+            record_id: 1,
+            content: "x".to_string(),
+            source: "s".to_string(),
+            kind: "reported".to_string(),
+            sha256: sha256_hex("x"),
+            created_at: 0,
+        }];
+        let mut resp = SyncResponse {
+            responder_id: "n".to_string(),
+            records,
+            current_epoch: 1,
+            has_more: false,
+            responder_pubkey: [0u8; 32],
+            signature: Vec::new(),
+            nonce,
+            session_id: session.to_string(),
+            timestamp_ms: now,
+        };
+        resp.sign_with(&key);
+        resp.verify(&pubkey, &nonce, session, now)
+            .expect("fresh valid response");
+
+        let mut bad_nonce = resp.clone();
+        bad_nonce.nonce = [8u8; 32];
+        assert!(matches!(
+            bad_nonce.verify(&pubkey, &nonce, session, now),
+            Err(MeshError::Unauthorized(_))
+        ));
+
+        let mut bad_session = resp.clone();
+        bad_session.session_id = "other".to_string();
+        assert!(matches!(
+            bad_session.verify(&pubkey, &nonce, session, now),
+            Err(MeshError::Unauthorized(_))
+        ));
+
+        let mut stale = resp.clone();
+        stale.timestamp_ms = now.saturating_sub(MESH_RESPONSE_MAX_AGE_MS + 1);
+        stale.sign_with(&key);
+        assert!(matches!(
+            stale.verify(&pubkey, &nonce, session, now),
+            Err(MeshError::Unauthorized(_))
+        ));
+
+        let cache = ReplayCache::default();
+        cache
+            .observe("key:session", 100)
+            .expect("first observation");
+        assert!(
+            cache.observe("key:session", 100).is_err(),
+            "replayed session must be refused"
+        );
+        cache
+            .observe("key:other", 100)
+            .expect("distinct session accepted");
+        cache
+            .observe("key:session", 100 + MESH_REPLAY_WINDOW_SECS + 1)
+            .expect("expired replay entry is pruned");
+    }
+
+    #[test]
+    fn mesh_peer_allowlist_policy() {
+        let (_, pubkey) = keypair(66);
+        let key_hex = hex_encode_key(&pubkey);
+        let allow = parse_peer_allowlist(&format!("node-a, {} , ", key_hex.to_uppercase()));
+        assert_eq!(allow.len(), 2);
+        assert!(peer_allowed(&allow, "NODE-A", &pubkey));
+        assert!(peer_allowed(&allow, "nobody", &pubkey));
+        check_peer_allowlist(&allow, false, "node-a", &pubkey).expect("listed node id on remote");
+        assert!(
+            check_peer_allowlist(&allow, false, "mallory", &[3u8; 32]).is_err(),
+            "unlisted remote peer must be refused"
+        );
+
+        // Empty allowlist = loopback-only sync.
+        check_peer_allowlist(&[], true, "anyone", &pubkey).expect("loopback allowed");
+        let err = check_peer_allowlist(&[], false, "remote", &pubkey)
+            .expect_err("remote peer refused without an allowlist");
+        assert!(err.to_string().contains("loopback-only"), "{err}");
+    }
+
+    #[test]
+    fn mesh_bundle_receipt_signatures_verified_before_import() {
+        fn receipt(id: &str) -> ContinuityReceipt05 {
+            ContinuityReceipt05::new(
+                id.to_string(),
+                "tenant".to_string(),
+                "agent".to_string(),
+                "session".to_string(),
+                1_700_000_000_000,
+                "landlock".to_string(),
+                "claim".to_string(),
+                true,
+                "preflight".to_string(),
+                None,
+                "did:key:alice".to_string(),
+            )
+        }
+
+        fn bundle_with_receipts(
+            author_key: &SigningKey,
+            receipts: Vec<ContinuityReceipt05>,
+        ) -> SyncBundle {
+            let merkle_root = SyncBundle::compute_composite_merkle_root(&[], &receipts, &[]);
+            let mut bundle = SyncBundle {
+                header: BundleHeader {
+                    magic: WMPACK_MAGIC.to_string(),
+                    timestamp: 1_700_000_000,
+                    author_id: "node-alice".to_string(),
+                    author_pubkey: author_key.verifying_key().to_bytes(),
+                    from_epoch: 0,
+                    to_epoch: 0,
+                    record_count: 0,
+                },
+                records: Vec::new(),
+                receipts,
+                negative_signatures: Vec::new(),
+                merkle_root,
+                signature: Vec::new(),
+            };
+            bundle.sign_with(author_key);
+            bundle
+        }
+
+        let (alice_key, alice_pub) = keypair(67);
+        let (mallory_key, _) = keypair(68);
+        let dir = TempDir::new("receipt-target");
+        let mut target = synthetic_store(&dir);
+
+        let unsigned = bundle_with_receipts(&alice_key, vec![receipt("receipt-unsigned")]);
+        let err = unsigned
+            .import_into_substrate(&mut target, Some(&alice_pub), "unsigned.wmpack")
+            .expect_err("unsigned receipt must be refused");
+        assert!(matches!(err, MeshError::BundleCorrupted(_)), "{err}");
+
+        let mut foreign = receipt("receipt-foreign");
+        foreign.sign(&mallory_key);
+        let foreign = bundle_with_receipts(&alice_key, vec![foreign]);
+        let err = foreign
+            .import_into_substrate(&mut target, Some(&alice_pub), "foreign.wmpack")
+            .expect_err("foreign receipt signature must be refused");
+        assert!(matches!(err, MeshError::InvalidSignature(_)), "{err}");
+
+        let mut good = receipt("receipt-good");
+        good.sign(&alice_key);
+        let good = bundle_with_receipts(&alice_key, vec![good]);
+        let receipt = good
+            .import_into_substrate(&mut target, Some(&alice_pub), "good.wmpack")
+            .expect("correctly signed receipt imports");
+        assert_eq!(receipt.receipts_imported, 1);
+    }
+
+    #[test]
+    fn mesh_resolve_bind_handles_ipv6_and_rebinding() {
+        assert_eq!(
+            resolve_mesh_bind("localhost", 7369)
+                .expect("localhost resolves")
+                .to_string(),
+            "127.0.0.1:7369"
+        );
+        assert_eq!(
+            resolve_mesh_bind("::1", 7369).expect("::1").to_string(),
+            "[::1]:7369"
+        );
+        assert_eq!(
+            resolve_mesh_bind("[::1]", 7369).expect("[::1]").to_string(),
+            "[::1]:7369"
+        );
+        assert_eq!(
+            resolve_mesh_bind("::", 0).expect("::").to_string(),
+            "[::]:0"
+        );
+        assert!(resolve_mesh_bind("", 0).is_err());
+        assert!(resolve_mesh_bind("no-such-host.invalid", 0).is_err());
+
+        // Resolve-then-bind: the exact IPv6 loopback address is bound and reachable.
+        let dir = TempDir::new("ipv6-bind");
+        let (key, _) = keypair(69);
+        let mut server = MeshServer::new("ipv6", key, dir.path());
+        let bound = server.listen(0, "::1").expect("ipv6 loopback binds");
+        assert!(bound.is_ipv6() && bound.ip().is_loopback());
+        let (client_key, _) = keypair(70);
+        let mut client =
+            MeshClient::connect(bound, "ipv6-client", client_key).expect("connect to [::1]");
+        client.ping().expect("ping over ipv6 loopback");
+        server.stop();
     }
 
     #[test]
