@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, master]
 
+concurrency:
+  group: "ci-${{ github.ref }}"
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -31,7 +35,10 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy --workspace
+      # TODO(ci): 180 clippy warnings across the workspace on rustc 1.98
+      # (inventoried 2026-10-06). Once the tree is clean, flip this to
+      # `cargo clippy --workspace --all-targets -- -D warnings`.
+      - run: cargo clippy --workspace --all-targets
 
   truth:
     timeout-minutes: 10
@@ -44,8 +51,20 @@ jobs:
           python-version: "3.12"
       - run: python3 scripts/version_truth.py --check
 
+  python-tests:
+    timeout-minutes: 15
+    name: Python Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run python unit tests
+        run: python3 -m unittest discover -s scripts/tests -v
+
   test-linux:
-    timeout-minutes: 25
+    timeout-minutes: 35
     name: Tests (Linux)
     runs-on: ubuntu-latest
     steps:
@@ -57,10 +76,75 @@ jobs:
         with:
           path: .fastembed_cache
           key: fastembed-${{ runner.os }}-bge-small-en-v1.5-onnx-q-v1
+      - name: Fetch dependencies (locked)
+        run: cargo fetch --locked
+      - name: Closure static scans
+        # docs/CLOSURE_TESTS.md §1.1-B/C + §2.1 (dependency rule, mutation
+        # surface isolation) and CHARTER Article 4 (spawns only in the
+        # physical-I/O transports). The scan's `cargo tree` runs --offline,
+        # so it depends on the locked fetch above.
+        run: |
+          if [ -f scripts/check_closures.sh ]; then
+            bash scripts/check_closures.sh
+          else
+            echo "::warning::scripts/check_closures.sh is not tracked in this tree; closure gate skipped"
+          fi
       - name: Warm fastembed cache
         run: cargo run -p wm-gen3-core --example warm_embed_cache
       - name: Run workspace tests
-        run: cargo test --workspace
+        run: |
+          set -o pipefail
+          cargo test --workspace 2>&1 | tee tests-output.txt
+      - name: Run gate batteries (reference-models)
+        # Activates the Gate 9A adversary_contract and Gate 9D reality
+        # batteries, which never compile under the default feature set.
+        # `operator` is unified in via wm-gen3-harness's dependency on
+        # wm-gen3-core; projection::tests / ops::gated_tests are covered by
+        # the default workspace run and are skipped here.
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          cargo test --workspace --features wm-gen3-core/reference-models \
+            -- --skip projection::tests --skip ops::gated_tests 2>&1 | tee -a tests-output.txt
+      - name: Summarize test facts
+        if: ${{ !cancelled() }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+
+          passed = failed = ignored = 0
+          if os.path.exists("tests-output.txt"):
+              with open("tests-output.txt", encoding="utf-8", errors="replace") as fh:
+                  for line in fh:
+                      match = re.match(
+                          r"test result: \w+\. (\d+) passed; (\d+) failed; (\d+) ignored;",
+                          line,
+                      )
+                      if match:
+                          p, f, i = (int(value) for value in match.groups())
+                          passed += p
+                          failed += f
+                          ignored += i
+          facts = {
+              "passed": passed,
+              "ignored": ignored,
+              "failed": failed,
+              "source": f"ci-{os.environ.get('GITHUB_RUN_ID', 'local')}",
+          }
+          with open("tests.json", "w", encoding="utf-8") as fh:
+              json.dump(facts, fh, indent=2)
+              fh.write("\n")
+          print(facts)
+          PY
+      - name: Upload test summary
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-summary
+          path: tests.json
+          if-no-files-found: warn
 
   test-macos:
     timeout-minutes: 30
@@ -92,6 +176,11 @@ jobs:
       - run: cargo build --release --bin wm
       - name: Verify binary execution
         run: target/release/wm --version
+      - name: Selftest smoke (informational)
+        # Host-health checks depend on the runner (cgroups, ports, disk);
+        # record the JSON but never fail the release build on them.
+        continue-on-error: true
+        run: target/release/wm selftest --json
 
   npm:
     timeout-minutes: 10
