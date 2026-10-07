@@ -8,13 +8,18 @@
 //! the crate-internal `EvidenceRecord::from_wire` — there is no public
 //! construction or re-label path (Closure 2).
 
+use std::borrow::Cow;
 #[cfg(test)]
 use std::cell::Cell;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
 use lmdb::{Cursor, Database, Transaction};
+use zeroize::Zeroizing;
 
+use crate::at_rest::{
+    self, AtRestConfig, AtRestError, AtRestState, AtRestStatus, MigrationLedger, RECORD_SCOPE,
+};
 use crate::capability::CommitCapability;
 use crate::evidence::{Class, Domain, EvidenceRecord, RecordStatus};
 use crate::field::Relation;
@@ -66,6 +71,7 @@ pub enum StoreError {
     CounterOverflow { key: String },
     Intake(IntakeError),
     Sweep(SweepError),
+    AtRest(AtRestError),
 }
 
 impl fmt::Display for StoreError {
@@ -83,6 +89,7 @@ impl fmt::Display for StoreError {
             StoreError::CounterOverflow { key } => write!(f, "counter overflow: {key}"),
             StoreError::Intake(e) => write!(f, "intake: {e}"),
             StoreError::Sweep(e) => write!(f, "sweep: {e}"),
+            StoreError::AtRest(e) => write!(f, "at-rest: {e}"),
         }
     }
 }
@@ -117,6 +124,11 @@ impl From<IntakeError> for StoreError {
 impl From<SweepError> for StoreError {
     fn from(e: SweepError) -> Self {
         Self::Sweep(e)
+    }
+}
+impl From<AtRestError> for StoreError {
+    fn from(e: AtRestError) -> Self {
+        Self::AtRest(e)
     }
 }
 
@@ -205,12 +217,39 @@ pub struct Store {
     receipts: Database,
     default: Database,
     readonly: bool,
+    /// Unlocked at-rest keyring state (mode B/C writable opens only).
+    at_rest: Option<AtRestState>,
+    /// Keyring DBI handle (present iff [`Self::at_rest`] is).
+    keyring: Option<Database>,
     #[cfg(test)]
     fail_after_stage: Cell<Option<u8>>,
 }
 
+/// Outcome of a bounded seal-on-rewrite migration pass (Q39 slice B).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct AtRestMigrationReport {
+    /// Whether the pass counted without writing anything.
+    pub dry_run: bool,
+    /// Records scanned in the `records` keyspace.
+    pub scanned: u64,
+    /// Plaintext records sealed by this pass.
+    pub sealed: u64,
+    /// Records that already carried the WMEN envelope.
+    pub already_sealed: u64,
+    /// Values skipped as undecodable non-records or non-8-byte keys.
+    pub skipped: u64,
+    /// Whether the keyspace is now fully scanned (ledger `done`).
+    pub done: bool,
+}
+
 fn bytes_u64(v: u64) -> [u8; 8] {
     v.to_be_bytes()
+}
+
+fn record_key_id(key: &[u8]) -> Result<u64, StoreError> {
+    key.try_into()
+        .map(u64::from_be_bytes)
+        .map_err(|_| StoreError::Msg(format!("record key is {} bytes, expected 8", key.len())))
 }
 
 fn decode_record(bytes: &[u8]) -> Result<EvidenceRecord, StoreError> {
@@ -238,7 +277,16 @@ fn configured_map_size() -> usize {
 }
 
 impl Store {
+    /// Open with the environment's at-rest configuration
+    /// ([`AtRestConfig::from_env`]: `WM_AT_REST_MODE`, default `off`).
     pub fn open(path: &Path) -> Result<Self, StoreError> {
+        Self::open_with_at_rest(path, &AtRestConfig::from_env()?)
+    }
+
+    /// Open with an explicit at-rest configuration (`off` | `keyfile` |
+    /// `passphrase`). `off` is a provable no-op: no keyring DBI, no key file,
+    /// records byte-identical to the pre-at-rest codec.
+    pub fn open_with_at_rest(path: &Path, config: &AtRestConfig) -> Result<Self, StoreError> {
         let fresh = match std::fs::read_dir(path) {
             Ok(mut entries) => entries.next().is_none(),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -258,7 +306,9 @@ impl Store {
         if fresh {
             Self::initialize_fresh(&env)?;
         }
-        Self::from_env(env, path, false)
+        let mut store = Self::from_env(env, path, false)?;
+        store.install_at_rest(config)?;
+        Ok(store)
     }
 
     /// Snapshot-readonly open (`MDB_RDONLY | MDB_NOLOCK`, the 9.1.8 inspection pattern):
@@ -444,9 +494,241 @@ impl Store {
             receipts,
             default,
             readonly,
+            at_rest: None,
+            keyring: None,
             #[cfg(test)]
             fail_after_stage: Cell::new(None),
         })
+    }
+
+    /// Wire the at-rest keyring into this store (writable opens only).
+    ///
+    /// `off` + absent keyring is a no-op; `off` + present keyring refuses
+    /// (split-brain guard); B/C initialize on first use and unlock on later
+    /// opens. Read-only handles never call this: they disclose status via
+    /// [`Self::at_rest_status`] without resolving the root key.
+    fn install_at_rest(&mut self, config: &AtRestConfig) -> Result<(), StoreError> {
+        let (keyring, state) = at_rest::open_at_rest(&self.env, &self.path, config)?;
+        self.keyring = keyring;
+        self.at_rest = state;
+        Ok(())
+    }
+
+    /// Unlocked at-rest state, when this writable open resolved the keyring.
+    #[must_use]
+    pub const fn at_rest_state(&self) -> Option<&AtRestState> {
+        self.at_rest.as_ref()
+    }
+
+    /// Read-only at-rest disclosure (meta + counts, never the key bytes).
+    /// Works on read-only inspection handles too.
+    #[must_use]
+    pub fn at_rest_status(&self) -> AtRestStatus {
+        if let Some(state) = &self.at_rest {
+            return AtRestStatus::Present(state.status());
+        }
+        match at_rest::open_keyring_optional(&self.env) {
+            Ok(Some(db)) => at_rest::read_status(&self.env, db, &self.path),
+            Ok(None) => AtRestStatus::Absent,
+            Err(e) => AtRestStatus::Malformed {
+                reason: e.to_string(),
+            },
+        }
+    }
+
+    /// Read the `migration:v1` ledger from the keyring DBI, when present.
+    pub fn at_rest_migration_ledger(&self) -> Result<Option<MigrationLedger>, StoreError> {
+        match at_rest::open_keyring_optional(&self.env)? {
+            Some(db) => Ok(Some(at_rest::read_migration_ledger(&self.env, db)?)),
+            None => Ok(None),
+        }
+    }
+
+    /// DEK sealing this store's record bodies, when mode B/C is unlocked.
+    fn record_dek(&self) -> Option<&[u8; at_rest::AT_REST_KEY_LEN]> {
+        self.at_rest
+            .as_ref()
+            .and_then(|state| state.galaxy_dek(RECORD_SCOPE))
+    }
+
+    /// Encode a record body for storage: the plaintext wire bytes unchanged
+    /// in `off` mode, sealed under the record-scope DEK otherwise.
+    fn encode_stored_record<'a>(
+        &self,
+        id: u64,
+        version: u64,
+        plaintext: &'a [u8],
+    ) -> Result<Cow<'a, [u8]>, StoreError> {
+        match self.record_dek() {
+            None => Ok(Cow::Borrowed(plaintext)),
+            Some(dek) => at_rest::seal_record(
+                plaintext,
+                dek,
+                RECORD_SCOPE,
+                &at_rest::record_identity(id),
+                version,
+            )
+            .map(Cow::Owned)
+            .map_err(|e| StoreError::AtRest(AtRestError::msg(e))),
+        }
+    }
+
+    /// Open a stored record body's plaintext bytes (sealed values fail closed
+    /// without their key).
+    fn open_stored_record(&self, id: u64, stored: &[u8]) -> Result<Zeroizing<Vec<u8>>, StoreError> {
+        if !at_rest::is_sealed_record(stored) {
+            return Ok(Zeroizing::new(stored.to_vec()));
+        }
+        let Some(dek) = self.record_dek() else {
+            return Err(StoreError::AtRest(AtRestError::msg(format!(
+                "sealed record {id} but no at-rest key is loaded — open the store with its \
+                 WM_AT_REST_MODE/key source (a sealed value without its key fails closed)"
+            ))));
+        };
+        at_rest::open_record(stored, dek, RECORD_SCOPE, &at_rest::record_identity(id))
+            .map_err(|e| StoreError::AtRest(AtRestError::msg(format!("at-rest open failed: {e}"))))
+    }
+
+    /// Decode a stored record value: sealed values open under the record-scope
+    /// DEK (failing closed without one), plaintext values follow the legacy
+    /// wire codec.
+    fn decode_stored_record(&self, id: u64, stored: &[u8]) -> Result<EvidenceRecord, StoreError> {
+        if at_rest::is_sealed_record(stored) {
+            let opened = self.open_stored_record(id, stored)?;
+            decode_record(&opened)
+        } else {
+            decode_record(stored)
+        }
+    }
+
+    /// Seal-on-rewrite migration for pre-existing plaintext records (Q39
+    /// slice B). Scans the `records` keyspace, sealing every plaintext body
+    /// under the record-scope DEK in bounded batches and journaling progress
+    /// in the `migration:v1` ledger row.
+    ///
+    /// Idempotent: already-sealed values are skipped, a completed pass
+    /// (`done`) short-circuits without touching the ledger, and a crash
+    /// between a batch commit and the ledger write only repeats bounded
+    /// work. `dry_run` counts without writing records or ledger.
+    pub fn migrate_at_rest_records(
+        &self,
+        batch_size: usize,
+        dry_run: bool,
+    ) -> Result<AtRestMigrationReport, StoreError> {
+        self.ensure_writable()?;
+        if self.at_rest.is_none() {
+            return Err(StoreError::AtRest(AtRestError::msg(
+                "at-rest migration requires an unlocked mode B/C store",
+            )));
+        }
+        let keyring = self.keyring.ok_or_else(|| {
+            StoreError::AtRest(AtRestError::msg("at-rest keyring DBI is not open"))
+        })?;
+        let mut report = AtRestMigrationReport {
+            dry_run,
+            ..Default::default()
+        };
+        let mut ledger = at_rest::read_migration_ledger(&self.env, keyring)?;
+        if ledger
+            .galaxies
+            .get(RECORD_SCOPE)
+            .is_some_and(|state| state.done)
+        {
+            report.done = true;
+            return Ok(report);
+        }
+
+        // Pass 1: collect ids of unsealed records (bounded memory — values
+        // are re-read per batch below).
+        let mut pending: Vec<u64> = Vec::new();
+        {
+            let txn = self.env.begin_ro_txn()?;
+            let mut cursor = txn.open_ro_cursor(self.records)?;
+            for (key, value) in cursor.iter() {
+                report.scanned += 1;
+                if at_rest::is_sealed_record(value) {
+                    report.already_sealed += 1;
+                    continue;
+                }
+                match record_key_id(key) {
+                    Ok(id) => pending.push(id),
+                    Err(_) => report.skipped += 1,
+                }
+            }
+        }
+        report.sealed = pending.len() as u64;
+        if dry_run {
+            report.done = pending.is_empty();
+            return Ok(report);
+        }
+
+        let prior = ledger
+            .galaxies
+            .get(RECORD_SCOPE)
+            .map_or(0, |state| state.encrypted);
+        let mut sealed_total = prior;
+        let mut sealed_now: u64 = 0;
+        for chunk in pending.chunks(batch_size.max(1)) {
+            let mut txn = self.env.begin_rw_txn()?;
+            for id in chunk {
+                let value = match txn.get(self.records, &bytes_u64(*id)) {
+                    Ok(value) => value.to_vec(),
+                    Err(lmdb::Error::NotFound) => continue,
+                    Err(e) => return Err(e.into()),
+                };
+                if at_rest::is_sealed_record(&value) {
+                    continue;
+                }
+                let record = match decode_record(&value) {
+                    Ok(record) => record,
+                    Err(_) => {
+                        report.skipped += 1;
+                        continue;
+                    }
+                };
+                let sealed = self.encode_stored_record(*id, record.created_at(), &value)?;
+                txn.put(
+                    self.records,
+                    &bytes_u64(*id),
+                    &sealed,
+                    lmdb::WriteFlags::empty(),
+                )?;
+                sealed_now += 1;
+            }
+            txn.commit()?;
+            sealed_total = prior + sealed_now;
+            ledger.galaxies.insert(
+                RECORD_SCOPE.to_string(),
+                at_rest::MigrationGalaxyState {
+                    encrypted: sealed_total,
+                    cursor_hex: chunk
+                        .last()
+                        .map_or_else(String::new, |id| at_rest::hex_encode(&bytes_u64(*id))),
+                    done: false,
+                },
+            );
+            ledger.updated_at = chrono::Utc::now().to_rfc3339();
+            at_rest::write_migration_ledger(&self.env, keyring, &ledger)?;
+        }
+
+        if let Some(state) = ledger.galaxies.get_mut(RECORD_SCOPE) {
+            state.done = true;
+            state.encrypted = sealed_total;
+        } else {
+            ledger.galaxies.insert(
+                RECORD_SCOPE.to_string(),
+                at_rest::MigrationGalaxyState {
+                    encrypted: sealed_total,
+                    cursor_hex: String::new(),
+                    done: true,
+                },
+            );
+        }
+        ledger.updated_at = chrono::Utc::now().to_rfc3339();
+        at_rest::write_migration_ledger(&self.env, keyring, &ledger)?;
+        report.sealed = sealed_now;
+        report.done = true;
+        Ok(report)
     }
 
     #[must_use]
@@ -692,7 +974,7 @@ impl Store {
             if let Some(ids) = candidate_ids {
                 for candidate_id in ids {
                     if let Ok(bytes) = txn.get(self.records, &bytes_u64(candidate_id)) {
-                        let r = decode_record(bytes)?;
+                        let r = self.decode_stored_record(candidate_id, bytes)?;
                         if r.domain() == domain
                             && r.content() == request.content()
                             && r.source() == request.source()
@@ -707,8 +989,8 @@ impl Store {
         } else {
             let mut cursor = txn.open_ro_cursor(self.records)?;
             let mut found = false;
-            for (_, bytes) in cursor.iter() {
-                let r = decode_record(bytes)?;
+            for (key, bytes) in cursor.iter() {
+                let r = self.decode_stored_record(record_key_id(key)?, bytes)?;
                 if r.domain() == domain
                     && r.content() == request.content()
                     && r.source() == request.source()
@@ -742,11 +1024,14 @@ impl Store {
             status: status_to_u8(RecordStatus::Persistent),
             created_at: id,
         })?;
+        // The receipt digest binds the plaintext wire bytes in every mode; the
+        // stored value is sealed under the record-scope DEK when mode B/C.
         let record_digest: [u8; 32] = Sha256::digest(&wire).into();
+        let stored = self.encode_stored_record(id, record.created_at(), &wire)?;
         txn.put(
             self.records,
             &bytes_u64(id),
-            &wire,
+            &stored,
             lmdb::WriteFlags::NO_OVERWRITE,
         )?;
         self.fail_after(1)?;
@@ -875,11 +1160,14 @@ impl Store {
         let wire = txn
             .get(self.records, &bytes_u64(receipt.record_id))
             .map_err(|_| IntakeError::CorruptCommitState)?;
-        let record = decode_record(wire).map_err(|_| IntakeError::CorruptCommitState)?;
+        let plaintext = self
+            .open_stored_record(receipt.record_id, wire)
+            .map_err(|_| IntakeError::CorruptCommitState)?;
+        let record = decode_record(&plaintext).map_err(|_| IntakeError::CorruptCommitState)?;
         if record.id() != receipt.record_id || record.created_at() != receipt.created_at {
             return Err(IntakeError::CorruptCommitState.into());
         }
-        let actual: [u8; 32] = Sha256::digest(wire).into();
+        let actual: [u8; 32] = Sha256::digest(&plaintext).into();
         if actual != receipt.record_digest {
             return Err(IntakeError::CorruptCommitState.into());
         }
@@ -972,6 +1260,7 @@ impl Store {
         };
         let key = bytes_u64(record.id());
         let value = rmp_serde::to_vec(&wire)?;
+        let stored = self.encode_stored_record(record.id(), record.created_at(), &value)?;
         let mut txn = self.env.begin_rw_txn()?;
         if txn.get(self.records, &key).is_ok() {
             return Err(StoreError::Msg(format!(
@@ -979,7 +1268,7 @@ impl Store {
                 record.id()
             )));
         }
-        txn.put(self.records, &key, &value, lmdb::WriteFlags::empty())?;
+        txn.put(self.records, &key, &stored, lmdb::WriteFlags::empty())?;
         for term in terms {
             let mut ids: Vec<u64> = match txn.get(self.postings, &term) {
                 Ok(bytes) => rmp_serde::from_slice(bytes)?,
@@ -1000,7 +1289,7 @@ impl Store {
         let txn = self.env.begin_ro_txn()?;
         let db = self.records;
         match txn.get(db, &bytes_u64(id)) {
-            Ok(bytes) => Ok(Some(decode_record(bytes)?)),
+            Ok(bytes) => Ok(Some(self.decode_stored_record(id, bytes)?)),
             Err(lmdb::Error::NotFound) => Ok(None),
             Err(e) => Err(e.into()),
         }
@@ -1012,8 +1301,8 @@ impl Store {
         let mut cursor = txn.open_ro_cursor(db)?;
         let mut out = Vec::new();
         for item in cursor.iter() {
-            let (_, bytes) = item;
-            out.push(decode_record(bytes)?);
+            let (key, bytes) = item;
+            out.push(self.decode_stored_record(record_key_id(key)?, bytes)?);
         }
         Ok(out)
     }
@@ -1168,7 +1457,7 @@ impl Store {
         let mut records: Vec<EvidenceRecord> = Vec::new();
         {
             let mut cursor = txn.open_ro_cursor(self.records)?;
-            for (_, bytes) in cursor.iter() {
+            for (key, bytes) in cursor.iter() {
                 add_count(&mut observed.records_scanned, 1)?;
                 if observed.records_scanned > limits.max_records_scanned {
                     return Err(limit_error(
@@ -1190,7 +1479,7 @@ impl Store {
                         limits.max_single_record_bytes,
                     ));
                 }
-                let record = decode_record(bytes)?;
+                let record = self.decode_stored_record(record_key_id(key)?, bytes)?;
                 let record_bytes = record.content().len() as u64 + record.source().len() as u64;
                 if record_bytes > limits.max_single_record_bytes {
                     return Err(limit_error(
@@ -2683,5 +2972,240 @@ mod tests {
             store.lookup_sweep_receipt(operation_id),
             Err(StoreError::Sweep(SweepError::ReceiptState(_)))
         ));
+    }
+
+    // ── At-rest integration (Q39 slices A–B) ──────────────────────────────
+
+    fn raw_record(store: &Store, id: u64) -> Vec<u8> {
+        let txn = store.env.begin_ro_txn().unwrap();
+        txn.get(store.records, &bytes_u64(id)).unwrap().to_vec()
+    }
+
+    fn commit_plaintext(store: &Store, op: [u8; 16], content: &str) -> (IntakeRequest, u64) {
+        let intake = request(store, op, store.epoch().unwrap(), content);
+        let outcome = store
+            .commit_intake(
+                capability(store, &intake),
+                &intake,
+                &crate::field::tokenize(intake.content()),
+            )
+            .unwrap();
+        (intake, outcome.receipt.record_id)
+    }
+
+    #[test]
+    fn at_rest_off_creates_no_keyring_and_stays_byte_identical() {
+        let tmp = TempStore::new("at-rest-off");
+        let before_reopen;
+        {
+            let store = Store::open_with_at_rest(&tmp.0, &AtRestConfig::off()).unwrap();
+            assert_eq!(store.at_rest_status(), AtRestStatus::Absent);
+            assert!(store.at_rest_state().is_none());
+
+            let (intake, id) = commit_plaintext(&store, [41; 16], "plaintext body stays wire");
+            let stored = raw_record(&store, id);
+            assert!(!crate::at_rest::is_sealed_record(&stored));
+            let decoded: WireRecord = rmp_serde::from_slice(&stored).unwrap();
+            assert_eq!(decoded.content, intake.content());
+
+            assert!(store.env.open_db(Some(crate::at_rest::KEYRING_DB)).is_err());
+            assert!(!tmp.0.join(crate::at_rest::AT_REST_KEY_FILE).exists());
+            before_reopen = data_hash(&tmp.0);
+        }
+
+        // Reopening off must not write a keyring DBI, a key file, or bytes.
+        let store = Store::open(&tmp.0).unwrap();
+        assert_eq!(store.at_rest_status(), AtRestStatus::Absent);
+        assert_eq!(data_hash(&tmp.0), before_reopen);
+        assert_eq!(
+            store.get_record(0).unwrap().unwrap().content(),
+            "plaintext body stays wire"
+        );
+    }
+
+    #[test]
+    fn at_rest_keyfile_seals_bodies_and_roundtrips_across_reopen() {
+        let tmp = TempStore::new("at-rest-keyfile");
+        let key = "aa".repeat(32);
+        let (id, expected);
+        {
+            let store =
+                Store::open_with_at_rest(&tmp.0, &AtRestConfig::keyfile_with_root_key(key.clone()))
+                    .unwrap();
+            assert_eq!(
+                store.at_rest_state().unwrap().dek_count(),
+                crate::at_rest::scope_count()
+            );
+            let (intake, record_id) = commit_plaintext(&store, [42; 16], "sealed body roundtrip");
+            id = record_id;
+            expected = intake.content().to_string();
+
+            let stored = raw_record(&store, id);
+            assert!(crate::at_rest::is_sealed_record(&stored));
+            assert_eq!(&stored[..4], b"WMEN");
+
+            let record = store.get_record(id).unwrap().unwrap();
+            assert_eq!(record.content(), expected);
+            assert_eq!(store.iter_records().unwrap().len(), 1);
+            // Receipt replay re-verifies digests over the unsealed plaintext.
+            let cached = store.lookup_intake_receipt(&intake).unwrap().unwrap();
+            assert_eq!(cached.record_id, id);
+        }
+
+        let reopened =
+            Store::open_with_at_rest(&tmp.0, &AtRestConfig::keyfile_with_root_key(key)).unwrap();
+        assert_eq!(
+            reopened.get_record(id).unwrap().unwrap().content(),
+            expected
+        );
+    }
+
+    #[test]
+    fn at_rest_wrong_key_refuses_and_never_reinitializes() {
+        let tmp = TempStore::new("at-rest-wrong-key");
+        let key_a = "aa".repeat(32);
+        let key_b = "bb".repeat(32);
+        let before;
+        {
+            let store = Store::open_with_at_rest(
+                &tmp.0,
+                &AtRestConfig::keyfile_with_root_key(key_a.clone()),
+            )
+            .unwrap();
+            before = store.at_rest_state().unwrap().meta().clone();
+            let _ = commit_plaintext(&store, [43; 16], "bound to key A");
+        }
+
+        let error =
+            match Store::open_with_at_rest(&tmp.0, &AtRestConfig::keyfile_with_root_key(key_b)) {
+                Ok(_) => panic!("wrong root key must refuse"),
+                Err(error) => error,
+            };
+        assert!(error.to_string().contains("unlock failed"), "{error}");
+
+        let reopened =
+            Store::open_with_at_rest(&tmp.0, &AtRestConfig::keyfile_with_root_key(key_a)).unwrap();
+        assert_eq!(
+            reopened.at_rest_state().unwrap().meta(),
+            &before,
+            "a failed unlock must never re-initialize the keyring"
+        );
+        assert_eq!(
+            reopened.get_record(0).unwrap().unwrap().content(),
+            "bound to key A"
+        );
+    }
+
+    #[test]
+    fn at_rest_off_writable_open_of_keyring_store_is_refused() {
+        let tmp = TempStore::new("at-rest-split-brain");
+        let key = "aa".repeat(32);
+        let _ =
+            Store::open_with_at_rest(&tmp.0, &AtRestConfig::keyfile_with_root_key(key)).unwrap();
+
+        let error = match Store::open_with_at_rest(&tmp.0, &AtRestConfig::off()) {
+            Ok(_) => panic!("plaintext writable open of an at-rest store must fail closed"),
+            Err(error) => error,
+        };
+        let message = error.to_string();
+        assert!(message.contains("keyring"), "{message}");
+        assert!(message.contains("off"), "{message}");
+        assert!(message.contains("split-brain"), "{message}");
+
+        // Read-only inspection still discloses the mode without the key.
+        match Store::open_readonly(&tmp.0).unwrap().at_rest_status() {
+            AtRestStatus::Present(present) => {
+                assert_eq!(present.meta.mode, crate::at_rest::AtRestMode::Keyfile);
+                assert_eq!(present.wrapped_deks, crate::at_rest::scope_count());
+            }
+            other => panic!("expected Present, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn at_rest_sealed_value_without_key_fails_closed() {
+        let tmp = TempStore::new("at-rest-no-key");
+        let key = "aa".repeat(32);
+        let id: u64;
+        {
+            let store = Store::open_with_at_rest(&tmp.0, &AtRestConfig::keyfile_with_root_key(key))
+                .unwrap();
+            (_, id) = commit_plaintext(&store, [44; 16], "needs the key to open");
+        }
+
+        let inspection = Store::open_readonly(&tmp.0).unwrap();
+        let error = inspection.get_record(id).unwrap_err();
+        assert!(error.to_string().contains("at-rest"), "{error}");
+        assert!(
+            error.to_string().contains("no at-rest key") || error.to_string().contains("sealed"),
+            "{error}"
+        );
+        assert!(inspection.iter_records().is_err());
+    }
+
+    #[test]
+    fn at_rest_migration_seals_plaintext_and_is_idempotent() {
+        let tmp = TempStore::new("at-rest-migrate");
+        let key = "aa".repeat(32);
+
+        // Pre-existing plaintext records written while the store was `off`.
+        let (legacy_one, id_one);
+        {
+            let store = Store::open_with_at_rest(&tmp.0, &AtRestConfig::off()).unwrap();
+            let (request_one, record_one) =
+                commit_plaintext(&store, [51; 16], "legacy plaintext one");
+            let (_, record_two) = commit_plaintext(&store, [52; 16], "legacy plaintext two");
+            legacy_one = request_one;
+            id_one = record_one;
+            assert!(!crate::at_rest::is_sealed_record(&raw_record(
+                &store, record_one
+            )));
+            assert!(!crate::at_rest::is_sealed_record(&raw_record(
+                &store, record_two
+            )));
+        }
+
+        // Upgrade: the keyring initializes over the existing plaintext store.
+        let store =
+            Store::open_with_at_rest(&tmp.0, &AtRestConfig::keyfile_with_root_key(key)).unwrap();
+
+        let dry = store.migrate_at_rest_records(1, true).unwrap();
+        assert!(dry.dry_run);
+        assert_eq!(dry.sealed, 2);
+        assert_eq!(dry.already_sealed, 0);
+        assert!(
+            !crate::at_rest::is_sealed_record(&raw_record(&store, id_one)),
+            "dry-run must not write"
+        );
+
+        let report = store.migrate_at_rest_records(1, false).unwrap();
+        assert_eq!(report.sealed, 2);
+        assert_eq!(report.skipped, 0);
+        assert!(report.done);
+        assert!(crate::at_rest::is_sealed_record(&raw_record(
+            &store, id_one
+        )));
+        assert_eq!(
+            store.get_record(id_one).unwrap().unwrap().content(),
+            "legacy plaintext one"
+        );
+        // Sealed replay still validates (digest is over the plaintext body).
+        assert!(store.lookup_intake_receipt(&legacy_one).is_ok());
+
+        let ledger_after = store.at_rest_migration_ledger().unwrap().unwrap();
+        assert_eq!(ledger_after.version, 1);
+        let state = ledger_after.galaxies.get(RECORD_SCOPE).unwrap();
+        assert!(state.done);
+        assert_eq!(state.encrypted, 2);
+        assert_eq!(state.cursor_hex.len(), 16);
+
+        let second = store.migrate_at_rest_records(1, false).unwrap();
+        assert_eq!(second.sealed, 0);
+        assert!(second.done);
+        assert_eq!(
+            store.at_rest_migration_ledger().unwrap().unwrap(),
+            ledger_after,
+            "a completed pass must not rewrite the ledger"
+        );
     }
 }
