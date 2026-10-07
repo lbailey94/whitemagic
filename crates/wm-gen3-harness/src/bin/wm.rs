@@ -18,8 +18,8 @@ use wm_gen3_core::compat::{
 use wm_gen3_core::constitution::default_view;
 use wm_gen3_core::evidence::RatifiedChannel;
 use wm_gen3_core::mandala::{
-    CapabilityManifest, MandalaPass, MandalaReplayLedger, PassBudget, ScopeMode,
-    resolve_or_create_mandala_gate_key,
+    CapabilityManifest, ContinuityReceipt05, MandalaPass, MandalaReplayLedger, PassBudget,
+    ScopeMode, SigningKey, VerifyingKey, resolve_or_create_mandala_gate_key,
 };
 use wm_gen3_core::mesh::{
     DEFAULT_MESH_PORT, MESH_PROTOCOL_VERSION, MeshClient, MeshServer, SyncBundle,
@@ -30,7 +30,7 @@ use wm_gen3_core::peer::{BanCertificate, PeerDirectory, PeerIdentity, PeerTrustT
 use wm_gen3_core::sentinel::{
     SentinelCircuitBreaker, SentinelLeaseGuard, SentinelReport, SentinelStatus,
 };
-use wm_gen3_harness::bridge::{McpProfile, build_contract_manifest};
+use wm_gen3_harness::bridge::{McpProfile, build_contract_manifest, get_tools_list_for_profile};
 use wm_gen3_harness::mcp_server::{McpBackend, NetworkTransport, serve_network};
 
 /// Build version — single source of truth is the workspace Cargo.toml
@@ -60,9 +60,9 @@ enum Commands {
         /// Output report as JSON for agent consumption
         #[arg(long)]
         json: bool,
-        /// Write detected MCP configurations to local client config files
+        /// Plan detected MCP client configuration changes without modifying any files
         #[arg(long)]
-        write: bool,
+        plan: bool,
     },
     /// Initialize and provision a local WhiteMagic substrate store with the starter guide galaxy
     Init {
@@ -87,8 +87,8 @@ enum Commands {
         #[arg(long, default_value = "operator:cli")]
         source: String,
         /// Epistemic kind: reported (default), system, or simulated
-        #[arg(long, default_value = "reported")]
-        kind: String,
+        #[arg(long, default_value = "reported", value_parser = parse_import_kind_arg)]
+        kind: ImportKind,
     },
     /// Recall memories matching a query string
     Recall {
@@ -126,8 +126,8 @@ enum Commands {
         #[arg(long)]
         cycles: Option<usize>,
         /// Mode: genuine (default), sham, baseline
-        #[arg(long, default_value = "genuine")]
-        mode: String,
+        #[arg(long, default_value = "genuine", value_parser = parse_incubation_mode_arg)]
+        mode: wm_gen3_core::dream::IncubationMode,
         /// Optional path to write dream journal log (default: <store>/dream.jsonl)
         #[arg(long)]
         log_file: Option<PathBuf>,
@@ -137,12 +137,18 @@ enum Commands {
         /// Output or inspect actionable synthetic dream insights
         #[arg(long)]
         insights: bool,
-        /// Run complete dual-phase sleep cycle (NREM structural compaction + REM associative dreaming)
-        #[arg(long, default_value_t = true)]
-        dual_phase: bool,
+        /// Run complete dual-phase sleep cycle (NREM structural compaction + REM associative dreaming; default: true)
+        #[arg(long, num_args = 0..=1, default_missing_value = "true")]
+        dual_phase: Option<bool>,
+        /// Disable dual-phase sleep cycle (REM-only or NREM-throttled execution)
+        #[arg(long)]
+        no_dual_phase: bool,
         /// Enable homeostatic regulation of dream parameters (default: true)
-        #[arg(long, default_value_t = true)]
-        homeostatic: bool,
+        #[arg(long, num_args = 0..=1, default_missing_value = "true")]
+        homeostatic: Option<bool>,
+        /// Disable homeostatic regulation of dream parameters
+        #[arg(long)]
+        no_homeostatic: bool,
         /// Force dream incubation regardless of thermal or battery stress
         #[arg(long)]
         force: bool,
@@ -258,15 +264,22 @@ enum Commands {
     /// Run the JSON-RPC / MCP stdio server (sidecar for Claude Code, Antigravity, Opencode)
     #[command(alias = "mcp")]
     Serve {
-        /// Active MCP tool profile: 'cyberbrain' (10 lean tools, default) or 'full' (36-tool curated suite)
-        #[arg(long, default_value = "cyberbrain")]
-        profile: String,
+        #[arg(
+            long,
+            default_value = "cyberbrain",
+            value_parser = parse_profile_arg,
+            help = profile_help_text()
+        )]
+        profile: McpProfile,
         /// Open store in read-only mode
         #[arg(long)]
         readonly: bool,
-        /// Enable cognitive sweep
-        #[arg(long, default_value_t = true)]
-        sweep: bool,
+        /// Enable cognitive sweep (default: true)
+        #[arg(long, num_args = 0..=1, default_missing_value = "true")]
+        sweep: Option<bool>,
+        /// Disable cognitive sweep
+        #[arg(long)]
+        no_sweep: bool,
         /// Enable semantic projection
         #[arg(long)]
         projection: bool,
@@ -276,9 +289,12 @@ enum Commands {
         /// Enable dispersion
         #[arg(long)]
         dispersion: bool,
-        /// Enable noise filtration
-        #[arg(long, default_value_t = true)]
-        noise: bool,
+        /// Enable noise filtration (default: true)
+        #[arg(long, num_args = 0..=1, default_missing_value = "true")]
+        noise: Option<bool>,
+        /// Disable noise filtration
+        #[arg(long)]
+        no_noise: bool,
         /// Mount a legacy Gen2 LMDB store read-only (directory containing data.mdb)
         /// instead of a Gen3 store; exposes memory.search/list/read/count/stats
         #[arg(long)]
@@ -311,9 +327,9 @@ enum Commands {
         /// Default source identifier
         #[arg(long, default_value = "ingest:stream")]
         default_source: String,
-        /// Default import kind: reported, direct, observed, foreign (default: reported)
-        #[arg(long, default_value = "reported")]
-        default_kind: String,
+        /// Default import kind: reported, system, simulated (default: reported)
+        #[arg(long, default_value = "reported", value_parser = parse_import_kind_arg)]
+        default_kind: ImportKind,
     },
     /// Mandala OS Execution Authority & Continuity Receipt Bridge
     Mandala {
@@ -476,9 +492,9 @@ enum PeerCommands {
     Add {
         /// Node ID (e.g. whitemagic-vps, miranda-laptop)
         node_id: String,
-        /// Public key in hex (32 bytes / 64 hex characters)
+        /// Public key in hex (32 bytes / 64 hex characters); required
         #[arg(long)]
-        key: Option<String>,
+        key: String,
         /// Trust tier: blocked, stranger, net, trusted, local (default: stranger)
         #[arg(long, default_value = "stranger")]
         tier: String,
@@ -620,8 +636,11 @@ enum SessionCommands {
         #[arg(long)]
         context_token: Option<String>,
         /// Autonomously evolve action skeletons and consolidate dream insights after checkpoint (default: true)
-        #[arg(long, default_value_t = true)]
-        evolve: bool,
+        #[arg(long, num_args = 0..=1, default_missing_value = "true")]
+        evolve: Option<bool>,
+        /// Disable autonomous post-checkpoint evolution and consolidation
+        #[arg(long)]
+        no_evolve: bool,
     },
     /// Ingest an arbitrary session note or log
     Record {
@@ -905,13 +924,144 @@ fn resolve_store_path(cli_store: Option<&PathBuf>) -> PathBuf {
     PathBuf::from("gen3-store")
 }
 
+fn parse_profile_arg(value: &str) -> Result<McpProfile, String> {
+    value.parse::<McpProfile>()
+}
+
+fn parse_import_kind_arg(value: &str) -> Result<ImportKind, String> {
+    match value.to_ascii_lowercase().as_str() {
+        "reported" => Ok(ImportKind::Reported),
+        "system" => Ok(ImportKind::System),
+        "simulated" => Ok(ImportKind::Simulated),
+        other => Err(format!(
+            "unknown epistemic kind '{other}' (expected: reported, system, simulated)"
+        )),
+    }
+}
+
+fn parse_incubation_mode_arg(value: &str) -> Result<wm_gen3_core::dream::IncubationMode, String> {
+    match value.to_ascii_lowercase().as_str() {
+        "genuine" => Ok(wm_gen3_core::dream::IncubationMode::GenuineDreaming),
+        "sham" => Ok(wm_gen3_core::dream::IncubationMode::ShamDreaming),
+        "baseline" => Ok(wm_gen3_core::dream::IncubationMode::BaselineIdle),
+        other => Err(format!(
+            "unknown dream mode '{other}' (expected: genuine, sham, baseline)"
+        )),
+    }
+}
+
+/// Tool count for a profile, derived from the same builders the MCP server uses.
+fn profile_tool_count(profile: McpProfile) -> usize {
+    get_tools_list_for_profile(profile, false)
+        .as_array()
+        .map(Vec::len)
+        .unwrap_or(0)
+}
+
+/// Runtime-derived `--profile` help so advertised tool counts cannot drift.
+fn profile_help_text() -> String {
+    format!(
+        "Active MCP tool profile: 'cyberbrain' ({} lean tools, default) or 'full' ({} curated tools)",
+        profile_tool_count(McpProfile::Cyberbrain),
+        profile_tool_count(McpProfile::Full)
+    )
+}
+
+fn parse_pubkey_hex(hex_str: &str) -> Result<[u8; 32], String> {
+    if hex_str.len() != 64 {
+        return Err("public key hex must be 64 characters (32 bytes)".to_string());
+    }
+    let mut pubkey = [0u8; 32];
+    for (index, byte) in pubkey.iter_mut().enumerate() {
+        let pair = &hex_str[index * 2..index * 2 + 2];
+        *byte = u8::from_str_radix(pair, 16)
+            .map_err(|_| format!("public key contains non-hex characters: '{pair}'"))?;
+    }
+    if pubkey == [0u8; 32] {
+        return Err("public key must not be the all-zero placeholder".to_string());
+    }
+    Ok(pubkey)
+}
+
+/// Load the store's Mandala gate verifying key without creating one.
+fn load_gate_verifying_key(store_path: &Path) -> Result<VerifyingKey, String> {
+    let key_path = store_path.join("mandala_gate_key.bin");
+    let bytes = std::fs::read(&key_path).map_err(|e| {
+        format!(
+            "gate authority key unavailable at {}: {e}",
+            key_path.display()
+        )
+    })?;
+    if bytes.len() != 32 {
+        return Err(format!(
+            "gate authority key at {} must be 32 bytes, got {}",
+            key_path.display(),
+            bytes.len()
+        ));
+    }
+    let mut array = [0u8; 32];
+    array.copy_from_slice(&bytes);
+    Ok(SigningKey::from_bytes(&array).verifying_key())
+}
+
+/// Fail-closed decision for `mandala verify-pass`: a pass is accepted only when
+/// the replay ledger admits it *and* its signature verifies against the trusted
+/// local gate key. Returns the gate public key on success.
+fn verify_pass_against_gate(
+    pass: &MandalaPass,
+    store_path: &Path,
+    now: u64,
+) -> Result<[u8; 32], String> {
+    let ledger_path = store_path.join("mandala_ledger.jsonl");
+    let ledger = MandalaReplayLedger::open_durable(&ledger_path).map_err(|e| {
+        format!(
+            "failed to open Mandala replay ledger at {}: {e}",
+            ledger_path.display()
+        )
+    })?;
+    ledger
+        .check_validity(pass, now)
+        .map_err(|e| format!("ledger replay check failed: {e}"))?;
+    let verifying_key = load_gate_verifying_key(store_path)?;
+    pass.verify_signature(&verifying_key).map_err(|e| {
+        format!("cryptographic signature does not verify against the trusted local gate: {e}")
+    })?;
+    let mut pubkey = [0u8; 32];
+    pubkey.copy_from_slice(&verifying_key.to_bytes());
+    Ok(pubkey)
+}
+
+/// Fail-closed verification for `mandala record-receipt`: parse a strict
+/// ContinuityReceipt05 envelope and verify its Ed25519 signature against the
+/// store gate key before any substrate write.
+fn verify_continuity_receipt05(
+    content: &str,
+    store_path: &Path,
+) -> Result<ContinuityReceipt05, String> {
+    let value = wm_gen3_harness::receipt_verify::parse_strict_json(content)
+        .map_err(|e| format!("receipt JSON rejected: {e}"))?;
+    let receipt: ContinuityReceipt05 = serde_json::from_value(value)
+        .map_err(|e| format!("receipt is not a valid ContinuityReceipt05 envelope: {e}"))?;
+    if receipt.spec != "continuity-receipt/0.5" {
+        return Err(format!(
+            "unsupported receipt spec '{}' (expected 'continuity-receipt/0.5')",
+            receipt.spec
+        ));
+    }
+    let verifying_key = load_gate_verifying_key(store_path)?;
+    receipt.verify(&verifying_key).map_err(|e| {
+        format!("receipt signature does not verify against the store gate key: {e}")
+    })?;
+    Ok(receipt)
+}
+
 fn main() {
     let cli = Cli::parse();
     let store_path = resolve_store_path(cli.store.as_ref());
 
     match cli.command {
-        Commands::Grimoire { json, write } => {
-            if let Err(e) = wm_gen3_harness::grimoire::run_grimoire(&store_path, json, write) {
+        Commands::Grimoire { json, plan } => {
+            if let Err(e) = wm_gen3_harness::grimoire::run_grimoire(&store_path, json, plan) {
                 eprintln!("Grimoire run failed: {e}");
                 std::process::exit(1);
             }
@@ -959,14 +1109,20 @@ fn main() {
         }
         Commands::Status { legacy } => {
             if let Some(legacy_path) = legacy {
-                run_legacy_census(&legacy_path);
+                if let Err(e) = run_legacy_census(&legacy_path) {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                }
                 return;
             }
 
             // Check if store_path is a Gen2 store
             if legacy_store_detected(&store_path) {
                 println!("Detected legacy Gen2 store at: {}", store_path.display());
-                run_legacy_census(&store_path);
+                if let Err(e) = run_legacy_census(&store_path) {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                }
                 return;
             }
 
@@ -1026,7 +1182,10 @@ fn main() {
             }
         }
         Commands::Census { path } => {
-            run_legacy_census(&path);
+            if let Err(e) = run_legacy_census(&path) {
+                eprintln!("{e}");
+                std::process::exit(1);
+            }
         }
         Commands::Remember {
             content,
@@ -1044,11 +1203,7 @@ fn main() {
                     }
                 };
 
-            let import_kind = match kind.to_lowercase().as_str() {
-                "system" => ImportKind::System,
-                "simulated" => ImportKind::Simulated,
-                _ => ImportKind::Reported,
-            };
+            let import_kind = kind;
 
             let effective_source = if let Some(gal) = galaxy {
                 if source.starts_with("corpus:") {
@@ -1230,9 +1385,13 @@ fn main() {
             report,
             insights,
             dual_phase,
+            no_dual_phase,
             homeostatic,
+            no_homeostatic,
             force,
         } => {
+            let dual_phase = dual_phase.unwrap_or(true) && !no_dual_phase;
+            let homeostatic = homeostatic.unwrap_or(true) && !no_homeostatic;
             let dream_log = log_file.unwrap_or_else(|| store_path.join("dream.jsonl"));
             let insights_log = store_path.join("dream_insights.jsonl");
             let cycles_to_run = match (cycles, report, insights) {
@@ -1307,11 +1466,7 @@ fn main() {
                     };
                 substrate.set_intake_authority(RatifiedChannel::mint("wm-cli-dream"));
 
-                let incubation_mode = match mode.to_lowercase().as_str() {
-                    "sham" => wm_gen3_core::dream::IncubationMode::ShamDreaming,
-                    "baseline" => wm_gen3_core::dream::IncubationMode::BaselineIdle,
-                    _ => wm_gen3_core::dream::IncubationMode::GenuineDreaming,
-                };
+                let incubation_mode = mode;
 
                 println!("==================================================");
                 println!("      WhiteMagic Gen3 Cognitive Dream Incubation   ");
@@ -1426,7 +1581,7 @@ fn main() {
                         let log_entry = serde_json::json!({
                             "cycle": current_cycle_num,
                             "timestamp_ns": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos() as u64,
-                            "dual_phase": dual_phase,
+                            "dual_phase": active_dual_phase,
                             "quiescence": regime.quiescence,
                             "temperature": regime.temperature,
                             "associative_radius": regime.associative_radius,
@@ -1525,7 +1680,7 @@ fn main() {
                 let took = start.elapsed();
                 println!("==================================================");
                 println!("Dream Incubation Complete in {:.2?}", took);
-                if dual_phase {
+                if active_dual_phase {
                     println!("NREM Superseded Pruned:      {}", total_superseded);
                     println!("NREM Contradictions Resolved: {}", total_contradictions);
                     println!("NREM Summaries Minted:       {}", total_compacted);
@@ -1893,21 +2048,36 @@ fn main() {
                     let json_path = opt_json.unwrap_or_else(|| store_path.join("galaxy_6d.json"));
                     let html_path = opt_html.unwrap_or_else(|| store_path.join("galaxy.html"));
 
-                    let json_data = serde_json::to_string(&projections).unwrap_or_default();
+                    let json_data = match serde_json::to_string(&projections) {
+                        Ok(data) => data,
+                        Err(e) => {
+                            eprintln!("Error serializing 6D dataset: {e}");
+                            std::process::exit(1);
+                        }
+                    };
+                    let mut galaxy_write_failed = false;
                     if let Err(e) = std::fs::write(&json_path, &json_data) {
-                        eprintln!("Warning: failed writing json dataset: {e}");
+                        eprintln!(
+                            "Error writing 6D JSON dataset to {}: {e}",
+                            json_path.display()
+                        );
+                        galaxy_write_failed = true;
                     } else {
                         println!("Saved 6D dataset:      {}", json_path.display());
                     }
 
                     let html_content = generate_galaxy_html(&json_data, total_records, epoch);
                     if let Err(e) = std::fs::write(&html_path, html_content) {
-                        eprintln!("Error writing galaxy HTML: {e}");
+                        eprintln!("Error writing galaxy HTML to {}: {e}", html_path.display());
+                        galaxy_write_failed = true;
                     } else {
                         println!("Saved 3D Galaxy HTML:  {}", html_path.display());
                         println!(
                             "Visualizer ready. Open in browser to view the Sangha Galaxy in 3D."
                         );
+                    }
+                    if galaxy_write_failed {
+                        std::process::exit(1);
                     }
                 }
             }
@@ -2132,17 +2302,19 @@ fn main() {
             profile,
             readonly,
             sweep,
+            no_sweep,
             projection,
             embed_cache,
             dispersion,
             noise,
+            no_noise,
             legacy_store,
             transport,
             bind,
         } => {
-            let parsed_profile = profile
-                .parse::<McpProfile>()
-                .unwrap_or(McpProfile::Cyberbrain);
+            let parsed_profile = profile;
+            let sweep_enabled = sweep.unwrap_or(true) && !no_sweep;
+            let noise_enabled = noise.unwrap_or(true) && !no_noise;
 
             let backend = if let Some(legacy) = legacy_store.as_deref() {
                 match Gen2Reader::open(legacy) {
@@ -2183,7 +2355,7 @@ fn main() {
                 };
 
                 substrate.set_intake_authority(RatifiedChannel::mint("wm-gen3-serve"));
-                substrate.set_sweep_enabled(sweep);
+                substrate.set_sweep_enabled(sweep_enabled);
                 if projection {
                     if let Err(e) = substrate.set_projection_enabled(true, embed_cache.as_deref()) {
                         eprintln!("gen3: projection enable failed: {e}");
@@ -2191,14 +2363,14 @@ fn main() {
                     }
                 }
                 substrate.set_dispersion(dispersion);
-                substrate.set_noise_enabled(noise);
+                substrate.set_noise_enabled(noise_enabled);
 
                 eprintln!(
                     "gen3: serve store={} profile={:?} mode={} sweep={} projection={}",
                     store_path.display(),
                     parsed_profile,
                     if readonly { "readonly" } else { "readwrite" },
-                    if sweep { "on" } else { "off" },
+                    if sweep_enabled { "on" } else { "off" },
                     if projection { "on" } else { "off" }
                 );
 
@@ -2290,7 +2462,7 @@ fn main() {
                 &file,
                 batch_size,
                 &default_source,
-                &default_kind,
+                default_kind,
             );
         }
         Commands::Vault { command } => {
@@ -3418,43 +3590,59 @@ fn run_organ_command(cmd: OrganCommands, _store_path: &Path) {
             println!("==================================================");
             println!("     WhiteMagic Gen3 Cyberbrain Organ Verification");
             println!("==================================================");
-            #[cfg(feature = "systemone")]
-            {
-                match wm_gen3_systemone::SystemOne::resolve_model_dir(None) {
-                    Ok(dir) => {
-                        println!("Probing System One (Laya) at: {}", dir.display());
-                        let organ = wm_gen3_systemone::SystemOne::new(dir);
-                        let test_state = serde_json::json!({"probe": "heartbeat"});
-                        let test_questions = serde_json::json!({
-                            "health": {
-                                "type": "choice",
-                                "instructions": "System status?",
-                                "criteria": ["nominal", "degraded"]
-                            }
-                        });
-                        let start = std::time::Instant::now();
-                        match organ.decide(&test_state, &test_questions) {
-                            Ok(res) => {
-                                let elapsed = start.elapsed();
-                                println!(
-                                    "  Result:  PASS ({:.2} ms)",
-                                    elapsed.as_secs_f64() * 1000.0
-                                );
-                                if let Some(answers) = res.get("answers") {
-                                    println!("  Verdict: {}", answers);
+            let verified = {
+                #[cfg(feature = "systemone")]
+                {
+                    match wm_gen3_systemone::SystemOne::resolve_model_dir(None) {
+                        Ok(dir) => {
+                            println!("Probing System One (Laya) at: {}", dir.display());
+                            let organ = wm_gen3_systemone::SystemOne::new(dir);
+                            let test_state = serde_json::json!({"probe": "heartbeat"});
+                            let test_questions = serde_json::json!({
+                                "health": {
+                                    "type": "choice",
+                                    "instructions": "System status?",
+                                    "criteria": ["nominal", "degraded"]
+                                }
+                            });
+                            let start = std::time::Instant::now();
+                            match organ.decide(&test_state, &test_questions) {
+                                Ok(res) => {
+                                    let elapsed = start.elapsed();
+                                    println!(
+                                        "  Result:  PASS ({:.2} ms)",
+                                        elapsed.as_secs_f64() * 1000.0
+                                    );
+                                    if let Some(answers) = res.get("answers") {
+                                        println!("  Verdict: {}", answers);
+                                    }
+                                    true
+                                }
+                                Err(e) => {
+                                    println!("  Result:  FAIL ({e})");
+                                    false
                                 }
                             }
-                            Err(e) => println!("  Result:  FAIL ({e})"),
+                        }
+                        Err(e) => {
+                            println!("System One: Not available ({e})");
+                            false
                         }
                     }
-                    Err(e) => println!("System One: Not available ({e})"),
                 }
-            }
-            #[cfg(not(feature = "systemone"))]
-            {
-                println!("System One: Disabled in this build (--features systemone)");
-            }
+                #[cfg(not(feature = "systemone"))]
+                {
+                    println!("System One: Disabled in this build (--features systemone)");
+                    false
+                }
+            };
             println!("==================================================");
+            if !verified {
+                eprintln!(
+                    "Organ verification failed: System One did not pass its diagnostic pulse."
+                );
+                std::process::exit(1);
+            }
         }
     }
 }
@@ -3520,19 +3708,13 @@ fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
                     std::process::exit(1);
                 }
             };
-            let mut pubkey = [0u8; 32];
-            if let Some(ref hex_str) = key {
-                if hex_str.len() == 64 {
-                    for i in 0..32 {
-                        if let Ok(b) = u8::from_str_radix(&hex_str[i * 2..i * 2 + 2], 16) {
-                            pubkey[i] = b;
-                        }
-                    }
-                } else {
-                    eprintln!("Error: public key hex must be 64 characters (32 bytes)");
-                    std::process::exit(1);
+            let pubkey = match parse_pubkey_hex(&key) {
+                Ok(pubkey) => pubkey,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    std::process::exit(2);
                 }
-            }
+            };
             let mut identity = PeerIdentity::new(&node_id, pubkey, parsed_tier);
             identity.endpoint = endpoint;
             dir.admit(identity);
@@ -3544,7 +3726,10 @@ fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
         }
         PeerCommands::Trust { target } => match dir.set_tier(&target, PeerTrustTier::Trusted) {
             Ok(_) => {
-                let _ = dir.save(&peer_file);
+                if let Err(e) = dir.save(&peer_file) {
+                    eprintln!("Error saving peer directory: {e}");
+                    std::process::exit(1);
+                }
                 println!("Peer `{target}` promoted to `trusted`.");
             }
             Err(e) => {
@@ -3554,7 +3739,10 @@ fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
         },
         PeerCommands::Block { target } => match dir.set_tier(&target, PeerTrustTier::Blocked) {
             Ok(_) => {
-                let _ = dir.save(&peer_file);
+                if let Err(e) = dir.save(&peer_file) {
+                    eprintln!("Error saving peer directory: {e}");
+                    std::process::exit(1);
+                }
                 println!("Peer `{target}` demoted to `blocked`.");
             }
             Err(e) => {
@@ -3572,7 +3760,10 @@ fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
             };
             match dir.set_tier(&target, parsed_tier) {
                 Ok(_) => {
-                    let _ = dir.save(&peer_file);
+                    if let Err(e) = dir.save(&peer_file) {
+                        eprintln!("Error saving peer directory: {e}");
+                        std::process::exit(1);
+                    }
                     println!("Peer `{target}` set to `{parsed_tier}`.");
                 }
                 Err(e) => {
@@ -3984,7 +4175,9 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
             open_flags,
             context_token,
             evolve,
+            no_evolve,
         } => {
+            let evolve = evolve.unwrap_or(true) && !no_evolve;
             let mut substrate =
                 match Substrate::open(store_path, Some(&journal_path), default_view()) {
                     Ok(s) => s,
@@ -4255,33 +4448,8 @@ fn run_mandala_command(cmd: MandalaCommands, store_path: &Path) {
                     .as_secs()
             });
 
-            let ledger = match MandalaReplayLedger::open_durable(&ledger_path) {
-                Ok(l) => l,
-                Err(e) => {
-                    eprintln!(
-                        "Failed to open Mandala replay ledger at {}: {e}",
-                        ledger_path.display()
-                    );
-                    std::process::exit(1);
-                }
-            };
-
-            match ledger.check_validity(&pass, now) {
-                Ok(()) => {
-                    let (signing_key, pubkey) = match resolve_or_create_mandala_gate_key(store_path)
-                    {
-                        Ok(k) => k,
-                        Err(e) => {
-                            eprintln!("Failed to resolve gate authority key: {e}");
-                            std::process::exit(1);
-                        }
-                    };
-                    let verifying_key = signing_key.verifying_key();
-                    let sig_status = match pass.verify_signature(&verifying_key) {
-                        Ok(()) => "VALID (Signed by Local Authority Gate)",
-                        Err(_) => "UNVERIFIED (Foreign or Self-Signed Signature)",
-                    };
-
+            match verify_pass_against_gate(&pass, store_path, now) {
+                Ok(pubkey) => {
                     println!("==================================================");
                     println!("       Mandala Pass Verification Status           ");
                     println!("==================================================");
@@ -4301,7 +4469,7 @@ fn run_mandala_command(cmd: MandalaCommands, store_path: &Path) {
                     println!("Max Compute:         {} ms", pass.budget.max_compute_ms);
                     println!("Max Memory:          {} MB", pass.budget.max_memory_mb);
                     println!("Network Restricted:  {}", pass.manifest.network_restricted);
-                    println!("Cryptographic Sig:   {}", sig_status);
+                    println!("Cryptographic Sig:   VALID (Signed by Local Authority Gate)");
                     println!("Ledger Replay Check: PASS (Unconsumed)");
                     println!("Gate Authority DID:  did:key:{}", hex_encode(&pubkey));
                     println!("==================================================");
@@ -4426,6 +4594,17 @@ fn run_mandala_command(cmd: MandalaCommands, store_path: &Path) {
                 }
             };
 
+            let receipt = match verify_continuity_receipt05(&content, store_path) {
+                Ok(receipt) => receipt,
+                Err(e) => {
+                    eprintln!(
+                        "Refusing unverified receipt {}: {e}",
+                        receipt_file.display()
+                    );
+                    std::process::exit(1);
+                }
+            };
+
             let json_val: serde_json::Value = match serde_json::from_str(&content) {
                 Ok(v) => v,
                 Err(e) => {
@@ -4475,6 +4654,10 @@ fn run_mandala_command(cmd: MandalaCommands, store_path: &Path) {
                     println!("    Mandala Continuity Receipt Recorded In Gen3   ");
                     println!("==================================================");
                     println!("Source File:         {}", receipt_file.display());
+                    println!("Receipt ID:          {}", receipt.receipt_id);
+                    println!("Spec:                {}", receipt.spec);
+                    println!("Issuer DID:          {}", receipt.issuer_did);
+                    println!("Signature:           VALID (verified against store gate key)");
                     println!("Record ID:           {}", id);
                     println!("New Store Epoch:     {}", epoch);
                     println!("Gate Class:          {}", gate_class);
@@ -4666,7 +4849,9 @@ fn run_mandala_command(cmd: MandalaCommands, store_path: &Path) {
             println!("Kernel Sandboxing:   Linux Landlock LSM (Auto ABI V1-V5)");
             println!("Network Isolation:   AccessNet (TCP Port Jail, Deny Default)");
             println!("Resource Limits:     POSIX rlimit (AS, CPU, NOFILE)");
-            println!("PEB-15 Microsecond Benchmarks (Ratified):");
+            println!(
+                "PEB-15 Microsecond Benchmarks (recorded 2026-09 baseline; historical, not live):"
+            );
             println!("  JEV Pre-Triage:    26.70 ns / eval  (37.5M evals/sec)");
             println!("  Workspace Claim:   87.67 us / claim (11.4k claims/sec)");
             println!("  Landlock Ruleset:  142.55 us / ruleset (7.0k rulesets/sec)");
@@ -4675,6 +4860,9 @@ fn run_mandala_command(cmd: MandalaCommands, store_path: &Path) {
             println!("  Factory Pipeline:  604.44 us / trial (1,654 trials/sec)");
             println!("Speedup vs MicroVM:  152.0x faster than Firecracker");
             println!("Speedup vs Container: 521.2x faster than Docker/runc");
+            println!(
+                "Note:                recorded 2026-09 baseline; not re-measured by this command."
+            );
             println!("==================================================");
         }
     }
@@ -4685,7 +4873,7 @@ fn run_ingest(
     file_path: &str,
     batch_size: usize,
     default_source: &str,
-    default_kind: &str,
+    default_kind: ImportKind,
 ) {
     let journal_path = store_path.join("journal.jsonl");
     let mut substrate = match Substrate::open(store_path, Some(&journal_path), default_view()) {
@@ -4703,11 +4891,7 @@ fn run_ingest(
     substrate.set_budget(0); // Unconstrained budget for bulk ingestion
     substrate.set_noise_enabled(false); // Ingest execution logs and traces without noise rejection
 
-    let kind = match default_kind.to_ascii_lowercase().as_str() {
-        "system" => ImportKind::System,
-        "simulated" => ImportKind::Simulated,
-        _ => ImportKind::Reported,
-    };
+    let kind = default_kind;
 
     let reader: Box<dyn std::io::BufRead> = if file_path == "-" {
         Box::new(std::io::BufReader::new(std::io::stdin()))
@@ -5659,15 +5843,14 @@ fn legacy_store_detected(path: &Path) -> bool {
     Gen2Reader::open(path).is_ok()
 }
 
-fn run_legacy_census(path: &Path) {
+fn run_legacy_census(path: &Path) -> Result<(), String> {
     println!("Opening legacy Gen2 store at: {}", path.display());
-    match Gen2Reader::open(path) {
-        Ok(reader) => match reader.census() {
-            Ok(census) => print_census_report(&census),
-            Err(e) => eprintln!("Error during census scan: {e}"),
-        },
-        Err(e) => eprintln!("Failed to open Gen2 store: {e}"),
-    }
+    let reader = Gen2Reader::open(path).map_err(|e| format!("Failed to open Gen2 store: {e}"))?;
+    let census = reader
+        .census()
+        .map_err(|e| format!("Error during census scan: {e}"))?;
+    print_census_report(&census);
+    Ok(())
 }
 
 fn print_census_report(census: &Gen2Census) {
@@ -7044,5 +7227,271 @@ mod ingest_meta_tests {
         let meta = parse_ingest_meta(&value).expect("meta present");
         assert_eq!(meta.tags, vec!["a"]);
         assert_eq!(meta.importance, 0.0);
+    }
+}
+
+#[cfg(test)]
+mod cli_truth_tests {
+    use super::*;
+    use clap::CommandFactory;
+
+    fn fixture_store_dir() -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("wm-cli-truth-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("create fixture store");
+        dir
+    }
+
+    fn fixture_pass() -> MandalaPass {
+        MandalaPass {
+            pass_id: "pass-test".to_string(),
+            slot_id: "slot-test".to_string(),
+            tenant_id: "tenant-test".to_string(),
+            agent_id: "agent-test".to_string(),
+            principal_id: None,
+            jti: "jti-test".to_string(),
+            parent_jti: None,
+            fork_depth: 0,
+            created_at: 100,
+            expires_at: 10_000,
+            budget: PassBudget {
+                max_operations: 10,
+                operations_used: 0,
+                max_compute_ms: 60_000,
+                max_memory_mb: 512,
+            },
+            manifest: CapabilityManifest::default(),
+            mandate_ref: None,
+            signature: None,
+        }
+    }
+
+    fn fixture_continuity_receipt(key: &SigningKey) -> ContinuityReceipt05 {
+        let mut receipt = ContinuityReceipt05::new(
+            "rcpt-test".to_string(),
+            "tenant-test".to_string(),
+            "agent-test".to_string(),
+            "session-test".to_string(),
+            1_700_000_000_000,
+            "kekkai-v1".to_string(),
+            "claim-digest".to_string(),
+            true,
+            "preflight-digest".to_string(),
+            None,
+            format!("did:key:{}", hex_encode(&key.verifying_key().to_bytes())),
+        );
+        receipt.sign(key);
+        receipt
+    }
+
+    #[test]
+    fn verify_pass_against_gate_fails_closed_for_foreign_or_unsigned_passes() {
+        let store = fixture_store_dir();
+        let (signing_key, pubkey) =
+            resolve_or_create_mandala_gate_key(&store).expect("gate key fixture");
+
+        let mut trusted = fixture_pass();
+        trusted.sign(&signing_key);
+        let verified_pubkey =
+            verify_pass_against_gate(&trusted, &store, 1_500).expect("trusted pass accepted");
+        assert_eq!(verified_pubkey, pubkey);
+
+        let foreign_key = SigningKey::from_bytes(&[9u8; 32]);
+        let mut foreign = fixture_pass();
+        foreign.sign(&foreign_key);
+        let foreign_error =
+            verify_pass_against_gate(&foreign, &store, 1_500).expect_err("foreign pass refused");
+        assert!(
+            foreign_error.contains("does not verify against the trusted local gate"),
+            "{foreign_error}"
+        );
+
+        let mut unsigned = fixture_pass();
+        unsigned.signature = None;
+        assert!(verify_pass_against_gate(&unsigned, &store, 1_500).is_err());
+
+        let expired_error =
+            verify_pass_against_gate(&trusted, &store, 20_000).expect_err("expired pass refused");
+        assert!(expired_error.contains("ledger replay check failed"));
+
+        let keyless_store = fixture_store_dir();
+        let keyless_error = verify_pass_against_gate(&trusted, &keyless_store, 1_500)
+            .expect_err("missing gate key refuses verification");
+        assert!(keyless_error.contains("gate authority key unavailable"));
+
+        std::fs::remove_dir_all(&store).ok();
+        std::fs::remove_dir_all(&keyless_store).ok();
+    }
+
+    #[test]
+    fn verify_continuity_receipt05_fails_closed_for_tampering_and_foreign_keys() {
+        let store = fixture_store_dir();
+        let (signing_key, _) = resolve_or_create_mandala_gate_key(&store).expect("gate key");
+
+        let receipt = fixture_continuity_receipt(&signing_key);
+        let content = serde_json::to_string(&receipt).expect("serialize receipt");
+        let verified =
+            verify_continuity_receipt05(&content, &store).expect("trusted receipt verifies");
+        assert_eq!(verified.receipt_id, "rcpt-test");
+
+        let mut tampered = receipt.clone();
+        tampered.tenant_id = "tenant-attacker".to_string();
+        let tampered_content = serde_json::to_string(&tampered).expect("serialize tampered");
+        assert!(verify_continuity_receipt05(&tampered_content, &store).is_err());
+
+        let foreign = fixture_continuity_receipt(&SigningKey::from_bytes(&[7u8; 32]));
+        let foreign_content = serde_json::to_string(&foreign).expect("serialize foreign");
+        let foreign_error =
+            verify_continuity_receipt05(&foreign_content, &store).expect_err("foreign refused");
+        assert!(
+            foreign_error.contains("does not verify against the store gate key"),
+            "{foreign_error}"
+        );
+
+        let mut unsigned = fixture_continuity_receipt(&signing_key);
+        unsigned.signature = None;
+        assert!(
+            verify_continuity_receipt05(&serde_json::to_string(&unsigned).unwrap(), &store)
+                .is_err()
+        );
+
+        let mut wrong_spec = fixture_continuity_receipt(&signing_key);
+        wrong_spec.spec = "continuity-receipt/9".to_string();
+        let spec_error =
+            verify_continuity_receipt05(&serde_json::to_string(&wrong_spec).unwrap(), &store)
+                .expect_err("wrong spec refused");
+        assert!(
+            spec_error.contains("unsupported receipt spec"),
+            "{spec_error}"
+        );
+
+        std::fs::remove_dir_all(&store).ok();
+    }
+
+    #[test]
+    fn advertised_profile_counts_match_runtime_tool_lists() {
+        let cyberbrain = profile_tool_count(McpProfile::Cyberbrain);
+        let full = profile_tool_count(McpProfile::Full);
+        assert!(cyberbrain > 0, "cyberbrain profile must expose tools");
+        assert!(full > cyberbrain, "full profile must be a superset");
+
+        let help = profile_help_text();
+        assert!(help.contains(&format!("{cyberbrain} lean tools")), "{help}");
+        assert!(help.contains(&format!("{full} curated tools")), "{help}");
+
+        let manifest = build_contract_manifest(WM_VERSION);
+        assert_eq!(
+            manifest["counts"]["routes"].as_u64().expect("routes count") as usize,
+            full,
+            "contract manifest routes must equal the advertised full profile count"
+        );
+
+        let mut cmd = Cli::command();
+        let serve = cmd.find_subcommand_mut("serve").expect("serve subcommand");
+        let profile_arg = serve
+            .get_arguments()
+            .find(|arg| arg.get_id() == "profile")
+            .expect("profile arg");
+        let wired_help = profile_arg.get_help().expect("profile help").to_string();
+        assert!(wired_help.contains(&format!("{cyberbrain} lean tools")));
+        assert!(wired_help.contains(&format!("{full} curated tools")));
+    }
+
+    #[test]
+    fn boolean_flags_default_on_and_can_be_disabled() {
+        let cli = Cli::try_parse_from(["wm", "dream"]).expect("parse dream defaults");
+        match cli.command {
+            Commands::Dream {
+                dual_phase,
+                no_dual_phase,
+                homeostatic,
+                no_homeostatic,
+                ..
+            } => {
+                assert_eq!(dual_phase, None);
+                assert!(!no_dual_phase);
+                assert_eq!(homeostatic, None);
+                assert!(!no_homeostatic);
+            }
+            _ => panic!("expected dream command"),
+        }
+
+        let cli = Cli::try_parse_from(["wm", "dream", "--no-dual-phase", "--no-homeostatic"])
+            .expect("parse dream disables");
+        match cli.command {
+            Commands::Dream {
+                no_dual_phase,
+                no_homeostatic,
+                ..
+            } => {
+                assert!(no_dual_phase);
+                assert!(no_homeostatic);
+            }
+            _ => panic!("expected dream command"),
+        }
+
+        let cli = Cli::try_parse_from(["wm", "serve", "--no-sweep", "--no-noise"])
+            .expect("parse serve disables");
+        match cli.command {
+            Commands::Serve {
+                sweep,
+                no_sweep,
+                noise,
+                no_noise,
+                ..
+            } => {
+                assert_eq!(sweep, None);
+                assert!(no_sweep);
+                assert_eq!(noise, None);
+                assert!(no_noise);
+            }
+            _ => panic!("expected serve command"),
+        }
+
+        let cli = Cli::try_parse_from([
+            "wm",
+            "session",
+            "checkpoint",
+            "--session-id",
+            "s",
+            "--summary",
+            "x",
+            "--no-evolve",
+        ])
+        .expect("parse checkpoint disable");
+        match cli.command {
+            Commands::Session {
+                command:
+                    SessionCommands::Checkpoint {
+                        evolve, no_evolve, ..
+                    },
+            } => {
+                assert_eq!(evolve, None);
+                assert!(no_evolve);
+            }
+            _ => panic!("expected session checkpoint command"),
+        }
+    }
+
+    #[test]
+    fn invalid_option_values_are_rejected_at_parse_time() {
+        assert!(Cli::try_parse_from(["wm", "serve", "--profile", "bogus"]).is_err());
+        assert!(Cli::try_parse_from(["wm", "remember", "note", "--kind", "bogus"]).is_err());
+        assert!(Cli::try_parse_from(["wm", "ingest", "--default-kind", "bogus"]).is_err());
+        assert!(Cli::try_parse_from(["wm", "dream", "--mode", "bogus"]).is_err());
+
+        assert!(Cli::try_parse_from(["wm", "serve", "--profile", "curated"]).is_ok());
+        assert!(Cli::try_parse_from(["wm", "remember", "note", "--kind", "system"]).is_ok());
+        assert!(Cli::try_parse_from(["wm", "dream", "--mode", "sham"]).is_ok());
+    }
+
+    #[test]
+    fn peer_add_requires_explicit_nonzero_key() {
+        assert!(Cli::try_parse_from(["wm", "peer", "add", "node-x"]).is_err());
+        let zero = "00".repeat(32);
+        assert!(parse_pubkey_hex(&zero).is_err());
+        let valid = "ab".repeat(32);
+        assert!(parse_pubkey_hex(&valid).is_ok());
+        assert!(Cli::try_parse_from(["wm", "peer", "add", "node-x", "--key", &valid]).is_ok());
+        assert!(parse_pubkey_hex("zz").is_err());
     }
 }
