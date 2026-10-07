@@ -58,6 +58,10 @@ pub enum MandalaError {
     TokenReplayDetected { jti: String },
     /// Child pass attempted privilege escalation beyond parent constraints.
     IllegalForkAttenuation(String),
+    /// Sandbox confinement was only partially enforced by the kernel (NOT full confinement).
+    PartialEnforcement { details: String },
+    /// Sandbox confinement was not enforced at all by the kernel.
+    ConfinementNotEnforced { details: String },
     /// Durable journal or ledger persistence error.
     PersistenceFailure(String),
 }
@@ -129,6 +133,15 @@ impl fmt::Display for MandalaError {
                     f,
                     "Mandala Illegal Fork Attenuation (Privilege Escalation): {msg}"
                 )
+            }
+            Self::PartialEnforcement { details } => {
+                write!(
+                    f,
+                    "Mandala Sandbox Only Partially Enforced (Not Full Confinement): {details}"
+                )
+            }
+            Self::ConfinementNotEnforced { details } => {
+                write!(f, "Mandala Sandbox Not Enforced: {details}")
             }
             Self::PersistenceFailure(msg) => {
                 write!(f, "Mandala Replay Ledger Persistence Failure: {msg}")
@@ -216,6 +229,14 @@ impl CapabilityManifest {
             return Err(MandalaError::IllegalForkAttenuation(
                 "Child cannot enable network egress when parent is network restricted".to_string(),
             ));
+        }
+
+        // Child cannot widen the scope resolution mode beyond the parent's scope
+        if child.scope_mode == ScopeMode::All && self.scope_mode != ScopeMode::All {
+            return Err(MandalaError::IllegalForkAttenuation(format!(
+                "Child cannot escalate scope mode to All from parent {:?} scope",
+                self.scope_mode
+            )));
         }
 
         // Parent denials MUST be preserved in child
@@ -324,8 +345,57 @@ pub struct MandalaPass {
     pub signature: Option<Vec<u8>>,
 }
 
+/// Mixes a length-prefixed field into the canonical hash stream.
+///
+/// Length framing makes the encoding injective: values containing delimiter-like
+/// bytes cannot be re-split across field boundaries.
+fn hash_field(hasher: &mut Sha256, bytes: &[u8]) {
+    hasher.update((bytes.len() as u64).to_be_bytes());
+    hasher.update(bytes);
+}
+
+/// Mixes an optional string with an explicit presence marker.
+fn hash_opt_field(hasher: &mut Sha256, value: Option<&str>) {
+    match value {
+        Some(v) => {
+            hasher.update([1u8]);
+            hash_field(hasher, v.as_bytes());
+        }
+        None => hasher.update([0u8]),
+    }
+}
+
+/// Mixes a filesystem path using its native byte representation on Unix.
+fn hash_path_field(hasher: &mut Sha256, path: &Path) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        hash_field(hasher, path.as_os_str().as_bytes());
+    }
+    #[cfg(not(unix))]
+    {
+        hash_field(hasher, path.to_string_lossy().as_bytes());
+    }
+}
+
+/// Canonical, stable label for a scope mode (never `Debug`-formatted).
+fn scope_mode_label(mode: ScopeMode) -> &'static str {
+    match mode {
+        ScopeMode::All => "all",
+        ScopeMode::Include => "include",
+        ScopeMode::Exclude => "exclude",
+    }
+}
+
 impl MandalaPass {
     /// Generates canonical bytes for signing and verification.
+    ///
+    /// Every authority-bearing field is covered, including `manifest.scope_mode`,
+    /// the network policy, and both capability lists in sorted order. Fields use
+    /// length-prefixed framing so no two distinct manifests can hash to the same
+    /// byte stream. `budget.operations_used` is intentionally excluded: it is
+    /// mutable post-signature consumption state, and re-signing is required by
+    /// `advance_continuation`.
     #[must_use]
     pub fn canonical_signing_bytes(&self) -> Vec<u8> {
         // Sort operations for deterministic serialization
@@ -335,51 +405,36 @@ impl MandalaPass {
         sorted_denied.sort();
 
         let mut hasher = Sha256::new();
-        hasher.update(b"MANDALA_PASS_V1\n");
-        hasher.update(self.pass_id.as_bytes());
-        hasher.update(b"\n");
-        hasher.update(self.slot_id.as_bytes());
-        hasher.update(b"\n");
-        hasher.update(self.tenant_id.as_bytes());
-        hasher.update(b"\n");
-        hasher.update(self.agent_id.as_bytes());
-        hasher.update(b"\n");
-        if let Some(ref p) = self.principal_id {
-            hasher.update(p.as_bytes());
-        }
-        hasher.update(b"\n");
-        hasher.update(self.jti.as_bytes());
-        hasher.update(b"\n");
-        if let Some(ref pj) = self.parent_jti {
-            hasher.update(pj.as_bytes());
-        }
-        hasher.update(b"\n");
+        hasher.update(b"MANDALA_PASS_V2\n");
+        hash_field(&mut hasher, self.pass_id.as_bytes());
+        hash_field(&mut hasher, self.slot_id.as_bytes());
+        hash_field(&mut hasher, self.tenant_id.as_bytes());
+        hash_field(&mut hasher, self.agent_id.as_bytes());
+        hash_opt_field(&mut hasher, self.principal_id.as_deref());
+        hash_field(&mut hasher, self.jti.as_bytes());
+        hash_opt_field(&mut hasher, self.parent_jti.as_deref());
         hasher.update(self.fork_depth.to_be_bytes());
         hasher.update(self.created_at.to_be_bytes());
         hasher.update(self.expires_at.to_be_bytes());
+        // Immutable budget ceilings
         hasher.update(self.budget.max_operations.to_be_bytes());
         hasher.update(self.budget.max_compute_ms.to_be_bytes());
         hasher.update(self.budget.max_memory_mb.to_be_bytes());
-        hasher.update(if self.manifest.network_restricted {
-            b"1"
-        } else {
-            b"0"
-        });
-        hasher.update(b"\n");
-
-        for op in sorted_allowed {
-            hasher.update(b"+");
-            hasher.update(op.as_bytes());
-            hasher.update(b"\n");
+        // Manifest: scope mode and network policy carry semantic authority
+        hash_field(
+            &mut hasher,
+            scope_mode_label(self.manifest.scope_mode).as_bytes(),
+        );
+        hasher.update([u8::from(self.manifest.network_restricted)]);
+        hasher.update((sorted_allowed.len() as u64).to_be_bytes());
+        for op in &sorted_allowed {
+            hash_field(&mut hasher, op.as_bytes());
         }
-        for op in sorted_denied {
-            hasher.update(b"-");
-            hasher.update(op.as_bytes());
-            hasher.update(b"\n");
+        hasher.update((sorted_denied.len() as u64).to_be_bytes());
+        for op in &sorted_denied {
+            hash_field(&mut hasher, op.as_bytes());
         }
-        if let Some(ref mr) = self.mandate_ref {
-            hasher.update(mr.as_bytes());
-        }
+        hash_opt_field(&mut hasher, self.mandate_ref.as_deref());
 
         hasher.finalize().to_vec()
     }
@@ -959,28 +1014,52 @@ impl WorkspaceClaim {
             .map(|fd| wm_gen3_shm::ShmSubstrate::from_raw_fd(fd, false))
     }
     /// Computes the canonical SHA-256 digest of this workspace claim.
+    ///
+    /// Covers every capability-bearing field: identity, workspace root, sorted
+    /// read-only and read-write paths, network policy, kekkai phase, resource
+    /// limits, and the inherited shm fd. Length-prefixed framing prevents
+    /// delimiter injection between fields.
     #[must_use]
     pub fn canonical_digest(&self) -> String {
+        let mut sorted_ro: Vec<&PathBuf> = self.read_only_paths.iter().collect();
+        sorted_ro.sort();
+        let mut sorted_rw: Vec<&PathBuf> = self.read_write_paths.iter().collect();
+        sorted_rw.sort();
+
         let mut hasher = Sha256::new();
-        hasher.update(self.claim_id.as_bytes());
-        hasher.update(b":");
-        hasher.update(self.tenant_id.as_bytes());
-        hasher.update(b":");
-        hasher.update(self.agent_id.as_bytes());
-        hasher.update(b":");
-        hasher.update(self.workspace_root.to_string_lossy().as_bytes());
-        hasher.update(b":");
-        hasher.update(format!("{:?}", self.kekkai_phase).as_bytes());
-        hasher.update(b":");
-        if let Some(ref lim) = self.resource_limits {
-            hasher.update(lim.max_memory_mb.to_le_bytes());
-            hasher.update(lim.max_cpu_seconds.to_le_bytes());
-            hasher.update(lim.max_open_files.to_le_bytes());
+        hasher.update(b"WORKSPACE_CLAIM_V2\n");
+        hash_field(&mut hasher, self.claim_id.as_bytes());
+        hash_field(&mut hasher, self.tenant_id.as_bytes());
+        hash_field(&mut hasher, self.agent_id.as_bytes());
+        hash_path_field(&mut hasher, &self.workspace_root);
+        hasher.update((sorted_ro.len() as u64).to_be_bytes());
+        for p in &sorted_ro {
+            hash_path_field(&mut hasher, p);
         }
-        hasher.update(b":");
-        hasher.update(self.created_at.to_le_bytes());
-        hasher.update(b":");
-        hasher.update(self.expires_at.to_le_bytes());
+        hasher.update((sorted_rw.len() as u64).to_be_bytes());
+        for p in &sorted_rw {
+            hash_path_field(&mut hasher, p);
+        }
+        hasher.update([u8::from(self.network_allowed)]);
+        hash_field(&mut hasher, self.kekkai_phase.as_str().as_bytes());
+        match &self.resource_limits {
+            Some(lim) => {
+                hasher.update([1u8]);
+                hasher.update(lim.max_memory_mb.to_be_bytes());
+                hasher.update(lim.max_cpu_seconds.to_be_bytes());
+                hasher.update(lim.max_open_files.to_be_bytes());
+            }
+            None => hasher.update([0u8]),
+        }
+        match self.inherited_shm_fd {
+            Some(fd) => {
+                hasher.update([1u8]);
+                hasher.update(fd.to_be_bytes());
+            }
+            None => hasher.update([0u8]),
+        }
+        hasher.update(self.created_at.to_be_bytes());
+        hasher.update(self.expires_at.to_be_bytes());
         format!("sha256:{:x}", hasher.finalize())
     }
 
@@ -1007,6 +1086,54 @@ impl WorkspaceClaim {
         key.verify(digest.as_bytes(), &sig)
             .map_err(|_| MandalaError::SignatureInvalid)
     }
+}
+
+/// Kernel enforcement outcome for a sandbox restriction call.
+///
+/// Callers must never treat [`SandboxEnforcement::PartiallyEnforced`] as full
+/// confinement: some requested restrictions were rejected or ignored by the kernel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SandboxEnforcement {
+    /// The kernel enforced every requested restriction.
+    FullyEnforced,
+    /// The kernel enforced only a subset of the requested restrictions.
+    PartiallyEnforced,
+    /// The kernel did not enforce the ruleset at all.
+    NotEnforced,
+}
+
+impl SandboxEnforcement {
+    /// Returns true only when every requested restriction is kernel-enforced.
+    #[must_use]
+    pub fn is_full(self) -> bool {
+        matches!(self, Self::FullyEnforced)
+    }
+
+    /// Stable machine-readable label for reports and receipts.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::FullyEnforced => "fully_enforced",
+            Self::PartiallyEnforced => "partially_enforced",
+            Self::NotEnforced => "not_enforced",
+        }
+    }
+}
+
+/// Explicit sandbox enforcement report.
+///
+/// Carries the enforcement classification out of the `restrict_*` calls so
+/// partial confinement is visible to callers, receipts, and operators.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SandboxEnforcementReport {
+    /// Digest of the `WorkspaceClaim` materialized, when one applies.
+    pub workspace_claim_digest: Option<String>,
+    /// Enforcement classification for this restriction call.
+    pub status: SandboxEnforcement,
+    /// Enforcement backend (e.g. `landlock`, `advisory-rlimit`).
+    pub backend: String,
+    /// Human-readable detail when enforcement is not full.
+    pub details: Option<String>,
 }
 
 /// Native Linux Landlock LSM sandbox executor.
@@ -1126,8 +1253,50 @@ impl LandlockSandbox {
         Ok(SandboxRuleset)
     }
 
+    /// Maps a Landlock kernel result into the explicit enforcement classification.
+    #[cfg(target_os = "linux")]
+    fn classify_enforcement(status: landlock::RulesetStatus) -> SandboxEnforcement {
+        match status {
+            landlock::RulesetStatus::FullyEnforced => SandboxEnforcement::FullyEnforced,
+            landlock::RulesetStatus::PartiallyEnforced => SandboxEnforcement::PartiallyEnforced,
+            landlock::RulesetStatus::NotEnforced => SandboxEnforcement::NotEnforced,
+        }
+    }
+
+    /// Fails closed unless the kernel fully enforced the requested confinement.
+    fn require_full_enforcement(status: SandboxEnforcement) -> Result<(), MandalaError> {
+        match status {
+            SandboxEnforcement::FullyEnforced => Ok(()),
+            SandboxEnforcement::PartiallyEnforced => Err(MandalaError::PartialEnforcement {
+                details:
+                    "Landlock enforced only a subset of the requested restrictions; confinement \
+                     is not complete"
+                        .to_string(),
+            }),
+            SandboxEnforcement::NotEnforced => Err(MandalaError::ConfinementNotEnforced {
+                details: "Landlock ruleset was not enforced by the kernel".to_string(),
+            }),
+        }
+    }
+
     /// Enforces Landlock confinement and unprivileged resource limits on the current thread/process.
+    ///
+    /// Fails closed unless the kernel reports full enforcement. Use
+    /// [`Self::restrict_current_process_reported`] to distinguish full, partial,
+    /// and absent enforcement.
     pub fn restrict_current_process(claim: &WorkspaceClaim) -> Result<(), MandalaError> {
+        let report = Self::restrict_current_process_reported(claim)?;
+        Self::require_full_enforcement(report.status)
+    }
+
+    /// Enforces confinement and returns an explicit enforcement report.
+    ///
+    /// Partial confinement (for example an older Landlock ABI that enforces only
+    /// filesystem rules) is reported as [`SandboxEnforcement::PartiallyEnforced`]
+    /// and is never silently upgraded to full enforcement.
+    pub fn restrict_current_process_reported(
+        claim: &WorkspaceClaim,
+    ) -> Result<SandboxEnforcementReport, MandalaError> {
         // 1. Apply unprivileged resource limits (RLIMIT_AS, RLIMIT_CPU, RLIMIT_NOFILE)
         if let Some(ref limits) = claim.resource_limits {
             limits.apply_to_current_process()?;
@@ -1140,21 +1309,44 @@ impl LandlockSandbox {
             let status = ruleset.inner.restrict_self().map_err(|e| {
                 MandalaError::PersistenceFailure(format!("Landlock restrict_self failed: {e}"))
             })?;
-
-            match status.ruleset {
-                landlock::RulesetStatus::FullyEnforced
-                | landlock::RulesetStatus::PartiallyEnforced => Ok(()),
-                landlock::RulesetStatus::NotEnforced => Err(MandalaError::OperationNotAllowed {
-                    operation: "landlock_confinement".to_string(),
-                    reason: "Landlock ruleset was not enforced by the kernel".to_string(),
-                }),
-            }
+            let enforcement = Self::classify_enforcement(status.ruleset);
+            let details = match enforcement {
+                SandboxEnforcement::FullyEnforced => None,
+                SandboxEnforcement::PartiallyEnforced => Some(
+                    "Landlock kernel enforced only a subset of the requested restrictions; \
+                     confinement is not complete"
+                        .to_string(),
+                ),
+                SandboxEnforcement::NotEnforced => {
+                    Some("Landlock ruleset was not enforced by the kernel".to_string())
+                }
+            };
+            Ok(SandboxEnforcementReport {
+                workspace_claim_digest: Some(claim.canonical_digest()),
+                status: enforcement,
+                backend: "landlock".to_string(),
+                details,
+            })
         }
 
+        // 3. Non-Linux: no kernel LSM, only advisory process limits can apply
         #[cfg(not(target_os = "linux"))]
         {
-            // On macOS / Windows, process limits are enforced via rlimit/advisory bounds.
-            Ok(())
+            let enforcement = if claim.resource_limits.is_some() {
+                SandboxEnforcement::PartiallyEnforced
+            } else {
+                SandboxEnforcement::NotEnforced
+            };
+            Ok(SandboxEnforcementReport {
+                workspace_claim_digest: Some(claim.canonical_digest()),
+                status: enforcement,
+                backend: "advisory-rlimit".to_string(),
+                details: Some(
+                    "No kernel LSM on this platform; filesystem/network confinement is advisory \
+                     only"
+                        .to_string(),
+                ),
+            })
         }
     }
 
@@ -1285,12 +1477,35 @@ impl LandlockSandbox {
     }
 
     /// Enforces Landlock confinement on the current thread/process derived from a verified delegation proof.
+    ///
+    /// Fails closed unless the kernel reports full enforcement. Use
+    /// [`Self::restrict_delegated_process_reported`] to distinguish full, partial,
+    /// and absent enforcement.
     pub fn restrict_delegated_process(
         token: &crate::attestation::AgentIdentityToken,
         proof: Option<&crate::attestation::DelegationProof>,
         root_authority_vk: &ed25519_dalek::VerifyingKey,
         current_epoch: u64,
     ) -> Result<(), MandalaError> {
+        let report = Self::restrict_delegated_process_reported(
+            token,
+            proof,
+            root_authority_vk,
+            current_epoch,
+        )?;
+        Self::require_full_enforcement(report.status)
+    }
+
+    /// Enforces delegated confinement and returns an explicit enforcement report.
+    ///
+    /// Partial confinement is reported as [`SandboxEnforcement::PartiallyEnforced`]
+    /// and is never silently upgraded to full enforcement.
+    pub fn restrict_delegated_process_reported(
+        token: &crate::attestation::AgentIdentityToken,
+        proof: Option<&crate::attestation::DelegationProof>,
+        root_authority_vk: &ed25519_dalek::VerifyingKey,
+        current_epoch: u64,
+    ) -> Result<SandboxEnforcementReport, MandalaError> {
         #[cfg(target_os = "linux")]
         {
             let ruleset =
@@ -1298,20 +1513,37 @@ impl LandlockSandbox {
             let status = ruleset.inner.restrict_self().map_err(|e| {
                 MandalaError::PersistenceFailure(format!("Landlock restrict_self failed: {e}"))
             })?;
-
-            match status.ruleset {
-                landlock::RulesetStatus::FullyEnforced
-                | landlock::RulesetStatus::PartiallyEnforced => Ok(()),
-                landlock::RulesetStatus::NotEnforced => Err(MandalaError::OperationNotAllowed {
-                    operation: "landlock_confinement".to_string(),
-                    reason: "Landlock ruleset was not enforced by the kernel".to_string(),
-                }),
-            }
+            let enforcement = Self::classify_enforcement(status.ruleset);
+            let details = match enforcement {
+                SandboxEnforcement::FullyEnforced => None,
+                SandboxEnforcement::PartiallyEnforced => Some(
+                    "Landlock kernel enforced only a subset of the delegated restrictions; \
+                     confinement is not complete"
+                        .to_string(),
+                ),
+                SandboxEnforcement::NotEnforced => {
+                    Some("Landlock ruleset was not enforced by the kernel".to_string())
+                }
+            };
+            Ok(SandboxEnforcementReport {
+                workspace_claim_digest: None,
+                status: enforcement,
+                backend: "landlock-delegated".to_string(),
+                details,
+            })
         }
 
         #[cfg(not(target_os = "linux"))]
         {
-            Ok(())
+            Ok(SandboxEnforcementReport {
+                workspace_claim_digest: None,
+                status: SandboxEnforcement::NotEnforced,
+                backend: "none".to_string(),
+                details: Some(
+                    "No kernel LSM on this platform; delegated confinement is unavailable"
+                        .to_string(),
+                ),
+            })
         }
     }
 }
@@ -1838,5 +2070,261 @@ mod tests {
             receipt.verify(&verifying).unwrap_err(),
             MandalaError::SignatureInvalid
         );
+    }
+
+    #[test]
+    fn test_scope_mode_is_signed_and_flip_fails_closed() {
+        let (signing, verifying) = test_gate_keypair();
+        let gate_did = "did:key:scope-mode";
+
+        let mut manifest = CapabilityManifest::default();
+        manifest
+            .allowed_operations
+            .insert("memory:intake".to_string());
+
+        let mut pass = MandalaPass {
+            pass_id: "pass-scope-001".to_string(),
+            slot_id: "slot-scope".to_string(),
+            tenant_id: "tenant-scope".to_string(),
+            agent_id: "agent-scope".to_string(),
+            principal_id: None,
+            jti: "jti-scope-001".to_string(),
+            parent_jti: None,
+            fork_depth: 0,
+            created_at: 1000,
+            expires_at: 2000,
+            budget: PassBudget::default(),
+            manifest,
+            mandate_ref: None,
+            signature: None,
+        };
+        pass.sign(&signing);
+
+        let mut verifier = MandalaAuthorityVerifier::new(MandalaReplayLedger::new());
+        verifier.register_gate_key(gate_did, verifying);
+        assert!(verifier.verify_pass_offline(&pass, gate_did, 1500).is_ok());
+
+        // Attacker flips scope_mode Include -> All after signing
+        let mut tampered = pass.clone();
+        tampered.manifest.scope_mode = ScopeMode::All;
+        assert_eq!(
+            tampered.verify_signature(&verifying).unwrap_err(),
+            MandalaError::SignatureInvalid
+        );
+        assert_eq!(
+            verifier
+                .verify_pass_offline(&tampered, gate_did, 1500)
+                .unwrap_err(),
+            MandalaError::SignatureInvalid
+        );
+
+        // Authorization for an operation only permitted by the flipped All scope fails closed
+        let mut escalated = pass.clone();
+        escalated.manifest.scope_mode = ScopeMode::All;
+        assert_eq!(
+            verifier
+                .verify_and_authorize_commit(&mut escalated, gate_did, "delete:everything", 1500)
+                .unwrap_err(),
+            MandalaError::SignatureInvalid
+        );
+    }
+
+    #[test]
+    fn test_pass_capability_ordering_is_canonical() {
+        fn pass_with(allowed: &[&str]) -> MandalaPass {
+            let mut manifest = CapabilityManifest::default();
+            for op in allowed {
+                manifest.allowed_operations.insert((*op).to_string());
+            }
+            MandalaPass {
+                pass_id: "pass-order".to_string(),
+                slot_id: "slot-order".to_string(),
+                tenant_id: "tenant-order".to_string(),
+                agent_id: "agent-order".to_string(),
+                principal_id: None,
+                jti: "jti-order".to_string(),
+                parent_jti: None,
+                fork_depth: 0,
+                created_at: 1000,
+                expires_at: 2000,
+                budget: PassBudget::default(),
+                manifest,
+                mandate_ref: None,
+                signature: None,
+            }
+        }
+
+        let a = pass_with(&["memory:recall", "memory:intake", "tool:run"]);
+        let b = pass_with(&["tool:run", "memory:recall", "memory:intake"]);
+        assert_eq!(a.canonical_signing_bytes(), b.canonical_signing_bytes());
+    }
+
+    #[test]
+    fn test_fork_scope_mode_escalation_rejected() {
+        let parent = MandalaPass {
+            pass_id: "pass-parent-scope".to_string(),
+            slot_id: "slot-ps".to_string(),
+            tenant_id: "tenant-scope".to_string(),
+            agent_id: "agent-parent".to_string(),
+            principal_id: None,
+            jti: "jti-parent-scope".to_string(),
+            parent_jti: None,
+            fork_depth: 0,
+            created_at: 1000,
+            expires_at: 2000,
+            budget: PassBudget::default(),
+            manifest: CapabilityManifest {
+                scope_mode: ScopeMode::Include,
+                allowed_operations: ["read:data"].iter().map(|s| s.to_string()).collect(),
+                denied_operations: HashSet::new(),
+                network_restricted: true,
+            },
+            mandate_ref: None,
+            signature: None,
+        };
+
+        let all_scope = CapabilityManifest {
+            scope_mode: ScopeMode::All,
+            allowed_operations: HashSet::new(),
+            denied_operations: HashSet::new(),
+            network_restricted: true,
+        };
+        let child_budget = PassBudget {
+            max_operations: 5,
+            operations_used: 0,
+            max_compute_ms: 1_000,
+            max_memory_mb: 128,
+        };
+
+        let escalated = parent.fork_child(
+            "pass-child-all",
+            "slot-ca",
+            "agent-child",
+            "jti-ca",
+            all_scope.clone(),
+            child_budget,
+            1800,
+            1200,
+        );
+        assert!(matches!(
+            escalated.unwrap_err(),
+            MandalaError::IllegalForkAttenuation(_)
+        ));
+
+        let mut parent_all = parent;
+        parent_all.manifest = all_scope.clone();
+        let allowed = parent_all.fork_child(
+            "pass-child-all-2",
+            "slot-ca2",
+            "agent-child",
+            "jti-ca2",
+            all_scope,
+            child_budget,
+            1800,
+            1200,
+        );
+        assert!(allowed.is_ok());
+    }
+
+    #[test]
+    fn test_workspace_claim_all_scope_fields_signed() {
+        let (signing, verifying) = test_gate_keypair();
+        let base = WorkspaceClaim {
+            claim_id: "claim-tamper-001".to_string(),
+            tenant_id: "tenant-lucas".to_string(),
+            agent_id: "agent-opencode".to_string(),
+            workspace_root: PathBuf::from("/tmp"),
+            read_only_paths: vec![PathBuf::from("/usr"), PathBuf::from("/lib")],
+            read_write_paths: vec![PathBuf::from("/tmp/scratch")],
+            network_allowed: false,
+            kekkai_phase: KekkaiPhase::Hoi,
+            resource_limits: Some(SandboxResourceLimits::default()),
+            inherited_shm_fd: None,
+            created_at: 1000,
+            expires_at: 5000,
+            signature: None,
+        };
+        let mut signed = base.clone();
+        signed.sign(&signing);
+        assert!(signed.verify(&verifying).is_ok());
+
+        // Path ordering is canonicalized: the same set in any order verifies
+        let mut reordered = signed.clone();
+        reordered.read_only_paths.reverse();
+        assert!(reordered.verify(&verifying).is_ok());
+
+        let mut ro = signed.clone();
+        ro.read_only_paths.push(PathBuf::from("/etc"));
+        assert_eq!(
+            ro.verify(&verifying).unwrap_err(),
+            MandalaError::SignatureInvalid
+        );
+
+        let mut rw = signed.clone();
+        rw.read_write_paths = vec![PathBuf::from("/tmp/elsewhere")];
+        assert_eq!(
+            rw.verify(&verifying).unwrap_err(),
+            MandalaError::SignatureInvalid
+        );
+
+        let mut net = signed.clone();
+        net.network_allowed = true;
+        assert_eq!(
+            net.verify(&verifying).unwrap_err(),
+            MandalaError::SignatureInvalid
+        );
+
+        let mut shm = signed.clone();
+        shm.inherited_shm_fd = Some(7);
+        assert_eq!(
+            shm.verify(&verifying).unwrap_err(),
+            MandalaError::SignatureInvalid
+        );
+
+        let mut limits = signed.clone();
+        limits.resource_limits = Some(SandboxResourceLimits {
+            max_memory_mb: 64,
+            ..SandboxResourceLimits::default()
+        });
+        assert_eq!(
+            limits.verify(&verifying).unwrap_err(),
+            MandalaError::SignatureInvalid
+        );
+    }
+
+    #[test]
+    fn test_partial_enforcement_is_not_full() {
+        assert!(SandboxEnforcement::FullyEnforced.is_full());
+        assert!(!SandboxEnforcement::PartiallyEnforced.is_full());
+        assert!(!SandboxEnforcement::NotEnforced.is_full());
+
+        assert!(
+            LandlockSandbox::require_full_enforcement(SandboxEnforcement::FullyEnforced).is_ok()
+        );
+        assert!(matches!(
+            LandlockSandbox::require_full_enforcement(SandboxEnforcement::PartiallyEnforced)
+                .unwrap_err(),
+            MandalaError::PartialEnforcement { .. }
+        ));
+        assert!(matches!(
+            LandlockSandbox::require_full_enforcement(SandboxEnforcement::NotEnforced).unwrap_err(),
+            MandalaError::ConfinementNotEnforced { .. }
+        ));
+
+        #[cfg(target_os = "linux")]
+        {
+            assert_eq!(
+                LandlockSandbox::classify_enforcement(landlock::RulesetStatus::FullyEnforced),
+                SandboxEnforcement::FullyEnforced
+            );
+            assert_eq!(
+                LandlockSandbox::classify_enforcement(landlock::RulesetStatus::PartiallyEnforced),
+                SandboxEnforcement::PartiallyEnforced
+            );
+            assert_eq!(
+                LandlockSandbox::classify_enforcement(landlock::RulesetStatus::NotEnforced),
+                SandboxEnforcement::NotEnforced
+            );
+        }
     }
 }
