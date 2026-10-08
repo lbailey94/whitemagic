@@ -254,7 +254,7 @@ All three RED findings and two AMBER findings are resolved and proven in test su
 4. **H15-4:** true physical power-loss qualification is not performed; crash consistency is emulated with write-ahead fsync + reopen.
 5. **9B (CLOSED by addendum, 2026-10-07; rev.2):** `docs/LEGACY_CLI_AUDIT_2026-10-07.md` tables
    all 30 v9-only commands (Preserve/Translate/Deprecate/Remove) and the 8 drifted shared names.
-   `wm at-rest` and `wm host-guard` CLI are now covered (wave-3 `88ac66a`, merged `80b34c2`:
+   `wm at-rest` and `wm host-guard` CLI are now covered (wave-3 `88ac66a`, merged `d08e20c`:
    `wm at-rest status|migrate`; `wm host-guard status|run|arm|disarm`; `wm compact` e2e gated on
    `lmdb-utils`). Remaining follow-on gaps, not 9B blockers: no Gen3 whole-store
    `backup`/`restore`; memory source-trust curation partial.
@@ -266,5 +266,5 @@ All three RED findings and two AMBER findings are resolved and proven in test su
 7. **Closure scan: RESOLVED (rev.2).** The scan failed rule 3 at `ef623fb`
    (`crates/wm-gen3-harness/src/bin/wm_node.rs` spawns); wave-3 `ef24101` extended the scanner
    allowlist and added `receipts/BOUNDARY_WM_NODE_TRANSPORT_SPAWNS_2026-10-07.md`. Re-run at the
-   merge base `80b34c2`: `closure static scans: PASS` (3/3). History:
+   merge base `d08e20c`: `closure static scans: PASS` (3/3). History:
    `receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md` §4a.

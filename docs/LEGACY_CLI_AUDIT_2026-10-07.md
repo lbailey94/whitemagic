@@ -12,7 +12,7 @@
   `receipts/gate9b_artifact_evidence_20261007/logs/10-command-presence.txt`.
   This audits the **CLI** surface; the Gen3 MCP route surface is separately machine-checked by
   `wm10 contract --json` (44 routes / 40 declared / 4 undeclared).
-- **Rev 2 (2026-10-07, post-merge `80b34c2`):** wave-3 commit `88ac66a` wired `wm at-rest`
+- **Rev 2 (2026-10-07, post-merge `d08e20c`):** wave-3 commit `88ac66a` wired `wm at-rest`
   (`status|migrate`) and added the Gen3-only `wm host-guard` (`status|run|arm|disarm`) and
   `wm compact` commands; row #29 and §4.2 updated. All other dispositions stand.
 

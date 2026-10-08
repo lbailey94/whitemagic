@@ -7,9 +7,11 @@
   (packaged-artifact M0–M8 evidence; legacy CLI audit)
 - **Status:** evidence recorded; **no code edits**; H15-2 remains formally open at the
   preregistered driver-form scope (bounded below); operator ratification untouched
-- **Rev 2 (2026-10-07, post-merge `80b34c2`):** command-presence count corrected to 63;
+- **Rev 2 (2026-10-07, post-merge `d08e20c`):** command-presence count corrected to 63;
   §4a closure-scan finding updated — repaired by wave-3 `ef24101` (allowlist + boundary
   receipt); `wm at-rest`/`wm host-guard` CLI now covered (audit rev.2)
+- **Errata 2026-10-07 (hash re-anchor):** merge base `80b34c2` → `d08e20c` after the
+  public-history rewrite (internal runbook purge); referenced content unchanged.
 - **Evidence bundle:** `receipts/gate9b_artifact_evidence_20261007/`
   (raw logs, `SHA256SUMS`, `summary.json`, release manifest, exact patch)
 
@@ -130,7 +132,7 @@ and `mcp_server.rs`. Line 1036 is the accept loop dispatching per-connection han
 physical-I/O transport site in intent (Article 4-compliant), so this was a **scanner
 allowlist gap**, not evidence of a semantic breach. **Resolution (rev.2):** wave-3 `ef24101`
 extended the scanner allowlist and added the ratified boundary receipt
-`receipts/BOUNDARY_WM_NODE_TRANSPORT_SPAWNS_2026-10-07.md`; re-run at merge base `80b34c2`
+`receipts/BOUNDARY_WM_NODE_TRANSPORT_SPAWNS_2026-10-07.md`; re-run at merge base `d08e20c`
 reports `closure static scans: PASS` (3/3). Original log:
 `receipts/gate9b_artifact_evidence_20261007/logs/13-closure-scan-base.txt`.
 `python3 scripts/version_truth.py --check` passes (`10.2.0-alpha.6` agrees on all surfaces).
@@ -149,7 +151,7 @@ reports `closure static scans: PASS` (3/3). Original log:
 - **Gate 9B overall:** remains **engineering-closed, ratification pending**. This receipt
   removes the "no packaged-artifact evidence" gap and closes the audit gap; it does **not**
   close the strict H15-2 wording. Rev.2: the §4a closure-scan finding was repaired on main by
-  `ef24101` (re-run at merge `80b34c2`: 3/3 PASS), and wave-3 `88ac66a` closes the
+  `ef24101` (re-run at merge `d08e20c`: 3/3 PASS), and wave-3 `88ac66a` closes the
   `wm at-rest`/`wm host-guard` CLI gaps; the only remaining verdict §4 conditions are the CI
   reference-model battery, the 9D real-store skip, and the H15-2 closure decision.
 

@@ -5,9 +5,12 @@
   base `ef623fbd5e80d64a47c3335e99a34ea3b9bf7511` (10.2.0-alpha.6, branch `docs/gate9b-evidence`);
   pointers `receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md`,
   `docs/LEGACY_CLI_AUDIT_2026-10-07.md`
-- **Addendum rev.2:** 2026-10-07 post-merge (`80b34c2`, main wave-3) — `wm at-rest` and
+- **Addendum rev.2:** 2026-10-07 post-merge (`d08e20c`, main wave-3) — `wm at-rest` and
   `wm host-guard` CLI covered (`88ac66a`), closure static scan repaired (`ef24101` + boundary
   receipt), artifact-evidence command count corrected; audit rev.2
+- **Errata 2026-10-07 (hash re-anchor):** merge base `80b34c2` → `d08e20c` after the
+  public-history rewrite that purged an internal runbook from the wave-3 range;
+  referenced content is unchanged.
 - **Target Architecture:** WhiteMagic Gen3 `wm` binary (`crates/wm-gen3-harness`, `crates/wm-gen3-core/src/compat.rs`)
 - **Base Commit:** `2a923b4c60f97570551d4bcbb02c290ad474f77b` (10.2.0-alpha.5, `main`)
 - **Operator / Authority:** Lucas (ratification pending)
@@ -57,7 +60,7 @@ locally re-executed tests on the base commit (cargo 1.98.0 / rustc 1.98.0,
 | **Install certification** | `certify-install` jobs (alpha.5 release run) | Green on aarch64-macos, aarch64, x86_64 against the published assets |
 | **Packaged-artifact checks** (addendum) | installed `wm10` alpha.6 (sha `fcd7f5a0…`) and manifest-verified published `wm-linux-x86_64` alpha.6 (sha `05de780c…`), isolated `/tmp` stores: `init`, `status`, `selftest --json`, `contract --json`, `apotheosis`, `inspect`, `grimoire`, `remember`/`recall`, `mandala status/triage`, `mesh status`, `peer list`, `shortlist`, stdio MCP probe (`initialize` / `tools/list` / `memory.create` / `memory.search` / `session.continuity`) | **Green on both artifacts** (13 check families; 9/9 invariant audit; 44 tools; server rc=0). Detail: `receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md` |
 | **Legacy CLI audit** (addendum) | `wm9` 9.3.4 `--help` / `help --all` vs `wm10` 10.2.0-alpha.6 `<cmd> --help`; 63-name command-presence log in the evidence bundle | 30 v9-only commands dispositioned (Preserve/Translate/Deprecate/Remove) + 8 shared names with semantic drift: `docs/LEGACY_CLI_AUDIT_2026-10-07.md` (rev.2 updates `at-rest`) |
-| **Wave-3 CLI additions** (addendum rev.2) | merged main `80b34c2`; source `crates/wm-gen3-harness/src/bin/wm.rs` (`HostGuard`/`AtRest`/`Compact` variants + parse tests `host_guard_cli_flags_parse`); `bash scripts/check_closures.sh` re-run | `wm host-guard status\|run\|arm\|disarm`, `wm at-rest status\|migrate` wired (`88ac66a`); closure scan **3/3 PASS** after `ef24101` (allowlist + `receipts/BOUNDARY_WM_NODE_TRANSPORT_SPAWNS_2026-10-07.md`) |
+| **Wave-3 CLI additions** (addendum rev.2) | merged main `d08e20c`; source `crates/wm-gen3-harness/src/bin/wm.rs` (`HostGuard`/`AtRest`/`Compact` variants + parse tests `host_guard_cli_flags_parse`); `bash scripts/check_closures.sh` re-run | `wm host-guard status\|run\|arm\|disarm`, `wm at-rest status\|migrate` wired (`88ac66a`); closure scan **3/3 PASS** after `ef24101` (allowlist + `receipts/BOUNDARY_WM_NODE_TRANSPORT_SPAWNS_2026-10-07.md`) |
 
 The `wm` binary root carries `#![recursion_limit]` but not its own
 `#![forbid(unsafe_code)]` (the harness library does); `rg unsafe` over
@@ -128,7 +131,7 @@ The `wm` binary root carries `#![recursion_limit]` but not its own
    addendum base (`ef623fb`, rule 3 on the `wm_node.rs` spawns); wave-3 `ef24101`
    extended the scanner allowlist and added the boundary receipt
    (`receipts/BOUNDARY_WM_NODE_TRANSPORT_SPAWNS_2026-10-07.md`). Re-run at the
-   merge base `80b34c2`: **3/3 PASS** (`closure static scans: PASS`). History:
+   merge base `d08e20c`: **3/3 PASS** (`closure static scans: PASS`). History:
    `receipts/GATE_9B_ARTIFACT_EVIDENCE_2026-10-07.md` §4a,
    `logs/13-closure-scan-base.txt`.
 
