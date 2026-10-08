@@ -66,3 +66,10 @@ regexTarget = "line"
 regexes = [
     '''Argon2id for passphrase-mode root keys''',
 ]
+
+[[allowlists]]
+description = "2026-10-07: gate9b CLI-surface evidence log records the mesh Node Public Key of a throwaway /tmp/opencode test store; generic-api-key reads 'Node Public Key: <hex>' as an assignment. The value is a public key by construction and the log stays scanned for every other rule."
+regexTarget = "line"
+regexes = [
+    '''Node Public Key:\s+8b65be789cd7e24466f4d146076fe4c3e447ed32cf4a8b49b058e657e6e0a118''',
+]
