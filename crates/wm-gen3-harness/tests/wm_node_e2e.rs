@@ -9,12 +9,28 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+fn socket_base_dir() -> PathBuf {
+    // UDS paths are capped (~104 bytes at the syscall). macOS TMPDIR is
+    // `/var/folders/...`, long enough to exhaust the budget before the
+    // behavior under test (regular-file refusal, double-bind) is reached —
+    // the node then correctly refuses the long path instead (macOS advisory
+    // job failed exactly this way, reproduced on Linux with a long TMPDIR,
+    // 2026-10-08). Prefer a short writable base when one exists.
+    for candidate in ["/tmp", "/var/tmp"] {
+        let path = Path::new(candidate);
+        if path.is_dir() {
+            return path.to_path_buf();
+        }
+    }
+    std::env::temp_dir()
+}
+
 fn unique_socket(tag: &str) -> PathBuf {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
-    std::env::temp_dir().join(format!(
+    socket_base_dir().join(format!(
         "wm-node-e2e-{tag}-{}-{nanos}.sock",
         std::process::id()
     ))

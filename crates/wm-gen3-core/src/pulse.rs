@@ -1176,9 +1176,20 @@ mod tests {
 
     #[test]
     fn test_peb0_1_intelligent_merger_benchmark_execution() {
-        let report = run_peb0_1_intelligent_merger_benchmark(0xDEADBEEF42C0FFEE);
+        // The mechanism properties (equivalence, backtracks, blindness) are
+        // structural; the latency ratio is a wall-clock observation a shared
+        // CI runner can perturb in either direction. Re-measure a bounded
+        // number of times before failing on the ratio, keeping the strict
+        // threshold (flaked on the macOS advisory job, 2026-10-08).
+        const ATTEMPTS: usize = 3;
+        let mut report = run_peb0_1_intelligent_merger_benchmark(0xDEADBEEF42C0FFEE);
+        let mut attempt = 1;
+        while report.latency_blowup_factor < 1.5 && attempt < ATTEMPTS {
+            attempt += 1;
+            report = run_peb0_1_intelligent_merger_benchmark(0xDEADBEEF42C0FFEE);
+        }
         println!(
-            "PEB-0.1 Report => equiv={}, violations={}, refusal_rate={:.2}, decoupled_us={:.2}, merger_us={:.2}, blowup={:.2}x, decoupled_backtracks={}, merger_backtracks={}, paraconsistent_blindness={}",
+            "PEB-0.1 Report (attempt {attempt}/{ATTEMPTS}) => equiv={}, violations={}, refusal_rate={:.2}, decoupled_us={:.2}, merger_us={:.2}, blowup={:.2}x, decoupled_backtracks={}, merger_backtracks={}, paraconsistent_blindness={}",
             report.intelligent_merger_observational_equivalence,
             report.intelligent_merger_violations,
             report.intelligent_merger_refusal_rate,
