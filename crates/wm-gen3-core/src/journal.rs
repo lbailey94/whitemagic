@@ -48,9 +48,16 @@ impl Journal {
             std::fs::create_dir_all(parent)?;
         }
         // Recover the sequence and locate any truncated trailing record so a
-        // crash mid-write cannot corrupt the next appended line.
-        let (seq, valid_len, total_len) = match std::fs::read(path) {
-            Ok(bytes) => {
+        // crash mid-write cannot corrupt the next appended line. Only regular
+        // files are scanned: a character device such as /dev/full never EOFs
+        // on read, so `fs::read` there would grow without bound and OOM the
+        // host (the Gate 9A audit-failure test killed CI runners this way,
+        // 2026-10-08). Non-regular targets keep write-failure semantics —
+        // appends still surface EIO/ENOSPC and journal_ok reports them.
+        let (seq, valid_len, total_len) = match std::fs::metadata(path) {
+            Ok(meta) if !meta.is_file() => (0, 0, 0),
+            Ok(_) => {
+                let bytes = std::fs::read(path)?;
                 let (seq, valid_len) = recover_seq(&bytes);
                 (seq, valid_len, bytes.len())
             }
@@ -208,5 +215,21 @@ mod tests {
         assert_eq!(events[2]["seq"], 3);
         assert_eq!(events[2]["type"], "c");
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_non_regular_target_is_not_scanned_and_writes_still_fail() {
+        // Regression (2026-10-08): /dev/full is an infinite zero-stream on
+        // read; the recovery scan must skip non-regular files or it grows
+        // without bound (OOM'd CI runners via the Gate 9A test).
+        if !Path::new("/dev/full").exists() {
+            return;
+        }
+        let mut journal = Journal::open(Path::new("/dev/full")).expect("open /dev/full");
+        assert_eq!(journal.seq(), 0);
+        assert!(
+            journal.event("probe", fields()).is_err(),
+            "writes to a full device must surface their error"
+        );
     }
 }
