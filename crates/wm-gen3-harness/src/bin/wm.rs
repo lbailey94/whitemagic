@@ -342,6 +342,9 @@ enum Commands {
         /// Default import kind: reported, system, simulated (default: reported)
         #[arg(long, default_value = "reported", value_parser = parse_import_kind_arg)]
         default_kind: ImportKind,
+        /// Per-item byte cap; oversized items are skipped and counted (0 = no cap)
+        #[arg(long, default_value_t = 1048576)]
+        max_item_bytes: usize,
     },
     /// Mandala OS Execution Authority & Continuity Receipt Bridge
     Mandala {
@@ -2591,6 +2594,7 @@ fn main() {
             batch_size,
             default_source,
             default_kind,
+            max_item_bytes,
         } => {
             run_ingest(
                 &store_path,
@@ -2598,6 +2602,7 @@ fn main() {
                 batch_size,
                 &default_source,
                 default_kind,
+                max_item_bytes,
             );
         }
         Commands::Vault { command } => {
@@ -6464,6 +6469,7 @@ fn run_ingest(
     batch_size: usize,
     default_source: &str,
     default_kind: ImportKind,
+    max_item_bytes: usize,
 ) {
     let journal_path = store_path.join("journal.jsonl");
     let mut substrate = match Substrate::open(store_path, Some(&journal_path), default_view()) {
@@ -6515,6 +6521,8 @@ fn run_ingest(
     let mut total_committed: usize = 0;
     let mut total_duplicates: usize = 0;
     let mut total_other_refusals: usize = 0;
+    let mut total_skipped_oversize: usize = 0;
+    let mut total_skipped_binary: usize = 0;
     let mut total_meta_entries: usize = 0;
     let start_time = std::time::Instant::now();
 
@@ -6571,6 +6579,14 @@ fn run_ingest(
             )
         };
 
+        if let Some(reason) = ingest_skip_reason(&item.content, max_item_bytes) {
+            match reason {
+                "oversize" => total_skipped_oversize += 1,
+                _ => total_skipped_binary += 1,
+            }
+            continue;
+        }
+
         batch.push(item);
         batch_meta.push(meta);
 
@@ -6626,12 +6642,28 @@ fn run_ingest(
     if total_other_refusals > 0 {
         println!("Other Refusals:        {}", total_other_refusals);
     }
+    if total_skipped_oversize > 0 || total_skipped_binary > 0 {
+        println!("Skipped (oversize):    {}", total_skipped_oversize);
+        println!("Skipped (binary):      {}", total_skipped_binary);
+    }
     if total_meta_entries > 0 {
         println!("Metadata Entries:      {}", total_meta_entries);
         println!("Metadata Sidecar:      {}", meta_path.display());
     }
     println!("Current Store Epoch:   {}", epoch);
     println!("==================================================");
+}
+
+/// Counted, never-silent ingest guard: oversized content and binary payloads
+/// (NUL bytes) are skipped before they can bloat the store (board #764).
+fn ingest_skip_reason(content: &str, max_item_bytes: usize) -> Option<&'static str> {
+    if max_item_bytes > 0 && content.len() > max_item_bytes {
+        return Some("oversize");
+    }
+    if content.as_bytes().contains(&0) {
+        return Some("binary");
+    }
+    None
 }
 
 struct IngestMeta {
