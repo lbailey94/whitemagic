@@ -52,7 +52,7 @@ Between October 9 and October 10, 2026, the entire legacy V9 multi-era substrate
 The conversational corpus across nodes, devices, and eras was harvested and indexed into `session_log.jsonl`:
 - **ChatGPT Archive:** 93 conversations / 1,234 turns ingested.
 - **Miranda (Mac Stranger) Snapshot:** 90 sessions / 7,798 turns ingested.
-- **Inspiron Snapshot:** 14 sessions / 504 turns ingested.
+- **Auxiliary Fleet Snapshot:** 14 sessions / 504 turns ingested.
 - **SD Card 5D Memory Core (`opencode-export-20261001.jsonl`):** 40,485 turns ingested with sovereign deduplication.
 - **Result:** `opencode` store expanded from 173,175 to **223,622 clean records** (+50,447 records).
 

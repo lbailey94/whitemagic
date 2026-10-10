@@ -711,6 +711,8 @@ enum VaultCommands {
         #[arg(long, default_value = "vanguard")]
         kind: String,
     },
+    /// Compact the Geneseed Vault: deduplicate by ID, keep highest fitness, prune redundant skeletons
+    Compact,
 }
 
 #[derive(Subcommand)]
@@ -1909,6 +1911,15 @@ fn main() {
                 println!("  Direct Execution Cmd:    wm vault execute {}", skel.id);
             } else {
                 println!("Bound Action Skeleton:     None (No direct match in vault)");
+            }
+            if let Some(ins) = insights.iter().find(|ins| {
+                let inq = inquiry.to_lowercase();
+                inq.contains(&ins.source_concept.to_lowercase())
+                    || inq.contains(&ins.target_concept.to_lowercase())
+                    || (bound_skeleton.is_some() && bound_skeleton.unwrap().action_steps.iter().any(|step| ins.actionable_recommendation.to_lowercase().contains(&step.to_lowercase())))
+            }) {
+                println!("  Context Injection:       {}", ins.actionable_recommendation);
+                println!("  Dream Insight Bridge:    {} ⇄ {} ({})", ins.source_concept, ins.target_concept, ins.relation_type);
             }
             println!("==================================================");
             match &dispatch {
@@ -8664,6 +8675,21 @@ fn run_vault_command(cmd: VaultCommands, store_path: &Path) {
                     std::process::exit(1);
                 }
             }
+        }
+        VaultCommands::Compact => {
+            println!("==================================================");
+            println!("   WhiteMagic Gen3 Vault Pareto Cladistics GC     ");
+            println!("==================================================");
+            let before = vault.skeletons.len();
+            let (retained, pruned) = vault.compact_pareto();
+            if let Err(e) = vault.sync_to_file(&vault_path) {
+                eprintln!("Warning: failed to persist compacted vault: {e}");
+            }
+            println!("Initial Skeletons:  {}", before);
+            println!("Retained Skeletons: {}", retained);
+            println!("Pruned Redundant:   {}", pruned);
+            println!("Compacted Vault:    {}", vault_path.display());
+            println!("==================================================");
         }
     }
 }

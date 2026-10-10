@@ -417,9 +417,50 @@ impl GeneseedVault {
         }
     }
 
-    /// Register a newly synthesized or external skeleton into the vault.
+    /// Register a newly synthesized or external skeleton into the vault, updating existing if higher version/fitness.
     pub fn register_skeleton(&mut self, skeleton: ActionSkeleton) {
-        self.skeletons.push(skeleton);
+        if let Some(existing) = self.skeletons.iter_mut().find(|s| s.id == skeleton.id) {
+            let ex_fit = existing.fitness_spectrum().composite_fitness;
+            let sk_fit = skeleton.fitness_spectrum().composite_fitness;
+            if skeleton.version > existing.version || (skeleton.version == existing.version && sk_fit >= ex_fit) {
+                *existing = skeleton;
+            }
+        } else {
+            self.skeletons.push(skeleton);
+        }
+    }
+
+    /// Compact the vault: deduplicate skeletons by id keeping highest fitness,
+    /// and sort by rolling utility descending.
+    pub fn compact_pareto(&mut self) -> (usize, usize) {
+        let initial_count = self.skeletons.len();
+        let mut map: std::collections::BTreeMap<String, ActionSkeleton> = std::collections::BTreeMap::new();
+
+        for skel in self.skeletons.drain(..) {
+            match map.get(&skel.id) {
+                Some(existing) => {
+                    let ex_fit = existing.fitness_spectrum().composite_fitness;
+                    let sk_fit = skel.fitness_spectrum().composite_fitness;
+                    if skel.version > existing.version || (skel.version == existing.version && sk_fit >= ex_fit) {
+                        map.insert(skel.id.clone(), skel);
+                    }
+                }
+                None => {
+                    map.insert(skel.id.clone(), skel);
+                }
+            }
+        }
+
+        self.skeletons = map.into_values().collect();
+        self.skeletons.sort_by(|a, b| {
+            b.rolling_utility
+                .partial_cmp(&a.rolling_utility)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let retained = self.skeletons.len();
+        let pruned = initial_count.saturating_sub(retained);
+        (retained, pruned)
     }
 
     /// Get active (non-deprecated) skeleton by ID.
@@ -640,7 +681,12 @@ impl GeneseedVault {
 
     /// Loads skeletons from a JSONL file, or initializes standard baseline if missing or empty.
     pub fn load_or_init(jsonl_path: &std::path::Path) -> Self {
-        let mut vault = Self::new();
+        let mut vault = Self {
+            skeletons: Vec::new(),
+            total_forks_minted: 0,
+            total_retirements: 0,
+            retired_signatures: HashSet::new(),
+        };
         if let Ok(content) = std::fs::read_to_string(jsonl_path) {
             for line in content.lines() {
                 let trimmed = line.trim();
@@ -651,6 +697,9 @@ impl GeneseedVault {
                     vault.register_skeleton(skel);
                 }
             }
+        }
+        if vault.skeletons.is_empty() {
+            vault.seed_canonical_skeletons();
         }
         vault
     }
