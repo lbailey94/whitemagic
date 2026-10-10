@@ -1,7 +1,7 @@
 {
   "benchmark": "PEB-14A",
   "milestone": "Milestone 8A",
-  "elapsed_seconds": 0.63,
+  "elapsed_seconds": 0.91,
   "results": {
     "choppy_stream_reassembled": true,
     "guillotine_clean_teardown": true,

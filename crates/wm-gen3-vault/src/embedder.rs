@@ -79,6 +79,58 @@ impl VaultEmbedder {
         Ok(())
     }
 
+    /// Append contiguous normalized vectors to an existing vector file, updating count
+    pub fn append_vector_file<P: AsRef<Path>>(
+        path: P,
+        vectors: &[Vec<f32>],
+        dimension: usize,
+    ) -> std::io::Result<()> {
+        if vectors.is_empty() {
+            return Ok(());
+        }
+        let p = path.as_ref();
+        if !p.exists() || std::fs::metadata(p)?.len() < 16 {
+            return Self::write_vector_file(p, vectors, dimension);
+        }
+
+        use std::io::{Read, Seek, SeekFrom};
+        let mut file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(p)?;
+
+        let mut header = [0u8; 16];
+        file.read_exact(&mut header)?;
+        let magic = u32::from_le_bytes([header[0], header[1], header[2], header[3]]);
+        if magic != VECTOR_FILE_MAGIC {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "Invalid vector file magic",
+            ));
+        }
+        let existing_count = u32::from_le_bytes([header[8], header[9], header[10], header[11]]);
+        let file_dim = u32::from_le_bytes([header[12], header[13], header[14], header[15]]) as usize;
+        if file_dim != dimension {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Dimension mismatch: file has {file_dim}, requested {dimension}"),
+            ));
+        }
+
+        let new_count = existing_count + vectors.len() as u32;
+        file.seek(SeekFrom::Start(8))?;
+        file.write_all(&new_count.to_le_bytes())?;
+
+        file.seek(SeekFrom::End(0))?;
+        for vec in vectors {
+            for &val in vec {
+                file.write_all(&val.to_le_bytes())?;
+            }
+        }
+        file.flush()?;
+        Ok(())
+    }
+
     /// Memory map vector file for zero-copy ultra-fast querying
     pub fn open_vector_mmap<P: AsRef<Path>>(path: P) -> std::io::Result<(Mmap, usize, usize)> {
         let file = File::open(path)?;

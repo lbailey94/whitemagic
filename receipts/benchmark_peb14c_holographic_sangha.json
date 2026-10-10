@@ -1,7 +1,7 @@
 {
   "benchmark": "PEB-14C",
   "milestone": "Milestone 8C",
-  "elapsed_seconds": 0.4,
+  "elapsed_seconds": 0.31,
   "results": {
     "heterogeneous_throughput_standing_preserved": true,
     "capability_negotiation_clean_degrade": true,

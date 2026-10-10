@@ -1,8 +1,8 @@
 # PEB-14C Heterogeneous Sangha & Radiant Hologram Benchmark Receipt (Milestone 8C)
 
-**Date:** 2026-09-22 16:10:02 UTC  
+**Date:** 2026-10-10 16:39:25 UTC  
 **Status:** RATIFIED & PASSING  
-**Execution Runtime:** 0.40s  
+**Execution Runtime:** 0.31s  
 **Pre-Registration Authority:** `docs/PREREGISTRATION_PEB14C_HETEROGENEOUS_SANGHA_HOLOGRAM.md`  
 
 ---

@@ -128,18 +128,20 @@ done
 # Credential scan of the outgoing commits (best effort, fast range).
 if command -v gitleaks >/dev/null 2>&1; then
     RANGE=""
-    while read -r local_ref local_sha remote_ref remote_sha; do
-        [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
-        if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
-            if git rev-parse --verify origin/main >/dev/null 2>&1; then
-                RANGE="origin/main..$local_sha"
+    if [ ! -t 0 ]; then
+        while read -t 0.2 -r local_ref local_sha remote_ref remote_sha; do
+            [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
+            if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+                if git rev-parse --verify origin/main >/dev/null 2>&1; then
+                    RANGE="origin/main..$local_sha"
+                else
+                    RANGE="$local_sha -n 10"
+                fi
             else
-                RANGE="$local_sha -n 10"
+                RANGE="$remote_sha..$local_sha"
             fi
-        else
-            RANGE="$remote_sha..$local_sha"
-        fi
-    done
+        done
+    fi
     if [ -n "$RANGE" ]; then
         if ! gitleaks detect --source . --no-banner --redact \
                 --log-opts="$RANGE" >/tmp/wm-guard-gitleaks.log 2>&1; then

@@ -34,9 +34,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("╚═══════════════════════════════════════════════════════════════════════════════╝\n");
 
     let model_dir = PathBuf::from("/home/lucas/.local/share/whitemagic/system05/potion-base-32M");
-    let intents_path = PathBuf::from("/home/lucas/Desktop/WHITEMAGIC/WMv10/catalogs/intents.jsonl");
-    let enriched_routes_path =
-        PathBuf::from("/home/lucas/Desktop/WHITEMAGIC/WMv10/catalogs/routes_v9_enriched.json");
+    let catalogs_candidates = [
+        PathBuf::from("/home/lucas/Desktop/front burner/WHITEMAGIC/WMv10/catalogs"),
+        PathBuf::from("/home/lucas/Desktop/WHITEMAGIC/WMv10/catalogs"),
+        PathBuf::from("catalogs"),
+    ];
+    let catalogs_dir = catalogs_candidates
+        .iter()
+        .find(|p| p.join("intents.jsonl").exists())
+        .cloned()
+        .unwrap_or_else(|| PathBuf::from("catalogs"));
+    let intents_path = catalogs_dir.join("intents.jsonl");
+    let enriched_routes_path = catalogs_dir.join("routes_v9_enriched.json");
 
     let mut organ_arc: Option<Arc<System05>> = None;
 

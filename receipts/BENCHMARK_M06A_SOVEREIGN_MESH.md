@@ -1,8 +1,8 @@
 # PEB-11 Sovereign Mesh & Hostile Boundary Benchmark Receipt (Milestone 6A)
 
-**Date:** 2026-09-22 16:09:59 UTC  
+**Date:** 2026-10-10 16:41:20 UTC  
 **Status:** RATIFIED & PASSING  
-**Execution Runtime:** 80.09s  
+**Execution Runtime:** 58.53s  
 **Trial Battery:** $N = 500$ hostile distributed coordination cycles  
 
 ---

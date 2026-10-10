@@ -2,7 +2,7 @@
   "benchmark": "PEB-11",
   "milestone": "Milestone 6A",
   "trials": 500,
-  "elapsed_seconds": 80.09,
+  "elapsed_seconds": 58.53,
   "results": {
     "replay_before_restart": {
       "successes": 500,

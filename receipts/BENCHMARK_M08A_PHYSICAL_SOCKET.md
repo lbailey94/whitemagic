@@ -1,8 +1,8 @@
 # PEB-14A Physical OS Socket Sovereignty Benchmark Receipt (Milestone 8A)
 
-**Date:** 2026-09-22 16:10:01 UTC  
+**Date:** 2026-10-10 16:39:13 UTC  
 **Status:** RATIFIED & PASSING  
-**Execution Runtime:** 0.63s  
+**Execution Runtime:** 0.91s  
 **Pre-Registration Authority:** `docs/PREREGISTRATION_PEB14A_PHYSICAL_SOCKET_SOVEREIGNTY.md`  
 
 ---

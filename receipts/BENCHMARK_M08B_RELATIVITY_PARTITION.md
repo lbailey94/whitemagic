@@ -1,8 +1,8 @@
 # PEB-14B Relativity and Partition Benchmark Receipt (Milestone 8B)
 
-**Date:** 2026-09-22 16:10:02 UTC  
+**Date:** 2026-10-10 16:39:19 UTC  
 **Status:** RATIFIED & PASSING  
-**Execution Runtime:** 0.38s  
+**Execution Runtime:** 0.31s  
 **Pre-Registration Authority:** `docs/PREREGISTRATION_PEB14B_RELATIVITY_AND_PARTITIONS.md`  
 
 ---

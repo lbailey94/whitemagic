@@ -48,11 +48,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         state_before.total_edges_indexed
     );
 
-    // Initial batch: 100 sessions to demonstrate instant indexing without blocking
-    let limit = std::env::var("WM_SYNC_LIMIT")
+    // Parse CLI arguments: e.g. wm_vault_index 100 or --all or --batch 50
+    let args: Vec<String> = std::env::args().collect();
+    let mut limit = std::env::var("WM_SYNC_LIMIT")
         .ok()
-        .and_then(|s| s.parse::<usize>().ok())
-        .or(Some(50));
+        .and_then(|s| s.parse::<usize>().ok());
+
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--all" | "-a" => {
+                limit = None;
+            }
+            "--batch" | "-b" | "--limit" | "-n" => {
+                if i + 1 < args.len() {
+                    limit = args[i + 1].parse::<usize>().ok();
+                    i += 1;
+                }
+            }
+            arg if !arg.starts_with('-') => {
+                if let Ok(n) = arg.parse::<usize>() {
+                    limit = Some(n);
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    if limit.is_none() && !args.iter().any(|a| a == "--all" || a == "-a") {
+        limit = Some(100);
+    }
 
     println!(
         "Starting non-blocking WAL streaming extraction (session batch: {:?})...",

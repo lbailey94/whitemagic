@@ -73,10 +73,20 @@ impl VaultDaemon {
             .list_sessions()
             .map_err(|e| format!("Failed to list sessions: {e}"))?;
 
-        // Filter sessions newer than last_synced_session_time
+        let existing_ids: std::collections::HashSet<String> = {
+            let mut stmt = vault_conn
+                .prepare("SELECT session_id FROM vault_sessions")
+                .map_err(|e| format!("Failed to query vault_sessions: {e}"))?;
+            let rows = stmt
+                .query_map([], |row| row.get(0))
+                .map_err(|e| format!("Failed to map session_ids: {e}"))?;
+            rows.filter_map(|r| r.ok()).collect()
+        };
+
+        // Filter sessions newer than last_synced_session_time not yet in vault
         let mut pending_sessions: Vec<_> = all_sessions
             .into_iter()
-            .filter(|s| s.time_created >= state.last_synced_session_time)
+            .filter(|s| !existing_ids.contains(&s.id) && s.time_created >= state.last_synced_session_time)
             .collect();
 
         if let Some(limit) = max_sessions {
@@ -188,7 +198,7 @@ impl VaultDaemon {
                     .map(|c| c.chunk_text.clone())
                     .collect();
                 if let Ok(vectors) = embedder.encode_batch(&texts) {
-                    let _ = VaultEmbedder::write_vector_file(
+                    let _ = VaultEmbedder::append_vector_file(
                         &self.vector_file_path,
                         &vectors,
                         embedder.dimension(),
