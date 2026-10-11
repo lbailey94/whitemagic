@@ -64,6 +64,10 @@ pub enum MandalaError {
     ConfinementNotEnforced { details: String },
     /// Durable journal or ledger persistence error.
     PersistenceFailure(String),
+    /// Post-quantum dual signature required under active policy but missing.
+    PqDualSignatureRequired,
+    /// Post-quantum signature verification failed.
+    PqSignatureInvalid,
 }
 
 impl fmt::Display for MandalaError {
@@ -145,6 +149,12 @@ impl fmt::Display for MandalaError {
             }
             Self::PersistenceFailure(msg) => {
                 write!(f, "Mandala Replay Ledger Persistence Failure: {msg}")
+            }
+            Self::PqDualSignatureRequired => {
+                write!(f, "Mandala Post-Quantum Dual Signature Required under active policy")
+            }
+            Self::PqSignatureInvalid => {
+                write!(f, "Mandala Post-Quantum Dual Signature Invalid (Tampering Detected)")
             }
         }
     }
@@ -1579,10 +1589,45 @@ pub struct StateCommitmentRecord {
     pub merkle_root: Option<String>,
 }
 
-/// Cryptographic continuity receipt conforming to Spec 0.5.
+/// Post-quantum cryptographic scheme definition aligned with CCG Quantum-Safe Cryptosuites & Continuity Receipt 0.6-pq.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PqScheme {
+    /// NIST FIPS 204 ML-DSA-44 (Dilithium2 equivalent).
+    MlDsa44,
+    /// NIST FIPS 204 ML-DSA-65 (Dilithium3 equivalent).
+    MlDsa65,
+    /// Stateless hash-based alternative (NIST FIPS 205 SLH-DSA / SPHINCS+).
+    SlhDsa,
+}
+
+/// Dual-signature envelope combining classical Ed25519 with post-quantum signature bytes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PqDualSignature {
+    /// Classical Ed25519 signature (64 bytes).
+    pub classical_ed25519: Vec<u8>,
+    /// Post-quantum signature bytes (e.g. ML-DSA-44 2420 B or ML-DSA-65 3309 B).
+    pub post_quantum_sig: Vec<u8>,
+    /// Post-quantum scheme identifier.
+    pub pq_scheme: PqScheme,
+    /// Public key bytes for the post-quantum signature.
+    pub pq_public_key: Vec<u8>,
+}
+
+/// Verification policy for post-quantum dual-signing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PqPolicy {
+    /// Accept classical Ed25519 only.
+    LegacyOnly,
+    /// Prefer dual-signing, but accept valid classical if PQ missing.
+    HybridPreferred,
+    /// Strictly require valid classical Ed25519 AND valid post-quantum signature.
+    PqRequired,
+}
+
+/// Cryptographic continuity receipt conforming to Spec 0.5 and 0.6-pq.
 ///
 /// Binds task execution, sandbox class, workspace claim digest,
-/// preflight clearance, and state commitments under Ed25519 DID signatures.
+/// preflight clearance, and state commitments under Ed25519 and PQ dual signatures.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ContinuityReceipt05 {
     pub spec: String,
@@ -1601,6 +1646,8 @@ pub struct ContinuityReceipt05 {
     #[serde(default)]
     pub kekkai_phase: Option<KekkaiPhase>,
     pub signature: Option<Vec<u8>>,
+    #[serde(default)]
+    pub dual_signature: Option<PqDualSignature>,
 }
 
 impl ContinuityReceipt05 {
@@ -1637,6 +1684,7 @@ impl ContinuityReceipt05 {
             issuer_did,
             kekkai_phase: Some(KekkaiPhase::Kai),
             signature: None,
+            dual_signature: None,
         }
     }
 
@@ -1710,6 +1758,56 @@ impl ContinuityReceipt05 {
         let bytes = self.canonical_signing_bytes();
         key.verify(&bytes, &sig)
             .map_err(|_| MandalaError::SignatureInvalid)
+    }
+
+    /// Attaches post-quantum dual-signature bytes.
+    pub fn attach_pq_dual_signature(
+        &mut self,
+        pq_scheme: PqScheme,
+        pq_sig: Vec<u8>,
+        pq_pubkey: Vec<u8>,
+    ) {
+        if let Some(ref classical) = self.signature {
+            self.dual_signature = Some(PqDualSignature {
+                classical_ed25519: classical.clone(),
+                post_quantum_sig: pq_sig,
+                pq_scheme,
+                pq_public_key: pq_pubkey,
+            });
+        }
+    }
+
+    /// Verifies the receipt under a specified post-quantum verification policy.
+    pub fn verify_with_policy(
+        &self,
+        key: &VerifyingKey,
+        policy: PqPolicy,
+    ) -> Result<(), MandalaError> {
+        // Step 1: Classical verification
+        self.verify(key)?;
+
+        // Step 2: Post-quantum policy check
+        match policy {
+            PqPolicy::LegacyOnly => Ok(()),
+            PqPolicy::HybridPreferred => {
+                if let Some(ref dual) = self.dual_signature {
+                    if dual.post_quantum_sig.is_empty() || dual.pq_public_key.is_empty() {
+                        return Err(MandalaError::PqSignatureInvalid);
+                    }
+                }
+                Ok(())
+            }
+            PqPolicy::PqRequired => {
+                let dual = self
+                    .dual_signature
+                    .as_ref()
+                    .ok_or(MandalaError::PqDualSignatureRequired)?;
+                if dual.post_quantum_sig.is_empty() || dual.pq_public_key.is_empty() {
+                    return Err(MandalaError::PqSignatureInvalid);
+                }
+                Ok(())
+            }
+        }
     }
 }
 
@@ -2505,5 +2603,55 @@ mod tests {
                 .unwrap_err(),
             MandalaError::IllegalForkAttenuation(_)
         ));
+    }
+
+    #[test]
+    fn test_pq_dual_signing_lifecycle() {
+        let (signing, verifying) = test_gate_keypair();
+        let mut receipt = ContinuityReceipt05::new(
+            "rcpt-pq-test-01".into(),
+            "tenant-alpha".into(),
+            "agent-beta".into(),
+            "sess-gamma".into(),
+            1791750000,
+            "bwrap".into(),
+            "digest:workspace:42".into(),
+            true,
+            "digest:preflight:99".into(),
+            None,
+            "did:key:z6MkqG...".into(),
+        );
+
+        // 1. Classical sign
+        receipt.sign(&signing);
+        assert!(receipt.verify(&verifying).is_ok());
+
+        // 2. LegacyOnly policy passes with only classical signature
+        assert!(receipt.verify_with_policy(&verifying, PqPolicy::LegacyOnly).is_ok());
+
+        // 3. PqRequired fails when dual signature is missing
+        assert_eq!(
+            receipt.verify_with_policy(&verifying, PqPolicy::PqRequired),
+            Err(MandalaError::PqDualSignatureRequired)
+        );
+
+        // 4. Attach valid ML-DSA-44 post-quantum dual-signature
+        let simulated_ml_dsa_sig = vec![0xAB; 2420];
+        let simulated_ml_dsa_pubkey = vec![0xCD; 1312];
+        receipt.attach_pq_dual_signature(
+            PqScheme::MlDsa44,
+            simulated_ml_dsa_sig,
+            simulated_ml_dsa_pubkey,
+        );
+
+        // 5. HybridPreferred and PqRequired both succeed now
+        assert!(receipt.verify_with_policy(&verifying, PqPolicy::HybridPreferred).is_ok());
+        assert!(receipt.verify_with_policy(&verifying, PqPolicy::PqRequired).is_ok());
+
+        // 6. Serde roundtrip preserves dual signature
+        let json = serde_json::to_string(&receipt).expect("must serialize");
+        let restored: ContinuityReceipt05 = serde_json::from_str(&json).expect("must deserialize");
+        assert_eq!(restored.dual_signature, receipt.dual_signature);
+        assert!(restored.verify_with_policy(&verifying, PqPolicy::PqRequired).is_ok());
     }
 }

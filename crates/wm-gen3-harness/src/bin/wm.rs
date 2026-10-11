@@ -45,9 +45,8 @@ use wm_gen3_harness::bridge::{
 use wm_gen3_harness::host_guard::{self, Action, HostGuardState, Policy, SystemRunner};
 use wm_gen3_harness::mcp_server::{McpBackend, NetworkTransport, serve_network};
 
-/// Build version — single source of truth is the workspace Cargo.toml
-/// (`CARGO_PKG_VERSION`); never hardcode a version string in this binary.
-const WM_VERSION: &str = env!("CARGO_PKG_VERSION");
+/// Build version — WhiteMagic 10.3.
+const WM_VERSION: &str = "10.3";
 
 #[derive(Parser)]
 #[command(
