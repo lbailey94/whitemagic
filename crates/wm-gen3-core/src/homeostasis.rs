@@ -61,6 +61,8 @@ pub struct HardwareTelemetry {
     pub load_avg_1m: f64,
     /// Available system memory in Megabytes.
     pub mem_available_mb: f64,
+    /// Free storage headroom on root NVMe filesystem in Gigabytes.
+    pub nvme_free_gb: f64,
     /// Sampling latency in nanoseconds.
     pub probe_latency_ns: f64,
 }
@@ -73,9 +75,50 @@ impl Default for HardwareTelemetry {
             on_ac_power: true,
             load_avg_1m: 0.50,
             mem_available_mb: 8192.0,
+            nvme_free_gb: 40.0,
             probe_latency_ns: 1000.0,
         }
     }
+}
+
+/// Bioelectric cellular resting potential and metabolism state.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BioelectricState {
+    /// Resting potential $V_{\text{rest}} \in [-70.0, -10.0]$ mV.
+    /// -70 mV = fully hyperpolarized, serene homeostasis.
+    /// -10 mV = fully depolarized, critical threshold alarm.
+    pub v_rest_mv: f32,
+    /// Homeostatic operating regime.
+    pub regime: HomeostaticRegime,
+    /// Peak CPU thermal reading in Celsius.
+    pub cpu_temp_c: f64,
+    /// Battery capacity in percent if available.
+    pub battery_pct: Option<f64>,
+    /// Whether connected to AC power.
+    pub on_ac_power: bool,
+    /// 1-minute system load average.
+    pub load_avg_1m: f64,
+    /// Available RAM in MB.
+    pub mem_available_mb: f64,
+    /// Root NVMe disk free space in GB.
+    pub nvme_free_gb: f64,
+    /// Active metabolic mode.
+    pub metabolism_mode: MetabolismMode,
+    /// Microsecond sampling latency in nanoseconds.
+    pub probe_latency_ns: f64,
+}
+
+/// Dynamic metabolism mode modulating agent duty cycle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MetabolismMode {
+    /// Nominal: Deliberative reasoning, background dreaming, full write budgets.
+    NominalSynthesis,
+    /// Conserving: Micro-compacted search, spaced-out cycles, battery priority.
+    ConservingReflex,
+    /// ThermalThrottled: CPU frequency reduced, heavy transforms suspended.
+    ThermalThrottled,
+    /// CriticalHibernation: Zero NVMe wear, RAM write block, emergency preservation.
+    CriticalHibernation,
 }
 
 impl HardwareTelemetry {
@@ -89,6 +132,7 @@ impl HardwareTelemetry {
         let mut on_ac_power = true;
         let mut load_avg_1m = 0.50;
         let mut mem_available_mb = 8192.0;
+        let mut nvme_free_gb = 40.0;
 
         #[cfg(target_os = "linux")]
         {
@@ -175,6 +219,15 @@ impl HardwareTelemetry {
                     }
                 }
             }
+
+            // 5. Root NVMe disk headroom via safe rustix::fs::statvfs
+            #[cfg(unix)]
+            {
+                if let Ok(stat) = rustix::fs::statvfs("/") {
+                    let free_bytes = stat.f_bavail as f64 * stat.f_frsize as f64;
+                    nvme_free_gb = free_bytes / (1024.0 * 1024.0 * 1024.0);
+                }
+            }
         }
 
         let probe_latency_ns = t0.elapsed().as_nanos() as f64;
@@ -184,7 +237,52 @@ impl HardwareTelemetry {
             on_ac_power,
             load_avg_1m,
             mem_available_mb,
+            nvme_free_gb,
             probe_latency_ns,
+        }
+    }
+
+    /// Compute biological resting potential isomorphism $V_{\text{rest}} \in [-70.0, -10.0]$ mV.
+    #[must_use]
+    pub fn resting_potential_mv(&self) -> f32 {
+        let thermal_s = self.thermal_stress();
+        let battery_s = self.battery_stress();
+        let load_s = ((self.load_avg_1m / 4.0) as f32).clamp(0.0, 1.0);
+
+        // Immediate depolarization if disk headroom drops below the 20 GiB safety invariant
+        if self.nvme_free_gb < 20.0 {
+            return -10.0;
+        }
+
+        let depolarization = 35.0 * thermal_s + 25.0 * battery_s + 20.0 * load_s;
+        (-70.0 + depolarization).clamp(-70.0, -10.0)
+    }
+
+    /// Derive full BioelectricState including regime and metabolism mode.
+    #[must_use]
+    pub fn to_bioelectric_state(&self) -> BioelectricState {
+        let v_rest = self.resting_potential_mv();
+        let (regime, metabolism_mode) = if self.nvme_free_gb < 10.0 || v_rest >= -25.0 {
+            (HomeostaticRegime::Critical, MetabolismMode::CriticalHibernation)
+        } else if self.nvme_free_gb < 20.0 || v_rest >= -45.0 || self.thermal_stress() > 0.7 {
+            (HomeostaticRegime::Stressed, MetabolismMode::ThermalThrottled)
+        } else if v_rest >= -60.0 || self.battery_stress() > 0.3 {
+            (HomeostaticRegime::Conserving, MetabolismMode::ConservingReflex)
+        } else {
+            (HomeostaticRegime::Nominal, MetabolismMode::NominalSynthesis)
+        };
+
+        BioelectricState {
+            v_rest_mv: v_rest,
+            regime,
+            cpu_temp_c: self.cpu_temp_c,
+            battery_pct: self.battery_pct,
+            on_ac_power: self.on_ac_power,
+            load_avg_1m: self.load_avg_1m,
+            mem_available_mb: self.mem_available_mb,
+            nvme_free_gb: self.nvme_free_gb,
+            metabolism_mode,
+            probe_latency_ns: self.probe_latency_ns,
         }
     }
 
@@ -773,6 +871,7 @@ mod tests {
             on_ac_power: false,
             load_avg_1m: 4.5,
             mem_available_mb: 2048.0,
+            nvme_free_gb: 35.0,
             probe_latency_ns: 500.0,
         };
 
@@ -784,5 +883,52 @@ mod tests {
         assert!(regime >= HomeostaticRegime::Stressed);
         assert!(act.top_k <= 5);
         assert!(act.background_sleep_active);
+    }
+
+    #[test]
+    fn test_bioelectric_resting_potential_isomorphism() {
+        let calm_hw = HardwareTelemetry {
+            cpu_temp_c: 42.0,
+            battery_pct: Some(95.0),
+            on_ac_power: true,
+            load_avg_1m: 0.2,
+            mem_available_mb: 8192.0,
+            nvme_free_gb: 40.0,
+            probe_latency_ns: 250.0,
+        };
+        let calm_bio = calm_hw.to_bioelectric_state();
+        assert!(calm_bio.v_rest_mv <= -65.0, "Calm hardware must be hyperpolarized (approx -70mV)");
+        assert_eq!(calm_bio.regime, HomeostaticRegime::Nominal);
+        assert_eq!(calm_bio.metabolism_mode, MetabolismMode::NominalSynthesis);
+
+        // Under 20GB invariant breach: immediate depolarization
+        let breach_hw = HardwareTelemetry {
+            cpu_temp_c: 42.0,
+            battery_pct: Some(95.0),
+            on_ac_power: true,
+            load_avg_1m: 0.2,
+            mem_available_mb: 8192.0,
+            nvme_free_gb: 18.5,
+            probe_latency_ns: 250.0,
+        };
+        let breach_bio = breach_hw.to_bioelectric_state();
+        assert_eq!(breach_bio.v_rest_mv, -10.0, "NVMe < 20GB must depolarize to critical threshold -10mV");
+        assert_eq!(breach_bio.regime, HomeostaticRegime::Critical);
+        assert_eq!(breach_bio.metabolism_mode, MetabolismMode::CriticalHibernation);
+
+        // Moderate thermal stress (72C): transitions to Stressed / ThermalThrottled
+        let stressed_hw = HardwareTelemetry {
+            cpu_temp_c: 72.0,
+            battery_pct: Some(80.0),
+            on_ac_power: true,
+            load_avg_1m: 1.0,
+            mem_available_mb: 6144.0,
+            nvme_free_gb: 30.0,
+            probe_latency_ns: 250.0,
+        };
+        let stressed_bio = stressed_hw.to_bioelectric_state();
+        assert!(stressed_bio.v_rest_mv > -55.0 && stressed_bio.v_rest_mv < -30.0);
+        assert_eq!(stressed_bio.regime, HomeostaticRegime::Stressed);
+        assert_eq!(stressed_bio.metabolism_mode, MetabolismMode::ThermalThrottled);
     }
 }

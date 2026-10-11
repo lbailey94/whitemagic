@@ -68,9 +68,11 @@ pub mod sutra;
 pub mod sweep;
 pub(crate) mod sweep_planner;
 pub mod transport;
+pub mod tripartite_router;
 pub mod tuple_space;
 
 pub use sutra::{CompoundSutra, SutraGlyph, SutraKekkaiProfile, SutraParseError};
+pub use tripartite_router::{CognitiveTier, RoutingDecision, TripartiteRouter};
 
 pub use action_skeleton::{ActionSkeleton, AstActionType, AstDelta, SkeletonValidationResult};
 pub use causal_ticket::CausalCapabilityTicket;

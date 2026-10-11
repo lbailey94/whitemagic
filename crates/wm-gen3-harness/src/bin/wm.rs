@@ -519,6 +519,12 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Inspect bioelectric resting potential, hardware vitals, and homeostatic regime
+    Homeostasis {
+        /// Emit structured JSON output
+        #[arg(long)]
+        json: bool,
+    },
     /// Run an invariant self-test and environment diagnostic
     Selftest {
         /// Output results as JSON
@@ -1906,6 +1912,11 @@ fn main() {
                 "JEV Pre-Triage Score:      {:.4} (26.7ns non-autoregressive gate)",
                 jev_score
             );
+            let bio = wm_gen3_core::homeostasis::HardwareTelemetry::probe().to_bioelectric_state();
+            let trip = wm_gen3_core::tripartite_router::TripartiteRouter::route(&inquiry, Some(&bio));
+            println!("Tripartite Tier:           {:?} (V_rest: {:.1}mV)", trip.tier, bio.v_rest_mv);
+            println!("Tripartite Latency:        {:.2} µs", trip.routing_latency_ns as f64 / 1000.0);
+            println!("Tripartite Rationale:      {}", trip.rationale);
             println!("Active Dream Insights:     {}", insights.len());
             println!("Compiled Fast-Path Rules:  {}", compiled_count);
             if let Some(skel) = bound_skeleton {
@@ -2780,6 +2791,42 @@ fn main() {
         } => {
             let actual_dry_run = if execute { false } else { dry_run || !execute };
             run_sutra_command(&codon, actual_dry_run, json, &store_path);
+        }
+        Commands::Homeostasis { json } => {
+            run_homeostasis_command(json);
+        }
+    }
+}
+
+fn run_homeostasis_command(json: bool) {
+    let hw = wm_gen3_core::homeostasis::HardwareTelemetry::probe();
+    let bio = hw.to_bioelectric_state();
+    if json {
+        println!("{}", serde_json::to_string_pretty(&bio).unwrap());
+    } else {
+        println!("==================================================");
+        println!("  WhiteMagic Gen3 Bioelectric Homeostasis Monitor ");
+        println!("==================================================");
+        println!("Resting Potential:  {:.1} mV (Serene baseline: -70.0 mV)", bio.v_rest_mv);
+        println!("Homeostatic Regime: {:?}", bio.regime);
+        println!("Metabolism Mode:    {:?}", bio.metabolism_mode);
+        println!("CPU Temperature:    {:.1}°C", bio.cpu_temp_c);
+        if let Some(bat) = bio.battery_pct {
+            println!("Battery Level:      {:.1}% ({})", bat, if bio.on_ac_power { "AC Connected" } else { "Discharging" });
+        } else {
+            println!("Power Supply:       AC Connected (no battery detected)");
+        }
+        println!("Load Average (1m):  {:.2}", bio.load_avg_1m);
+        println!("Available RAM:      {:.1} MB", bio.mem_available_mb);
+        println!("Root NVMe Free:     {:.2} GB (Invariant floor: 20.0 GB)", bio.nvme_free_gb);
+        println!("Probe Latency:      {:.2} µs", bio.probe_latency_ns / 1000.0);
+        println!("--------------------------------------------------");
+        if bio.nvme_free_gb < 20.0 {
+            println!("STATUS: [CRITICAL ALARM] NVMe storage floor breached (<20 GB)!");
+        } else if bio.v_rest_mv >= -35.0 {
+            println!("STATUS: [STRESSED] Thermal or compute throttling active.");
+        } else {
+            println!("STATUS: [OPTIMAL] Serene bioelectric homeostatic balance.");
         }
     }
 }

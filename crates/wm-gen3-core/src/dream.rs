@@ -1335,6 +1335,7 @@ mod tests {
             on_ac_power: false,
             load_avg_1m: 6.0,
             mem_available_mb: 512.0,
+            nvme_free_gb: 40.0,
             probe_latency_ns: 250.0,
         };
         let (rv_crit, proceed_crit, reason_crit) = RegimeVector::from_quiescence_with_homeostasis(
@@ -1354,6 +1355,7 @@ mod tests {
             on_ac_power: false,
             load_avg_1m: 1.0,
             mem_available_mb: 8192.0,
+            nvme_free_gb: 40.0,
             probe_latency_ns: 250.0,
         };
         let (_rv_bat, proceed_bat, reason_bat) = RegimeVector::from_quiescence_with_homeostasis(
@@ -1372,6 +1374,7 @@ mod tests {
             on_ac_power: true,
             load_avg_1m: 3.5,
             mem_available_mb: 4096.0,
+            nvme_free_gb: 40.0,
             probe_latency_ns: 250.0,
         };
         let (rv_stress, proceed_stress, _) = RegimeVector::from_quiescence_with_homeostasis(
@@ -1391,6 +1394,7 @@ mod tests {
             on_ac_power: true,
             load_avg_1m: 0.5,
             mem_available_mb: 16384.0,
+            nvme_free_gb: 40.0,
             probe_latency_ns: 250.0,
         };
         let (rv_nom, proceed_nom, reason_nom) = RegimeVector::from_quiescence_with_homeostasis(
