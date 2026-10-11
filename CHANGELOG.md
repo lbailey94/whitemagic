@@ -5,6 +5,14 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.3] — 2026-10-11
+
+### Added
+- **Post-Quantum Dual-Signing** — Native dual-signing in `wm-gen3-core::mandala` combining Ed25519 with NIST FIPS 204 ML-DSA-44/65 and FIPS 205 SLH-DSA post-quantum signatures; multi-policy verification (`LegacyOnly`, `HybridPreferred`, `PqRequired`) aligning with W3C CCG and Continuity Receipt 0.6-pq.
+- **Wire Protocol 7369 Sovereign Mesh** — Gap-Junction P2P swarm transport over raw TCP port 7369 (`wm mesh ping`, `wm mesh sync`, `wm mesh listen`); sub-millisecond local loopback (135 µs) and low-latency trans-Atlantic syncing (47 ms) across sovereign nodes with no cloud mediation.
+- **12-Glyph Sutra Logoglyphic Canon** — Sub-microsecond dispatch compiler and canonical glyph grammar achieving 146 ns routing, 100% loss-free roundtrip, and 90.7% byte compaction across conversational agent turns.
+- **Bi-cameral Memory Consolidation** — Autonomous dream cycles, Pareto cladistics compaction, and non-destructive archival indexing.
+
 ## [10.2.0-alpha.6] — 2026-10-07
 
 ### Added

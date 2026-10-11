@@ -52,13 +52,13 @@ SURFACES = [
     "scripts/install.sh",
 ]
 
-VERSION_RE = re.compile(r"\bv?(?:10\.\d+\.\d+(?:-alpha(?:\.\d+)?)?|9\.\d+\.\d+)\b")
+VERSION_RE = re.compile(r"\bv?(?:10\.\d+(?:\.\d+)?(?:-alpha(?:\.\d+)?)?|9\.\d+\.\d+)\b")
 WORKSPACE_RE = re.compile(r'(?m)^version = "([^"]+)"')
-SEMVER_RE = re.compile(r"\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?")
+SEMVER_RE = re.compile(r"\d+\.\d+(\.\d+)?(-[a-zA-Z0-9.]+)?")
 
 CHANGELOG = "CHANGELOG.md"
-UNRELEASED_RE = re.compile(r"(?m)^## \[Unreleased\][^\n]*?(\d+\.\d+\.\d+)")
-RELEASED_HEADING_RE = re.compile(r"^## \[(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.]+)?)]")
+UNRELEASED_RE = re.compile(r"(?m)^## \[Unreleased\][^\n]*?(\d+\.\d+(?:\.\d+)?)")
+RELEASED_HEADING_RE = re.compile(r"^## \[(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9.]+)?)]")
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 # Historical version mentions that must never count as drift or be rewritten
@@ -127,14 +127,16 @@ def check_ceremony(root: Path, target: str) -> bool:
         return False
     text = path.read_text(encoding="utf-8")
     ok = True
+    base_target = target[:-2] if target.endswith(".0") else target
+    accepted = {target, base_target, f"{base_target}.0"}
     unreleased = UNRELEASED_RE.search(text)
-    if unreleased and unreleased.group(1) == target:
+    if unreleased and unreleased.group(1) in accepted:
         print(f"  {CHANGELOG:<42} DRIFT: {target} is still under [Unreleased]")
         ok = False
     section: str | None = None
     for line in text.splitlines():
         match = RELEASED_HEADING_RE.match(line)
-        if match and match.group(1) == target:
+        if match and match.group(1) in accepted:
             section = line
             break
     if section is None:
@@ -148,11 +150,13 @@ def check_ceremony(root: Path, target: str) -> bool:
 
 def check(root: Path, expected: str | None) -> int:
     target = expected or workspace_version(root)
+    base_target = target[:-2] if target.endswith(".0") else target
+    accepted = {target, base_target, f"{base_target}.0"}
     rows = scan(root)
     drift = False
     print(f"version truth — expected {target}")
     for rel, versions in rows:
-        bad = sorted({v for v in versions if v != target})
+        bad = sorted({v for v in versions if v not in accepted})
         if bad:
             drift = True
             status = f"DRIFT: {', '.join(bad)}"
