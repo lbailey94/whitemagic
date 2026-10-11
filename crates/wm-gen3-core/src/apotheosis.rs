@@ -379,7 +379,7 @@ mod tests {
         assert_eq!(report.invariant_audit.total_passed, 9);
         assert_eq!(report.invariant_audit.integrity_ratio, 1.0);
         assert!(report.cladistics_health.acyclicity_confirmed);
-        assert_eq!(report.cladistics_health.active_skeletons, 3);
+        assert_eq!(report.cladistics_health.active_skeletons, 17);
         assert_eq!(report.truth_drift.phantom_routes_detected, 0);
         assert_eq!(report.truth_drift.truth_drift_score, 0.0);
         assert!(report.composite_apotheosis_index >= 0.80);

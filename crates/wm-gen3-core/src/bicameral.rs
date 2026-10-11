@@ -387,8 +387,7 @@ impl GeneseedVault {
 
     /// Seeds standard canonical skeletons into the vault across all Sutra logoglyphs and 2027 frontiers.
     pub fn seed_canonical_skeletons(&mut self) {
-        if self.skeletons.is_empty() {
-            // ── Standard Core & Sutra Logoglyphic Canon Skeletons ──
+        // ── Standard Core & Sutra Logoglyphic Canon Skeletons ──
             let mut v1 = ActionSkeleton::new(
                 "skel-verify-commit",
                 "VerifyAndCommit",
@@ -630,9 +629,13 @@ impl GeneseedVault {
             v17.tier = SkeletonTier::Heavy;
             v17.rolling_utility = 0.88;
 
-            self.skeletons.extend([
-                v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17,
-            ]);
+        let canonical = [
+            v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17,
+        ];
+        for c in canonical {
+            if !self.skeletons.iter().any(|s| s.id == c.id) {
+                self.skeletons.push(c);
+            }
         }
     }
 
@@ -1105,9 +1108,7 @@ impl GeneseedVault {
                 }
             }
         }
-        if vault.skeletons.is_empty() {
-            vault.seed_canonical_skeletons();
-        }
+        vault.seed_canonical_skeletons();
         vault
     }
 
