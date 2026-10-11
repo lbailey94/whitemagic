@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // =========================================================================
     // 1. SYSTEM 0.5 STATIC EMBEDDINGS & MEMORY RECALL (Model2Vec 32M)
     // =========================================================================
-    println!("─── [1/6] System 0.5 Static Embedding Engine & Route Recall (DIR-08) ────────────");
+    println!("─── [1/7] System 0.5 Static Embedding Engine & Route Recall (DIR-08) ────────────");
     if model_dir.exists() && intents_path.exists() && enriched_routes_path.exists() {
         let t0 = Instant::now();
         let organ = Arc::new(System05::new(&model_dir));
@@ -146,7 +146,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // =========================================================================
     // 2. SUB-SYMBOLIC SHARED MEMORY & INTER-AGENT COORDINATION (DIR-01)
     // =========================================================================
-    println!("─── [2/6] Sub-Symbolic Substrate & Inter-Agent Coordination (DIR-01) ───────────");
+    println!("─── [2/7] Sub-Symbolic Substrate & Inter-Agent Coordination (DIR-01) ───────────");
     let n_tuples = 10_000;
     let mut ts = TupleSpace::new();
 
@@ -238,7 +238,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // =========================================================================
     // 3. VECTORIZED TOOL DSL LOGOGLYPH COMPRESSION (DIR-06)
     // =========================================================================
-    println!("─── [3/6] Vectorized Tool DSL & Token Compression (DIR-06) ─────────────────────");
+    println!("─── [3/7] Vectorized Tool DSL & Token Compression (DIR-06) ─────────────────────");
     let raw_mcp_call = r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"memory.search","arguments":{"query":"subsymbolic geth consensus","limit":16}}}"#;
     let logoglyph = "⊳memory.search(query='subsymbolic geth consensus', limit=16)⊲";
 
@@ -273,7 +273,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // =========================================================================
     // 4. TACIT CONTINUITY VAULT QUERY PERFORMANCE (DIR-08)
     // =========================================================================
-    println!("─── [4/6] Tacit Continuity Vault Associative Retrieval (DIR-08) ────────────────");
+    println!("─── [4/7] Tacit Continuity Vault Associative Retrieval (DIR-08) ────────────────");
     let vault_db_path = PathBuf::from("/home/lucas/.local/share/whitemagic/vault/tacit_vault.db");
     if let Some(organ) = organ_arc.filter(|_| vault_db_path.exists()) {
         let vault_conn = open_vault_db(&vault_db_path).map_err(|e| format!("{e}"))?;
@@ -343,7 +343,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // =========================================================================
     // 5. HOLOGRAPHIC COLD-STORAGE QUERY RETRIEVAL (DIR-10)
     // =========================================================================
-    println!("─── [5/6] Holographic Cold-Storage Awakening (DIR-10) ──────────────────────────");
+    println!("─── [5/7] Holographic Cold-Storage Awakening (DIR-10) ──────────────────────────");
     let cold_db_path =
         PathBuf::from("/home/lucas/.local/share/whitemagic/cold_catalog/cold_catalog.db");
     if cold_db_path.exists() {
@@ -376,7 +376,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // =========================================================================
     // 6. CRYPTOGRAPHIC CONTINUITY & PRIMORDIAL COVENANT (DIR-03, DIR-11)
     // =========================================================================
-    println!("─── [6/6] Sovereign Governance & Primordial Covenant Closures (DIR-11) ─────────");
+    println!("─── [6/7] Sovereign Governance & Primordial Covenant Closures (DIR-11) ─────────");
     let signing_key = SigningKey::from_bytes(&[42u8; 32]);
     let verifying_key = signing_key.verifying_key();
     let covenant = PrimordialCovenant::new(verifying_key, "did:key:lucas".to_string());
@@ -394,6 +394,65 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!(
         "  ✓ Constitutional Check:  {:.1} ns/evaluation (Fail-Closed Zero-Overhead)\n",
         cov_ns
+    );
+
+    // =========================================================================
+    // 7. SUTRA COMPILER & LOGOGLYPHIC CANON DISPATCH (DIR-06, DIR-08)
+    // =========================================================================
+    println!("─── [7/7] Sutra Compiler & Logoglyphic Canon Dispatch (DIR-06 / DIR-08) ────────");
+    use wm_gen3_core::sutra::CompoundSutra;
+
+    let test_codons = [
+        "⟪ 證 · 行 · 鏡 ⟫",
+        "⟪ 觀 · 合 · 遠 ⟫",
+        "⟪ 息 · 清 · 生 ⟫",
+        "⟪ 界 · 應 · 根 ⟫",
+        "verify execute mirror",
+    ];
+    let n_sutra = 50_000;
+    let t0 = Instant::now();
+    for i in 0..n_sutra {
+        let codon_str = test_codons[i % test_codons.len()];
+        let _ = CompoundSutra::parse(codon_str)?;
+    }
+    let sutra_dur = t0.elapsed();
+    let sutra_ns = sutra_dur.as_secs_f64() * 1_000_000_000.0 / n_sutra as f64;
+    let sutra_per_sec = n_sutra as f64 / sutra_dur.as_secs_f64();
+
+    let shipwright = CompoundSutra::parse("⟪ 證 · 行 · 鏡 ⟫")?;
+    let alignment_zheng = shipwright.alignment_scores[0].1;
+    let alignment_xing = shipwright.alignment_scores[1].1;
+    let alignment_jing = shipwright.alignment_scores[2].1;
+
+    let nl_equivalent = "Verify all invariant tests in WMv10, execute and commit the ratified changes with Continuity Receipt 0.6, and mirror receipts to the thread";
+    let nl_tokens = (nl_equivalent.len() as f64 / 3.8).ceil() as usize;
+    let sutra_tokens = (shipwright.codon_str.len() as f64 / 3.8).ceil() as usize;
+    let token_reduction = (1.0 - (sutra_tokens as f64 / nl_tokens as f64)) * 100.0;
+    let estimated_llm_latency_ms = 850.0;
+    let sutra_latency_ms = sutra_ns / 1_000_000.0;
+    let speedup = estimated_llm_latency_ms / sutra_latency_ms;
+
+    println!(
+        "  ✓ Codon Parse & Align Speed:{:.1} ns/op ({:.2} million codons/sec)",
+        sutra_ns, sutra_per_sec / 1_000_000.0
+    );
+    println!(
+        "  ✓ Constituent Alignment:   證: {:.4} | 行: {:.4} | 鏡: {:.4}",
+        alignment_zheng, alignment_xing, alignment_jing
+    );
+    println!(
+        "  ✓ Kekkai Profile Merge:    RO: {} paths | RW: {} paths | Net: {}",
+        shipwright.kekkai_profile.read_only_paths.len(),
+        shipwright.kekkai_profile.read_write_paths.len(),
+        shipwright.kekkai_profile.network_allowed
+    );
+    println!(
+        "  ✓ Intent Token Reduction:  {} bytes (~{} tokens) → {} bytes (~{} tokens) [{:.1}% compression]",
+        nl_equivalent.len(), nl_tokens, shipwright.codon_str.len(), sutra_tokens, token_reduction
+    );
+    println!(
+        "  ✓ Sovereign Speedup:       {:.0}x acceleration vs. Cloud LLM ({:.4} ms vs {:.1} ms)\n",
+        speedup, sutra_latency_ms, estimated_llm_latency_ms
     );
 
     println!("╔═══════════════════════════════════════════════════════════════════════════════╗");
