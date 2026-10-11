@@ -385,9 +385,10 @@ impl GeneseedVault {
         self.retired_signatures.insert(signature.into());
     }
 
-    /// Seeds standard canonical skeletons into the vault.
+    /// Seeds standard canonical skeletons into the vault across all Sutra logoglyphs and 2027 frontiers.
     pub fn seed_canonical_skeletons(&mut self) {
         if self.skeletons.is_empty() {
+            // ── Standard Core & Sutra Logoglyphic Canon Skeletons ──
             let mut v1 = ActionSkeleton::new(
                 "skel-verify-commit",
                 "VerifyAndCommit",
@@ -426,9 +427,212 @@ impl GeneseedVault {
             );
             v3.tier = SkeletonTier::Vanguard;
 
-            self.skeletons.push(v1);
-            self.skeletons.push(v2);
-            self.skeletons.push(v3);
+            let mut v4 = ActionSkeleton::new(
+                "skel-verify-commit-vanguard",
+                "VerifyAndCommitVanguard",
+                vec![
+                    "quick_read_state".into(),
+                    "fast_verify".into(),
+                    "commit_signed_receipt".into(),
+                ],
+                vec!["capability_available".into()],
+                20,
+            );
+            v4.tier = SkeletonTier::Vanguard;
+            v4.rolling_utility = 0.92;
+
+            let mut v5 = ActionSkeleton::new(
+                "skel-deliberate-horizon",
+                "DeliberateHorizon",
+                vec![
+                    "gather_causal_ancestors".into(),
+                    "simulate_counterfactuals".into(),
+                    "adjudicate_pareto_gate".into(),
+                    "commit_deliberation_proof".into(),
+                ],
+                vec!["ram_headroom_sufficient".into(), "bioelectric_safe".into()],
+                600,
+            );
+            v5.tier = SkeletonTier::Heavy;
+            v5.rolling_utility = 0.90;
+
+            let mut v6 = ActionSkeleton::new(
+                "skel-ganying-handshake",
+                "GanYingHandshake",
+                vec![
+                    "challenge_nonce".into(),
+                    "verify_peer_pubkey".into(),
+                    "ratify_sovereign_session".into(),
+                ],
+                vec!["network_socket_open".into()],
+                35,
+            );
+            v6.tier = SkeletonTier::Standard;
+            v6.rolling_utility = 0.88;
+
+            let mut v7 = ActionSkeleton::new(
+                "skel-landlock-jail",
+                "LandlockJail",
+                vec![
+                    "configure_ro_paths".into(),
+                    "configure_rw_paths".into(),
+                    "drop_network_capabilities".into(),
+                    "apply_landlock_restriction".into(),
+                ],
+                vec!["linux_abi_supported".into()],
+                25,
+            );
+            v7.tier = SkeletonTier::Standard;
+            v7.rolling_utility = 0.95;
+
+            let mut v8 = ActionSkeleton::new(
+                "skel-archaeology-tacit",
+                "ArchaeologyTacit",
+                vec![
+                    "query_cold_catalog".into(),
+                    "decompress_in_shm".into(),
+                    "extract_tacit_evidence".into(),
+                ],
+                vec!["shm_headroom_sufficient".into()],
+                80,
+            );
+            v8.tier = SkeletonTier::Standard;
+            v8.rolling_utility = 0.87;
+
+            let mut v9 = ActionSkeleton::new(
+                "skel-quiesce-sleep",
+                "QuiesceAndSleep",
+                vec![
+                    "flush_in_memory_journals".into(),
+                    "drop_ephemeral_buffers".into(),
+                    "hibernate_metabolism".into(),
+                ],
+                vec!["state_persisted".into()],
+                12,
+            );
+            v9.tier = SkeletonTier::Vanguard;
+            v9.rolling_utility = 0.93;
+
+            let mut v10 = ActionSkeleton::new(
+                "skel-synthesize-unify",
+                "SynthesizeAndUnify",
+                vec![
+                    "read_associative_graphs".into(),
+                    "unify_heuristic_frames".into(),
+                    "commit_synthesized_model".into(),
+                ],
+                vec!["graphs_accessible".into()],
+                75,
+            );
+            v10.tier = SkeletonTier::Standard;
+            v10.rolling_utility = 0.89;
+
+            let mut v11 = ActionSkeleton::new(
+                "skel-mirror-attestation",
+                "MirrorAttestation",
+                vec![
+                    "inspect_boundary_hashes".into(),
+                    "generate_merkle_leaf".into(),
+                    "mirror_receipt_to_peers".into(),
+                ],
+                vec!["crypto_engine_ready".into()],
+                30,
+            );
+            v11.tier = SkeletonTier::Standard;
+            v11.rolling_utility = 0.92;
+
+            // ── 2027 Frontier: Bioelectric & Neuro-Acoustic Skeletons ──
+            let mut v12 = ActionSkeleton::new(
+                "skel-bioelectric-phase-lock",
+                "BioelectricPhaseLock",
+                vec![
+                    "sample_resting_potential".into(),
+                    "detect_phase_precession".into(),
+                    "emit_bioelectric_telemetry".into(),
+                ],
+                vec!["telemetry_channel_active".into()],
+                10,
+            );
+            v12.tier = SkeletonTier::Vanguard;
+            v12.rolling_utility = 0.94;
+
+            let mut v13 = ActionSkeleton::new(
+                "skel-acoustic-homeostasis",
+                "AcousticHomeostasis",
+                vec![
+                    "compute_beamforming_vector".into(),
+                    "modulate_acoustic_intensity".into(),
+                    "steer_v_rest_equilibrium".into(),
+                ],
+                vec!["transducer_calibrated".into(), "bioelectric_safe".into()],
+                50,
+            );
+            v13.tier = SkeletonTier::Standard;
+            v13.rolling_utility = 0.91;
+
+            let mut v14 = ActionSkeleton::new(
+                "skel-morphogenetic-repair",
+                "MorphogeneticRepair",
+                vec![
+                    "map_topological_voltage_field".into(),
+                    "identify_depolarized_lesions".into(),
+                    "synthesize_morphogenetic_target".into(),
+                    "execute_regeneration_plan".into(),
+                ],
+                vec!["morphogenetic_field_mapped".into(), "bioelectric_safe".into()],
+                450,
+            );
+            v14.tier = SkeletonTier::Heavy;
+            v14.rolling_utility = 0.89;
+
+            // ── 2027 Frontier: P2P Swarm & VPS Peering Skeletons ──
+            let mut v15 = ActionSkeleton::new(
+                "skel-gap-junction-sync",
+                "GapJunctionSync",
+                vec![
+                    "format_codon_frame".into(),
+                    "ed25519_sign".into(),
+                    "tcp_wire_stream".into(),
+                    "await_gap_ack".into(),
+                ],
+                vec!["gap_socket_connected".into()],
+                5,
+            );
+            v15.tier = SkeletonTier::Vanguard;
+            v15.rolling_utility = 0.96;
+
+            let mut v16 = ActionSkeleton::new(
+                "skel-swarm-quorum-vanguard",
+                "SwarmQuorumVanguard",
+                vec![
+                    "broadcast_linda_tuple".into(),
+                    "collect_quorum_votes".into(),
+                    "advance_lamport_epoch".into(),
+                ],
+                vec!["quorum_peers_available".into()],
+                40,
+            );
+            v16.tier = SkeletonTier::Standard;
+            v16.rolling_utility = 0.90;
+
+            let mut v17 = ActionSkeleton::new(
+                "skel-remote-vps-mirror",
+                "RemoteVpsMirror",
+                vec![
+                    "establish_sovereign_wan_link".into(),
+                    "reconcile_delta_heads".into(),
+                    "stream_continuity_bundles".into(),
+                    "archive_remote_proof".into(),
+                ],
+                vec!["wan_link_authorized".into(), "bioelectric_safe".into()],
+                350,
+            );
+            v17.tier = SkeletonTier::Heavy;
+            v17.rolling_utility = 0.88;
+
+            self.skeletons.extend([
+                v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17,
+            ]);
         }
     }
 
@@ -2805,7 +3009,7 @@ pub mod tests {
     #[test]
     fn test_geneseed_vault_fork_and_recombination() {
         let mut vault = GeneseedVault::new();
-        assert_eq!(vault.skeletons.len(), 3);
+        assert_eq!(vault.skeletons.len(), 17);
 
         // 1. Fork skel-verify-commit -> skel-verify-commit-v2
         let mutated_steps = vec![
@@ -3020,7 +3224,7 @@ pub mod tests {
     #[test]
     fn test_vault_hebbian_coactivation_and_recombination() {
         let mut vault = GeneseedVault::new();
-        assert_eq!(vault.skeletons.len(), 3);
+        assert_eq!(vault.skeletons.len(), 17);
 
         // Co-activate skel-verify-commit and skel-fast-lookup
         let result =
