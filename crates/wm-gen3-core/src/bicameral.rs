@@ -177,6 +177,21 @@ pub enum SkeletonTier {
     Heavy,
 }
 
+/// Telemetry record emitted when autopoietic morphogenetic adaptation occurs in the Geneseed Vault.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MorphogeneticReport {
+    pub baseline_v_rest_mv: f32,
+    pub regime: crate::homeostasis::HomeostaticRegime,
+    pub plasticity_factor: f64,
+    pub active_skeleton_count: usize,
+    pub adapted_skeletons: usize,
+    pub demoted_to_vanguard: usize,
+    pub demoted_to_standard: usize,
+    pub promoted_to_heavy: usize,
+    pub pruned_steps: usize,
+    pub homeostatic_reflex_injected: bool,
+}
+
 /// Standardized, evolvable multi-action skeleton for speculative execution and pre-warmed commit.
 ///
 /// Embodies the Gen1 Geneseed CodeTemplate:
@@ -585,6 +600,194 @@ impl GeneseedVault {
                     .partial_cmp(&b.fitness_spectrum().composite_fitness)
                     .unwrap_or(std::cmp::Ordering::Equal)
             })
+    }
+
+    /// Resolves the best matching ActionSkeleton for an operational inquiry,
+    /// conditioned on the active bioelectric homeostatic state.
+    ///
+    /// When the substrate is in Stressed or Critical regimes, Heavy skeletons are
+    /// suppressed in favor of Vanguard or Standard alternatives.
+    #[must_use]
+    pub fn find_best_skeleton_with_bio(
+        &self,
+        inquiry: &str,
+        bio: Option<&crate::homeostasis::BioelectricState>,
+    ) -> Option<&ActionSkeleton> {
+        let inquiry_lower = inquiry.to_lowercase();
+        let under_stress = bio
+            .map(|b| b.regime >= crate::homeostasis::HomeostaticRegime::Stressed)
+            .unwrap_or(false);
+        let is_critical = bio
+            .map(|b| b.regime == crate::homeostasis::HomeostaticRegime::Critical)
+            .unwrap_or(false);
+
+        self.skeletons
+            .iter()
+            .filter(|s| !s.deprecated)
+            .filter(|s| {
+                if is_critical && s.tier != SkeletonTier::Vanguard {
+                    return false;
+                }
+                if under_stress && s.tier == SkeletonTier::Heavy {
+                    return false;
+                }
+                true
+            })
+            .filter(|s| {
+                let id_clean = s.id.replace("skel-", "").replace('-', " ").to_lowercase();
+                let words: Vec<&str> = id_clean.split_whitespace().collect();
+                words.iter().any(|w| inquiry_lower.contains(w))
+                    || s.action_steps.iter().any(|step| {
+                        let step_clean = step.replace('_', " ").to_lowercase();
+                        inquiry_lower.contains(&step_clean)
+                    })
+            })
+            .max_by(|a, b| {
+                a.fitness_spectrum()
+                    .composite_fitness
+                    .partial_cmp(&b.fitness_spectrum().composite_fitness)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    }
+
+    /// Autopoietic morphogenetic adaptation of the action skeleton landscape
+    /// based on bioelectric resting potential (V_rest) drift.
+    ///
+    /// Implements Michael Levin's bioelectric morphogenetics:
+    /// - Depolarized / Stressed (V_rest >= -45 mV): Constricts expensive skeletons,
+    ///   demotes Heavy skeletons to Vanguard or Standard, prunes high-latency steps,
+    ///   and injects homeostatic self-preservation preconditions.
+    /// - Critical (V_rest >= -25 mV): Injects emergency triage reflex
+    ///   `skel-emergency-homeostasis-salvage`, demotes all skeletons to Vanguard,
+    ///   and prunes multi-step pipelines to absolute minimums.
+    /// - Hyperpolarized / Nominal (V_rest <= -55 mV): Elevates plasticity, unlocks
+    ///   Heavy verification workflows, enables cladistic recombination, and explores
+    ///   novel mutation branches.
+    pub fn autopoietic_morphogenesis(
+        &mut self,
+        bio: &crate::homeostasis::BioelectricState,
+    ) -> MorphogeneticReport {
+        let plasticity_factor = match bio.regime {
+            crate::homeostasis::HomeostaticRegime::Nominal => {
+                if bio.v_rest_mv <= -65.0 {
+                    1.75 // Hyperpolarized plasticity expansion
+                } else {
+                    1.00 // Standard nominal plasticity
+                }
+            }
+            crate::homeostasis::HomeostaticRegime::Conserving => 0.70,
+            crate::homeostasis::HomeostaticRegime::Stressed => 0.35,
+            crate::homeostasis::HomeostaticRegime::Critical => 0.10,
+        };
+
+        let mut adapted_skeletons = 0usize;
+        let mut demoted_to_vanguard = 0usize;
+        let mut demoted_to_standard = 0usize;
+        let mut promoted_to_heavy = 0usize;
+        let mut pruned_steps = 0usize;
+        let mut homeostatic_reflex_injected = false;
+
+        match bio.regime {
+            crate::homeostasis::HomeostaticRegime::Critical => {
+                // Emergency triage: all active skeletons demoted to Vanguard;
+                // multi-step operations truncated; "bioelectric_safe" precondition required.
+                for skel in &mut self.skeletons {
+                    if !skel.deprecated {
+                        if skel.tier != SkeletonTier::Vanguard {
+                            skel.tier = SkeletonTier::Vanguard;
+                            demoted_to_vanguard += 1;
+                            adapted_skeletons += 1;
+                        }
+                        if skel.action_steps.len() > 2 {
+                            let excess = skel.action_steps.len() - 2;
+                            skel.action_steps.truncate(2);
+                            pruned_steps += excess;
+                            adapted_skeletons += 1;
+                        }
+                        if !skel.expected_preconditions.iter().any(|p| p == "bioelectric_safe") {
+                            skel.expected_preconditions.push("bioelectric_safe".to_string());
+                            adapted_skeletons += 1;
+                        }
+                    }
+                }
+                // Inject emergency homeostasis salvage reflex if not present
+                if !self.skeletons.iter().any(|s| s.id == "skel-emergency-homeostasis-salvage") {
+                    let mut salvage = ActionSkeleton::new(
+                        "skel-emergency-homeostasis-salvage",
+                        "EmergencyHomeostasisSalvage",
+                        vec!["quiesce_processes".into(), "flush_buffers".into()],
+                        vec!["bioelectric_safe".into()],
+                        250,
+                    );
+                    salvage.tier = SkeletonTier::Vanguard;
+                    self.skeletons.push(salvage);
+                    homeostatic_reflex_injected = true;
+                    adapted_skeletons += 1;
+                }
+            }
+            crate::homeostasis::HomeostaticRegime::Stressed => {
+                // Stressed: Heavy skeletons demoted to Standard; prune steps > 4; add bioelectric_safe.
+                for skel in &mut self.skeletons {
+                    if !skel.deprecated {
+                        if skel.tier == SkeletonTier::Heavy {
+                            skel.tier = SkeletonTier::Standard;
+                            demoted_to_standard += 1;
+                            adapted_skeletons += 1;
+                        }
+                        if skel.action_steps.len() > 4 {
+                            let excess = skel.action_steps.len() - 4;
+                            skel.action_steps.truncate(4);
+                            pruned_steps += excess;
+                            adapted_skeletons += 1;
+                        }
+                        if !skel.expected_preconditions.iter().any(|p| p == "bioelectric_safe") {
+                            skel.expected_preconditions.push("bioelectric_safe".to_string());
+                            adapted_skeletons += 1;
+                        }
+                    }
+                }
+            }
+            crate::homeostasis::HomeostaticRegime::Conserving => {
+                // Conserving: ensure bioelectric_safe is registered for heavy skeletons
+                for skel in &mut self.skeletons {
+                    if !skel.deprecated && skel.tier == SkeletonTier::Heavy {
+                        if !skel.expected_preconditions.iter().any(|p| p == "bioelectric_safe") {
+                            skel.expected_preconditions.push("bioelectric_safe".to_string());
+                            adapted_skeletons += 1;
+                        }
+                    }
+                }
+            }
+            crate::homeostasis::HomeostaticRegime::Nominal => {
+                // Hyperpolarized (V_rest <= -65 mV): high plasticity, restore/promote high-fitness standard skeletons to Heavy
+                if bio.v_rest_mv <= -65.0 {
+                    for skel in &mut self.skeletons {
+                        if !skel.deprecated
+                            && skel.tier == SkeletonTier::Standard
+                            && skel.rolling_utility >= 0.88
+                            && skel.action_steps.len() >= 3
+                        {
+                            skel.tier = SkeletonTier::Heavy;
+                            promoted_to_heavy += 1;
+                            adapted_skeletons += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        MorphogeneticReport {
+            baseline_v_rest_mv: bio.v_rest_mv,
+            regime: bio.regime,
+            plasticity_factor,
+            active_skeleton_count: self.skeletons.iter().filter(|s| !s.deprecated).count(),
+            adapted_skeletons,
+            demoted_to_vanguard,
+            demoted_to_standard,
+            promoted_to_heavy,
+            pruned_steps,
+            homeostatic_reflex_injected,
+        }
     }
 
     /// Records an operational failure signature directly into the negative knowledge archive.
@@ -2888,4 +3091,124 @@ pub mod tests {
             "Composite fitness should be positive and balanced"
         );
     }
+
+    #[test]
+    fn test_autopoietic_morphogenesis_homeostatic_adaptation() {
+        use crate::homeostasis::{BioelectricState, HomeostaticRegime, MetabolismMode};
+
+        let mut vault = GeneseedVault::new();
+        // Add a heavy test skeleton with multiple steps
+        let mut heavy_skel = ActionSkeleton::new(
+            "skel-exhaustive-audit-huben",
+            "ExhaustiveAuditHuben",
+            vec![
+                "inspect_ast".into(),
+                "lint_syntax".into(),
+                "fuzz_inputs".into(),
+                "benchmark_throughput".into(),
+                "archive_receipt".into(),
+            ],
+            vec!["ram_headroom_sufficient".into()],
+            450,
+        );
+        heavy_skel.tier = SkeletonTier::Heavy;
+        vault.skeletons.push(heavy_skel);
+
+        // 1. Nominal regime with hyperpolarized resting potential (-68 mV)
+        let bio_hyper = BioelectricState {
+            v_rest_mv: -68.5,
+            regime: HomeostaticRegime::Nominal,
+            cpu_temp_c: 42.0,
+            battery_pct: Some(95.0),
+            on_ac_power: true,
+            load_avg_1m: 0.8,
+            mem_available_mb: 8192.0,
+            nvme_free_gb: 40.0,
+            metabolism_mode: MetabolismMode::NominalSynthesis,
+            probe_latency_ns: 400.0,
+        };
+        let rep_hyper = vault.autopoietic_morphogenesis(&bio_hyper);
+        assert_eq!(rep_hyper.regime, HomeostaticRegime::Nominal);
+        assert!(rep_hyper.plasticity_factor > 1.5, "Hyperpolarized state grants high plasticity");
+
+        // 2. Stressed regime (-35 mV): Heavy skeletons must demote to Standard, steps pruned to <= 4
+        let bio_stressed = BioelectricState {
+            v_rest_mv: -35.0,
+            regime: HomeostaticRegime::Stressed,
+            cpu_temp_c: 82.0,
+            battery_pct: Some(30.0),
+            on_ac_power: false,
+            load_avg_1m: 4.5,
+            mem_available_mb: 3000.0,
+            nvme_free_gb: 35.0,
+            metabolism_mode: MetabolismMode::ThermalThrottled,
+            probe_latency_ns: 450.0,
+        };
+        let rep_stressed = vault.autopoietic_morphogenesis(&bio_stressed);
+        assert_eq!(rep_stressed.regime, HomeostaticRegime::Stressed);
+        assert!(rep_stressed.demoted_to_standard >= 1);
+        assert!(rep_stressed.pruned_steps >= 1);
+
+        let skel = vault.skeletons.iter().find(|s| s.id == "skel-exhaustive-audit-huben").unwrap();
+        assert_eq!(skel.tier, SkeletonTier::Standard);
+        assert!(skel.action_steps.len() <= 4);
+        assert!(skel.expected_preconditions.contains(&"bioelectric_safe".to_string()));
+
+        // 3. Critical regime (-15 mV): Emergency salvage reflex injected, all demoted to Vanguard
+        let bio_critical = BioelectricState {
+            v_rest_mv: -15.0,
+            regime: HomeostaticRegime::Critical,
+            cpu_temp_c: 96.0,
+            battery_pct: Some(8.0),
+            on_ac_power: false,
+            load_avg_1m: 8.5,
+            mem_available_mb: 1024.0,
+            nvme_free_gb: 25.0,
+            metabolism_mode: MetabolismMode::CriticalHibernation,
+            probe_latency_ns: 500.0,
+        };
+        let rep_critical = vault.autopoietic_morphogenesis(&bio_critical);
+        assert_eq!(rep_critical.regime, HomeostaticRegime::Critical);
+        assert!(rep_critical.homeostatic_reflex_injected);
+        assert!(vault.skeletons.iter().all(|s| s.deprecated || s.tier == SkeletonTier::Vanguard));
+        assert!(vault.skeletons.iter().any(|s| s.id == "skel-emergency-homeostasis-salvage"));
+    }
+
+    #[test]
+    fn test_find_best_skeleton_with_bio_gating() {
+        use crate::homeostasis::{BioelectricState, HomeostaticRegime, MetabolismMode};
+
+        let mut vault = GeneseedVault::new();
+        let mut heavy = ActionSkeleton::new(
+            "skel-deep-code-search",
+            "DeepCodeSearch",
+            vec!["scan_all_files".into(), "deep_ast_parse".into(), "synthesize_cross_refs".into()],
+            vec!["ram_headroom_sufficient".into()],
+            300,
+        );
+        heavy.tier = SkeletonTier::Heavy;
+        heavy.rolling_utility = 0.99;
+        vault.skeletons.push(heavy);
+
+        // Under nominal, heavy is selected due to high rolling utility
+        let skel_nominal = vault.find_best_skeleton_with_bio("deep code search", None);
+        assert_eq!(skel_nominal.unwrap().id, "skel-deep-code-search");
+
+        // Under stress, heavy is suppressed
+        let bio_stressed = BioelectricState {
+            v_rest_mv: -38.0,
+            regime: HomeostaticRegime::Stressed,
+            cpu_temp_c: 80.0,
+            battery_pct: Some(40.0),
+            on_ac_power: false,
+            load_avg_1m: 4.0,
+            mem_available_mb: 2048.0,
+            nvme_free_gb: 30.0,
+            metabolism_mode: MetabolismMode::ThermalThrottled,
+            probe_latency_ns: 400.0,
+        };
+        let skel_stressed = vault.find_best_skeleton_with_bio("deep code search", Some(&bio_stressed));
+        assert!(skel_stressed.is_none() || skel_stressed.unwrap().tier != SkeletonTier::Heavy);
+    }
 }
+

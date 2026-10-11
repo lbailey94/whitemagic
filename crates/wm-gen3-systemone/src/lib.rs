@@ -242,4 +242,36 @@ mod tests {
         )));
         assert!(matches!(resolved, Err(Error::ModelDirNotFound(_))));
     }
+
+    #[test]
+    fn test_offline_laya_model_inference() {
+        if let Ok(model_dir) = SystemOne::resolve_model_dir(None) {
+            let organ = SystemOne::new(&model_dir);
+            organ.ensure_loaded().expect("model load failed");
+            assert!(organ.is_loaded());
+
+            let test_state = json!({
+                "inquiry": "autonomous swarm synchronization under thermal stress",
+                "v_rest_mv": -35.0,
+                "regime": "Stressed",
+            });
+            let test_questions = json!({
+                "should_suppress_cloud": {
+                    "type": "choice",
+                    "instructions": "Should cloud deliberation be suppressed under current thermal stress?",
+                    "criteria": ["suppress", "allow"]
+                },
+                "is_urgent": {
+                    "type": "noul",
+                    "instructions": "Is this action critical for host survival?"
+                }
+            });
+
+            let t0 = Instant::now();
+            let decision = organ.decide(&test_state, &test_questions).expect("inference failed");
+            let latency_ms = t0.elapsed().as_secs_f64() * 1000.0;
+            println!("  ✓ Local Laya Decision: in {:.2}ms", latency_ms);
+            assert!(decision.get("answers").is_some());
+        }
+    }
 }

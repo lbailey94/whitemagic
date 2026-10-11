@@ -1894,8 +1894,10 @@ fn main() {
             let compiled_count = router.compile_dream_insights(&insights);
 
             let vault_path = store_path.join("vault.jsonl");
-            let vault = wm_gen3_core::bicameral::GeneseedVault::load_or_init(&vault_path);
-            let bound_skeleton = vault.find_best_skeleton(&inquiry);
+            let mut vault = wm_gen3_core::bicameral::GeneseedVault::load_or_init(&vault_path);
+            let bio = wm_gen3_core::homeostasis::HardwareTelemetry::probe().to_bioelectric_state();
+            let morph_rep = vault.autopoietic_morphogenesis(&bio);
+            let bound_skeleton = vault.find_best_skeleton_with_bio(&inquiry, Some(&bio));
 
             let state =
                 wm_gen3_core::bicameral::PresentState::new(vec!["dispatch_triage".into()], 1024, 0);
@@ -1912,9 +1914,8 @@ fn main() {
                 "JEV Pre-Triage Score:      {:.4} (26.7ns non-autoregressive gate)",
                 jev_score
             );
-            let bio = wm_gen3_core::homeostasis::HardwareTelemetry::probe().to_bioelectric_state();
             let trip = wm_gen3_core::tripartite_router::TripartiteRouter::route(&inquiry, Some(&bio));
-            println!("Tripartite Tier:           {:?} (V_rest: {:.1}mV)", trip.tier, bio.v_rest_mv);
+            println!("Tripartite Tier:           {:?} (V_rest: {:.1}mV, Plasticity: {:.2}x)", trip.tier, bio.v_rest_mv, morph_rep.plasticity_factor);
             println!("Tripartite Latency:        {:.2} µs", trip.routing_latency_ns as f64 / 1000.0);
             println!("Tripartite Rationale:      {}", trip.rationale);
             println!("Active Dream Insights:     {}", insights.len());

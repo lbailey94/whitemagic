@@ -1715,6 +1715,7 @@ impl MeshServer {
                             let _conn_slot = conn_slot;
                             let mut handshake_nonce: Option<[u8; 32]> = None;
                             let _ = stream.set_nonblocking(false);
+                            let _ = stream.set_nodelay(true);
                             let _ = stream.set_read_timeout(Some(DEFAULT_FRAME_ASSEMBLY_TIMEOUT));
                             let _ = stream.set_write_timeout(Some(DEFAULT_FRAME_ASSEMBLY_TIMEOUT));
 
@@ -2114,6 +2115,7 @@ impl MeshClient {
         peer_allowlist: Vec<String>,
     ) -> Result<Self, MeshError> {
         let stream = TcpStream::connect_timeout(&peer_addr, DEFAULT_CONNECT_TIMEOUT)?;
+        stream.set_nodelay(true)?;
         stream.set_read_timeout(Some(DEFAULT_FRAME_ASSEMBLY_TIMEOUT))?;
         stream.set_write_timeout(Some(DEFAULT_FRAME_ASSEMBLY_TIMEOUT))?;
 
