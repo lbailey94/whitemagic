@@ -505,6 +505,20 @@ enum Commands {
         #[command(subcommand)]
         command: AtRestCommands,
     },
+    /// Parse, decode, and dispatch a sovereign Logoglyphic Sutra codon
+    Sutra {
+        /// Glyph codon or compound sutra string (e.g., "證 行 鏡" or "⟪ 證 · 行 · 鏡 ⟫")
+        codon: String,
+        /// Force dry run (default true unless --execute is passed)
+        #[arg(long)]
+        dry_run: bool,
+        /// Execute directly against the substrate (overrides dry_run default)
+        #[arg(long)]
+        execute: bool,
+        /// Emit structured JSON output
+        #[arg(long)]
+        json: bool,
+    },
     /// Run an invariant self-test and environment diagnostic
     Selftest {
         /// Output results as JSON
@@ -2757,6 +2771,15 @@ fn main() {
             if strict && host_verdict == wm_gen3_harness::host_health::Verdict::Critical {
                 std::process::exit(1);
             }
+        }
+        Commands::Sutra {
+            codon,
+            dry_run,
+            execute,
+            json,
+        } => {
+            let actual_dry_run = if execute { false } else { dry_run || !execute };
+            run_sutra_command(&codon, actual_dry_run, json, &store_path);
         }
     }
 }
@@ -8690,6 +8713,137 @@ fn run_vault_command(cmd: VaultCommands, store_path: &Path) {
             println!("Pruned Redundant:   {}", pruned);
             println!("Compacted Vault:    {}", vault_path.display());
             println!("==================================================");
+        }
+    }
+}
+
+fn run_sutra_command(codon: &str, dry_run: bool, json: bool, store_path: &Path) {
+    use std::time::Instant;
+    use wm_gen3_core::sutra::CompoundSutra;
+
+    let start = Instant::now();
+    let sutra = match CompoundSutra::parse(codon) {
+        Ok(s) => s,
+        Err(e) => {
+            if json {
+                println!(
+                    "{}",
+                    serde_json::json!({
+                        "status": "error",
+                        "error": e.to_string(),
+                        "input": codon,
+                    })
+                );
+            } else {
+                eprintln!("Error: failed to parse sutra codon '{codon}': {e}");
+            }
+            std::process::exit(1);
+        }
+    };
+    let parse_micros = start.elapsed().as_micros();
+
+    let vault_path = store_path.join("vault.jsonl");
+    let mut vault = wm_gen3_core::bicameral::GeneseedVault::load_or_init(&vault_path);
+
+    if json {
+        let output = serde_json::json!({
+            "status": "ok",
+            "codon": sutra.codon_str,
+            "canonical_name": sutra.canonical_name,
+            "parse_latency_micros": parse_micros,
+            "glyphs": sutra.glyphs.iter().map(|g| {
+                serde_json::json!({
+                    "glyph": g.as_char().to_string(),
+                    "pinyin": g.pinyin(),
+                    "english": g.english(),
+                    "bound_skeleton": g.bound_skeleton_id(),
+                })
+            }).collect::<Vec<_>>(),
+            "alignment_scores": sutra.alignment_scores.iter().map(|(g, sim)| {
+                serde_json::json!({
+                    "glyph": g.as_char().to_string(),
+                    "similarity": (sim * 10000.0).round() / 10000.0,
+                })
+            }).collect::<Vec<_>>(),
+            "kekkai_profile": {
+                "read_only_paths": sutra.kekkai_profile.read_only_paths,
+                "read_write_paths": sutra.kekkai_profile.read_write_paths,
+                "network_allowed": sutra.kekkai_profile.network_allowed,
+            },
+            "primary_skeleton_id": sutra.primary_skeleton_id,
+            "dry_run": dry_run,
+        });
+        println!("{}", serde_json::to_string_pretty(&output).unwrap_or_default());
+        return;
+    }
+
+    println!("==================================================");
+    println!("       WhiteMagic Gen3 Sovereign Sutra Dispatch   ");
+    println!("==================================================");
+    println!("Codon:                   {}", sutra.codon_str);
+    if let Some(ref name) = sutra.canonical_name {
+        println!("Title:                   {}", name);
+    }
+    println!("Parse Latency:           {} µs (Model2Vec Zero-Copy Vector Map)", parse_micros);
+    println!("Constituent Glyphs:");
+    for (g, sim) in &sutra.alignment_scores {
+        println!(
+            "  [{:>2}] {} ({:<5}) — {:<18} (alignment: {:.4})",
+            g.index(),
+            g.as_char(),
+            g.pinyin(),
+            g.english(),
+            sim
+        );
+    }
+    println!("--------------------------------------------------");
+    println!("Bound Kekkai Sandbox Profile:");
+    println!("  Read-Only Paths:       {:?}", sutra.kekkai_profile.read_only_paths);
+    println!("  Read-Write Paths:      {:?}", sutra.kekkai_profile.read_write_paths);
+    println!(
+        "  Network Policy:        {}",
+        if sutra.kekkai_profile.network_allowed { "Local / LAN Mesh Allowed (Port 7369)" } else { "Deny (Strict Confinement Isolated)" }
+    );
+    println!("--------------------------------------------------");
+    println!("Bound Action Skeleton:   {}", sutra.primary_skeleton_id);
+
+    if dry_run {
+        println!("Execution Status:        DRY RUN (Deterministic Plan Decoded)");
+        println!("                         [Pass --execute to dispatch against substrate]");
+        println!("==================================================");
+        return;
+    }
+
+    println!("Execution Status:        DISPATCHING AGAINST SUBSTRATE...");
+    let journal_path = store_path.join("journal.jsonl");
+    let mut substrate = match Substrate::open(store_path, Some(&journal_path), default_view()) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error opening substrate at {}: {e}", store_path.display());
+            std::process::exit(1);
+        }
+    };
+    substrate.set_intake_authority(RatifiedChannel::mint("wm-sutra-exec"));
+
+    match vault.execute_skeleton_cycle(&sutra.primary_skeleton_id, &mut substrate) {
+        Ok(res) => {
+            if let Err(e) = vault.sync_to_file(&vault_path) {
+                eprintln!("Warning: failed to persist vault to file: {e}");
+            }
+            println!("--------------------------------------------------");
+            println!("Dispatch Receipt:        SUCCESS");
+            println!("  Action Skeleton:       {}", res.skeleton_id);
+            println!("  Latency:               {} µs", res.latency_us);
+            println!("  Observed Utility:      {:.4}", res.observed_utility);
+            println!("  New Rolling EMA:       {:.4}", res.new_rolling_utility);
+            println!("  Execution Count:       {}", res.execution_count);
+            println!("  Status:                {}", res.status);
+            println!("==================================================");
+        }
+        Err(e) => {
+            eprintln!("Dispatch Receipt:        FAILED: {e}");
+            println!("==================================================");
+            std::process::exit(1);
         }
     }
 }

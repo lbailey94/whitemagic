@@ -5080,6 +5080,7 @@ name = "wm-gen3-zeropointfive"
 version = "10.2.0-alpha.6"
 dependencies = [
  "model2vec-rs",
+ "serde",
  "serde_json",
 ]
 

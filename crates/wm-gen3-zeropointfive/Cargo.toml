@@ -16,5 +16,8 @@ default = ["fancy-regex"]
 fancy-regex = ["model2vec-rs/fancy-regex"]
 onig = ["model2vec-rs/onig"]
 
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+
 [lints]
 workspace = true
