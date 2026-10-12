@@ -33,6 +33,7 @@ use wm_gen3_core::ops::{
     ImportKind, RecallQuery, RememberItem, SessionCheckpoint, SessionContinuityView, SessionTurn,
     Substrate, compose_session_digest,
 };
+use wm_gen3_core::sutra::{CompoundSutra, MudraEnvironment, SutraGlyph, CANONICAL_MUDRAS};
 
 /// Active MCP Tool Profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -200,6 +201,27 @@ pub static NLU_PROFILES: &[NluProfile] = &[
             ("epoch", 4.0),
         ],
     },
+    NluProfile {
+        route: "sutra.cast",
+        keywords: &[
+            ("sutra", 9.0),
+            ("mudra", 8.5),
+            ("seal", 8.0),
+            ("codon", 7.5),
+            ("cast", 7.0),
+            ("hand seal", 7.5),
+        ],
+    },
+    NluProfile {
+        route: "sutra.compile",
+        keywords: &[
+            ("sutra compile", 9.5),
+            ("compile sutra", 9.5),
+            ("mudra compile", 9.0),
+            ("compile mudra", 9.0),
+            ("intent to sutra", 8.5),
+        ],
+    },
 ];
 
 /// Predict the target route for a natural language thought.
@@ -302,6 +324,10 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "galaxy.list" | "galaxy_list" => "galaxy.list",
         "galaxy.fork" | "galaxy_fork" | "galaxy.branch" | "galaxy_branch" => "galaxy.fork",
         "galaxy.create" | "galaxy_create" => "galaxy.create",
+        "sutra.cast" | "sutra_cast" => "sutra.cast",
+        "sutra.compile" | "sutra_compile" => "sutra.compile",
+        "sutra.canon" | "sutra_canon" => "sutra.canon",
+        "sutra.list" | "sutra_list" => "sutra.list",
         _ => return None,
     })
 }
@@ -452,6 +478,13 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
     ("session.recall", &["session_id", "query", "limit"]),
     ("receipts.emit", &["kind", "session_id", "out", "limit"]),
     ("session.digest", &["session_id", "n"]),
+    (
+        "sutra.cast",
+        &["codon", "execute", "dry_run", "strict", "peer"],
+    ),
+    ("sutra.compile", &["query"]),
+    ("sutra.canon", &[]),
+    ("sutra.list", &[]),
 ];
 
 /// Consumed-argument list for a canonical tool route, if declared.
@@ -477,7 +510,93 @@ fn reject_unknown_args(tool: &str, args: &Value) -> Result<(), String> {
     Ok(())
 }
 
-/// 10 Lean Cyberbrain MCP Tools.
+fn sutra_tool_schemas_cyberbrain(mode_hint: &str) -> Vec<Value> {
+    vec![
+        json!({
+            "name": "sutra_cast",
+            "description": format!("Evaluate and dispatch a zero-allocation Taoist Hand Seal / Sutra Codon (e.g. '觀 證 行', 'Kek-01-Seal'). Validates preconditions, computes Kekkai sandbox boundaries, and executes bound Action Skeleton cycles or transmits swarm mudra packet to P2P peer.{mode_hint}"),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "codon": { "type": "string", "description": "Logoglyphic Sutra codon or Taoist hand seal sequence (e.g. '觀 證 行', 'Kek-01-Seal', '根 界 息')" },
+                    "execute": { "type": "boolean", "description": "Whether to execute the bound Action Skeleton against the substrate (default: false / dry-run)" },
+                    "dry_run": { "type": "boolean", "description": "Alias for !execute; if true, only validates preconditions and returns deterministic plan" },
+                    "strict": { "type": "boolean", "description": "Fails closed if preconditions (read-only, landlock, mesh net) are unsatisfied" },
+                    "peer": { "type": "string", "description": "Target peer address (e.g. '152.53.195.47:7369') for remote Swarm Mudra Handoff via Wire Protocol 7369" }
+                },
+                "required": ["codon"]
+            }
+        }),
+        json!({
+            "name": "sutra_compile",
+            "description": "Compile high-level natural language intent into an optimal compound Sutra codon and Taoist Mudra formula using static Model2Vec embeddings or lexical centroids.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "query": { "type": "string", "description": "High-level natural language intent or task description to compile into a Sutra codon" }
+                },
+                "required": ["query"]
+            }
+        }),
+        json!({
+            "name": "sutra_canon",
+            "description": "Inspect the canonical 12-glyph logoglyphic Sutra canon, alchemical dual-mappings, Taoist hand seals (印诀), and bound Action Skeletons.",
+            "inputSchema": { "type": "object", "properties": {} }
+        }),
+        json!({
+            "name": "sutra_list",
+            "description": "List all recognized canonical compound Taoist Mudras (印诀式), their formulaic compositions, preconditions, and primary execution skeletons.",
+            "inputSchema": { "type": "object", "properties": {} }
+        }),
+    ]
+}
+
+fn sutra_tool_schemas_full(mode_hint: &str) -> Vec<Value> {
+    vec![
+        json!({
+            "name": "sutra.cast",
+            "title": "Dispatch Sutra / Taoist Mudra",
+            "description": format!("Evaluate and dispatch a zero-allocation Taoist Hand Seal / Sutra Codon (e.g. '觀 證 行', 'Kek-01-Seal'). Validates preconditions, computes Kekkai sandbox boundaries, and executes bound Action Skeleton cycles or transmits swarm mudra packet to P2P peer.{mode_hint}"),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "codon": { "type": "string", "description": "Logoglyphic Sutra codon or Taoist hand seal sequence (e.g. '觀 證 行', 'Kek-01-Seal', '根 界 息')" },
+                    "execute": { "type": "boolean", "description": "Whether to execute the bound Action Skeleton against the substrate (default: false / dry-run)" },
+                    "dry_run": { "type": "boolean", "description": "Alias for !execute; if true, only validates preconditions and returns deterministic plan" },
+                    "strict": { "type": "boolean", "description": "Fails closed if preconditions (read-only, landlock, mesh net) are unsatisfied" },
+                    "peer": { "type": "string", "description": "Target peer address (e.g. '152.53.195.47:7369') for remote Swarm Mudra Handoff via Wire Protocol 7369" }
+                },
+                "required": ["codon"]
+            }
+        }),
+        json!({
+            "name": "sutra.compile",
+            "title": "Compile Intent to Sutra",
+            "description": "Compile high-level natural language intent into an optimal compound Sutra codon and Taoist Mudra formula using static Model2Vec embeddings or lexical centroids.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "query": { "type": "string", "description": "High-level natural language intent or task description to compile into a Sutra codon" }
+                },
+                "required": ["query"]
+            }
+        }),
+        json!({
+            "name": "sutra.canon",
+            "title": "Sutra Canon",
+            "description": "Inspect the canonical 12-glyph logoglyphic Sutra canon, alchemical dual-mappings, Taoist hand seals (印诀), and bound Action Skeletons.",
+            "inputSchema": { "type": "object", "properties": {} }
+        }),
+        json!({
+            "name": "sutra.list",
+            "title": "List Canonical Mudras",
+            "description": "List all recognized canonical compound Taoist Mudras (印诀式), their formulaic compositions, preconditions, and primary execution skeletons.",
+            "inputSchema": { "type": "object", "properties": {} }
+        }),
+    ]
+}
+
+/// 14 Lean Cyberbrain MCP Tools (including 4 Sutra / Mudra tools).
 pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
     let mode_hint = if readonly {
         " (READ-ONLY mode: mutations refused)"
@@ -597,7 +716,7 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
                     "thought": { "type": "string", "description": "Natural language request auto-routed via TF-IDF NLU" },
                     "route": { "type": "string", "description": "Explicit tool name or route for direct dispatch (e.g. 'memory.search', 'session.continuity')" },
                     "args": { "type": "object", "description": "Arguments to pass through to target tool" },
-                    "action": { "type": "string", "description": "Legacy action selector: recall, remember, get, stats, sync, sweep, inspect, session_checkpoint, session_continuity, session_record, session_list, galaxy_list, galaxy_fork" }
+                    "action": { "type": "string", "description": "Legacy action selector: recall, remember, get, stats, sync, sweep, inspect, session_checkpoint, session_continuity, session_record, session_list, galaxy_list, galaxy_fork, sutra_cast, sutra_compile, sutra_canon, sutra_list" }
                 }
             }
         },
@@ -619,6 +738,9 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
             }
         }
     ]);
+    if let Value::Array(ref mut list) = tools {
+        list.extend(sutra_tool_schemas_cyberbrain(mode_hint));
+    }
     #[cfg(feature = "systemone")]
     if let Value::Array(ref mut list) = tools {
         list.push(systemone_tool_schema(mode_hint));
@@ -1234,6 +1356,9 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
     if let Value::Array(ref mut list) = tools {
         list.push(decision_outcome_tool_schema(mode_hint));
     }
+    if let Value::Array(ref mut list) = tools {
+        list.extend(sutra_tool_schemas_full(mode_hint));
+    }
     tools
 }
 
@@ -1362,8 +1487,16 @@ pub fn execute_hybrid_tool_call(
         }
         "galaxy.create" | "galaxy_create" => handle_galaxy_create(args, substrate, readonly),
 
+        // ── Sutra Codon & Taoist Mudra Operations ──────────────────────────
+        "sutra.cast" | "sutra_cast" => {
+            handle_sutra_cast(args, substrate, store_path, readonly)
+        }
+        "sutra.compile" | "sutra_compile" => handle_sutra_compile(args),
+        "sutra.canon" | "sutra_canon" => handle_sutra_canon(args),
+        "sutra.list" | "sutra_list" => handle_sutra_list(args),
+
         unknown => Err(format!(
-            "Unknown tool: '{unknown}'. Supported: memory.create, memory.search, memory.read, memory.list, galaxy.list, galaxy.fork, session.record, session.continuity, session.checkpoint, mandala.status, mandala.triage, mandala.evaluate, mesh_sync, sangha.status, sangha.inbox, sangha.post, wm{SYSTEMONE_TOOL_HINT}{SYSTEM05_TOOL_HINT}{SYSTEM15_TOOL_HINT}"
+            "Unknown tool: '{unknown}'. Supported: memory.create, memory.search, memory.read, memory.list, galaxy.list, galaxy.fork, session.record, session.continuity, session.checkpoint, mandala.status, mandala.triage, mandala.evaluate, mesh_sync, sangha.status, sangha.inbox, sangha.post, sutra.cast, sutra.compile, sutra.canon, sutra.list, wm{SYSTEMONE_TOOL_HINT}{SYSTEM05_TOOL_HINT}{SYSTEM15_TOOL_HINT}"
         )),
     }
 }
@@ -1405,6 +1538,12 @@ fn handle_wm_router(
                 }
                 "mandala.triage" if extracted_args.get("inquiry").is_none() => {
                     extracted_args["inquiry"] = json!(trimmed);
+                }
+                "sutra.cast" if extracted_args.get("codon").is_none() => {
+                    extracted_args["codon"] = json!(trimmed);
+                }
+                "sutra.compile" if extracted_args.get("query").is_none() => {
+                    extracted_args["query"] = json!(trimmed);
                 }
                 _ => {}
             }
@@ -1462,8 +1601,17 @@ fn handle_wm_router(
     // 3. Legacy Action Selector (Gen3 cyberbrain style: action="recall")
     if let Some(action) = args.get("action").and_then(Value::as_str) {
         if !action.is_empty() {
+            let pass_args = if let Some(sub_args) = args.get("args") {
+                sub_args.clone()
+            } else {
+                let mut stripped = args.clone();
+                if let Value::Object(ref mut map) = stripped {
+                    map.remove("action");
+                }
+                stripped
+            };
             return execute_hybrid_tool_call(
-                action, args, substrate, store_path, readonly, profile,
+                action, &pass_args, substrate, store_path, readonly, profile,
             );
         }
     }
@@ -5259,6 +5407,295 @@ fn handle_sangha_post(args: &Value, readonly: bool) -> Result<Value, String> {
     }
 }
 
+// ── Sutra Codon & Taoist Hand Seal Handlers ────────────────────────────────
+
+fn handle_sutra_canon(args: &Value) -> Result<Value, String> {
+    reject_unknown_args("sutra.canon", args)?;
+    let items: Vec<_> = SutraGlyph::ALL
+        .iter()
+        .map(|g| {
+            let prof = g.kekkai_profile();
+            json!({
+                "index": g.index(),
+                "char": g.as_char().to_string(),
+                "alchemical": g.alchemical_char().to_string(),
+                "pinyin": g.pinyin(),
+                "english": g.english(),
+                "taoist_seal": g.taoist_seal(),
+                "bound_skeleton": g.bound_skeleton_id(),
+                "kekkai": {
+                    "read_only_paths": prof.read_only_paths,
+                    "read_write_paths": prof.read_write_paths,
+                    "network_allowed": prof.network_allowed,
+                }
+            })
+        })
+        .collect();
+    Ok(json!({
+        "status": "success",
+        "count": items.len(),
+        "canon": items,
+    }))
+}
+
+fn handle_sutra_list(args: &Value) -> Result<Value, String> {
+    reject_unknown_args("sutra.list", args)?;
+    let mudras: Vec<_> = CANONICAL_MUDRAS
+        .iter()
+        .map(|m| {
+            json!({
+                "name": m.name,
+                "glyphs": m.glyphs.iter().map(|g| json!({
+                    "char": g.as_char().to_string(),
+                    "alchemical": g.alchemical_char().to_string(),
+                    "pinyin": g.pinyin(),
+                })).collect::<Vec<_>>(),
+                "taoist_formula": m.taoist_formula,
+                "primary_skeleton": m.primary_skeleton,
+                "preconditions": {
+                    "requires_store_write": m.requires_store_write,
+                    "requires_landlock": m.requires_landlock,
+                    "requires_mesh_net": m.requires_mesh_net,
+                },
+                "description": m.description,
+            })
+        })
+        .collect();
+    Ok(json!({
+        "status": "success",
+        "count": mudras.len(),
+        "canonical_mudras": mudras,
+    }))
+}
+
+fn handle_sutra_compile(args: &Value) -> Result<Value, String> {
+    reject_unknown_args("sutra.compile", args)?;
+    let query = args
+        .get("query")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'query'".to_string())?
+        .trim();
+    if query.is_empty() {
+        return Err("Parameter 'query' cannot be empty".to_string());
+    }
+
+    use std::time::Instant;
+    let start = Instant::now();
+    let mut model_used = "lexical-fallback";
+    let mut best_mudra: Option<&'static str> = None;
+    let mut mudra_score: f32 = 0.0;
+    let mut glyph_scores: Vec<(SutraGlyph, f32)> = Vec::new();
+
+    static ORGAN: std::sync::OnceLock<Result<wm_gen3_zeropointfive::System05, String>> =
+        std::sync::OnceLock::new();
+    let organ = ORGAN.get_or_init(|| {
+        wm_gen3_zeropointfive::System05::resolve_model_dir(None)
+            .map(wm_gen3_zeropointfive::System05::new)
+            .map_err(|e| e.to_string())
+    });
+
+    if let Ok(organ) = organ.as_ref() {
+        if let Ok(query_vec) = organ.encode_single(query) {
+            model_used = "Model2Vec (potion-base-32M static embedding)";
+            for &g in &SutraGlyph::ALL {
+                let gvec = g.vector();
+                let dot: f32 = query_vec.iter().zip(gvec.iter()).map(|(a, b)| a * b).sum();
+                glyph_scores.push((g, dot));
+            }
+            glyph_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+            for m in CANONICAL_MUDRAS {
+                if let Ok(sutra) = CompoundSutra::from_glyphs(m.glyphs.to_vec()) {
+                    let dot: f32 = query_vec
+                        .iter()
+                        .zip(sutra.compound_vector.iter())
+                        .map(|(a, b)| a * b)
+                        .sum();
+                    if dot > mudra_score {
+                        mudra_score = dot;
+                        best_mudra = Some(m.name);
+                    }
+                }
+            }
+        }
+    }
+
+    if glyph_scores.is_empty() {
+        for word in query.split(|c: char| !c.is_alphanumeric() && c != '·') {
+            if let Some(g) = SutraGlyph::from_token(word) {
+                if !glyph_scores.iter().any(|(x, _)| *x == g) {
+                    glyph_scores.push((g, 1.0));
+                }
+            }
+        }
+    }
+
+    let selected_glyphs: Vec<SutraGlyph> = if glyph_scores.is_empty() {
+        vec![SutraGlyph::Zheng, SutraGlyph::Xing, SutraGlyph::Jing]
+    } else {
+        glyph_scores.iter().take(3).map(|(g, _)| *g).collect()
+    };
+
+    let sutra = CompoundSutra::from_glyphs(selected_glyphs)
+        .unwrap_or_else(|_| CompoundSutra::parse("證 行 鏡").unwrap());
+    let compile_us = start.elapsed().as_micros();
+
+    Ok(json!({
+        "status": "success",
+        "query": query,
+        "engine": model_used,
+        "compile_latency_us": compile_us,
+        "compiled_codon": sutra.codon_str,
+        "alchemical_codon": format!("⟪ {} ⟫", sutra.glyphs.iter().map(|g| g.alchemical_char().to_string()).collect::<Vec<_>>().join(" · ")),
+        "taoist_formula": sutra.taoist_formula(),
+        "best_compound_mudra": best_mudra,
+        "compound_mudra_score": mudra_score,
+        "primary_skeleton_id": sutra.primary_skeleton_id,
+        "top_glyph_alignments": glyph_scores.iter().take(5).map(|(g, score)| {
+            json!({
+                "glyph": g.as_char().to_string(),
+                "alchemical": g.alchemical_char().to_string(),
+                "pinyin": g.pinyin(),
+                "english": g.english(),
+                "score": (score * 10000.0).round() / 10000.0,
+            })
+        }).collect::<Vec<_>>(),
+    }))
+}
+
+fn handle_sutra_cast(
+    args: &Value,
+    substrate: &mut Substrate,
+    store_path: &Path,
+    readonly: bool,
+) -> Result<Value, String> {
+    reject_unknown_args("sutra.cast", args)?;
+    let codon = args
+        .get("codon")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'codon'".to_string())?
+        .trim();
+    if codon.is_empty() {
+        return Err("Parameter 'codon' cannot be empty".to_string());
+    }
+
+    let execute = args.get("execute").and_then(Value::as_bool).unwrap_or(false);
+    let dry_run = args.get("dry_run").and_then(Value::as_bool).unwrap_or(!execute);
+    let strict = args.get("strict").and_then(Value::as_bool).unwrap_or(false);
+    let peer = args.get("peer").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty());
+
+    use std::time::Instant;
+    let start = Instant::now();
+    let sutra = CompoundSutra::parse(codon)
+        .map_err(|e| format!("failed to parse sutra codon '{codon}': {e}"))?;
+    let parse_us = start.elapsed().as_micros();
+
+    let env = MudraEnvironment::probe(store_path);
+    let pre_result = sutra.validate_preconditions(&env);
+    if let Err(ref e) = pre_result {
+        if strict {
+            return Err(format!("sutra precondition validation failed: {e}"));
+        }
+    }
+
+    // Swarm mudra handoff via Wire Protocol 7369
+    if let Some(peer_addr) = peer {
+        let addr: std::net::SocketAddr = peer_addr
+            .parse()
+            .map_err(|e| format!("Invalid peer address '{peer_addr}': {e}"))?;
+        let allowlist_raw = std::env::var("WM_MESH_SYNC_ALLOWLIST").unwrap_or_default();
+        if !allowlist_raw.trim().is_empty() {
+            mesh_sync_peer_allowlist(&allowlist_raw, addr)?;
+        }
+        let (signing_key, _) = resolve_or_create_mesh_key(store_path)
+            .map_err(|e| format!("Failed to resolve mesh key: {e}"))?;
+        let mut client = MeshClient::connect(addr, "mcp-agent", signing_key)
+            .map_err(|e| format!("Mesh connection to {peer_addr} failed: {e}"))?;
+        let handoff_start = Instant::now();
+        let ack = client.send_gap_codon(&sutra.codon_str, "remote-node", 0)
+            .map_err(|e| format!("Mudra handoff to {peer_addr} failed: {e}"))?;
+        let handoff_us = handoff_start.elapsed().as_micros();
+
+        return Ok(json!({
+            "status": "success",
+            "mode": "remote_handoff",
+            "peer": peer_addr,
+            "codon": sutra.codon_str,
+            "taoist_formula": sutra.taoist_formula(),
+            "parse_latency_us": parse_us,
+            "handoff_latency_us": handoff_us,
+            "ack": {
+                "accepted": ack.accepted,
+                "responder_node": ack.responder_node,
+                "packet_type": ack.packet_type,
+                "details": ack.details,
+                "timestamp_ms": ack.timestamp_ms,
+            }
+        }));
+    }
+
+    let mut execution_receipt = None;
+    if !dry_run {
+        if readonly {
+            return Err("read-only mode: sutra execution refused by Article 1".to_string());
+        }
+        let vault_path = store_path.join("vault.jsonl");
+        let mut vault = wm_gen3_core::bicameral::GeneseedVault::load_or_init(&vault_path);
+        substrate.set_intake_authority(RatifiedChannel::mint("wm-sutra-exec"));
+        match vault.execute_skeleton_cycle(&sutra.primary_skeleton_id, substrate) {
+            Ok(res) => {
+                let _ = vault.sync_to_file(&vault_path);
+                execution_receipt = Some(json!({
+                    "action_skeleton": res.skeleton_id,
+                    "latency_us": res.latency_us,
+                    "observed_utility": res.observed_utility,
+                    "new_rolling_utility": res.new_rolling_utility,
+                    "execution_count": res.execution_count,
+                    "status": res.status,
+                }));
+            }
+            Err(e) => {
+                return Err(format!("Execution of skeleton '{}' failed: {e}", sutra.primary_skeleton_id));
+            }
+        }
+    }
+
+    Ok(json!({
+        "status": "success",
+        "codon": sutra.codon_str,
+        "canonical_name": sutra.canonical_name,
+        "parse_latency_us": parse_us,
+        "preconditions_satisfied": pre_result.is_ok(),
+        "preconditions_error": pre_result.err().map(|e| e.to_string()),
+        "taoist_formula": sutra.taoist_formula(),
+        "alchemical_formula": sutra.alchemical_formula(),
+        "glyphs": sutra.glyphs.iter().map(|g| {
+            json!({
+                "glyph": g.as_char().to_string(),
+                "alchemical": g.alchemical_char().to_string(),
+                "pinyin": g.pinyin(),
+                "english": g.english(),
+                "taoist_seal": g.taoist_seal(),
+                "bound_skeleton": g.bound_skeleton_id(),
+            })
+        }).collect::<Vec<_>>(),
+        "alignment_scores": sutra.alignment_scores.iter().map(|(g, sim)| {
+            json!({
+                "glyph": g.as_char().to_string(),
+                "similarity": (sim * 10000.0).round() / 10000.0,
+            })
+        }).collect::<Vec<_>>(),
+        "kekkai_profile": {
+            "read_only_paths": sutra.kekkai_profile.read_only_paths,
+            "read_write_paths": sutra.kekkai_profile.read_write_paths,
+            "network_allowed": sutra.kekkai_profile.network_allowed,
+        },
+        "primary_skeleton_id": sutra.primary_skeleton_id,
+        "dry_run": dry_run,
+        "execution_receipt": execution_receipt,
+    }))
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /// Resolve a numeric u64 or UUID string ID to a numeric u64.
@@ -6087,6 +6524,10 @@ mod contract_truth_tests {
         "session.recall",
         "receipts.emit",
         "session.digest",
+        "sutra.cast",
+        "sutra.compile",
+        "sutra.canon",
+        "sutra.list",
     ];
 
     #[test]
@@ -6782,6 +7223,91 @@ mod honesty_behavior_tests {
         )
         .expect_err("unknown supersedes");
         assert!(err.contains("no such turn id"), "{err}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod sutra_mcp_tests {
+    use super::*;
+
+    #[test]
+    fn sutra_canon_and_list_surface() {
+        let canon = handle_sutra_canon(&json!({})).expect("sutra canon");
+        assert_eq!(canon["status"], "success");
+        assert_eq!(canon["count"], 12);
+        let items = canon["canon"].as_array().expect("canon array");
+        assert_eq!(items.len(), 12);
+        assert_eq!(items[0]["char"], "證");
+        assert_eq!(items[0]["alchemical"], "🜅");
+
+        let list = handle_sutra_list(&json!({})).expect("sutra list");
+        assert_eq!(list["status"], "success");
+        let mudras = list["canonical_mudras"].as_array().expect("mudras array");
+        assert!(!mudras.is_empty());
+        assert_eq!(mudras[0]["name"], "The Shipwright's Codon");
+    }
+
+    #[test]
+    fn sutra_compile_and_cast_dispatch() {
+        let dir = std::env::temp_dir().join(format!("wm-sutra-test-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("open substrate");
+
+        // 1. sutra.compile
+        let compiled = handle_sutra_compile(&json!({"query": "verify and mirror substrate"}))
+            .expect("compile sutra");
+        assert_eq!(compiled["status"], "success");
+        assert!(compiled["compiled_codon"].as_str().is_some());
+        assert!(compiled["taoist_formula"].as_str().is_some());
+
+        // 2. sutra.cast dry-run
+        let cast = handle_sutra_cast(
+            &json!({"codon": "觀 證 行", "dry_run": true}),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("cast dry-run");
+        assert_eq!(cast["status"], "success");
+        assert_eq!(cast["dry_run"], true);
+        assert_eq!(cast["preconditions_satisfied"], true);
+        assert_eq!(cast["primary_skeleton_id"], "skel-verify-commit");
+
+        // 3. execute via wm router thought
+        let routed = handle_wm_router(
+            &json!({"thought": "sutra 觀 證 行"}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect("thought routed sutra cast");
+        assert_eq!(routed["status"], "success");
+
+        // 4. execute via wm router action
+        let action_routed = handle_wm_router(
+            &json!({"action": "sutra_canon"}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect("action routed sutra canon");
+        assert_eq!(action_routed["status"], "success");
+        assert_eq!(action_routed["count"], 12);
+
+        // 5. contract honesty: refuse unknown argument
+        let err = handle_sutra_cast(
+            &json!({"codon": "觀 證 行", "unknown_bogus_arg": 123}),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect_err("refuse unknown argument");
+        assert!(err.contains("refuses unknown argument 'unknown_bogus_arg'"), "{err}");
+
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

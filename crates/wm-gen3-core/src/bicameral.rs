@@ -979,16 +979,16 @@ impl GeneseedVault {
             crate::homeostasis::HomeostaticRegime::Conserving => {
                 // Conserving: ensure bioelectric_safe is registered for heavy skeletons
                 for skel in &mut self.skeletons {
-                    if !skel.deprecated && skel.tier == SkeletonTier::Heavy {
-                        if !skel
+                    if !skel.deprecated
+                        && skel.tier == SkeletonTier::Heavy
+                        && !skel
                             .expected_preconditions
                             .iter()
                             .any(|p| p == "bioelectric_safe")
-                        {
-                            skel.expected_preconditions
-                                .push("bioelectric_safe".to_string());
-                            adapted_skeletons += 1;
-                        }
+                    {
+                        skel.expected_preconditions
+                            .push("bioelectric_safe".to_string());
+                        adapted_skeletons += 1;
                     }
                 }
             }

@@ -31,7 +31,19 @@ pub struct SutraGlyphMeta {
     pub vector: Option<Vec<f32>>,
 }
 
-const CANONICAL_GLYPHS: &[(&str, &str, &str, &str, &str, &[&str], &[&str], bool)] = &[
+type CanonicalGlyphDef = (
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static [&'static str],
+    &'static [&'static str],
+    bool,
+);
+
+#[allow(clippy::type_complexity)]
+const CANONICAL_GLYPHS: &[CanonicalGlyphDef] = &[
     // 0: 證
     (
         "證",

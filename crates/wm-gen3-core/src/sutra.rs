@@ -375,7 +375,7 @@ impl SutraGlyph {
     pub fn vector(self) -> [f32; SUTRA_VECTOR_DIM] {
         let offset = 16 + (self.index() * SUTRA_VECTOR_DIM * 4);
         let mut vec = [0.0f32; SUTRA_VECTOR_DIM];
-        for i in 0..SUTRA_VECTOR_DIM {
+        for (i, item) in vec.iter_mut().enumerate() {
             let start = offset + (i * 4);
             let bytes = [
                 EMBEDDED_SUTRA_VECTORS[start],
@@ -383,7 +383,7 @@ impl SutraGlyph {
                 EMBEDDED_SUTRA_VECTORS[start + 2],
                 EMBEDDED_SUTRA_VECTORS[start + 3],
             ];
-            vec[i] = f32::from_le_bytes(bytes);
+            *item = f32::from_le_bytes(bytes);
         }
         vec
     }
@@ -646,6 +646,21 @@ pub const CANONICAL_MUDRAS: &[CanonicalMudraInfo] = &[
         requires_mesh_net: true,
     },
     CanonicalMudraInfo {
+        name: "The Fortress Gate Seal (Attested)",
+        glyphs: &[
+            SutraGlyph::Jie,
+            SutraGlyph::Xing,
+            SutraGlyph::Zheng,
+            SutraGlyph::Ying,
+        ],
+        taoist_formula: "金刚结界印 ──► 太上开天火印 ──► 两仪分形印 ──► 感应同频印",
+        description: "Defensive perimeter lockdown with transactional fire execution, dual-aspect proof, and swarm sync.",
+        primary_skeleton: "shipwright-cycle",
+        requires_store_write: true,
+        requires_landlock: true,
+        requires_mesh_net: true,
+    },
+    CanonicalMudraInfo {
         name: "The Wind-Thunder Fleet Pulse",
         glyphs: &[SutraGlyph::Ying, SutraGlyph::Guan, SutraGlyph::Xing],
         taoist_formula: "感应同频印 ──► 灵宝通真印 ──► 太上开天火印",
@@ -787,6 +802,12 @@ impl CompoundSutra {
                 SutraGlyph::Xing,
                 SutraGlyph::Jing,
                 SutraGlyph::Ying,
+            ]
+            | [
+                SutraGlyph::Jie,
+                SutraGlyph::Xing,
+                SutraGlyph::Zheng,
+                SutraGlyph::Ying,
             ] => Some("The Fortress Gate Seal (Kekkai · Action · Mirror · Swarm)".into()),
             [SutraGlyph::Ying, SutraGlyph::Guan, SutraGlyph::Xing]
             | [SutraGlyph::Ying, SutraGlyph::Guan] => {
@@ -920,26 +941,20 @@ impl CompoundSutra {
     ) -> Result<(), MudraValidationError> {
         for glyph in &self.glyphs {
             match glyph {
-                SutraGlyph::Xing => {
-                    if !env.store_writable {
-                        return Err(MudraValidationError::PreconditionFailed(
-                            "Store not writable for Action/Pulse (Xing)".into(),
-                        ));
-                    }
+                SutraGlyph::Xing if !env.store_writable => {
+                    return Err(MudraValidationError::PreconditionFailed(
+                        "Store not writable for Action/Pulse (Xing)".into(),
+                    ));
                 }
-                SutraGlyph::Jie => {
-                    if !env.landlock_supported {
-                        return Err(MudraValidationError::PreconditionFailed(
-                            "Landlock LSM unavailable for Kekkai (Jie)".into(),
-                        ));
-                    }
+                SutraGlyph::Jie if !env.landlock_supported => {
+                    return Err(MudraValidationError::PreconditionFailed(
+                        "Landlock LSM unavailable for Kekkai (Jie)".into(),
+                    ));
                 }
-                SutraGlyph::Ying => {
-                    if !env.mesh_peer_online && !env.network_egress_allowed {
-                        return Err(MudraValidationError::PreconditionFailed(
-                            "Network/Mesh unavailable for Gan Ying (Ying)".into(),
-                        ));
-                    }
+                SutraGlyph::Ying if !env.mesh_peer_online && !env.network_egress_allowed => {
+                    return Err(MudraValidationError::PreconditionFailed(
+                        "Network/Mesh unavailable for Gan Ying (Ying)".into(),
+                    ));
                 }
                 _ => {}
             }
