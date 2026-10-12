@@ -48,15 +48,18 @@ impl TripartiteRouter {
         // 1. System 0: Direct Logoglyphic Canon Detection (<1 µs)
         for glyph in SutraGlyph::ALL {
             let c = glyph.as_char();
-            if trimmed.contains(c) {
+            let a = glyph.alchemical_char();
+            if trimmed.contains(c) || trimmed.contains(a) {
+                let matched = if trimmed.contains(c) { c } else { a };
                 return RoutingDecision {
                     tier: CognitiveTier::System0Sutra,
-                    selected_glyph: Some(c),
+                    selected_glyph: Some(matched),
                     skeleton_id: Some(glyph.bound_skeleton_id().to_string()),
                     confidence: 0.99,
                     rationale: format!(
-                        "Exact canonical logoglyph '{}' matched; dispatching System 0 organelle reflex",
-                        c
+                        "Exact canonical logoglyph '{}' ({}) matched; dispatching System 0 organelle reflex",
+                        matched,
+                        glyph.taoist_seal()
                     ),
                     routing_latency_ns: t0.elapsed().as_nanos() as u64,
                 };

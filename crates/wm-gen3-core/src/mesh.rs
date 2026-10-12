@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::mandala::ContinuityReceipt05;
+use crate::sutra::CompoundSutra;
 
 use crate::bicameral::{ActionSkeleton, GeneseedVault};
 use crate::cladistics::{
@@ -880,9 +881,7 @@ impl GapJunctionCodonPacket {
 
     pub fn verify(&self) -> Result<(), MeshError> {
         if self.nonce == [0u8; 32] {
-            return Err(MeshError::Unauthorized(
-                "gap_codon has zero nonce".to_string(),
-            ));
+            return Err(MeshError::Unauthorized("gap_codon has zero nonce".to_string()));
         }
         let sig_bytes: [u8; 64] = self.signature.as_slice().try_into().map_err(|_| {
             MeshError::InvalidSignature("gap_codon signature length != 64 bytes".to_string())
@@ -953,9 +952,7 @@ impl GapJunctionTuplePacket {
 
     pub fn verify(&self) -> Result<(), MeshError> {
         if self.nonce == [0u8; 32] {
-            return Err(MeshError::Unauthorized(
-                "gap_tuple has zero nonce".to_string(),
-            ));
+            return Err(MeshError::Unauthorized("gap_tuple has zero nonce".to_string()));
         }
         let sig_bytes: [u8; 64] = self.signature.as_slice().try_into().map_err(|_| {
             MeshError::InvalidSignature("gap_tuple signature length != 64 bytes".to_string())
@@ -1030,9 +1027,7 @@ impl BioelectricTelemetryPacket {
 
     pub fn verify(&self) -> Result<(), MeshError> {
         if self.nonce == [0u8; 32] {
-            return Err(MeshError::Unauthorized(
-                "gap_telemetry has zero nonce".to_string(),
-            ));
+            return Err(MeshError::Unauthorized("gap_telemetry has zero nonce".to_string()));
         }
         let sig_bytes: [u8; 64] = self.signature.as_slice().try_into().map_err(|_| {
             MeshError::InvalidSignature("gap_telemetry signature length != 64 bytes".to_string())
@@ -1041,9 +1036,7 @@ impl BioelectricTelemetryPacket {
             .map_err(|e| MeshError::InvalidSignature(format!("invalid sender key: {e}")))?;
         verifying_key
             .verify(&self.signing_payload(), &Signature::from_bytes(&sig_bytes))
-            .map_err(|e| {
-                MeshError::InvalidSignature(format!("gap_telemetry verification failed: {e}"))
-            })
+            .map_err(|e| MeshError::InvalidSignature(format!("gap_telemetry verification failed: {e}")))
     }
 }
 
@@ -1987,17 +1980,21 @@ impl MeshServer {
                                                 );
                                             }
                                         } else {
-                                            let ack =
-                                                MeshEnvelope::GapJunctionAck(GapJunctionAck {
-                                                    responder_node: node_id_inner.clone(),
-                                                    packet_type: "codon".to_string(),
-                                                    accepted: true,
-                                                    details: format!(
-                                                        "Codon '{}' accepted across gap junction",
-                                                        pkt.codon
-                                                    ),
-                                                    timestamp_ms: now_millis(),
-                                                });
+                                            let details = match CompoundSutra::parse(&pkt.codon) {
+                                                Ok(sutra) => {
+                                                    let name = sutra.canonical_name.clone().unwrap_or_else(|| "Custom Mudra".into());
+                                                    let formula = sutra.taoist_formula();
+                                                    format!("Mudra {} [{}] decoded; formula: {}", sutra.codon_str, name, formula)
+                                                }
+                                                Err(e) => format!("Codon '{}' accepted (unparsed: {})", pkt.codon, e),
+                                            };
+                                            let ack = MeshEnvelope::GapJunctionAck(GapJunctionAck {
+                                                responder_node: node_id_inner.clone(),
+                                                packet_type: "codon".to_string(),
+                                                accepted: true,
+                                                details,
+                                                timestamp_ms: now_millis(),
+                                            });
                                             if let Ok(resp_bytes) = serde_json::to_vec(&ack) {
                                                 let _ = PhysicalFrameCodec::write_frame(
                                                     &mut stream,
@@ -2019,17 +2016,13 @@ impl MeshServer {
                                                 );
                                             }
                                         } else {
-                                            let ack =
-                                                MeshEnvelope::GapJunctionAck(GapJunctionAck {
-                                                    responder_node: node_id_inner.clone(),
-                                                    packet_type: "tuple".to_string(),
-                                                    accepted: true,
-                                                    details: format!(
-                                                        "Tuple '{}' ingested across gap junction",
-                                                        pkt.key
-                                                    ),
-                                                    timestamp_ms: now_millis(),
-                                                });
+                                            let ack = MeshEnvelope::GapJunctionAck(GapJunctionAck {
+                                                responder_node: node_id_inner.clone(),
+                                                packet_type: "tuple".to_string(),
+                                                accepted: true,
+                                                details: format!("Tuple '{}' ingested across gap junction", pkt.key),
+                                                timestamp_ms: now_millis(),
+                                            });
                                             if let Ok(resp_bytes) = serde_json::to_vec(&ack) {
                                                 let _ = PhysicalFrameCodec::write_frame(
                                                     &mut stream,
@@ -2051,18 +2044,13 @@ impl MeshServer {
                                                 );
                                             }
                                         } else {
-                                            let ack = MeshEnvelope::GapJunctionAck(
-                                                GapJunctionAck {
-                                                    responder_node: node_id_inner.clone(),
-                                                    packet_type: "telemetry".to_string(),
-                                                    accepted: true,
-                                                    details: format!(
-                                                        "Bioelectric telemetry accepted: V_rest={:.1}mV regime={}",
-                                                        pkt.v_rest_mv, pkt.regime
-                                                    ),
-                                                    timestamp_ms: now_millis(),
-                                                },
-                                            );
+                                            let ack = MeshEnvelope::GapJunctionAck(GapJunctionAck {
+                                                responder_node: node_id_inner.clone(),
+                                                packet_type: "telemetry".to_string(),
+                                                accepted: true,
+                                                details: format!("Bioelectric telemetry accepted: V_rest={:.1}mV regime={}", pkt.v_rest_mv, pkt.regime),
+                                                timestamp_ms: now_millis(),
+                                            });
                                             if let Ok(resp_bytes) = serde_json::to_vec(&ack) {
                                                 let _ = PhysicalFrameCodec::write_frame(
                                                     &mut stream,
@@ -3391,31 +3379,28 @@ mod tests {
         let mut server = MeshServer::new("server-node", server_key, dir.path());
         let addr = server.listen(0, "127.0.0.1").expect("start server");
 
-        let mut client =
-            MeshClient::connect(addr, "client-node", client_key).expect("client connect");
+        let mut client = MeshClient::connect(
+            addr,
+            "client-node",
+            client_key,
+        ).expect("client connect");
 
         let hs = client.handshake(0, 0).expect("handshake");
         assert_eq!(hs.node_id, "server-node");
 
         // 1. Send Logoglyphic Codon across Gap Junction
-        let codon_ack = client
-            .send_gap_codon("行", "server-node", 409827)
-            .expect("send codon");
+        let codon_ack = client.send_gap_codon("行", "server-node", 409827).expect("send codon");
         assert!(codon_ack.accepted);
         assert_eq!(codon_ack.packet_type, "codon");
         assert!(codon_ack.details.contains("行"));
 
         // 2. Send Linda Tuple across Gap Junction
-        let tuple_ack = client
-            .send_gap_tuple("sutra.state", b"active_codon", 10000)
-            .expect("send tuple");
+        let tuple_ack = client.send_gap_tuple("sutra.state", b"active_codon", 10000).expect("send tuple");
         assert!(tuple_ack.accepted);
         assert_eq!(tuple_ack.packet_type, "tuple");
 
         // 3. Send Bioelectric Telemetry across Gap Junction
-        let bio_ack = client
-            .send_bioelectric_telemetry(-62.5, "Nominal", 41.2, Some(90.0), 40.0)
-            .expect("send telemetry");
+        let bio_ack = client.send_bioelectric_telemetry(-62.5, "Nominal", 41.2, Some(90.0), 40.0).expect("send telemetry");
         assert!(bio_ack.accepted);
         assert_eq!(bio_ack.packet_type, "telemetry");
         assert!(bio_ack.details.contains("-62.5mV"));
@@ -3423,3 +3408,4 @@ mod tests {
         server.stop();
     }
 }
+

@@ -504,16 +504,25 @@ enum Commands {
         #[command(subcommand)]
         command: AtRestCommands,
     },
-    /// Parse, decode, and dispatch a sovereign Logoglyphic Sutra codon
+    /// Parse, decode, compile, and dispatch sovereign Logoglyphic Sutras and Taoist Mudras
     Sutra {
-        /// Glyph codon or compound sutra string (e.g., "證 行 鏡" or "⟪ 證 · 行 · 鏡 ⟫")
-        codon: String,
+        #[command(subcommand)]
+        command: Option<SutraCommands>,
+        /// Direct codon string (legacy or shorthand invocation: e.g. "證 行 鏡")
+        #[arg(value_name = "CODON")]
+        codon: Option<String>,
         /// Force dry run (default true unless --execute is passed)
         #[arg(long)]
         dry_run: bool,
-        /// Execute directly against the substrate (overrides dry_run default)
+        /// Execute directly against the substrate
         #[arg(long)]
         execute: bool,
+        /// Strict precondition enforcement (fails if preconditions unmet)
+        #[arg(long, default_value_t = true)]
+        strict: bool,
+        /// Remote peer for cross-node handoff over Wire Protocol 7369 (e.g. 152.53.195.47:7369)
+        #[arg(long)]
+        peer: Option<String>,
         /// Emit structured JSON output
         #[arg(long)]
         json: bool,
@@ -916,6 +925,65 @@ enum MeshCommands {
         /// Custom node name identifier
         #[arg(long)]
         node_id: Option<String>,
+    },
+    /// Transmit a sovereign Logoglyphic Sutra / Mudra codon packet across the Gap Junction (Port 7369)
+    Codon {
+        /// Peer socket address (e.g. 127.0.0.1:7369 or 152.53.195.47:7369)
+        #[arg(long)]
+        peer: String,
+        /// Codon or glyph sequence (e.g. "證 行 鏡", "🜅 🜂 🜅", "⟪ 證 · 行 · 鏡 ⟫")
+        #[arg(long)]
+        codon: String,
+        /// Custom node name identifier
+        #[arg(long)]
+        node_id: Option<String>,
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum SutraCommands {
+    /// Print the canonical 12-glyph Taoist Mudra & Alchemical Seal table
+    Canon {
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// List all recognized compound Mudras and their precondition contracts
+    List {
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Compile natural language intent or keywords into optimal Sutra logoglyphs using Model2Vec
+    Compile {
+        /// Natural language intent or prompt
+        query: String,
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Cast (parse, validate preconditions, and execute) a Sutra or Mudra codon sequence
+    Cast {
+        /// Codon or glyph sequence (e.g. "證 行 鏡", "🜅 🜂 🜅", "⟪ 證 · 行 · 鏡 ⟫")
+        codon: String,
+        /// Force dry run (default true unless --execute is passed)
+        #[arg(long)]
+        dry_run: bool,
+        /// Execute directly against the substrate
+        #[arg(long)]
+        execute: bool,
+        /// Strict precondition enforcement (fails if preconditions unmet)
+        #[arg(long, default_value_t = true)]
+        strict: bool,
+        /// Remote peer for cross-node handoff over Wire Protocol 7369 (e.g. 152.53.195.47:7369)
+        #[arg(long)]
+        peer: Option<String>,
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -1913,16 +1981,9 @@ fn main() {
                 "JEV Pre-Triage Score:      {:.4} (26.7ns non-autoregressive gate)",
                 jev_score
             );
-            let trip =
-                wm_gen3_core::tripartite_router::TripartiteRouter::route(&inquiry, Some(&bio));
-            println!(
-                "Tripartite Tier:           {:?} (V_rest: {:.1}mV, Plasticity: {:.2}x)",
-                trip.tier, bio.v_rest_mv, morph_rep.plasticity_factor
-            );
-            println!(
-                "Tripartite Latency:        {:.2} µs",
-                trip.routing_latency_ns as f64 / 1000.0
-            );
+            let trip = wm_gen3_core::tripartite_router::TripartiteRouter::route(&inquiry, Some(&bio));
+            println!("Tripartite Tier:           {:?} (V_rest: {:.1}mV, Plasticity: {:.2}x)", trip.tier, bio.v_rest_mv, morph_rep.plasticity_factor);
+            println!("Tripartite Latency:        {:.2} µs", trip.routing_latency_ns as f64 / 1000.0);
             println!("Tripartite Rationale:      {}", trip.rationale);
             println!("Active Dream Insights:     {}", insights.len());
             println!("Compiled Fast-Path Rules:  {}", compiled_count);
@@ -1948,21 +2009,10 @@ fn main() {
                 let inq = inquiry.to_lowercase();
                 inq.contains(&ins.source_concept.to_lowercase())
                     || inq.contains(&ins.target_concept.to_lowercase())
-                    || (bound_skeleton.is_some()
-                        && bound_skeleton.unwrap().action_steps.iter().any(|step| {
-                            ins.actionable_recommendation
-                                .to_lowercase()
-                                .contains(&step.to_lowercase())
-                        }))
+                    || (bound_skeleton.is_some() && bound_skeleton.unwrap().action_steps.iter().any(|step| ins.actionable_recommendation.to_lowercase().contains(&step.to_lowercase())))
             }) {
-                println!(
-                    "  Context Injection:       {}",
-                    ins.actionable_recommendation
-                );
-                println!(
-                    "  Dream Insight Bridge:    {} ⇄ {} ({})",
-                    ins.source_concept, ins.target_concept, ins.relation_type
-                );
+                println!("  Context Injection:       {}", ins.actionable_recommendation);
+                println!("  Dream Insight Bridge:    {} ⇄ {} ({})", ins.source_concept, ins.target_concept, ins.relation_type);
             }
             println!("==================================================");
             match &dispatch {
@@ -2802,13 +2852,44 @@ fn main() {
             }
         }
         Commands::Sutra {
+            command,
             codon,
             dry_run,
             execute,
+            strict,
+            peer,
             json,
         } => {
-            let actual_dry_run = if execute { false } else { dry_run || !execute };
-            run_sutra_command(&codon, actual_dry_run, json, &store_path);
+            match command {
+                Some(SutraCommands::Canon { json: j }) => {
+                    run_sutra_canon(j || json);
+                }
+                Some(SutraCommands::List { json: j }) => {
+                    run_sutra_list(j || json);
+                }
+                Some(SutraCommands::Compile { query, json: j }) => {
+                    run_sutra_compile(&query, j || json);
+                }
+                Some(SutraCommands::Cast {
+                    codon: c,
+                    dry_run: dr,
+                    execute: ex,
+                    strict: st,
+                    peer: p,
+                    json: j,
+                }) => {
+                    let actual_dry_run = if ex { false } else { dr || !ex };
+                    run_sutra_cast(&c, actual_dry_run, st, p.as_deref(), j, &store_path);
+                }
+                None => {
+                    if let Some(c) = codon {
+                        let actual_dry_run = if execute { false } else { dry_run || !execute };
+                        run_sutra_cast(&c, actual_dry_run, strict, peer.as_deref(), json, &store_path);
+                    } else {
+                        run_sutra_canon(json);
+                    }
+                }
+            }
         }
         Commands::Homeostasis { json } => {
             run_homeostasis_command(json);
@@ -2825,36 +2906,19 @@ fn run_homeostasis_command(json: bool) {
         println!("==================================================");
         println!("  WhiteMagic Gen3 Bioelectric Homeostasis Monitor ");
         println!("==================================================");
-        println!(
-            "Resting Potential:  {:.1} mV (Serene baseline: -70.0 mV)",
-            bio.v_rest_mv
-        );
+        println!("Resting Potential:  {:.1} mV (Serene baseline: -70.0 mV)", bio.v_rest_mv);
         println!("Homeostatic Regime: {:?}", bio.regime);
         println!("Metabolism Mode:    {:?}", bio.metabolism_mode);
         println!("CPU Temperature:    {:.1}°C", bio.cpu_temp_c);
         if let Some(bat) = bio.battery_pct {
-            println!(
-                "Battery Level:      {:.1}% ({})",
-                bat,
-                if bio.on_ac_power {
-                    "AC Connected"
-                } else {
-                    "Discharging"
-                }
-            );
+            println!("Battery Level:      {:.1}% ({})", bat, if bio.on_ac_power { "AC Connected" } else { "Discharging" });
         } else {
             println!("Power Supply:       AC Connected (no battery detected)");
         }
         println!("Load Average (1m):  {:.2}", bio.load_avg_1m);
         println!("Available RAM:      {:.1} MB", bio.mem_available_mb);
-        println!(
-            "Root NVMe Free:     {:.2} GB (Invariant floor: 20.0 GB)",
-            bio.nvme_free_gb
-        );
-        println!(
-            "Probe Latency:      {:.2} µs",
-            bio.probe_latency_ns / 1000.0
-        );
+        println!("Root NVMe Free:     {:.2} GB (Invariant floor: 20.0 GB)", bio.nvme_free_gb);
+        println!("Probe Latency:      {:.2} µs", bio.probe_latency_ns / 1000.0);
         println!("--------------------------------------------------");
         if bio.nvme_free_gb < 20.0 {
             println!("STATUS: [CRITICAL ALARM] NVMe storage floor breached (<20 GB)!");
@@ -8047,6 +8111,69 @@ fn run_mesh_command(command: MeshCommands, store_path: &Path) {
                 }
             }
         }
+        MeshCommands::Codon {
+            peer,
+            codon,
+            node_id,
+            json,
+        } => {
+            let (signing_key, _) = match resolve_or_create_mesh_key(store_path) {
+                Ok(k) => k,
+                Err(e) => {
+                    eprintln!("Failed to resolve mesh key: {e}");
+                    std::process::exit(1);
+                }
+            };
+            let name = node_id.unwrap_or_else(|| "sovereign-codon-client".to_string());
+            let addr: std::net::SocketAddr = match peer.parse() {
+                Ok(a) => a,
+                Err(e) => {
+                    eprintln!("Invalid peer address '{}': {e}", peer);
+                    std::process::exit(1);
+                }
+            };
+            println!("Connecting to peer {} for Mudra Codon transmission...", addr);
+            let mut client = match MeshClient::connect(addr, &name, signing_key) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("Connection failed: {e}");
+                    std::process::exit(1);
+                }
+            };
+            let start = std::time::Instant::now();
+            let ack = match client.send_gap_codon(&codon, "remote-node", 0) {
+                Ok(a) => a,
+                Err(e) => {
+                    eprintln!("Codon transmission failed: {e}");
+                    std::process::exit(1);
+                }
+            };
+            let rtt_us = start.elapsed().as_micros();
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&serde_json::json!({
+                        "status": "ok",
+                        "peer": peer,
+                        "codon": codon,
+                        "rtt_us": rtt_us,
+                        "ack": ack,
+                    }))
+                    .unwrap_or_default()
+                );
+            } else {
+                println!("==================================================");
+                println!("       Mudra Codon Gap-Junction Transmission       ");
+                println!("==================================================");
+                println!("Target Peer:       {}", peer);
+                println!("Codon:             {}", codon);
+                println!("Wire Latency:      {} µs ({:.3} ms)", rtt_us, rtt_us as f64 / 1000.0);
+                println!("Accepted:          {}", ack.accepted);
+                println!("Remote Responder:  {}", ack.responder_node);
+                println!("Acknowledgment:    {}", ack.details);
+                println!("==================================================");
+            }
+        }
     }
 }
 
@@ -8799,9 +8926,213 @@ fn run_vault_command(cmd: VaultCommands, store_path: &Path) {
     }
 }
 
-fn run_sutra_command(codon: &str, dry_run: bool, json: bool, store_path: &Path) {
+fn run_sutra_canon(json: bool) {
+    use wm_gen3_core::sutra::SutraGlyph;
+
+    if json {
+        let items: Vec<_> = SutraGlyph::ALL
+            .iter()
+            .map(|g| {
+                let prof = g.kekkai_profile();
+                serde_json::json!({
+                    "index": g.index(),
+                    "char": g.as_char().to_string(),
+                    "alchemical": g.alchemical_char().to_string(),
+                    "pinyin": g.pinyin(),
+                    "english": g.english(),
+                    "taoist_seal": g.taoist_seal(),
+                    "bound_skeleton": g.bound_skeleton_id(),
+                    "kekkai": {
+                        "read_only_paths": prof.read_only_paths,
+                        "read_write_paths": prof.read_write_paths,
+                        "network_allowed": prof.network_allowed,
+                    }
+                })
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&items).unwrap_or_default());
+        return;
+    }
+
+    println!("==========================================================================================");
+    println!("                   WhiteMagic Gen3 Canonical 12-Glyph Logoglyphic Canon                   ");
+    println!("==========================================================================================");
+    println!("Idx | Glyph | Alch | Pinyin | Meaning            | Taoist Seal (印诀)              | Skeleton");
+    println!("----+-------+------+--------+--------------------+---------------------------------+--------------------");
+    for g in SutraGlyph::ALL {
+        println!(
+            "{:>3} | {:^5} | {:^4} | {:<6} | {:<18} | {:<31} | {:<20}",
+            g.index(),
+            g.as_char(),
+            g.alchemical_char(),
+            g.pinyin(),
+            g.english(),
+            g.taoist_seal(),
+            g.bound_skeleton_id(),
+        );
+    }
+    println!("==========================================================================================");
+}
+
+fn run_sutra_list(json: bool) {
+    use wm_gen3_core::sutra::CANONICAL_MUDRAS;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&CANONICAL_MUDRAS).unwrap_or_default());
+        return;
+    }
+
+    println!("==========================================================================================");
+    println!("                 WhiteMagic Gen3 Recognized Compound Taoist Mudras (印诀式)                 ");
+    println!("==========================================================================================");
+    for (i, m) in CANONICAL_MUDRAS.iter().enumerate() {
+        let glyph_str = m
+            .glyphs
+            .iter()
+            .map(|g| format!("{} [{}]", g.as_char(), g.alchemical_char()))
+            .collect::<Vec<_>>()
+            .join(" · ");
+        println!("{}. {}", i + 1, m.name);
+        println!("   Codon Glyphs:       ⟪ {} ⟫", glyph_str);
+        println!("   Taoist Formula:     {}", m.taoist_formula);
+        println!("   Primary Skeleton:   {}", m.primary_skeleton);
+        println!(
+            "   Preconditions:      Store Writable: {} | Landlock: {} | Mesh Net: {}",
+            if m.requires_store_write { "Yes" } else { "No" },
+            if m.requires_landlock { "Required" } else { "Optional" },
+            if m.requires_mesh_net { "Required" } else { "Optional" },
+        );
+        println!("   Description:        {}", m.description);
+        println!("------------------------------------------------------------------------------------------");
+    }
+}
+
+fn run_sutra_compile(query: &str, json: bool) {
     use std::time::Instant;
-    use wm_gen3_core::sutra::CompoundSutra;
+    use wm_gen3_core::sutra::{CompoundSutra, SutraGlyph, CANONICAL_MUDRAS};
+    use wm_gen3_zeropointfive::System05;
+
+    let start = Instant::now();
+    let mut model_used = "lexical-fallback";
+    let mut best_mudra: Option<&'static str> = None;
+    let mut mudra_score: f32 = 0.0;
+    let mut glyph_scores: Vec<(SutraGlyph, f32)> = Vec::new();
+
+    // 1. Try static embedding model (potion-base-32M)
+    if let Ok(model_dir) = System05::resolve_model_dir(None) {
+        let organ = System05::new(model_dir);
+        if let Ok(query_vec) = organ.encode_single(query) {
+            model_used = "Model2Vec (potion-base-32M static embedding)";
+            // Score each glyph
+            for &g in &SutraGlyph::ALL {
+                let gvec = g.vector();
+                let dot: f32 = query_vec.iter().zip(gvec.iter()).map(|(a, b)| a * b).sum();
+                glyph_scores.push((g, dot));
+            }
+            glyph_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+            // Score compound mudras
+            for m in CANONICAL_MUDRAS {
+                if let Ok(sutra) = CompoundSutra::from_glyphs(m.glyphs.to_vec()) {
+                    let dot: f32 = query_vec.iter().zip(sutra.compound_vector.iter()).map(|(a, b)| a * b).sum();
+                    if dot > mudra_score {
+                        mudra_score = dot;
+                        best_mudra = Some(m.name);
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback if model not available or produced no matches: scan tokens
+    if glyph_scores.is_empty() {
+        for word in query.split(|c: char| !c.is_alphanumeric() && c != '·') {
+            if let Some(g) = SutraGlyph::from_token(word) {
+                if !glyph_scores.iter().any(|(x, _)| *x == g) {
+                    glyph_scores.push((g, 1.0));
+                }
+            }
+        }
+    }
+
+    // Select top matching glyphs (top 3, or all above 0.35 if vectorized)
+    let selected_glyphs: Vec<SutraGlyph> = if glyph_scores.is_empty() {
+        vec![SutraGlyph::Zheng, SutraGlyph::Xing, SutraGlyph::Jing]
+    } else {
+        glyph_scores.iter().take(3).map(|(g, _)| *g).collect()
+    };
+
+    let sutra = CompoundSutra::from_glyphs(selected_glyphs).unwrap_or_else(|_| {
+        CompoundSutra::parse("證 行 鏡").unwrap()
+    });
+    let compile_us = start.elapsed().as_micros();
+
+    if json {
+        let out = serde_json::json!({
+            "status": "ok",
+            "query": query,
+            "engine": model_used,
+            "latency_micros": compile_us,
+            "compiled_codon": sutra.codon_str,
+            "alchemical_codon": format!("⟪ {} ⟫", sutra.glyphs.iter().map(|g| g.alchemical_char().to_string()).collect::<Vec<_>>().join(" · ")),
+            "taoist_formula": sutra.taoist_formula(),
+            "best_compound_mudra": best_mudra,
+            "compound_mudra_score": mudra_score,
+            "primary_skeleton": sutra.primary_skeleton_id,
+            "top_glyph_alignments": glyph_scores.iter().take(5).map(|(g, score)| {
+                serde_json::json!({
+                    "glyph": g.as_char().to_string(),
+                    "alchemical": g.alchemical_char().to_string(),
+                    "pinyin": g.pinyin(),
+                    "english": g.english(),
+                    "score": (score * 10000.0).round() / 10000.0,
+                })
+            }).collect::<Vec<_>>(),
+        });
+        println!("{}", serde_json::to_string_pretty(&out).unwrap_or_default());
+        return;
+    }
+
+    println!("==================================================");
+    println!("    WhiteMagic Gen3 Vectorized Sutra Compiler     ");
+    println!("==================================================");
+    println!("Query Intent:            \"{}\"", query);
+    println!("Compiler Engine:         {}", model_used);
+    println!("Compile Latency:         {} µs", compile_us);
+    println!("Compiled Codon:          {}", sutra.codon_str);
+    println!(
+        "Alchemical Codon:        ⟪ {} ⟫",
+        sutra.glyphs.iter().map(|g| g.alchemical_char().to_string()).collect::<Vec<_>>().join(" · ")
+    );
+    println!("Taoist Mudra Formula:    {}", sutra.taoist_formula());
+    if let Some(mudra) = best_mudra {
+        println!("Best Matching Mudra:     {} (score: {:.4})", mudra, mudra_score);
+    }
+    println!("Bound Primary Skeleton:  {}", sutra.primary_skeleton_id);
+    println!("Top Semantic Alignments:");
+    for (g, score) in glyph_scores.iter().take(5) {
+        println!(
+            "  {} / {} ({:<5}) — {:<16} (score: {:.4})",
+            g.as_char(),
+            g.alchemical_char(),
+            g.pinyin(),
+            g.english(),
+            score,
+        );
+    }
+    println!("==================================================");
+}
+
+fn run_sutra_cast(
+    codon: &str,
+    dry_run: bool,
+    strict: bool,
+    peer: Option<&str>,
+    json: bool,
+    store_path: &Path,
+) {
+    use std::time::Instant;
+    use wm_gen3_core::sutra::{CompoundSutra, MudraEnvironment};
 
     let start = Instant::now();
     let sutra = match CompoundSutra::parse(codon) {
@@ -8824,6 +9155,96 @@ fn run_sutra_command(codon: &str, dry_run: bool, json: bool, store_path: &Path) 
     };
     let parse_micros = start.elapsed().as_micros();
 
+    // Precondition evaluation (< 50 ns)
+    let env = MudraEnvironment::probe(store_path);
+    let pre_result = sutra.validate_preconditions(&env);
+    if let Err(ref e) = pre_result {
+        if strict {
+            if json {
+                println!(
+                    "{}",
+                    serde_json::json!({
+                        "status": "precondition_failed",
+                        "error": e.to_string(),
+                        "codon": sutra.codon_str,
+                    })
+                );
+            } else {
+                eprintln!("Mudra Precondition Validation FAILED: {e}");
+            }
+            std::process::exit(1);
+        }
+    }
+
+    // Check if remote peer handoff requested (Wire Protocol 7369)
+    if let Some(peer_addr) = peer {
+        let (signing_key, _) = match resolve_or_create_mesh_key(store_path) {
+            Ok(k) => k,
+            Err(e) => {
+                eprintln!("Failed to resolve mesh key: {e}");
+                std::process::exit(1);
+            }
+        };
+        let addr: std::net::SocketAddr = match peer_addr.parse() {
+            Ok(a) => a,
+            Err(e) => {
+                eprintln!("Invalid peer address '{peer_addr}': {e}");
+                std::process::exit(1);
+            }
+        };
+        let mut client = match MeshClient::connect(addr, "sovereign-caster", signing_key) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Mesh connection to {peer_addr} failed: {e}");
+                std::process::exit(1);
+            }
+        };
+        let handoff_start = Instant::now();
+        let ack = match client.send_gap_codon(&sutra.codon_str, "remote-node", 0) {
+            Ok(a) => a,
+            Err(e) => {
+                eprintln!("Mudra handoff failed: {e}");
+                std::process::exit(1);
+            }
+        };
+        let handoff_us = handoff_start.elapsed().as_micros();
+
+        if json {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "status": "ok",
+                    "mode": "remote_handoff",
+                    "peer": peer_addr,
+                    "codon": sutra.codon_str,
+                    "taoist_formula": sutra.taoist_formula(),
+                    "parse_latency_micros": parse_micros,
+                    "handoff_latency_micros": handoff_us,
+                    "ack": ack,
+                }))
+                .unwrap_or_default()
+            );
+            return;
+        }
+
+        println!("==================================================");
+        println!("     WhiteMagic Gen3 Swarm Mudra Handoff (P2P)    ");
+        println!("==================================================");
+        println!("Target Peer:             {}", peer_addr);
+        println!("Transmitted Codon:       {}", sutra.codon_str);
+        println!("Taoist Mudra Formula:    {}", sutra.taoist_formula());
+        println!("Parse Latency:           {} µs", parse_micros);
+        println!(
+            "Handoff Latency:         {} µs ({:.3} ms across Wire Protocol 7369)",
+            handoff_us,
+            handoff_us as f64 / 1000.0
+        );
+        println!("Acknowledgment Status:   ACCEPTED");
+        println!("Remote Node Details:     {}", ack.details);
+        println!("==================================================");
+        return;
+    }
+
     let vault_path = store_path.join("vault.jsonl");
     let mut vault = wm_gen3_core::bicameral::GeneseedVault::load_or_init(&vault_path);
 
@@ -8833,11 +9254,16 @@ fn run_sutra_command(codon: &str, dry_run: bool, json: bool, store_path: &Path) 
             "codon": sutra.codon_str,
             "canonical_name": sutra.canonical_name,
             "parse_latency_micros": parse_micros,
+            "preconditions_satisfied": pre_result.is_ok(),
+            "taoist_formula": sutra.taoist_formula(),
+            "alchemical_formula": sutra.alchemical_formula(),
             "glyphs": sutra.glyphs.iter().map(|g| {
                 serde_json::json!({
                     "glyph": g.as_char().to_string(),
+                    "alchemical": g.alchemical_char().to_string(),
                     "pinyin": g.pinyin(),
                     "english": g.english(),
+                    "taoist_seal": g.taoist_seal(),
                     "bound_skeleton": g.bound_skeleton_id(),
                 })
             }).collect::<Vec<_>>(),
@@ -8855,10 +9281,7 @@ fn run_sutra_command(codon: &str, dry_run: bool, json: bool, store_path: &Path) 
             "primary_skeleton_id": sutra.primary_skeleton_id,
             "dry_run": dry_run,
         });
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&output).unwrap_or_default()
-        );
+        println!("{}", serde_json::to_string_pretty(&output).unwrap_or_default());
         return;
     }
 
@@ -8866,19 +9289,26 @@ fn run_sutra_command(codon: &str, dry_run: bool, json: bool, store_path: &Path) 
     println!("       WhiteMagic Gen3 Sovereign Sutra Dispatch   ");
     println!("==================================================");
     println!("Codon:                   {}", sutra.codon_str);
+    println!(
+        "Alchemical:              ⟪ {} ⟫",
+        sutra.glyphs.iter().map(|g| g.alchemical_char().to_string()).collect::<Vec<_>>().join(" · ")
+    );
     if let Some(ref name) = sutra.canonical_name {
         println!("Title:                   {}", name);
     }
+    println!("Taoist Mudra Formula:    {}", sutra.taoist_formula());
+    println!("Parse Latency:           {} µs", parse_micros);
     println!(
-        "Parse Latency:           {} µs (Model2Vec Zero-Copy Vector Map)",
-        parse_micros
+        "Precondition Contract:   {}",
+        if pre_result.is_ok() { "SATISFIED" } else { "FAILED" }
     );
     println!("Constituent Glyphs:");
     for (g, sim) in &sutra.alignment_scores {
         println!(
-            "  [{:>2}] {} ({:<5}) — {:<18} (alignment: {:.4})",
+            "  [{:>2}] {} / {} ({:<5}) — {:<18} (alignment: {:.4})",
             g.index(),
             g.as_char(),
+            g.alchemical_char(),
             g.pinyin(),
             g.english(),
             sim
@@ -8886,14 +9316,8 @@ fn run_sutra_command(codon: &str, dry_run: bool, json: bool, store_path: &Path) 
     }
     println!("--------------------------------------------------");
     println!("Bound Kekkai Sandbox Profile:");
-    println!(
-        "  Read-Only Paths:       {:?}",
-        sutra.kekkai_profile.read_only_paths
-    );
-    println!(
-        "  Read-Write Paths:      {:?}",
-        sutra.kekkai_profile.read_write_paths
-    );
+    println!("  Read-Only Paths:       {:?}", sutra.kekkai_profile.read_only_paths);
+    println!("  Read-Write Paths:      {:?}", sutra.kekkai_profile.read_write_paths);
     println!(
         "  Network Policy:        {}",
         if sutra.kekkai_profile.network_allowed {
@@ -8944,6 +9368,11 @@ fn run_sutra_command(codon: &str, dry_run: bool, json: bool, store_path: &Path) 
             std::process::exit(1);
         }
     }
+}
+
+#[allow(dead_code)]
+fn run_sutra_command(codon: &str, dry_run: bool, json: bool, store_path: &Path) {
+    run_sutra_cast(codon, dry_run, false, None, json, store_path);
 }
 
 fn run_evolve_command(

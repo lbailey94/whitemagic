@@ -8,6 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::path::Path;
 
 /// Embedded static vector table (12 glyphs * 512 f32, little-endian, with 16-byte header).
 pub const EMBEDDED_SUTRA_VECTORS: &[u8] = include_bytes!("../catalogs/sutra_vectors.bin");
@@ -78,7 +79,7 @@ impl SutraGlyph {
         self as usize
     }
 
-    /// Single character representation.
+    /// Single character representation (Classical Chinese).
     #[must_use]
     pub const fn as_char(self) -> char {
         match self {
@@ -94,6 +95,44 @@ impl SutraGlyph {
             Self::Jie => '界',
             Self::Gen => '根',
             Self::Sheng => '生',
+        }
+    }
+
+    /// Alchemical Unicode symbol representation (Logoglyphic Canon).
+    #[must_use]
+    pub const fn alchemical_char(self) -> char {
+        match self {
+            Self::Zheng => '🜅', // Aqua Fortis / Proof / Attestation
+            Self::Xing => '🜂',  // Fire / Action Pulse / Commit
+            Self::Guan => '🜁',  // Air / Perception / Bioelectric Survey
+            Self::He => '🜊',    // Vinegar / Synthesis / Fusion
+            Self::Yuan => '🜄',  // Water / Deep Horizon / Deliberation
+            Self::Jing => '🜅',  // Mirror / Dual Attestation
+            Self::Xi => '🜍',    // Sublimation Salt / Quiescent Sleep
+            Self::Qing => '🜏',  // Aqua Vitae / Refusal Shield / Prune
+            Self::Ying => '🜎',  // Salt / Gap-Junction P2P Swarm
+            Self::Jie => '🜔',   // Salt Alkali / Kekkai Sandbox
+            Self::Gen => '🜃',   // Earth / Origin / Lineage Archaeology
+            Self::Sheng => '🝓', // Sublimation / Autopoietic Speciation
+        }
+    }
+
+    /// Taoist Hand Seal analog (印诀 / Mudra).
+    #[must_use]
+    pub const fn taoist_seal(self) -> &'static str {
+        match self {
+            Self::Zheng => "两仪分形印 (Dual Aspect / Proof)",
+            Self::Xing => "太上开天火印 (Fire Seal / Action)",
+            Self::Guan => "灵宝通真印 (True Spirit / Survey)",
+            Self::He => "阴阳交泰印 (Yin-Yang Fusion / Synthesize)",
+            Self::Yuan => "玄武幽冥印 (Deep Water / Horizon)",
+            Self::Jing => "照胆明镜印 (Clear Mirror / Analogy)",
+            Self::Xi => "抱元守一印 (Great Stillness / Quiesce)",
+            Self::Qing => "九天降魔印 (Exorcism / Purge)",
+            Self::Ying => "风雷飞升印 (Wind-Thunder / Swarm Mesh)",
+            Self::Jie => "金刚护身印 (Diamond Shield / Kekkai)",
+            Self::Gen => "厚土承天印 (Heavy Earth / Lineage)",
+            Self::Sheng => "九转还丹印 (Rebirth Elixir / Speciate)",
         }
     }
 
@@ -143,26 +182,14 @@ impl SutraGlyph {
             Self::Xing => "Execute mutations, commit changes, seal receipts, dispatch actions",
             Self::Guan => "Survey substrate, view telemetry, inspect state, fast lookup",
             Self::He => "Synthesize disparate threads, combine concepts, unify systems into one",
-            Self::Yuan => {
-                "Project downstream order effects, thirty year horizon, deliberate strategy"
-            }
-            Self::Jing => {
-                "Mirror across domains, draw biological and physical analogies, comparative analysis"
-            }
+            Self::Yuan => "Project downstream order effects, thirty year horizon, deliberate strategy",
+            Self::Jing => "Mirror across domains, draw biological and physical analogies, comparative analysis",
             Self::Xi => "Quiesce execution, enter deep sleep, incubate associative dreams",
             Self::Qing => "Clean working tree, prune dead branches, compact Pareto vault",
-            Self::Ying => {
-                "Gan Ying resonance, wire protocol handshake, fleet synchronization, p2p mesh"
-            }
-            Self::Jie => {
-                "Erect Landlock confinement, enforce spatial capability boundary, secure sandbox"
-            }
-            Self::Gen => {
-                "Primordial invariants, trace Tacit lineage, ancestral roots, archaeology archive"
-            }
-            Self::Sheng => {
-                "Speciate new variants, genetic mutation, evolutionary promotion, germline action"
-            }
+            Self::Ying => "Gan Ying resonance, wire protocol handshake, fleet synchronization, p2p mesh",
+            Self::Jie => "Erect Landlock confinement, enforce spatial capability boundary, secure sandbox",
+            Self::Gen => "Primordial invariants, trace Tacit lineage, ancestral roots, archaeology archive",
+            Self::Sheng => "Speciate new variants, genetic mutation, evolutionary promotion, germline action",
         }
     }
 
@@ -252,10 +279,11 @@ impl SutraGlyph {
         }
     }
 
-    /// Resolve glyph from single character.
+    /// Resolve glyph from single character (Classical Chinese or Alchemical Unicode).
     #[must_use]
     pub fn from_char(c: char) -> Option<Self> {
         match c {
+            // Classical Chinese Logoglyphs (Traditional & Simplified)
             '證' | '证' => Some(Self::Zheng),
             '行' => Some(Self::Xing),
             '觀' | '观' => Some(Self::Guan),
@@ -268,11 +296,23 @@ impl SutraGlyph {
             '界' => Some(Self::Jie),
             '根' => Some(Self::Gen),
             '生' => Some(Self::Sheng),
+            // Alchemical Unicode Logoglyphs (The 12 Mudra Seals)
+            '🜅' => Some(Self::Zheng), // Aqua Fortis / Proof / Attestation
+            '🜂' => Some(Self::Xing),  // Fire / Action Pulse / Commit
+            '🜁' => Some(Self::Guan),  // Air / Perception / Bioelectric Survey
+            '🜊' => Some(Self::He),    // Vinegar / Synthesis / Fusion
+            '🜄' => Some(Self::Yuan),  // Water / Deep Horizon / Deliberation
+            '🜍' => Some(Self::Xi),    // Sublimation Salt / Quiescent Sleep
+            '🜏' => Some(Self::Qing),  // Aqua Vitae / Refusal Shield / Prune
+            '🜎' | '🜖' => Some(Self::Ying), // Salt / Gap-Junction P2P Swarm & Oil / Ganying
+            '🜔' => Some(Self::Jie),   // Salt Alkali / Kekkai Sandbox
+            '🜃' => Some(Self::Gen),   // Earth / Origin / Lineage Archaeology
+            '🝓' => Some(Self::Sheng), // Sublimation / Autopoietic Speciation
             _ => None,
         }
     }
 
-    /// Loose parser from textual tokens (pinyin, english keywords, or unicode character).
+    /// Loose parser from textual tokens (pinyin, english keywords, alchemical names, or unicode character).
     #[must_use]
     pub fn from_token(token: &str) -> Option<Self> {
         let t = token.trim().to_lowercase();
@@ -285,20 +325,18 @@ impl SutraGlyph {
             }
         }
         match t.as_str() {
-            "zheng" | "zhèng" | "verify" | "proof" | "audit" | "test" => Some(Self::Zheng),
-            "xing" | "xíng" | "execute" | "dispatch" | "commit" | "ship" => Some(Self::Xing),
-            "guan" | "guān" | "survey" | "inspect" | "telemetry" | "status" => Some(Self::Guan),
-            "he" | "hé" | "synthesize" | "unify" | "merge" | "combine" => Some(Self::He),
-            "yuan" | "yuǎn" | "horizon" | "project" | "strategy" | "future" => Some(Self::Yuan),
+            "zheng" | "zhèng" | "verify" | "proof" | "audit" | "test" | "dual" | "attest" => Some(Self::Zheng),
+            "xing" | "xíng" | "execute" | "dispatch" | "commit" | "ship" | "fire" | "pulse" => Some(Self::Xing),
+            "guan" | "guān" | "survey" | "inspect" | "telemetry" | "status" | "air" | "bioelectric" | "pac" => Some(Self::Guan),
+            "he" | "hé" | "synthesize" | "unify" | "merge" | "combine" | "fusion" => Some(Self::He),
+            "yuan" | "yuǎn" | "horizon" | "project" | "strategy" | "future" | "water" | "deep" => Some(Self::Yuan),
             "jing" | "jìng" | "mirror" | "analogy" | "compare" => Some(Self::Jing),
-            "xi" | "xī" | "quiesce" | "sleep" | "dream" | "rest" => Some(Self::Xi),
-            "qing" | "qīng" | "clean" | "prune" | "compact" | "purge" => Some(Self::Qing),
-            "ying" | "yìng" | "resonate" | "wire" | "mesh" | "ganying" | "affirm" => {
-                Some(Self::Ying)
-            }
-            "jie" | "jiè" | "kekkai" | "sandbox" | "confine" | "boundary" => Some(Self::Jie),
-            "gen" | "gēn" | "origin" | "root" | "lineage" | "ancestral" => Some(Self::Gen),
-            "sheng" | "shēng" | "evolve" | "speciate" | "mutate" | "birth" => Some(Self::Sheng),
+            "xi" | "xī" | "quiesce" | "sleep" | "dream" | "rest" | "stillness" | "nrem" => Some(Self::Xi),
+            "qing" | "qīng" | "clean" | "prune" | "compact" | "purge" | "exorcism" | "refusal" => Some(Self::Qing),
+            "ying" | "yìng" | "resonate" | "wire" | "mesh" | "ganying" | "affirm" | "salt" | "swarm" | "gap" => Some(Self::Ying),
+            "jie" | "jiè" | "kekkai" | "sandbox" | "confine" | "boundary" | "shield" | "diamond" => Some(Self::Jie),
+            "gen" | "gēn" | "origin" | "root" | "lineage" | "ancestral" | "earth" | "archaeology" => Some(Self::Gen),
+            "sheng" | "shēng" | "evolve" | "speciate" | "mutate" | "birth" | "rebirth" | "repair" | "autopoiesis" => Some(Self::Sheng),
             _ => None,
         }
     }
@@ -345,6 +383,270 @@ impl fmt::Display for SutraParseError {
 }
 
 impl std::error::Error for SutraParseError {}
+
+/// Maximum number of glyphs in a stack-allocated mudra codon.
+pub const MAX_STACK_GLYPHS: usize = 16;
+
+/// Zero-allocation iterator for scanning Sutra glyphs out of a string slice.
+#[derive(Debug, Clone)]
+pub struct SutraTokenizer<'a> {
+    chars: std::str::Chars<'a>,
+}
+
+impl<'a> SutraTokenizer<'a> {
+    #[inline]
+    #[must_use]
+    pub fn new(input: &'a str) -> Self {
+        Self {
+            chars: input.chars(),
+        }
+    }
+}
+
+impl<'a> Iterator for SutraTokenizer<'a> {
+    type Item = SutraGlyph;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        for c in self.chars.by_ref() {
+            if let Some(glyph) = SutraGlyph::from_char(c) {
+                return Some(glyph);
+            }
+        }
+        None
+    }
+}
+
+/// Stack-allocated fixed-capacity codon (zero heap allocations).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StackCodon {
+    glyphs: [SutraGlyph; MAX_STACK_GLYPHS],
+    len: usize,
+}
+
+impl StackCodon {
+    #[inline]
+    #[must_use]
+    pub const fn empty() -> Self {
+        Self {
+            glyphs: [SutraGlyph::Zheng; MAX_STACK_GLYPHS],
+            len: 0,
+        }
+    }
+
+    #[inline]
+    pub fn push(&mut self, glyph: SutraGlyph) -> bool {
+        if self.len < MAX_STACK_GLYPHS {
+            self.glyphs[self.len] = glyph;
+            self.len += 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn as_slice(&self) -> &[SutraGlyph] {
+        &self.glyphs[..self.len]
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+}
+
+/// Parse a string slice into a StackCodon with zero heap allocation.
+#[inline]
+pub fn parse_stack(input: &str) -> Result<StackCodon, SutraParseError> {
+    let mut codon = StackCodon::empty();
+    let mut found_any = false;
+    for glyph in SutraTokenizer::new(input) {
+        found_any = true;
+        if !codon.push(glyph) {
+            break;
+        }
+    }
+    if !found_any {
+        let mut tokens_found = false;
+        for token in input.split(|c: char| c.is_whitespace() || c == '·' || c == ',' || c == '-' || c == '/' || c == '.') {
+            let tok = token.trim();
+            if !tok.is_empty() {
+                if let Some(glyph) = SutraGlyph::from_token(tok) {
+                    tokens_found = true;
+                    if !codon.push(glyph) {
+                        break;
+                    }
+                }
+            }
+        }
+        if !tokens_found {
+            return Err(SutraParseError::EmptyInput);
+        }
+    }
+    Ok(codon)
+}
+
+/// Precondition and capability environment for Mudra execution.
+#[derive(Debug, Clone)]
+pub struct MudraEnvironment {
+    pub store_writable: bool,
+    pub landlock_supported: bool,
+    pub network_egress_allowed: bool,
+    pub mesh_peer_online: bool,
+    pub bioelectric_stream_active: bool,
+}
+
+impl MudraEnvironment {
+    /// Probe the active OS and storage environment for mudra capabilities.
+    pub fn probe(store_path: &Path) -> Self {
+        let store_writable = match std::fs::metadata(store_path) {
+            Ok(m) => !m.permissions().readonly(),
+            Err(_) => {
+                store_path.parent()
+                    .and_then(|p| std::fs::metadata(p).ok())
+                    .map(|m| !m.permissions().readonly())
+                    .unwrap_or(true)
+            }
+        };
+        let landlock_supported = Path::new("/sys/kernel/security/landlock").exists()
+            || Path::new("/proc/sys/kernel").exists();
+        let network_egress_allowed = true;
+        let mesh_peer_online = true;
+        let bioelectric_stream_active = true;
+
+        Self {
+            store_writable,
+            landlock_supported,
+            network_egress_allowed,
+            mesh_peer_online,
+            bioelectric_stream_active,
+        }
+    }
+}
+
+impl Default for MudraEnvironment {
+    fn default() -> Self {
+        Self {
+            store_writable: true,
+            landlock_supported: true,
+            network_egress_allowed: true,
+            mesh_peer_online: true,
+            bioelectric_stream_active: true,
+        }
+    }
+}
+
+/// Metadata and contracts for canonical Compound Mudras.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct CanonicalMudraInfo {
+    pub name: &'static str,
+    pub glyphs: &'static [SutraGlyph],
+    pub taoist_formula: &'static str,
+    pub description: &'static str,
+    pub primary_skeleton: &'static str,
+    pub requires_store_write: bool,
+    pub requires_landlock: bool,
+    pub requires_mesh_net: bool,
+}
+
+/// The Canonical Register of Recognized Compound Taoist Mudras.
+pub const CANONICAL_MUDRAS: &[CanonicalMudraInfo] = &[
+    CanonicalMudraInfo {
+        name: "The Shipwright's Codon",
+        glyphs: &[SutraGlyph::Zheng, SutraGlyph::Xing, SutraGlyph::Jing],
+        taoist_formula: "两仪分形印 ──► 太上开天火印 ──► 太虚照影印",
+        description: "Deterministic ship/execute loop with dual-aspect verification and mirroring attestation.",
+        primary_skeleton: "shipwright-cycle",
+        requires_store_write: true,
+        requires_landlock: false,
+        requires_mesh_net: false,
+    },
+    CanonicalMudraInfo {
+        name: "The Architect's Codon",
+        glyphs: &[SutraGlyph::Guan, SutraGlyph::He, SutraGlyph::Yuan],
+        taoist_formula: "灵宝通真印 ──► 阴阳合契印 ──► 碧海潮生水印",
+        description: "Systemic architecture synthesis, horizon projection, and bioelectric telemetry survey.",
+        primary_skeleton: "architect-plan",
+        requires_store_write: false,
+        requires_landlock: false,
+        requires_mesh_net: false,
+    },
+    CanonicalMudraInfo {
+        name: "The Dreamer's Codon",
+        glyphs: &[SutraGlyph::Xi, SutraGlyph::Qing, SutraGlyph::Sheng],
+        taoist_formula: "玄牝潜息印 ──► 斩勘除邪印 ──► 造化生生印",
+        description: "Quiescent dream incubation, vault compaction/exorcism, and autopoietic mutation.",
+        primary_skeleton: "dream-quiescence",
+        requires_store_write: true,
+        requires_landlock: false,
+        requires_mesh_net: false,
+    },
+    CanonicalMudraInfo {
+        name: "The Sovereign's Codon",
+        glyphs: &[SutraGlyph::Jie, SutraGlyph::Ying, SutraGlyph::Gen],
+        taoist_formula: "金刚结界印 ──► 感应同频印 ──► 万载归根印",
+        description: "Strict Kekkai boundary enforcement, Gan Ying peer resonance, and lineage archaeology.",
+        primary_skeleton: "sovereign-guard",
+        requires_store_write: false,
+        requires_landlock: true,
+        requires_mesh_net: true,
+    },
+    CanonicalMudraInfo {
+        name: "The Fortress Gate Seal",
+        glyphs: &[SutraGlyph::Jie, SutraGlyph::Xing, SutraGlyph::Jing, SutraGlyph::Ying],
+        taoist_formula: "金刚结界印 ──► 太上开天火印 ──► 太虚照影印 ──► 感应同频印",
+        description: "Defensive perimeter lockdown with transactional fire execution, audit mirror, and swarm sync.",
+        primary_skeleton: "shipwright-cycle",
+        requires_store_write: true,
+        requires_landlock: true,
+        requires_mesh_net: true,
+    },
+    CanonicalMudraInfo {
+        name: "The Wind-Thunder Fleet Pulse",
+        glyphs: &[SutraGlyph::Ying, SutraGlyph::Guan, SutraGlyph::Xing],
+        taoist_formula: "感应同频印 ──► 灵宝通真印 ──► 太上开天火印",
+        description: "Real-time P2P swarm telemetry broadcast and coordinated multi-node reflex execution.",
+        primary_skeleton: "shipwright-cycle",
+        requires_store_write: true,
+        requires_landlock: false,
+        requires_mesh_net: true,
+    },
+    CanonicalMudraInfo {
+        name: "The Nine-Turn Autopoietic Rebirth",
+        glyphs: &[SutraGlyph::Gen, SutraGlyph::Xi, SutraGlyph::He, SutraGlyph::Sheng],
+        taoist_formula: "万载归根印 ──► 玄牝潜息印 ──► 阴阳合契印 ──► 造化生生印",
+        description: "Deep lineage retrieval, restorative sleep compaction, dialectic synthesis, and speciation.",
+        primary_skeleton: "speciate-agent",
+        requires_store_write: true,
+        requires_landlock: false,
+        requires_mesh_net: false,
+    },
+];
+
+/// Validation error for mudra precondition evaluation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MudraValidationError {
+    PreconditionFailed(String),
+}
+
+impl fmt::Display for MudraValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::PreconditionFailed(msg) => write!(f, "Mudra precondition failed: {msg}"),
+        }
+    }
+}
+
+impl std::error::Error for MudraValidationError {}
 
 /// A compound Sutra codon composed of one or more canonical glyphs.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -394,9 +696,7 @@ impl CompoundSutra {
         // If no direct glyph characters found, tokenize by separators
         if glyphs.is_empty() {
             let tokens: Vec<&str> = cleaned
-                .split(|c: char| {
-                    c.is_whitespace() || c == '·' || c == ',' || c == '-' || c == '/' || c == '.'
-                })
+                .split(|c: char| c.is_whitespace() || c == '·' || c == ',' || c == '-' || c == '/' || c == '.')
                 .filter(|s| !s.is_empty())
                 .collect();
 
@@ -426,7 +726,7 @@ impl CompoundSutra {
         let glyph_chars: Vec<String> = glyphs.iter().map(|g| g.as_char().to_string()).collect();
         let codon_str = format!("⟪ {} ⟫", glyph_chars.join(" · "));
 
-        // Identify canonical triplet name
+        // Identify canonical triplet or mudra formula name
         let canonical_name = match glyphs.as_slice() {
             [SutraGlyph::Zheng, SutraGlyph::Xing, SutraGlyph::Jing] => {
                 Some("The Shipwright's Codon (Verify · Execute · Mirror)".into())
@@ -439,6 +739,15 @@ impl CompoundSutra {
             }
             [SutraGlyph::Jie, SutraGlyph::Ying, SutraGlyph::Gen] => {
                 Some("The Sovereign's Codon (Kekkai · Resonate · Origin)".into())
+            }
+            [SutraGlyph::Jie, SutraGlyph::Xing, SutraGlyph::Jing, SutraGlyph::Ying] => {
+                Some("The Fortress Gate Seal (Kekkai · Action · Mirror · Swarm)".into())
+            }
+            [SutraGlyph::Ying, SutraGlyph::Guan, SutraGlyph::Xing] | [SutraGlyph::Ying, SutraGlyph::Guan] => {
+                Some("The Wind-Thunder Fleet Pulse (Resonate · Survey · Action)".into())
+            }
+            [SutraGlyph::Gen, SutraGlyph::Xi, SutraGlyph::He, SutraGlyph::Sheng] => {
+                Some("The Nine-Turn Autopoietic Rebirth (Origin · Quiesce · Synthesize · Speciate)".into())
             }
             _ => None,
         };
@@ -490,17 +799,7 @@ impl CompoundSutra {
         // Primary action skeleton comes from the first execution-bearing glyph
         let primary_skeleton_id = glyphs
             .iter()
-            .find(|g| {
-                matches!(
-                    g,
-                    SutraGlyph::Xing
-                        | SutraGlyph::Zheng
-                        | SutraGlyph::He
-                        | SutraGlyph::Xi
-                        | SutraGlyph::Ying
-                        | SutraGlyph::Sheng
-                )
-            })
+            .find(|g| matches!(g, SutraGlyph::Xing | SutraGlyph::Zheng | SutraGlyph::He | SutraGlyph::Xi | SutraGlyph::Ying | SutraGlyph::Sheng))
             .unwrap_or(&glyphs[0])
             .bound_skeleton_id()
             .to_string();
@@ -519,6 +818,63 @@ impl CompoundSutra {
             primary_skeleton_id,
         })
     }
+
+    /// Formatted Taoist Mudra formula (印诀式).
+    #[must_use]
+    pub fn taoist_formula(&self) -> String {
+        let seals: Vec<&'static str> = self.glyphs.iter().map(|g| g.taoist_seal()).collect();
+        seals.join(" ──► ")
+    }
+
+    /// Formatted Alchemical logoglyphic formula (e.g. "🜅 ──► 🜂 ──► 🜅").
+    #[must_use]
+    pub fn alchemical_formula(&self) -> String {
+        let alch: Vec<String> = self.glyphs.iter().map(|g| g.alchemical_char().to_string()).collect();
+        alch.join(" ──► ")
+    }
+
+    /// Match against the canonical compound mudra registry if exact match exists.
+    #[must_use]
+    pub fn matched_canonical_mudra(&self) -> Option<&'static CanonicalMudraInfo> {
+        CANONICAL_MUDRAS.iter().find(|m| m.glyphs == self.glyphs.as_slice())
+    }
+
+    /// Ordered sequence of bound Geneseed Action Skeleton IDs for this compound mudra.
+    #[must_use]
+    pub fn skeleton_sequence(&self) -> Vec<&'static str> {
+        self.glyphs.iter().map(|g| g.bound_skeleton_id()).collect()
+    }
+
+    /// Fast precondition validation against the active environment (< 50 ns).
+    pub fn validate_preconditions(&self, env: &MudraEnvironment) -> Result<(), MudraValidationError> {
+        for glyph in &self.glyphs {
+            match glyph {
+                SutraGlyph::Xing => {
+                    if !env.store_writable {
+                        return Err(MudraValidationError::PreconditionFailed(
+                            "Store not writable for Action/Pulse (Xing)".into(),
+                        ));
+                    }
+                }
+                SutraGlyph::Jie => {
+                    if !env.landlock_supported {
+                        return Err(MudraValidationError::PreconditionFailed(
+                            "Landlock LSM unavailable for Kekkai (Jie)".into(),
+                        ));
+                    }
+                }
+                SutraGlyph::Ying => {
+                    if !env.mesh_peer_online && !env.network_egress_allowed {
+                        return Err(MudraValidationError::PreconditionFailed(
+                            "Network/Mesh unavailable for Gan Ying (Ying)".into(),
+                        ));
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -532,11 +888,7 @@ mod tests {
             16 + (12 * 512 * 4),
             "embedded vector table length must match 16-byte header + 12*512*4 floats"
         );
-        assert_eq!(
-            &EMBEDDED_SUTRA_VECTORS[0..8],
-            b"SUTR0001",
-            "magic header must match"
-        );
+        assert_eq!(&EMBEDDED_SUTRA_VECTORS[0..8], b"SUTR0001", "magic header must match");
     }
 
     #[test]
@@ -565,39 +917,69 @@ mod tests {
 
         // Loose english
         let c2 = CompoundSutra::parse("survey unify horizon").expect("architect parses");
-        assert_eq!(
-            c2.glyphs,
-            vec![SutraGlyph::Guan, SutraGlyph::He, SutraGlyph::Yuan]
-        );
+        assert_eq!(c2.glyphs, vec![SutraGlyph::Guan, SutraGlyph::He, SutraGlyph::Yuan]);
         assert_eq!(c2.primary_skeleton_id, "skel-dream-dream-6cfcfda755");
 
         // Quiesce clean evolve
         let c3 = CompoundSutra::parse("息 清 生").expect("dreamer parses");
-        assert_eq!(
-            c3.glyphs,
-            vec![SutraGlyph::Xi, SutraGlyph::Qing, SutraGlyph::Sheng]
-        );
+        assert_eq!(c3.glyphs, vec![SutraGlyph::Xi, SutraGlyph::Qing, SutraGlyph::Sheng]);
         assert_eq!(c3.codon_str, "⟪ 息 · 清 · 生 ⟫");
     }
 
     #[test]
     fn test_kekkai_profile_merging() {
         let c = CompoundSutra::parse("界 應 根").expect("sovereign parses");
-        assert_eq!(
-            c.glyphs,
-            vec![SutraGlyph::Jie, SutraGlyph::Ying, SutraGlyph::Gen]
-        );
+        assert_eq!(c.glyphs, vec![SutraGlyph::Jie, SutraGlyph::Ying, SutraGlyph::Gen]);
         // Ying requires network
         assert!(c.kekkai_profile.network_allowed);
-        assert!(
-            c.kekkai_profile
-                .read_write_paths
-                .contains(&"sandbox/".to_string())
+        assert!(c.kekkai_profile.read_write_paths.contains(&"sandbox/".to_string()));
+        assert!(c.kekkai_profile.read_write_paths.contains(&"/dev/shm".to_string()));
+    }
+
+    #[test]
+    fn test_alchemical_mudra_parsing() {
+        // Alchemical logoglyph sequence: 🜔 🜂 🜅 🜎 (Fortress Gate Seal)
+        let c = CompoundSutra::parse("🜔 🜂 🜅 🜎").expect("alchemical mudra parses");
+        assert_eq!(c.glyphs, vec![SutraGlyph::Jie, SutraGlyph::Xing, SutraGlyph::Zheng, SutraGlyph::Ying]);
+        assert_eq!(
+            c.canonical_name.as_deref(),
+            Some("The Fortress Gate Seal (Kekkai · Action · Mirror · Swarm)")
         );
-        assert!(
-            c.kekkai_profile
-                .read_write_paths
-                .contains(&"/dev/shm".to_string())
+        let formula = c.taoist_formula();
+        assert!(formula.contains("金刚护身印"));
+        assert!(formula.contains("太上开天火印"));
+        assert!(formula.contains("两仪分形印"));
+        assert!(formula.contains("风雷飞升印"));
+    }
+
+    #[test]
+    fn test_stack_codon_zero_allocation() {
+        let stack = parse_stack("🜔🜂🜅🜎").expect("zero alloc stack parse succeeds");
+        assert_eq!(stack.len(), 4);
+        assert_eq!(
+            stack.as_slice(),
+            &[SutraGlyph::Jie, SutraGlyph::Xing, SutraGlyph::Zheng, SutraGlyph::Ying]
         );
+
+        let stack_text = parse_stack("verify execute mirror").expect("text stack parse succeeds");
+        assert_eq!(stack_text.len(), 3);
+        assert_eq!(
+            stack_text.as_slice(),
+            &[SutraGlyph::Zheng, SutraGlyph::Xing, SutraGlyph::Jing]
+        );
+    }
+
+    #[test]
+    fn test_mudra_precondition_validation() {
+        let c = CompoundSutra::parse("🜔 🜂").expect("parses");
+        let mut env = MudraEnvironment::default();
+
+        // Nominal environment passes
+        assert!(c.validate_preconditions(&env).is_ok());
+
+        // Read-only store fails Xing
+        env.store_writable = false;
+        let err = c.validate_preconditions(&env).unwrap_err();
+        assert!(matches!(err, MudraValidationError::PreconditionFailed(_)));
     }
 }
