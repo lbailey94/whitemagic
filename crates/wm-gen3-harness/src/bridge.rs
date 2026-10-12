@@ -33,7 +33,7 @@ use wm_gen3_core::ops::{
     ImportKind, RecallQuery, RememberItem, SessionCheckpoint, SessionContinuityView, SessionTurn,
     Substrate, compose_session_digest,
 };
-use wm_gen3_core::sutra::{CompoundSutra, MudraEnvironment, SutraGlyph, CANONICAL_MUDRAS};
+use wm_gen3_core::sutra::{CANONICAL_MUDRAS, CompoundSutra, MudraEnvironment, SutraGlyph};
 
 /// Active MCP Tool Profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -1488,9 +1488,7 @@ pub fn execute_hybrid_tool_call(
         "galaxy.create" | "galaxy_create" => handle_galaxy_create(args, substrate, readonly),
 
         // ── Sutra Codon & Taoist Mudra Operations ──────────────────────────
-        "sutra.cast" | "sutra_cast" => {
-            handle_sutra_cast(args, substrate, store_path, readonly)
-        }
+        "sutra.cast" | "sutra_cast" => handle_sutra_cast(args, substrate, store_path, readonly),
         "sutra.compile" | "sutra_compile" => handle_sutra_compile(args),
         "sutra.canon" | "sutra_canon" => handle_sutra_canon(args),
         "sutra.list" | "sutra_list" => handle_sutra_list(args),
@@ -5579,10 +5577,20 @@ fn handle_sutra_cast(
         return Err("Parameter 'codon' cannot be empty".to_string());
     }
 
-    let execute = args.get("execute").and_then(Value::as_bool).unwrap_or(false);
-    let dry_run = args.get("dry_run").and_then(Value::as_bool).unwrap_or(!execute);
+    let execute = args
+        .get("execute")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let dry_run = args
+        .get("dry_run")
+        .and_then(Value::as_bool)
+        .unwrap_or(!execute);
     let strict = args.get("strict").and_then(Value::as_bool).unwrap_or(false);
-    let peer = args.get("peer").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty());
+    let peer = args
+        .get("peer")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
 
     use std::time::Instant;
     let start = Instant::now();
@@ -5612,7 +5620,8 @@ fn handle_sutra_cast(
         let mut client = MeshClient::connect(addr, "mcp-agent", signing_key)
             .map_err(|e| format!("Mesh connection to {peer_addr} failed: {e}"))?;
         let handoff_start = Instant::now();
-        let ack = client.send_gap_codon(&sutra.codon_str, "remote-node", 0)
+        let ack = client
+            .send_gap_codon(&sutra.codon_str, "remote-node", 0)
             .map_err(|e| format!("Mudra handoff to {peer_addr} failed: {e}"))?;
         let handoff_us = handoff_start.elapsed().as_micros();
 
@@ -5655,7 +5664,10 @@ fn handle_sutra_cast(
                 }));
             }
             Err(e) => {
-                return Err(format!("Execution of skeleton '{}' failed: {e}", sutra.primary_skeleton_id));
+                return Err(format!(
+                    "Execution of skeleton '{}' failed: {e}",
+                    sutra.primary_skeleton_id
+                ));
             }
         }
     }
@@ -7306,7 +7318,10 @@ mod sutra_mcp_tests {
             false,
         )
         .expect_err("refuse unknown argument");
-        assert!(err.contains("refuses unknown argument 'unknown_bogus_arg'"), "{err}");
+        assert!(
+            err.contains("refuses unknown argument 'unknown_bogus_arg'"),
+            "{err}"
+        );
 
         let _ = std::fs::remove_dir_all(&dir);
     }
