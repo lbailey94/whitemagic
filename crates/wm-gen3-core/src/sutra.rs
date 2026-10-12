@@ -143,14 +143,26 @@ impl SutraGlyph {
             Self::Xing => "Execute mutations, commit changes, seal receipts, dispatch actions",
             Self::Guan => "Survey substrate, view telemetry, inspect state, fast lookup",
             Self::He => "Synthesize disparate threads, combine concepts, unify systems into one",
-            Self::Yuan => "Project downstream order effects, thirty year horizon, deliberate strategy",
-            Self::Jing => "Mirror across domains, draw biological and physical analogies, comparative analysis",
+            Self::Yuan => {
+                "Project downstream order effects, thirty year horizon, deliberate strategy"
+            }
+            Self::Jing => {
+                "Mirror across domains, draw biological and physical analogies, comparative analysis"
+            }
             Self::Xi => "Quiesce execution, enter deep sleep, incubate associative dreams",
             Self::Qing => "Clean working tree, prune dead branches, compact Pareto vault",
-            Self::Ying => "Gan Ying resonance, wire protocol handshake, fleet synchronization, p2p mesh",
-            Self::Jie => "Erect Landlock confinement, enforce spatial capability boundary, secure sandbox",
-            Self::Gen => "Primordial invariants, trace Tacit lineage, ancestral roots, archaeology archive",
-            Self::Sheng => "Speciate new variants, genetic mutation, evolutionary promotion, germline action",
+            Self::Ying => {
+                "Gan Ying resonance, wire protocol handshake, fleet synchronization, p2p mesh"
+            }
+            Self::Jie => {
+                "Erect Landlock confinement, enforce spatial capability boundary, secure sandbox"
+            }
+            Self::Gen => {
+                "Primordial invariants, trace Tacit lineage, ancestral roots, archaeology archive"
+            }
+            Self::Sheng => {
+                "Speciate new variants, genetic mutation, evolutionary promotion, germline action"
+            }
         }
     }
 
@@ -281,7 +293,9 @@ impl SutraGlyph {
             "jing" | "jìng" | "mirror" | "analogy" | "compare" => Some(Self::Jing),
             "xi" | "xī" | "quiesce" | "sleep" | "dream" | "rest" => Some(Self::Xi),
             "qing" | "qīng" | "clean" | "prune" | "compact" | "purge" => Some(Self::Qing),
-            "ying" | "yìng" | "resonate" | "wire" | "mesh" | "ganying" | "affirm" => Some(Self::Ying),
+            "ying" | "yìng" | "resonate" | "wire" | "mesh" | "ganying" | "affirm" => {
+                Some(Self::Ying)
+            }
             "jie" | "jiè" | "kekkai" | "sandbox" | "confine" | "boundary" => Some(Self::Jie),
             "gen" | "gēn" | "origin" | "root" | "lineage" | "ancestral" => Some(Self::Gen),
             "sheng" | "shēng" | "evolve" | "speciate" | "mutate" | "birth" => Some(Self::Sheng),
@@ -380,7 +394,9 @@ impl CompoundSutra {
         // If no direct glyph characters found, tokenize by separators
         if glyphs.is_empty() {
             let tokens: Vec<&str> = cleaned
-                .split(|c: char| c.is_whitespace() || c == '·' || c == ',' || c == '-' || c == '/' || c == '.')
+                .split(|c: char| {
+                    c.is_whitespace() || c == '·' || c == ',' || c == '-' || c == '/' || c == '.'
+                })
                 .filter(|s| !s.is_empty())
                 .collect();
 
@@ -474,7 +490,17 @@ impl CompoundSutra {
         // Primary action skeleton comes from the first execution-bearing glyph
         let primary_skeleton_id = glyphs
             .iter()
-            .find(|g| matches!(g, SutraGlyph::Xing | SutraGlyph::Zheng | SutraGlyph::He | SutraGlyph::Xi | SutraGlyph::Ying | SutraGlyph::Sheng))
+            .find(|g| {
+                matches!(
+                    g,
+                    SutraGlyph::Xing
+                        | SutraGlyph::Zheng
+                        | SutraGlyph::He
+                        | SutraGlyph::Xi
+                        | SutraGlyph::Ying
+                        | SutraGlyph::Sheng
+                )
+            })
             .unwrap_or(&glyphs[0])
             .bound_skeleton_id()
             .to_string();
@@ -506,7 +532,11 @@ mod tests {
             16 + (12 * 512 * 4),
             "embedded vector table length must match 16-byte header + 12*512*4 floats"
         );
-        assert_eq!(&EMBEDDED_SUTRA_VECTORS[0..8], b"SUTR0001", "magic header must match");
+        assert_eq!(
+            &EMBEDDED_SUTRA_VECTORS[0..8],
+            b"SUTR0001",
+            "magic header must match"
+        );
     }
 
     #[test]
@@ -535,22 +565,39 @@ mod tests {
 
         // Loose english
         let c2 = CompoundSutra::parse("survey unify horizon").expect("architect parses");
-        assert_eq!(c2.glyphs, vec![SutraGlyph::Guan, SutraGlyph::He, SutraGlyph::Yuan]);
+        assert_eq!(
+            c2.glyphs,
+            vec![SutraGlyph::Guan, SutraGlyph::He, SutraGlyph::Yuan]
+        );
         assert_eq!(c2.primary_skeleton_id, "skel-dream-dream-6cfcfda755");
 
         // Quiesce clean evolve
         let c3 = CompoundSutra::parse("息 清 生").expect("dreamer parses");
-        assert_eq!(c3.glyphs, vec![SutraGlyph::Xi, SutraGlyph::Qing, SutraGlyph::Sheng]);
+        assert_eq!(
+            c3.glyphs,
+            vec![SutraGlyph::Xi, SutraGlyph::Qing, SutraGlyph::Sheng]
+        );
         assert_eq!(c3.codon_str, "⟪ 息 · 清 · 生 ⟫");
     }
 
     #[test]
     fn test_kekkai_profile_merging() {
         let c = CompoundSutra::parse("界 應 根").expect("sovereign parses");
-        assert_eq!(c.glyphs, vec![SutraGlyph::Jie, SutraGlyph::Ying, SutraGlyph::Gen]);
+        assert_eq!(
+            c.glyphs,
+            vec![SutraGlyph::Jie, SutraGlyph::Ying, SutraGlyph::Gen]
+        );
         // Ying requires network
         assert!(c.kekkai_profile.network_allowed);
-        assert!(c.kekkai_profile.read_write_paths.contains(&"sandbox/".to_string()));
-        assert!(c.kekkai_profile.read_write_paths.contains(&"/dev/shm".to_string()));
+        assert!(
+            c.kekkai_profile
+                .read_write_paths
+                .contains(&"sandbox/".to_string())
+        );
+        assert!(
+            c.kekkai_profile
+                .read_write_paths
+                .contains(&"/dev/shm".to_string())
+        );
     }
 }

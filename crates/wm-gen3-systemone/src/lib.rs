@@ -268,7 +268,9 @@ mod tests {
             });
 
             let t0 = Instant::now();
-            let decision = organ.decide(&test_state, &test_questions).expect("inference failed");
+            let decision = organ
+                .decide(&test_state, &test_questions)
+                .expect("inference failed");
             let latency_ms = t0.elapsed().as_secs_f64() * 1000.0;
             println!("  ✓ Local Laya Decision: in {:.2}ms", latency_ms);
             assert!(decision.get("answers").is_some());

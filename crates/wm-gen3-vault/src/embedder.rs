@@ -94,10 +94,7 @@ impl VaultEmbedder {
         }
 
         use std::io::{Read, Seek, SeekFrom};
-        let mut file = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(p)?;
+        let mut file = std::fs::OpenOptions::new().read(true).write(true).open(p)?;
 
         let mut header = [0u8; 16];
         file.read_exact(&mut header)?;
@@ -109,7 +106,8 @@ impl VaultEmbedder {
             ));
         }
         let existing_count = u32::from_le_bytes([header[8], header[9], header[10], header[11]]);
-        let file_dim = u32::from_le_bytes([header[12], header[13], header[14], header[15]]) as usize;
+        let file_dim =
+            u32::from_le_bytes([header[12], header[13], header[14], header[15]]) as usize;
         if file_dim != dimension {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,

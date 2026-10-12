@@ -263,11 +263,20 @@ impl HardwareTelemetry {
     pub fn to_bioelectric_state(&self) -> BioelectricState {
         let v_rest = self.resting_potential_mv();
         let (regime, metabolism_mode) = if self.nvme_free_gb < 10.0 || v_rest >= -25.0 {
-            (HomeostaticRegime::Critical, MetabolismMode::CriticalHibernation)
+            (
+                HomeostaticRegime::Critical,
+                MetabolismMode::CriticalHibernation,
+            )
         } else if self.nvme_free_gb < 20.0 || v_rest >= -45.0 || self.thermal_stress() > 0.7 {
-            (HomeostaticRegime::Stressed, MetabolismMode::ThermalThrottled)
+            (
+                HomeostaticRegime::Stressed,
+                MetabolismMode::ThermalThrottled,
+            )
         } else if v_rest >= -60.0 || self.battery_stress() > 0.3 {
-            (HomeostaticRegime::Conserving, MetabolismMode::ConservingReflex)
+            (
+                HomeostaticRegime::Conserving,
+                MetabolismMode::ConservingReflex,
+            )
         } else {
             (HomeostaticRegime::Nominal, MetabolismMode::NominalSynthesis)
         };
@@ -897,7 +906,10 @@ mod tests {
             probe_latency_ns: 250.0,
         };
         let calm_bio = calm_hw.to_bioelectric_state();
-        assert!(calm_bio.v_rest_mv <= -65.0, "Calm hardware must be hyperpolarized (approx -70mV)");
+        assert!(
+            calm_bio.v_rest_mv <= -65.0,
+            "Calm hardware must be hyperpolarized (approx -70mV)"
+        );
         assert_eq!(calm_bio.regime, HomeostaticRegime::Nominal);
         assert_eq!(calm_bio.metabolism_mode, MetabolismMode::NominalSynthesis);
 
@@ -912,9 +924,15 @@ mod tests {
             probe_latency_ns: 250.0,
         };
         let breach_bio = breach_hw.to_bioelectric_state();
-        assert_eq!(breach_bio.v_rest_mv, -10.0, "NVMe < 20GB must depolarize to critical threshold -10mV");
+        assert_eq!(
+            breach_bio.v_rest_mv, -10.0,
+            "NVMe < 20GB must depolarize to critical threshold -10mV"
+        );
         assert_eq!(breach_bio.regime, HomeostaticRegime::Critical);
-        assert_eq!(breach_bio.metabolism_mode, MetabolismMode::CriticalHibernation);
+        assert_eq!(
+            breach_bio.metabolism_mode,
+            MetabolismMode::CriticalHibernation
+        );
 
         // Moderate thermal stress (72C): transitions to Stressed / ThermalThrottled
         let stressed_hw = HardwareTelemetry {
@@ -929,6 +947,9 @@ mod tests {
         let stressed_bio = stressed_hw.to_bioelectric_state();
         assert!(stressed_bio.v_rest_mv > -55.0 && stressed_bio.v_rest_mv < -30.0);
         assert_eq!(stressed_bio.regime, HomeostaticRegime::Stressed);
-        assert_eq!(stressed_bio.metabolism_mode, MetabolismMode::ThermalThrottled);
+        assert_eq!(
+            stressed_bio.metabolism_mode,
+            MetabolismMode::ThermalThrottled
+        );
     }
 }

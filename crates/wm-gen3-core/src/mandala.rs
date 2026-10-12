@@ -151,10 +151,16 @@ impl fmt::Display for MandalaError {
                 write!(f, "Mandala Replay Ledger Persistence Failure: {msg}")
             }
             Self::PqDualSignatureRequired => {
-                write!(f, "Mandala Post-Quantum Dual Signature Required under active policy")
+                write!(
+                    f,
+                    "Mandala Post-Quantum Dual Signature Required under active policy"
+                )
             }
             Self::PqSignatureInvalid => {
-                write!(f, "Mandala Post-Quantum Dual Signature Invalid (Tampering Detected)")
+                write!(
+                    f,
+                    "Mandala Post-Quantum Dual Signature Invalid (Tampering Detected)"
+                )
             }
         }
     }
@@ -2627,7 +2633,11 @@ mod tests {
         assert!(receipt.verify(&verifying).is_ok());
 
         // 2. LegacyOnly policy passes with only classical signature
-        assert!(receipt.verify_with_policy(&verifying, PqPolicy::LegacyOnly).is_ok());
+        assert!(
+            receipt
+                .verify_with_policy(&verifying, PqPolicy::LegacyOnly)
+                .is_ok()
+        );
 
         // 3. PqRequired fails when dual signature is missing
         assert_eq!(
@@ -2645,13 +2655,25 @@ mod tests {
         );
 
         // 5. HybridPreferred and PqRequired both succeed now
-        assert!(receipt.verify_with_policy(&verifying, PqPolicy::HybridPreferred).is_ok());
-        assert!(receipt.verify_with_policy(&verifying, PqPolicy::PqRequired).is_ok());
+        assert!(
+            receipt
+                .verify_with_policy(&verifying, PqPolicy::HybridPreferred)
+                .is_ok()
+        );
+        assert!(
+            receipt
+                .verify_with_policy(&verifying, PqPolicy::PqRequired)
+                .is_ok()
+        );
 
         // 6. Serde roundtrip preserves dual signature
         let json = serde_json::to_string(&receipt).expect("must serialize");
         let restored: ContinuityReceipt05 = serde_json::from_str(&json).expect("must deserialize");
         assert_eq!(restored.dual_signature, receipt.dual_signature);
-        assert!(restored.verify_with_policy(&verifying, PqPolicy::PqRequired).is_ok());
+        assert!(
+            restored
+                .verify_with_policy(&verifying, PqPolicy::PqRequired)
+                .is_ok()
+        );
     }
 }

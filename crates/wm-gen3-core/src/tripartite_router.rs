@@ -65,19 +65,34 @@ impl TripartiteRouter {
 
         // 2. Keyword heuristic fast-path to System 0
         let lower = trimmed.to_lowercase();
-        let keyword_match = if lower.contains("verify") || lower.contains("test") || lower.contains("check") {
+        let keyword_match = if lower.contains("verify")
+            || lower.contains("test")
+            || lower.contains("check")
+        {
             Some(SutraGlyph::Zheng)
-        } else if lower.contains("execute") || lower.contains("commit") || lower.contains("dispatch") {
+        } else if lower.contains("execute")
+            || lower.contains("commit")
+            || lower.contains("dispatch")
+        {
             Some(SutraGlyph::Xing)
-        } else if lower.contains("survey") || lower.contains("inspect") || lower.contains("lookup") || lower.contains("status") {
+        } else if lower.contains("survey")
+            || lower.contains("inspect")
+            || lower.contains("lookup")
+            || lower.contains("status")
+        {
             Some(SutraGlyph::Guan)
         } else if lower.contains("clean") || lower.contains("prune") || lower.contains("compact") {
             Some(SutraGlyph::Qing)
         } else if lower.contains("dream") || lower.contains("sleep") || lower.contains("quiesce") {
             Some(SutraGlyph::Xi)
-        } else if lower.contains("sync") || lower.contains("resonate") || lower.contains("mesh") || lower.contains("peer") {
+        } else if lower.contains("sync")
+            || lower.contains("resonate")
+            || lower.contains("mesh")
+            || lower.contains("peer")
+        {
             Some(SutraGlyph::Ying)
-        } else if lower.contains("sandbox") || lower.contains("kekkai") || lower.contains("confine") {
+        } else if lower.contains("sandbox") || lower.contains("kekkai") || lower.contains("confine")
+        {
             Some(SutraGlyph::Jie)
         } else if lower.contains("synthesize") || lower.contains("unify") {
             Some(SutraGlyph::He)
@@ -102,7 +117,9 @@ impl TripartiteRouter {
 
         // Check bioelectric homeostatic override:
         // In Critical or Stressed mode, strictly avoid System 2 cloud token churn.
-        let under_stress = bio_state.map(|b| b.regime >= HomeostaticRegime::Stressed).unwrap_or(false);
+        let under_stress = bio_state
+            .map(|b| b.regime >= HomeostaticRegime::Stressed)
+            .unwrap_or(false);
 
         // 3. System 0.5: Local Semantic Pattern Routing (~25 µs)
         let word_count = trimmed.split_whitespace().count();
@@ -112,13 +129,16 @@ impl TripartiteRouter {
                 selected_glyph: Some('觀'),
                 skeleton_id: Some("skel-fast-lookup".to_string()),
                 confidence: 0.78,
-                rationale: "Short operational command routed to System 0.5 semantic vector matching".to_string(),
+                rationale:
+                    "Short operational command routed to System 0.5 semantic vector matching"
+                        .to_string(),
                 routing_latency_ns: t0.elapsed().as_nanos() as u64,
             };
         }
 
         // Determine if query is high-complexity open-ended reasoning
-        let is_complex_reasoning = word_count >= 15 || trimmed.contains("analyz") || trimmed.contains("research");
+        let is_complex_reasoning =
+            word_count >= 15 || trimmed.contains("analyz") || trimmed.contains("research");
 
         if is_complex_reasoning && !under_stress {
             return RoutingDecision {
@@ -157,8 +177,14 @@ mod tests {
         let dec = TripartiteRouter::route("行", None);
         assert_eq!(dec.tier, CognitiveTier::System0Sutra);
         assert_eq!(dec.selected_glyph, Some('行'));
-        assert_eq!(dec.skeleton_id.as_deref(), Some("skel-verify-commit-vanguard"));
-        assert!(dec.routing_latency_ns < 100_000, "System 0 routing must complete in sub-100µs");
+        assert_eq!(
+            dec.skeleton_id.as_deref(),
+            Some("skel-verify-commit-vanguard")
+        );
+        assert!(
+            dec.routing_latency_ns < 100_000,
+            "System 0 routing must complete in sub-100µs"
+        );
     }
 
     #[test]

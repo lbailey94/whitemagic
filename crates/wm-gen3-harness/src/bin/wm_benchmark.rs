@@ -434,7 +434,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!(
         "  ✓ Codon Parse & Align Speed:{:.1} ns/op ({:.2} million codons/sec)",
-        sutra_ns, sutra_per_sec / 1_000_000.0
+        sutra_ns,
+        sutra_per_sec / 1_000_000.0
     );
     println!(
         "  ✓ Constituent Alignment:   證: {:.4} | 行: {:.4} | 鏡: {:.4}",
@@ -448,7 +449,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     println!(
         "  ✓ Intent Token Reduction:  {} bytes (~{} tokens) → {} bytes (~{} tokens) [{:.1}% compression]",
-        nl_equivalent.len(), nl_tokens, shipwright.codon_str.len(), sutra_tokens, token_reduction
+        nl_equivalent.len(),
+        nl_tokens,
+        shipwright.codon_str.len(),
+        sutra_tokens,
+        token_reduction
     );
     println!(
         "  ✓ Sovereign Speedup:       {:.0}x acceleration vs. Cloud LLM ({:.4} ms vs {:.1} ms)\n",
@@ -510,12 +515,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!(
         "  ✓ Routing Triage Speed:    {:.1} ns/op ({:.2} million routes/sec)",
-        route_ns, routes_per_sec / 1_000_000.0
+        route_ns,
+        routes_per_sec / 1_000_000.0
     );
-    println!("  ✓ System 0 Sutra Reflex:   Tier: {:?} | Latency: {} ns | Cloud Tokens: 0", dec_s0.tier, dec_s0.routing_latency_ns);
-    println!("  ✓ System 0.5 Vector Match: Tier: {:?} | Latency: {} ns | Cloud Tokens: 0", dec_s05.tier, dec_s05.routing_latency_ns);
-    println!("  ✓ System 2 Cloud Escalation:Tier: {:?} (Permitted when V_rest is Nominal)", dec_nominal.tier);
-    println!("  ✓ Homeostatic Suppression: Tier: {:?} (Cloud blocked: V_rest = {:.1}mV Critical)", dec_stressed.tier, bio_critical.v_rest_mv);
+    println!(
+        "  ✓ System 0 Sutra Reflex:   Tier: {:?} | Latency: {} ns | Cloud Tokens: 0",
+        dec_s0.tier, dec_s0.routing_latency_ns
+    );
+    println!(
+        "  ✓ System 0.5 Vector Match: Tier: {:?} | Latency: {} ns | Cloud Tokens: 0",
+        dec_s05.tier, dec_s05.routing_latency_ns
+    );
+    println!(
+        "  ✓ System 2 Cloud Escalation:Tier: {:?} (Permitted when V_rest is Nominal)",
+        dec_nominal.tier
+    );
+    println!(
+        "  ✓ Homeostatic Suppression: Tier: {:?} (Cloud blocked: V_rest = {:.1}mV Critical)",
+        dec_stressed.tier, bio_critical.v_rest_mv
+    );
     println!("  ✓ Thermal/Wear Invariant:  100.0% Cloud Token Avoidance under Critical Stress\n");
 
     // =========================================================================
@@ -574,20 +592,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 3. Critical state (-15 mV): Emergency triage salvage injection
     let rep_critical = vault.autopoietic_morphogenesis(&bio_critical);
 
-    println!("  ✓ Hyperpolarized Plasticity:{:.2}x expansion (V_rest = {:.1}mV)", rep_hyper.plasticity_factor, bio_hyper.v_rest_mv);
-    println!("  ✓ Stressed Adaptation:     Plasticity: {:.2}x | Demoted to Standard: {} | Steps Pruned: {}", rep_stressed.plasticity_factor, rep_stressed.demoted_to_standard, rep_stressed.pruned_steps);
-    println!("  ✓ Critical Emergency Triage:Plasticity: {:.2}x | Demoted to Vanguard: {} | Reflex Injected: {}", rep_critical.plasticity_factor, rep_critical.demoted_to_vanguard, rep_critical.homeostatic_reflex_injected);
-    println!("  ✓ Active Skeletons in Vault:{} operational (All conform to bioelectric safety floor)\n", rep_critical.active_skeleton_count);
+    println!(
+        "  ✓ Hyperpolarized Plasticity:{:.2}x expansion (V_rest = {:.1}mV)",
+        rep_hyper.plasticity_factor, bio_hyper.v_rest_mv
+    );
+    println!(
+        "  ✓ Stressed Adaptation:     Plasticity: {:.2}x | Demoted to Standard: {} | Steps Pruned: {}",
+        rep_stressed.plasticity_factor, rep_stressed.demoted_to_standard, rep_stressed.pruned_steps
+    );
+    println!(
+        "  ✓ Critical Emergency Triage:Plasticity: {:.2}x | Demoted to Vanguard: {} | Reflex Injected: {}",
+        rep_critical.plasticity_factor,
+        rep_critical.demoted_to_vanguard,
+        rep_critical.homeostatic_reflex_injected
+    );
+    println!(
+        "  ✓ Active Skeletons in Vault:{} operational (All conform to bioelectric safety floor)\n",
+        rep_critical.active_skeleton_count
+    );
 
     // =========================================================================
     // 10. GAP-JUNCTION P2P SWARM WIRE STREAMING (PILLAR 1 & FRONTIER 1)
     // =========================================================================
-    println!("─── [10/10] Gap-Junction P2P Swarm Wire Protocol Streaming (Pillar 1 / Frontier 1) ─");
+    println!(
+        "─── [10/10] Gap-Junction P2P Swarm Wire Protocol Streaming (Pillar 1 / Frontier 1) ─"
+    );
     use wm_gen3_core::mesh::{MeshClient, MeshServer};
 
     let server_key = SigningKey::from_bytes(&[11u8; 32]);
     let client_key = SigningKey::from_bytes(&[22u8; 32]);
-    let tmp_node_dir = std::env::temp_dir().join(format!("wm3-bench-node-{}", uuid::Uuid::new_v4()));
+    let tmp_node_dir =
+        std::env::temp_dir().join(format!("wm3-bench-node-{}", uuid::Uuid::new_v4()));
     let _ = std::fs::create_dir_all(&tmp_node_dir);
 
     let mut server = MeshServer::new("node-beta-swarm", server_key, &tmp_node_dir);
@@ -603,7 +638,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ack = match i % 3 {
             0 => client.send_gap_codon("⟪ 證 · 行 · 鏡 ⟫", "node-beta-swarm", 1000 + i as u64)?,
             1 => client.send_gap_tuple("sutra.stream", format!("event_{i}").as_bytes(), 60000)?,
-            _ => client.send_bioelectric_telemetry(-60.0 + (i as f32 % 20.0), "Nominal", 45.0, Some(88.0), 36.0)?,
+            _ => client.send_bioelectric_telemetry(
+                -60.0 + (i as f32 % 20.0),
+                "Nominal",
+                45.0,
+                Some(88.0),
+                36.0,
+            )?,
         };
         if ack.accepted {
             swarm_acks += 1;
@@ -621,9 +662,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "  ✓ Swarm Packet Streaming:  {} frames streamed (Ed25519 Signed & Nonce-Challenged)",
         n_swarm
     );
-    println!("  ✓ Frame Acceptance Rate:   100.0% ({}/{} accepted, 0% packet loss)", swarm_acks, n_swarm);
-    println!("  ✓ Wire Swarm Throughput:   {:.1} packets/sec ({:.2} ms total for {} frames)", swarm_pps, swarm_secs * 1000.0, n_swarm);
-    println!("  ✓ Mean Packet Round-Trip:  {:.1} µs ({:.3} ms across TCP Wire Protocol 7369)\n", mean_pkt_us, mean_pkt_us / 1000.0);
+    println!(
+        "  ✓ Frame Acceptance Rate:   100.0% ({}/{} accepted, 0% packet loss)",
+        swarm_acks, n_swarm
+    );
+    println!(
+        "  ✓ Wire Swarm Throughput:   {:.1} packets/sec ({:.2} ms total for {} frames)",
+        swarm_pps,
+        swarm_secs * 1000.0,
+        n_swarm
+    );
+    println!(
+        "  ✓ Mean Packet Round-Trip:  {:.1} µs ({:.3} ms across TCP Wire Protocol 7369)\n",
+        mean_pkt_us,
+        mean_pkt_us / 1000.0
+    );
 
     println!("╔═══════════════════════════════════════════════════════════════════════════════╗");
     println!("║                  ALL ARCHITECTURAL BENCHMARKS RATIFIED (100% PASS)            ║");
