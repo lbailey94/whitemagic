@@ -400,14 +400,54 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 7. SUTRA COMPILER & LOGOGLYPHIC CANON DISPATCH (DIR-06, DIR-08)
     // =========================================================================
     println!("─── [7/10] Sutra Compiler & Logoglyphic Canon Dispatch (DIR-06 / DIR-08) ───────");
-    use wm_gen3_core::sutra::CompoundSutra;
+    use wm_gen3_core::sutra::{
+        CANONICAL_MUDRAS, CompoundSutra, MudraEnvironment, SutraTokenizer, parse_stack,
+    };
 
+    // 7.1 Zero-Allocation Tokenizer Microbenchmark
+    let raw_codon_stream = "證 行 鏡 觀 合 遠 息 清 生 界 應 根 🜅 🜂 🜁 🜊 🜄 🜅 🜍 🜏 🝓 🜔 🜎 🜃";
+    let n_tokens_iter = 100_000;
+    let t_tok = Instant::now();
+    let mut total_glyphs = 0usize;
+    for _ in 0..n_tokens_iter {
+        for glyph in SutraTokenizer::new(raw_codon_stream) {
+            total_glyphs += 1;
+            let _ = glyph.index();
+        }
+    }
+    let tok_dur = t_tok.elapsed();
+    let tok_throughput = total_glyphs as f64 / tok_dur.as_secs_f64();
+    let tok_ns_per_glyph = tok_dur.as_secs_f64() * 1_000_000_000.0 / total_glyphs as f64;
+
+    // 7.2 Stack-Allocated Codon Parsing (Zero Heap Allocation)
+    let n_stack = 100_000;
+    let t_stack = Instant::now();
+    for _ in 0..n_stack {
+        let _ = parse_stack("⟪ 證 · 行 · 鏡 ⟫")?;
+        let _ = parse_stack("⟪ 🜔 · 🜂 · 🜅 · 🜎 ⟫")?;
+    }
+    let stack_dur = t_stack.elapsed();
+    let stack_ns = stack_dur.as_secs_f64() * 1_000_000_000.0 / (n_stack * 2) as f64;
+
+    // 7.3 Mudra Precondition Contract Evaluation
+    let env = MudraEnvironment::default();
+    let fortress_mudra = CompoundSutra::parse("⟪ 界 · 行 · 鏡 · 應 ⟫")?;
+    let n_pre = 200_000;
+    let t_pre = Instant::now();
+    for _ in 0..n_pre {
+        let _ = fortress_mudra.validate_preconditions(&env);
+    }
+    let pre_dur = t_pre.elapsed();
+    let pre_ns = pre_dur.as_secs_f64() * 1_000_000_000.0 / n_pre as f64;
+
+    // 7.4 Compound Sutra Parsing with 512-dim Centroid Projection
     let test_codons = [
         "⟪ 證 · 行 · 鏡 ⟫",
         "⟪ 觀 · 合 · 遠 ⟫",
         "⟪ 息 · 清 · 生 ⟫",
         "⟪ 界 · 應 · 根 ⟫",
-        "verify execute mirror",
+        "⟪ 🜔 · 🜂 · 🜅 · 🜎 ⟫",
+        "⟪ 🜎 · 🜁 · 🜂 ⟫",
     ];
     let n_sutra = 50_000;
     let t0 = Instant::now();
@@ -433,9 +473,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let speedup = estimated_llm_latency_ms / sutra_latency_ms;
 
     println!(
-        "  ✓ Codon Parse & Align Speed:{:.1} ns/op ({:.2} million codons/sec)",
+        "  ✓ Zero-Alloc Tokenizer:    {:.2} million glyphs/sec ({:.2} ns/glyph)",
+        tok_throughput / 1_000_000.0,
+        tok_ns_per_glyph
+    );
+    println!(
+        "  ✓ Stack-Allocated Codons:  {:.1} ns/op (Zero Heap Allocations)",
+        stack_ns
+    );
+    println!(
+        "  ✓ Precondition Contract:   {:.2} ns/eval (Store, Landlock, Mesh)",
+        pre_ns
+    );
+    println!(
+        "  ✓ Codon Parse & Align:     {:.1} ns/op ({:.2} million codons/sec)",
         sutra_ns,
         sutra_per_sec / 1_000_000.0
+    );
+    println!(
+        "  ✓ Alchemical Dual-Mapping: 🜔·🜂·🜅·🜎 → {}",
+        fortress_mudra.taoist_formula()
+    );
+    println!(
+        "  ✓ Recognized Mudras:       {} canonical Taoist Hand Seals registered",
+        CANONICAL_MUDRAS.len()
     );
     println!(
         "  ✓ Constituent Alignment:   證: {:.4} | 行: {:.4} | 鏡: {:.4}",

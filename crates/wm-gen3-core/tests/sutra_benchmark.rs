@@ -7,7 +7,7 @@
 //! 4. Byte compaction ratio vs natural language (> 90%).
 
 use std::time::Instant;
-use wm_gen3_core::sutra::{parse_stack, CompoundSutra, MudraEnvironment};
+use wm_gen3_core::sutra::{CompoundSutra, MudraEnvironment, parse_stack};
 use wm_gen3_core::tripartite_router::{CognitiveTier, TripartiteRouter};
 
 #[test]
@@ -19,12 +19,7 @@ fn test_sutra_mudra_benchmark_suite() {
     // -------------------------------------------------------------------------
     // 1. Zero-Allocation Stack Tokenization Throughput (1,000,000 operations)
     // -------------------------------------------------------------------------
-    let test_inputs = [
-        "🜔 🜂 🜅 🜎",
-        "🜖 🜎 🜁",
-        "🜃 🜍 🜊 🝓",
-        "⟪ 證 · 行 · 鏡 ⟫",
-    ];
+    let test_inputs = ["🜔 🜂 🜅 🜎", "🜖 🜎 🜁", "🜃 🜍 🜊 🝓", "⟪ 證 · 行 · 鏡 ⟫"];
 
     let n_tokens = 1_000_000;
     let t0 = Instant::now();
@@ -62,7 +57,9 @@ fn test_sutra_mudra_benchmark_suite() {
     let n_validations = 500_000;
     let t0 = Instant::now();
     for _ in 0..n_validations {
-        fortress_seal.validate_preconditions(&env).expect("validation must pass");
+        fortress_seal
+            .validate_preconditions(&env)
+            .expect("validation must pass");
     }
     let val_elapsed = t0.elapsed();
     let ns_per_val = (val_elapsed.as_nanos() as f64) / (n_validations as f64);
@@ -113,15 +110,15 @@ fn test_sutra_mudra_benchmark_suite() {
     let prompt_comparisons = [
         (
             "Please erect a Landlock sandbox, commit a memory checkpoint, attach an ML-DSA-44 post-quantum dual signature, and stream the codon across the wire protocol mesh to the remote VPS peer.",
-            "🜔 🜂 🜅 🜎"
+            "🜔 🜂 🜅 🜎",
         ),
         (
             "Check bioelectric resting potential drift, align ultrasound phase frequency, and trigger autopoietic cellular morphogenetic repair.",
-            "🜁 🝓"
+            "🜁 🝓",
         ),
         (
             "Verify all test invariants, execute and commit the change to git, and mirror attestation receipts across the network.",
-            "⟪ 證 · 行 · 鏡 ⟫"
+            "⟪ 證 · 行 · 鏡 ⟫",
         ),
     ];
 
@@ -146,7 +143,10 @@ fn test_sutra_mudra_benchmark_suite() {
     }
 
     let overall_reduction = (1.0 - (total_glyph_bytes as f64 / total_nl_bytes as f64)) * 100.0;
-    println!("    Overall Compaction Ratio: {:.2}% byte reduction", overall_reduction);
+    println!(
+        "    Overall Compaction Ratio: {:.2}% byte reduction",
+        overall_reduction
+    );
     assert!(
         overall_reduction > 85.0,
         "Compaction ratio must exceed 85% (got {:.2}%)",

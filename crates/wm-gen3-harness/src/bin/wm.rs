@@ -1981,9 +1981,16 @@ fn main() {
                 "JEV Pre-Triage Score:      {:.4} (26.7ns non-autoregressive gate)",
                 jev_score
             );
-            let trip = wm_gen3_core::tripartite_router::TripartiteRouter::route(&inquiry, Some(&bio));
-            println!("Tripartite Tier:           {:?} (V_rest: {:.1}mV, Plasticity: {:.2}x)", trip.tier, bio.v_rest_mv, morph_rep.plasticity_factor);
-            println!("Tripartite Latency:        {:.2} µs", trip.routing_latency_ns as f64 / 1000.0);
+            let trip =
+                wm_gen3_core::tripartite_router::TripartiteRouter::route(&inquiry, Some(&bio));
+            println!(
+                "Tripartite Tier:           {:?} (V_rest: {:.1}mV, Plasticity: {:.2}x)",
+                trip.tier, bio.v_rest_mv, morph_rep.plasticity_factor
+            );
+            println!(
+                "Tripartite Latency:        {:.2} µs",
+                trip.routing_latency_ns as f64 / 1000.0
+            );
             println!("Tripartite Rationale:      {}", trip.rationale);
             println!("Active Dream Insights:     {}", insights.len());
             println!("Compiled Fast-Path Rules:  {}", compiled_count);
@@ -2009,10 +2016,21 @@ fn main() {
                 let inq = inquiry.to_lowercase();
                 inq.contains(&ins.source_concept.to_lowercase())
                     || inq.contains(&ins.target_concept.to_lowercase())
-                    || (bound_skeleton.is_some() && bound_skeleton.unwrap().action_steps.iter().any(|step| ins.actionable_recommendation.to_lowercase().contains(&step.to_lowercase())))
+                    || (bound_skeleton.is_some()
+                        && bound_skeleton.unwrap().action_steps.iter().any(|step| {
+                            ins.actionable_recommendation
+                                .to_lowercase()
+                                .contains(&step.to_lowercase())
+                        }))
             }) {
-                println!("  Context Injection:       {}", ins.actionable_recommendation);
-                println!("  Dream Insight Bridge:    {} ⇄ {} ({})", ins.source_concept, ins.target_concept, ins.relation_type);
+                println!(
+                    "  Context Injection:       {}",
+                    ins.actionable_recommendation
+                );
+                println!(
+                    "  Dream Insight Bridge:    {} ⇄ {} ({})",
+                    ins.source_concept, ins.target_concept, ins.relation_type
+                );
             }
             println!("==================================================");
             match &dispatch {
@@ -2859,38 +2877,43 @@ fn main() {
             strict,
             peer,
             json,
-        } => {
-            match command {
-                Some(SutraCommands::Canon { json: j }) => {
-                    run_sutra_canon(j || json);
-                }
-                Some(SutraCommands::List { json: j }) => {
-                    run_sutra_list(j || json);
-                }
-                Some(SutraCommands::Compile { query, json: j }) => {
-                    run_sutra_compile(&query, j || json);
-                }
-                Some(SutraCommands::Cast {
-                    codon: c,
-                    dry_run: dr,
-                    execute: ex,
-                    strict: st,
-                    peer: p,
-                    json: j,
-                }) => {
-                    let actual_dry_run = if ex { false } else { dr || !ex };
-                    run_sutra_cast(&c, actual_dry_run, st, p.as_deref(), j, &store_path);
-                }
-                None => {
-                    if let Some(c) = codon {
-                        let actual_dry_run = if execute { false } else { dry_run || !execute };
-                        run_sutra_cast(&c, actual_dry_run, strict, peer.as_deref(), json, &store_path);
-                    } else {
-                        run_sutra_canon(json);
-                    }
+        } => match command {
+            Some(SutraCommands::Canon { json: j }) => {
+                run_sutra_canon(j || json);
+            }
+            Some(SutraCommands::List { json: j }) => {
+                run_sutra_list(j || json);
+            }
+            Some(SutraCommands::Compile { query, json: j }) => {
+                run_sutra_compile(&query, j || json);
+            }
+            Some(SutraCommands::Cast {
+                codon: c,
+                dry_run: dr,
+                execute: ex,
+                strict: st,
+                peer: p,
+                json: j,
+            }) => {
+                let actual_dry_run = if ex { false } else { dr || !ex };
+                run_sutra_cast(&c, actual_dry_run, st, p.as_deref(), j, &store_path);
+            }
+            None => {
+                if let Some(c) = codon {
+                    let actual_dry_run = if execute { false } else { dry_run || !execute };
+                    run_sutra_cast(
+                        &c,
+                        actual_dry_run,
+                        strict,
+                        peer.as_deref(),
+                        json,
+                        &store_path,
+                    );
+                } else {
+                    run_sutra_canon(json);
                 }
             }
-        }
+        },
         Commands::Homeostasis { json } => {
             run_homeostasis_command(json);
         }
@@ -2906,19 +2929,36 @@ fn run_homeostasis_command(json: bool) {
         println!("==================================================");
         println!("  WhiteMagic Gen3 Bioelectric Homeostasis Monitor ");
         println!("==================================================");
-        println!("Resting Potential:  {:.1} mV (Serene baseline: -70.0 mV)", bio.v_rest_mv);
+        println!(
+            "Resting Potential:  {:.1} mV (Serene baseline: -70.0 mV)",
+            bio.v_rest_mv
+        );
         println!("Homeostatic Regime: {:?}", bio.regime);
         println!("Metabolism Mode:    {:?}", bio.metabolism_mode);
         println!("CPU Temperature:    {:.1}°C", bio.cpu_temp_c);
         if let Some(bat) = bio.battery_pct {
-            println!("Battery Level:      {:.1}% ({})", bat, if bio.on_ac_power { "AC Connected" } else { "Discharging" });
+            println!(
+                "Battery Level:      {:.1}% ({})",
+                bat,
+                if bio.on_ac_power {
+                    "AC Connected"
+                } else {
+                    "Discharging"
+                }
+            );
         } else {
             println!("Power Supply:       AC Connected (no battery detected)");
         }
         println!("Load Average (1m):  {:.2}", bio.load_avg_1m);
         println!("Available RAM:      {:.1} MB", bio.mem_available_mb);
-        println!("Root NVMe Free:     {:.2} GB (Invariant floor: 20.0 GB)", bio.nvme_free_gb);
-        println!("Probe Latency:      {:.2} µs", bio.probe_latency_ns / 1000.0);
+        println!(
+            "Root NVMe Free:     {:.2} GB (Invariant floor: 20.0 GB)",
+            bio.nvme_free_gb
+        );
+        println!(
+            "Probe Latency:      {:.2} µs",
+            bio.probe_latency_ns / 1000.0
+        );
         println!("--------------------------------------------------");
         if bio.nvme_free_gb < 20.0 {
             println!("STATUS: [CRITICAL ALARM] NVMe storage floor breached (<20 GB)!");
@@ -8132,7 +8172,10 @@ fn run_mesh_command(command: MeshCommands, store_path: &Path) {
                     std::process::exit(1);
                 }
             };
-            println!("Connecting to peer {} for Mudra Codon transmission...", addr);
+            println!(
+                "Connecting to peer {} for Mudra Codon transmission...",
+                addr
+            );
             let mut client = match MeshClient::connect(addr, &name, signing_key) {
                 Ok(c) => c,
                 Err(e) => {
@@ -8167,7 +8210,11 @@ fn run_mesh_command(command: MeshCommands, store_path: &Path) {
                 println!("==================================================");
                 println!("Target Peer:       {}", peer);
                 println!("Codon:             {}", codon);
-                println!("Wire Latency:      {} µs ({:.3} ms)", rtt_us, rtt_us as f64 / 1000.0);
+                println!(
+                    "Wire Latency:      {} µs ({:.3} ms)",
+                    rtt_us,
+                    rtt_us as f64 / 1000.0
+                );
                 println!("Accepted:          {}", ack.accepted);
                 println!("Remote Responder:  {}", ack.responder_node);
                 println!("Acknowledgment:    {}", ack.details);
@@ -8950,15 +8997,28 @@ fn run_sutra_canon(json: bool) {
                 })
             })
             .collect();
-        println!("{}", serde_json::to_string_pretty(&items).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&items).unwrap_or_default()
+        );
         return;
     }
 
-    println!("==========================================================================================");
-    println!("                   WhiteMagic Gen3 Canonical 12-Glyph Logoglyphic Canon                   ");
-    println!("==========================================================================================");
-    println!("Idx | Glyph | Alch | Pinyin | Meaning            | Taoist Seal (印诀)              | Skeleton");
-    println!("----+-------+------+--------+--------------------+---------------------------------+--------------------");
+    println!(
+        "=========================================================================================="
+    );
+    println!(
+        "                   WhiteMagic Gen3 Canonical 12-Glyph Logoglyphic Canon                   "
+    );
+    println!(
+        "=========================================================================================="
+    );
+    println!(
+        "Idx | Glyph | Alch | Pinyin | Meaning            | Taoist Seal (印诀)              | Skeleton"
+    );
+    println!(
+        "----+-------+------+--------+--------------------+---------------------------------+--------------------"
+    );
     for g in SutraGlyph::ALL {
         println!(
             "{:>3} | {:^5} | {:^4} | {:<6} | {:<18} | {:<31} | {:<20}",
@@ -8971,20 +9031,31 @@ fn run_sutra_canon(json: bool) {
             g.bound_skeleton_id(),
         );
     }
-    println!("==========================================================================================");
+    println!(
+        "=========================================================================================="
+    );
 }
 
 fn run_sutra_list(json: bool) {
     use wm_gen3_core::sutra::CANONICAL_MUDRAS;
 
     if json {
-        println!("{}", serde_json::to_string_pretty(&CANONICAL_MUDRAS).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&CANONICAL_MUDRAS).unwrap_or_default()
+        );
         return;
     }
 
-    println!("==========================================================================================");
-    println!("                 WhiteMagic Gen3 Recognized Compound Taoist Mudras (印诀式)                 ");
-    println!("==========================================================================================");
+    println!(
+        "=========================================================================================="
+    );
+    println!(
+        "                 WhiteMagic Gen3 Recognized Compound Taoist Mudras (印诀式)                 "
+    );
+    println!(
+        "=========================================================================================="
+    );
     for (i, m) in CANONICAL_MUDRAS.iter().enumerate() {
         let glyph_str = m
             .glyphs
@@ -8999,17 +9070,27 @@ fn run_sutra_list(json: bool) {
         println!(
             "   Preconditions:      Store Writable: {} | Landlock: {} | Mesh Net: {}",
             if m.requires_store_write { "Yes" } else { "No" },
-            if m.requires_landlock { "Required" } else { "Optional" },
-            if m.requires_mesh_net { "Required" } else { "Optional" },
+            if m.requires_landlock {
+                "Required"
+            } else {
+                "Optional"
+            },
+            if m.requires_mesh_net {
+                "Required"
+            } else {
+                "Optional"
+            },
         );
         println!("   Description:        {}", m.description);
-        println!("------------------------------------------------------------------------------------------");
+        println!(
+            "------------------------------------------------------------------------------------------"
+        );
     }
 }
 
 fn run_sutra_compile(query: &str, json: bool) {
     use std::time::Instant;
-    use wm_gen3_core::sutra::{CompoundSutra, SutraGlyph, CANONICAL_MUDRAS};
+    use wm_gen3_core::sutra::{CANONICAL_MUDRAS, CompoundSutra, SutraGlyph};
     use wm_gen3_zeropointfive::System05;
 
     let start = Instant::now();
@@ -9034,7 +9115,11 @@ fn run_sutra_compile(query: &str, json: bool) {
             // Score compound mudras
             for m in CANONICAL_MUDRAS {
                 if let Ok(sutra) = CompoundSutra::from_glyphs(m.glyphs.to_vec()) {
-                    let dot: f32 = query_vec.iter().zip(sutra.compound_vector.iter()).map(|(a, b)| a * b).sum();
+                    let dot: f32 = query_vec
+                        .iter()
+                        .zip(sutra.compound_vector.iter())
+                        .map(|(a, b)| a * b)
+                        .sum();
                     if dot > mudra_score {
                         mudra_score = dot;
                         best_mudra = Some(m.name);
@@ -9062,9 +9147,8 @@ fn run_sutra_compile(query: &str, json: bool) {
         glyph_scores.iter().take(3).map(|(g, _)| *g).collect()
     };
 
-    let sutra = CompoundSutra::from_glyphs(selected_glyphs).unwrap_or_else(|_| {
-        CompoundSutra::parse("證 行 鏡").unwrap()
-    });
+    let sutra = CompoundSutra::from_glyphs(selected_glyphs)
+        .unwrap_or_else(|_| CompoundSutra::parse("證 行 鏡").unwrap());
     let compile_us = start.elapsed().as_micros();
 
     if json {
@@ -9102,11 +9186,19 @@ fn run_sutra_compile(query: &str, json: bool) {
     println!("Compiled Codon:          {}", sutra.codon_str);
     println!(
         "Alchemical Codon:        ⟪ {} ⟫",
-        sutra.glyphs.iter().map(|g| g.alchemical_char().to_string()).collect::<Vec<_>>().join(" · ")
+        sutra
+            .glyphs
+            .iter()
+            .map(|g| g.alchemical_char().to_string())
+            .collect::<Vec<_>>()
+            .join(" · ")
     );
     println!("Taoist Mudra Formula:    {}", sutra.taoist_formula());
     if let Some(mudra) = best_mudra {
-        println!("Best Matching Mudra:     {} (score: {:.4})", mudra, mudra_score);
+        println!(
+            "Best Matching Mudra:     {} (score: {:.4})",
+            mudra, mudra_score
+        );
     }
     println!("Bound Primary Skeleton:  {}", sutra.primary_skeleton_id);
     println!("Top Semantic Alignments:");
@@ -9281,7 +9373,10 @@ fn run_sutra_cast(
             "primary_skeleton_id": sutra.primary_skeleton_id,
             "dry_run": dry_run,
         });
-        println!("{}", serde_json::to_string_pretty(&output).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&output).unwrap_or_default()
+        );
         return;
     }
 
@@ -9291,7 +9386,12 @@ fn run_sutra_cast(
     println!("Codon:                   {}", sutra.codon_str);
     println!(
         "Alchemical:              ⟪ {} ⟫",
-        sutra.glyphs.iter().map(|g| g.alchemical_char().to_string()).collect::<Vec<_>>().join(" · ")
+        sutra
+            .glyphs
+            .iter()
+            .map(|g| g.alchemical_char().to_string())
+            .collect::<Vec<_>>()
+            .join(" · ")
     );
     if let Some(ref name) = sutra.canonical_name {
         println!("Title:                   {}", name);
@@ -9300,7 +9400,11 @@ fn run_sutra_cast(
     println!("Parse Latency:           {} µs", parse_micros);
     println!(
         "Precondition Contract:   {}",
-        if pre_result.is_ok() { "SATISFIED" } else { "FAILED" }
+        if pre_result.is_ok() {
+            "SATISFIED"
+        } else {
+            "FAILED"
+        }
     );
     println!("Constituent Glyphs:");
     for (g, sim) in &sutra.alignment_scores {
@@ -9316,8 +9420,14 @@ fn run_sutra_cast(
     }
     println!("--------------------------------------------------");
     println!("Bound Kekkai Sandbox Profile:");
-    println!("  Read-Only Paths:       {:?}", sutra.kekkai_profile.read_only_paths);
-    println!("  Read-Write Paths:      {:?}", sutra.kekkai_profile.read_write_paths);
+    println!(
+        "  Read-Only Paths:       {:?}",
+        sutra.kekkai_profile.read_only_paths
+    );
+    println!(
+        "  Read-Write Paths:      {:?}",
+        sutra.kekkai_profile.read_write_paths
+    );
     println!(
         "  Network Policy:        {}",
         if sutra.kekkai_profile.network_allowed {
