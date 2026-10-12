@@ -31,7 +31,18 @@ pub struct SutraGlyphMeta {
     pub vector: Option<Vec<f32>>,
 }
 
-const CANONICAL_GLYPHS: &[(&str, &str, &str, &str, &str, &[&str], &[&str], bool)] = &[
+type CanonicalGlyph = (
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static [&'static str],
+    &'static [&'static str],
+    bool,
+);
+
+const CANONICAL_GLYPHS: &[CanonicalGlyph] = &[
     // 0: 證
     (
         "證",

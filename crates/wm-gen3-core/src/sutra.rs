@@ -308,7 +308,7 @@ impl SutraGlyph {
     pub fn vector(self) -> [f32; SUTRA_VECTOR_DIM] {
         let offset = 16 + (self.index() * SUTRA_VECTOR_DIM * 4);
         let mut vec = [0.0f32; SUTRA_VECTOR_DIM];
-        for i in 0..SUTRA_VECTOR_DIM {
+        for (i, slot) in vec.iter_mut().enumerate() {
             let start = offset + (i * 4);
             let bytes = [
                 EMBEDDED_SUTRA_VECTORS[start],
@@ -316,7 +316,7 @@ impl SutraGlyph {
                 EMBEDDED_SUTRA_VECTORS[start + 2],
                 EMBEDDED_SUTRA_VECTORS[start + 3],
             ];
-            vec[i] = f32::from_le_bytes(bytes);
+            *slot = f32::from_le_bytes(bytes);
         }
         vec
     }
