@@ -18,7 +18,8 @@ struct TempDir(PathBuf);
 
 impl TempDir {
     fn new(prefix: &str) -> Self {
-        let p = std::env::temp_dir().join(format!("wm3-gap-swarm-{}-{}", prefix, uuid::Uuid::new_v4()));
+        let p =
+            std::env::temp_dir().join(format!("wm3-gap-swarm-{}-{}", prefix, uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&p).unwrap();
         Self(p)
     }
@@ -55,20 +56,21 @@ fn test_gap_junction_multi_node_swarm_streaming_benchmark() {
 
     // 1. Spin up Daemon Node Beta (Listener)
     let mut node_beta = MeshServer::new("node-beta-sovereign", server_key, dir_b.path());
-    let bind_addr = node_beta.listen(0, "127.0.0.1").expect("node-beta listen failed");
+    let bind_addr = node_beta
+        .listen(0, "127.0.0.1")
+        .expect("node-beta listen failed");
     println!("  ✓ Node Beta listening on TCP: {}", bind_addr);
 
     // 2. Connect Daemon Node Alpha (Client)
-    let mut node_alpha = MeshClient::connect(
-        bind_addr,
-        "node-alpha-sovereign",
-        client_key,
-    ).expect("node-alpha connect failed");
+    let mut node_alpha = MeshClient::connect(bind_addr, "node-alpha-sovereign", client_key)
+        .expect("node-alpha connect failed");
     println!("  ✓ Node Alpha established sovereign TCP connection to Node Beta");
 
     // 3. Mutual Ed25519 Handshake with Challenge Nonce
     let t_hs = Instant::now();
-    let hs_ack = node_alpha.handshake(100, 10).expect("mutual handshake failed");
+    let hs_ack = node_alpha
+        .handshake(100, 10)
+        .expect("mutual handshake failed");
     let hs_dur_us = t_hs.elapsed().as_micros();
     assert_eq!(hs_ack.node_id, "node-beta-sovereign");
     println!(
@@ -77,7 +79,12 @@ fn test_gap_junction_multi_node_swarm_streaming_benchmark() {
     );
 
     // 4. Synthetic Continuous Load: 1,000 Gap-Junction Packets
-    let test_codons = ["⟪ 證 · 行 · 鏡 ⟫", "⟪ 觀 · 合 · 遠 ⟫", "⟪ 息 · 清 · 生 ⟫", "⟪ 界 · 應 · 根 ⟫"];
+    let test_codons = [
+        "⟪ 證 · 行 · 鏡 ⟫",
+        "⟪ 觀 · 合 · 遠 ⟫",
+        "⟪ 息 · 清 · 生 ⟫",
+        "⟪ 界 · 應 · 根 ⟫",
+    ];
     let n_packets = 1000usize;
     let mut latencies_us = Vec::with_capacity(n_packets);
     let mut accepted_count = 0usize;
@@ -89,20 +96,23 @@ fn test_gap_junction_multi_node_swarm_streaming_benchmark() {
             0 => {
                 // Gap-Junction Codon Packet
                 let codon = test_codons[i % test_codons.len()];
-                node_alpha.send_gap_codon(codon, "node-beta-sovereign", 50000 + i as u64)
+                node_alpha
+                    .send_gap_codon(codon, "node-beta-sovereign", 50000 + i as u64)
                     .expect("codon send failed")
             }
             1 => {
                 // Gap-Junction Linda Tuple Packet
                 let tag = format!("sutra.codon.state.{}", i % 8);
                 let payload = format!("state_payload_{i}");
-                node_alpha.send_gap_tuple(&tag, payload.as_bytes(), 60000)
+                node_alpha
+                    .send_gap_tuple(&tag, payload.as_bytes(), 60000)
                     .expect("tuple send failed")
             }
             _ => {
                 // Gap-Junction Bioelectric Telemetry Packet
                 let v_rest = -65.0 + (i as f32 % 30.0) * 0.5;
-                node_alpha.send_bioelectric_telemetry(v_rest, "Nominal", 42.0, Some(90.0), 38.0)
+                node_alpha
+                    .send_bioelectric_telemetry(v_rest, "Nominal", 42.0, Some(90.0), 38.0)
                     .expect("telemetry send failed")
             }
         };
@@ -129,11 +139,24 @@ fn test_gap_junction_multi_node_swarm_streaming_benchmark() {
 
     println!("\n  ─── Gap-Junction Wire Swarm Telemetry ───");
     println!("  ✓ Total Packets Streamed:   {} frames", n_packets);
-    println!("  ✓ Packets Accepted (Acks):  {} (100.0% Verified)", accepted_count);
-    println!("  ✓ Packet Loss:              {:.2}% (Zero-Drop Invariant Held)", packet_loss_pct);
+    println!(
+        "  ✓ Packets Accepted (Acks):  {} (100.0% Verified)",
+        accepted_count
+    );
+    println!(
+        "  ✓ Packet Loss:              {:.2}% (Zero-Drop Invariant Held)",
+        packet_loss_pct
+    );
     println!("  ✓ Total Streaming Duration: {:.3} seconds", total_secs);
-    println!("  ✓ Wire Swarm Throughput:    {:.1} packets/sec", throughput_pps);
-    println!("  ✓ Mean Packet Latency:      {:.1} µs ({:.3} ms)", mean_us, mean_us / 1000.0);
+    println!(
+        "  ✓ Wire Swarm Throughput:    {:.1} packets/sec",
+        throughput_pps
+    );
+    println!(
+        "  ✓ Mean Packet Latency:      {:.1} µs ({:.3} ms)",
+        mean_us,
+        mean_us / 1000.0
+    );
     println!("  ✓ Latency Distribution:");
     println!("      • Min:  {} µs", min_us);
     println!("      • p50:  {} µs", p50_us);
@@ -142,9 +165,18 @@ fn test_gap_junction_multi_node_swarm_streaming_benchmark() {
     println!("      • p99:  {} µs", p99_us);
     println!("      • Max:  {} µs", max_us);
 
-    assert_eq!(accepted_count, n_packets, "Every packet must be accepted and verified");
-    assert_eq!(packet_loss_pct, 0.0, "Zero packet loss must be preserved across Gap Junction");
-    assert!(throughput_pps > 50.0, "Throughput must exceed 50 packets/sec even in unoptimized debug mode (reaches 5,700+ pps in release)");
+    assert_eq!(
+        accepted_count, n_packets,
+        "Every packet must be accepted and verified"
+    );
+    assert_eq!(
+        packet_loss_pct, 0.0,
+        "Zero packet loss must be preserved across Gap Junction"
+    );
+    assert!(
+        throughput_pps > 50.0,
+        "Throughput must exceed 50 packets/sec even in unoptimized debug mode (reaches 5,700+ pps in release)"
+    );
 
     node_beta.stop();
     println!("\n  ✓ Node Beta and Node Alpha cleanly disconnected with zero resource leak.\n");

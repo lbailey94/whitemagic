@@ -1913,9 +1913,16 @@ fn main() {
                 "JEV Pre-Triage Score:      {:.4} (26.7ns non-autoregressive gate)",
                 jev_score
             );
-            let trip = wm_gen3_core::tripartite_router::TripartiteRouter::route(&inquiry, Some(&bio));
-            println!("Tripartite Tier:           {:?} (V_rest: {:.1}mV, Plasticity: {:.2}x)", trip.tier, bio.v_rest_mv, morph_rep.plasticity_factor);
-            println!("Tripartite Latency:        {:.2} µs", trip.routing_latency_ns as f64 / 1000.0);
+            let trip =
+                wm_gen3_core::tripartite_router::TripartiteRouter::route(&inquiry, Some(&bio));
+            println!(
+                "Tripartite Tier:           {:?} (V_rest: {:.1}mV, Plasticity: {:.2}x)",
+                trip.tier, bio.v_rest_mv, morph_rep.plasticity_factor
+            );
+            println!(
+                "Tripartite Latency:        {:.2} µs",
+                trip.routing_latency_ns as f64 / 1000.0
+            );
             println!("Tripartite Rationale:      {}", trip.rationale);
             println!("Active Dream Insights:     {}", insights.len());
             println!("Compiled Fast-Path Rules:  {}", compiled_count);
@@ -1941,10 +1948,21 @@ fn main() {
                 let inq = inquiry.to_lowercase();
                 inq.contains(&ins.source_concept.to_lowercase())
                     || inq.contains(&ins.target_concept.to_lowercase())
-                    || (bound_skeleton.is_some() && bound_skeleton.unwrap().action_steps.iter().any(|step| ins.actionable_recommendation.to_lowercase().contains(&step.to_lowercase())))
+                    || (bound_skeleton.is_some()
+                        && bound_skeleton.unwrap().action_steps.iter().any(|step| {
+                            ins.actionable_recommendation
+                                .to_lowercase()
+                                .contains(&step.to_lowercase())
+                        }))
             }) {
-                println!("  Context Injection:       {}", ins.actionable_recommendation);
-                println!("  Dream Insight Bridge:    {} ⇄ {} ({})", ins.source_concept, ins.target_concept, ins.relation_type);
+                println!(
+                    "  Context Injection:       {}",
+                    ins.actionable_recommendation
+                );
+                println!(
+                    "  Dream Insight Bridge:    {} ⇄ {} ({})",
+                    ins.source_concept, ins.target_concept, ins.relation_type
+                );
             }
             println!("==================================================");
             match &dispatch {
@@ -2807,19 +2825,36 @@ fn run_homeostasis_command(json: bool) {
         println!("==================================================");
         println!("  WhiteMagic Gen3 Bioelectric Homeostasis Monitor ");
         println!("==================================================");
-        println!("Resting Potential:  {:.1} mV (Serene baseline: -70.0 mV)", bio.v_rest_mv);
+        println!(
+            "Resting Potential:  {:.1} mV (Serene baseline: -70.0 mV)",
+            bio.v_rest_mv
+        );
         println!("Homeostatic Regime: {:?}", bio.regime);
         println!("Metabolism Mode:    {:?}", bio.metabolism_mode);
         println!("CPU Temperature:    {:.1}°C", bio.cpu_temp_c);
         if let Some(bat) = bio.battery_pct {
-            println!("Battery Level:      {:.1}% ({})", bat, if bio.on_ac_power { "AC Connected" } else { "Discharging" });
+            println!(
+                "Battery Level:      {:.1}% ({})",
+                bat,
+                if bio.on_ac_power {
+                    "AC Connected"
+                } else {
+                    "Discharging"
+                }
+            );
         } else {
             println!("Power Supply:       AC Connected (no battery detected)");
         }
         println!("Load Average (1m):  {:.2}", bio.load_avg_1m);
         println!("Available RAM:      {:.1} MB", bio.mem_available_mb);
-        println!("Root NVMe Free:     {:.2} GB (Invariant floor: 20.0 GB)", bio.nvme_free_gb);
-        println!("Probe Latency:      {:.2} µs", bio.probe_latency_ns / 1000.0);
+        println!(
+            "Root NVMe Free:     {:.2} GB (Invariant floor: 20.0 GB)",
+            bio.nvme_free_gb
+        );
+        println!(
+            "Probe Latency:      {:.2} µs",
+            bio.probe_latency_ns / 1000.0
+        );
         println!("--------------------------------------------------");
         if bio.nvme_free_gb < 20.0 {
             println!("STATUS: [CRITICAL ALARM] NVMe storage floor breached (<20 GB)!");
@@ -8820,7 +8855,10 @@ fn run_sutra_command(codon: &str, dry_run: bool, json: bool, store_path: &Path) 
             "primary_skeleton_id": sutra.primary_skeleton_id,
             "dry_run": dry_run,
         });
-        println!("{}", serde_json::to_string_pretty(&output).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&output).unwrap_or_default()
+        );
         return;
     }
 
@@ -8831,7 +8869,10 @@ fn run_sutra_command(codon: &str, dry_run: bool, json: bool, store_path: &Path) 
     if let Some(ref name) = sutra.canonical_name {
         println!("Title:                   {}", name);
     }
-    println!("Parse Latency:           {} µs (Model2Vec Zero-Copy Vector Map)", parse_micros);
+    println!(
+        "Parse Latency:           {} µs (Model2Vec Zero-Copy Vector Map)",
+        parse_micros
+    );
     println!("Constituent Glyphs:");
     for (g, sim) in &sutra.alignment_scores {
         println!(
@@ -8845,11 +8886,21 @@ fn run_sutra_command(codon: &str, dry_run: bool, json: bool, store_path: &Path) 
     }
     println!("--------------------------------------------------");
     println!("Bound Kekkai Sandbox Profile:");
-    println!("  Read-Only Paths:       {:?}", sutra.kekkai_profile.read_only_paths);
-    println!("  Read-Write Paths:      {:?}", sutra.kekkai_profile.read_write_paths);
+    println!(
+        "  Read-Only Paths:       {:?}",
+        sutra.kekkai_profile.read_only_paths
+    );
+    println!(
+        "  Read-Write Paths:      {:?}",
+        sutra.kekkai_profile.read_write_paths
+    );
     println!(
         "  Network Policy:        {}",
-        if sutra.kekkai_profile.network_allowed { "Local / LAN Mesh Allowed (Port 7369)" } else { "Deny (Strict Confinement Isolated)" }
+        if sutra.kekkai_profile.network_allowed {
+            "Local / LAN Mesh Allowed (Port 7369)"
+        } else {
+            "Deny (Strict Confinement Isolated)"
+        }
     );
     println!("--------------------------------------------------");
     println!("Bound Action Skeleton:   {}", sutra.primary_skeleton_id);

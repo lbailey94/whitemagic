@@ -5,10 +5,10 @@
 //! - catalogs/sutra_vectors.bin (zero-copy mmap binary)
 //! - catalogs/sutra_canon.json (structured metadata)
 
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
 use wm_gen3_zeropointfive::System05;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -201,13 +201,20 @@ fn test_calibrate_and_export_sutra_canon() {
     let mut calibrated_vectors: Vec<Vec<f32>> = Vec::new();
 
     println!("\n=== Calibrating 12 Canonical Sutra Glyphs (512-dim) ===");
-    for (i, &(glyph, name, english, semantic, skeleton, ro, rw, net)) in CANONICAL_GLYPHS.iter().enumerate() {
+    for (i, &(glyph, name, english, semantic, skeleton, ro, rw, net)) in
+        CANONICAL_GLYPHS.iter().enumerate()
+    {
         // Embed the rich semantic intent into unit-norm 512-dim vector
-        let vector = organ.encode_single(semantic).expect("encoding must succeed");
+        let vector = organ
+            .encode_single(semantic)
+            .expect("encoding must succeed");
         assert_eq!(vector.len(), 512, "embedding vector dimension must be 512");
 
         let norm: f32 = vector.iter().map(|x| x * x).sum::<f32>().sqrt();
-        assert!((norm - 1.0).abs() < 1e-4, "vector must be normalized to unit length");
+        assert!(
+            (norm - 1.0).abs() < 1e-4,
+            "vector must be normalized to unit length"
+        );
 
         println!(
             "[{:>2}] {} ({:<5}) | {:<18} -> 512-dim norm={:.4} | skeleton: {}",
@@ -248,7 +255,11 @@ fn test_calibrate_and_export_sutra_canon() {
     // Test Canonical Triplet Codons
     println!("\n=== Testing Compound Triplet Codons ===");
     // 1. ⟪ 證 · 行 · 鏡 ⟫ — The Shipwright’s Codon
-    let v_shipwright = compound_vector(&[&calibrated_vectors[0], &calibrated_vectors[1], &calibrated_vectors[5]]);
+    let v_shipwright = compound_vector(&[
+        &calibrated_vectors[0],
+        &calibrated_vectors[1],
+        &calibrated_vectors[5],
+    ]);
     let sim_zheng = cosine_similarity(&v_shipwright, &calibrated_vectors[0]);
     let sim_xing = cosine_similarity(&v_shipwright, &calibrated_vectors[1]);
     let sim_jing = cosine_similarity(&v_shipwright, &calibrated_vectors[5]);
@@ -259,7 +270,11 @@ fn test_calibrate_and_export_sutra_canon() {
     assert!(sim_zheng > 0.4 && sim_xing > 0.4 && sim_jing > 0.4);
 
     // 2. ⟪ 觀 · 合 · 遠 ⟫ — The Architect’s Codon
-    let v_architect = compound_vector(&[&calibrated_vectors[2], &calibrated_vectors[3], &calibrated_vectors[4]]);
+    let v_architect = compound_vector(&[
+        &calibrated_vectors[2],
+        &calibrated_vectors[3],
+        &calibrated_vectors[4],
+    ]);
     let sim_guan = cosine_similarity(&v_architect, &calibrated_vectors[2]);
     let sim_he = cosine_similarity(&v_architect, &calibrated_vectors[3]);
     let sim_yuan = cosine_similarity(&v_architect, &calibrated_vectors[4]);
@@ -270,7 +285,11 @@ fn test_calibrate_and_export_sutra_canon() {
     assert!(sim_guan > 0.4 && sim_he > 0.4 && sim_yuan > 0.4);
 
     // 3. ⟪ 息 · 清 · 生 ⟫ — The Dreamer’s Codon
-    let v_dreamer = compound_vector(&[&calibrated_vectors[6], &calibrated_vectors[7], &calibrated_vectors[11]]);
+    let v_dreamer = compound_vector(&[
+        &calibrated_vectors[6],
+        &calibrated_vectors[7],
+        &calibrated_vectors[11],
+    ]);
     let sim_xi = cosine_similarity(&v_dreamer, &calibrated_vectors[6]);
     let sim_qing = cosine_similarity(&v_dreamer, &calibrated_vectors[7]);
     let sim_sheng = cosine_similarity(&v_dreamer, &calibrated_vectors[11]);
@@ -281,7 +300,11 @@ fn test_calibrate_and_export_sutra_canon() {
     assert!(sim_xi > 0.4 && sim_qing > 0.4 && sim_sheng > 0.4);
 
     // 4. ⟪ 界 · 應 · 根 ⟫ — The Sovereign’s Codon
-    let v_sovereign = compound_vector(&[&calibrated_vectors[9], &calibrated_vectors[8], &calibrated_vectors[10]]);
+    let v_sovereign = compound_vector(&[
+        &calibrated_vectors[9],
+        &calibrated_vectors[8],
+        &calibrated_vectors[10],
+    ]);
     let sim_jie = cosine_similarity(&v_sovereign, &calibrated_vectors[9]);
     let sim_ying = cosine_similarity(&v_sovereign, &calibrated_vectors[8]);
     let sim_gen = cosine_similarity(&v_sovereign, &calibrated_vectors[10]);
@@ -292,7 +315,12 @@ fn test_calibrate_and_export_sutra_canon() {
     assert!(sim_jie > 0.4 && sim_ying > 0.4 && sim_gen > 0.4);
 
     // Export catalogs
-    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap().to_path_buf();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf();
     let catalogs_dir = workspace_root.join("catalogs");
     std::fs::create_dir_all(&catalogs_dir).unwrap();
 
@@ -300,13 +328,18 @@ fn test_calibrate_and_export_sutra_canon() {
     let json_path = catalogs_dir.join("sutra_canon.json");
     let json_str = serde_json::to_string_pretty(&glyphs_meta).unwrap();
     std::fs::write(&json_path, json_str).unwrap();
-    println!("\nWrote sutra canon JSON: {} ({} bytes)", json_path.display(), std::fs::metadata(&json_path).unwrap().len());
+    println!(
+        "\nWrote sutra canon JSON: {} ({} bytes)",
+        json_path.display(),
+        std::fs::metadata(&json_path).unwrap().len()
+    );
 
     // Export Binary: Magic (8 bytes) + Count (u32 LE) + Dim (u32 LE) + Vectors (12 * 512 * 4 bytes)
     let bin_path = catalogs_dir.join("sutra_vectors.bin");
     let mut file = File::create(&bin_path).unwrap();
     file.write_all(b"SUTR0001").unwrap();
-    file.write_all(&(calibrated_vectors.len() as u32).to_le_bytes()).unwrap();
+    file.write_all(&(calibrated_vectors.len() as u32).to_le_bytes())
+        .unwrap();
     file.write_all(&(512u32).to_le_bytes()).unwrap();
     for vec in &calibrated_vectors {
         for &val in vec {
@@ -314,5 +347,9 @@ fn test_calibrate_and_export_sutra_canon() {
         }
     }
     file.flush().unwrap();
-    println!("Wrote sutra vectors BIN:  {} ({} bytes)", bin_path.display(), std::fs::metadata(&bin_path).unwrap().len());
+    println!(
+        "Wrote sutra vectors BIN:  {} ({} bytes)",
+        bin_path.display(),
+        std::fs::metadata(&bin_path).unwrap().len()
+    );
 }

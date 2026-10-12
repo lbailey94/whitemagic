@@ -86,7 +86,9 @@ impl VaultDaemon {
         // Filter sessions newer than last_synced_session_time not yet in vault
         let mut pending_sessions: Vec<_> = all_sessions
             .into_iter()
-            .filter(|s| !existing_ids.contains(&s.id) && s.time_created >= state.last_synced_session_time)
+            .filter(|s| {
+                !existing_ids.contains(&s.id) && s.time_created >= state.last_synced_session_time
+            })
             .collect();
 
         if let Some(limit) = max_sessions {
