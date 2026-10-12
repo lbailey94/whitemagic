@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// Embedded static vector table (12 glyphs * 512 f32, little-endian, with 16-byte header).
-pub const EMBEDDED_SUTRA_VECTORS: &[u8] = include_bytes!("../../../catalogs/sutra_vectors.bin");
+pub const EMBEDDED_SUTRA_VECTORS: &[u8] = include_bytes!("../catalogs/sutra_vectors.bin");
 
 /// Dimension of the Model2Vec embedding space.
 pub const SUTRA_VECTOR_DIM: usize = 512;
