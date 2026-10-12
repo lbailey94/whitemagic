@@ -176,6 +176,138 @@ const CANONICAL_GLYPHS: &[CanonicalGlyphDef] = &[
         &["vault.jsonl"],
         false,
     ),
+    // 12: 辨
+    (
+        "辨",
+        "Biàn",
+        "Discriminate / Fuzz",
+        "Discriminate anomalies, fuzz invariants, adversarial boundary penetration, stress test",
+        "skel-adversarial-redteam",
+        &["."],
+        &["target/"],
+        false,
+    ),
+    // 13: 擬
+    (
+        "擬",
+        "Nǐ",
+        "Simulate / Shadow",
+        "Simulate actions in zero-mutation shadow environment, dry run speculative trajectory",
+        "skel-shadow-dryrun",
+        &["."],
+        &[],
+        false,
+    ),
+    // 14: 察
+    (
+        "察",
+        "Chá",
+        "Probe / Telemetry",
+        "Probe live telemetry, ast dependency traversal, dynamic grep inspection, continuous trace",
+        "skel-telemetry-probe",
+        &["."],
+        &[],
+        false,
+    ),
+    // 15: 分
+    (
+        "分",
+        "Fēn",
+        "Decompose / Decouple",
+        "Decompose complex monoliths, decouple subsystems, factor out isolated units",
+        "skel-modular-decouple",
+        &["."],
+        &["SharedWorkspace/"],
+        true,
+    ),
+    // 16: 微
+    (
+        "微",
+        "Wēi",
+        "Micro / Precision",
+        "Micro-inspect single tokens and lines, sub-atomic invariant focus, infinitesimal precision",
+        "skel-micro-inspect",
+        &["."],
+        &["scratch/"],
+        true,
+    ),
+    // 17: 照
+    (
+        "照",
+        "Zhào",
+        "Illuminate / Diff",
+        "Illuminate hidden state diffs, disclose latent mutations, public audit disclosure",
+        "skel-diff-reveal",
+        &["."],
+        &["logs/"],
+        false,
+    ),
+    // 18: 醒
+    (
+        "醒",
+        "Xǐng",
+        "Awaken / Alert",
+        "Awaken from quiescence, re-arm substrate watchers, raise high-priority alert",
+        "skel-alarm-rearm",
+        &["."],
+        &["dream.jsonl"],
+        false,
+    ),
+    // 19: 澄
+    (
+        "澄",
+        "Chéng",
+        "Clarify / Settle",
+        "Clarify conversational noise, settle epistemic dust, filter transient friction",
+        "skel-filter-clarify",
+        &["."],
+        &["."],
+        false,
+    ),
+    // 20: 受
+    (
+        "受",
+        "Shòu",
+        "Receive / Ingest",
+        "Receive incoming P2P packets, ingest foreign transcripts, receptive listening channel",
+        "skel-ingest-receive",
+        &["."],
+        &["/dev/shm"],
+        true,
+    ),
+    // 21: 通
+    (
+        "通",
+        "Tōng",
+        "Permeate / Bridge",
+        "Permeate boundaries, shared memory bridge, transparent cross-process channel",
+        "skel-shm-bridge",
+        &["/"],
+        &["sandbox/"],
+        false,
+    ),
+    // 22: 芽
+    (
+        "芽",
+        "Yá",
+        "Sprout / Fork",
+        "Sprout novel cognitive branches, fork experimental workspace, germinate new lines",
+        "skel-fork-branch",
+        &["."],
+        &[],
+        false,
+    ),
+    // 23: 化
+    (
+        "化",
+        "Huà",
+        "Transmute / Dissolve",
+        "Transmute technical debt, dissolve entropy, compact crystallized wisdom",
+        "skel-transmute-entropy",
+        &["."],
+        &["vault.jsonl"],
+        false,
+    ),
 ];
 
 fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {

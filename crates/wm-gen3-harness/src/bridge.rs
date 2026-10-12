@@ -7247,9 +7247,9 @@ mod sutra_mcp_tests {
     fn sutra_canon_and_list_surface() {
         let canon = handle_sutra_canon(&json!({})).expect("sutra canon");
         assert_eq!(canon["status"], "success");
-        assert_eq!(canon["count"], 12);
+        assert_eq!(canon["count"], 24);
         let items = canon["canon"].as_array().expect("canon array");
-        assert_eq!(items.len(), 12);
+        assert_eq!(items.len(), 24);
         assert_eq!(items[0]["char"], "證");
         assert_eq!(items[0]["alchemical"], "🜅");
 
@@ -7308,7 +7308,7 @@ mod sutra_mcp_tests {
         )
         .expect("action routed sutra canon");
         assert_eq!(action_routed["status"], "success");
-        assert_eq!(action_routed["count"], 12);
+        assert_eq!(action_routed["count"], 24);
 
         // 5. contract honesty: refuse unknown argument
         let err = handle_sutra_cast(

@@ -45,6 +45,7 @@ pub mod firebreak;
 pub mod ganying;
 pub mod gen1_gems;
 pub mod geometry;
+pub mod hexagram;
 pub mod hologram;
 pub mod homeostasis;
 pub mod intake;
@@ -71,6 +72,7 @@ pub mod transport;
 pub mod tripartite_router;
 pub mod tuple_space;
 
+pub use hexagram::{Hexagram, HexagramMeta, Trigram, WuXing};
 pub use sutra::{CompoundSutra, SutraGlyph, SutraKekkaiProfile, SutraParseError};
 pub use tripartite_router::{CognitiveTier, RoutingDecision, TripartiteRouter};
 

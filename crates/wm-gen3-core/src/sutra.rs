@@ -19,6 +19,20 @@ pub const SUTRA_VECTOR_DIM: usize = 512;
 /// Number of canonical glyphs in the canon.
 pub const CANONICAL_GLYPH_COUNT: usize = 12;
 
+/// Number of extended Yin/Yang phase-doubled glyphs in the canon.
+pub const EXTENDED_GLYPH_COUNT: usize = 24;
+
+pub use crate::hexagram::{Hexagram, Trigram, WuXing};
+
+/// Polarity of an energetic Sutra glyph.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SutraPolarity {
+    /// Yang (陽) — Active, expansive, kinetic, mutational (+)
+    Yang,
+    /// Yin (陰) — Receptive, contractive, preserving, verifying (-)
+    Yin,
+}
+
 /// A bounded Kekkai sandbox capability specification for a glyph.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SutraKekkaiProfile {
@@ -27,38 +41,65 @@ pub struct SutraKekkaiProfile {
     pub network_allowed: bool,
 }
 
-/// The 12 Canonical Logoglyphs of the WhiteMagic Canon.
+/// The 24 Canonical and Polar Logoglyphs of the WhiteMagic Canon.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SutraGlyph {
-    /// 證 (Zhèng) — Verify / Test / Proof
+    // ── The 12 Canonical Baseline Archetypes (0..11) ──
+    /// 證 (Zhèng) — Verify / Test / Proof (Yin Metal)
     Zheng = 0,
-    /// 行 (Xíng) — Execute / Commit / Dispatch
+    /// 行 (Xíng) — Execute / Commit / Dispatch (Yang Fire)
     Xing = 1,
-    /// 觀 (Guān) — Survey / Telemetry / Inspect
+    /// 觀 (Guān) — Survey / Telemetry / Inspect (Yin Wood)
     Guan = 2,
-    /// 合 (Hé) — Synthesize / Unify into One
+    /// 合 (Hé) — Synthesize / Unify into One (Yang Earth)
     He = 3,
-    /// 遠 (Yuǎn) — Project / Horizon / N+ Order
+    /// 遠 (Yuǎn) — Project / Horizon / N+ Order (Yang Water)
     Yuan = 4,
-    /// 鏡 (Jìng) — Mirror / Compare / Analogy
+    /// 鏡 (Jìng) — Mirror / Compare / Analogy (Yin Metal)
     Jing = 5,
-    /// 息 (Xī) — Quiesce / Sleep / Dream
+    /// 息 (Xī) — Quiesce / Sleep / Dream (Yin Earth)
     Xi = 6,
-    /// 清 (Qīng) — Clean / Prune / Compact
+    /// 清 (Qīng) — Clean / Prune / Compact (Yang Metal)
     Qing = 7,
-    /// 應 (Yìng) — Resonate / Affirm / P2P Wire
+    /// 應 (Yìng) — Resonate / Affirm / P2P Wire (Yang Fire)
     Ying = 8,
-    /// 界 (Jiè) — Kekkai / Sandbox / Confine
+    /// 界 (Jiè) — Kekkai / Sandbox / Confine (Yang Metal)
     Jie = 9,
-    /// 根 (Gēn) — Root / Lineage / Origins
+    /// 根 (Gēn) — Root / Lineage / Origins (Yin Wood)
     Gen = 10,
-    /// 生 (Shēng) — Evolve / Mutate / Speciate
+    /// 生 (Shēng) — Evolve / Mutate / Speciate (Yang Wood)
     Sheng = 11,
+
+    // ── Extended Yin/Yang Phase-Doubled Polar Canon (12..23) ──
+    /// 辨 (Biàn) — Discriminate / Fuzz / Adversarial Probe (Yang Metal)
+    Bian = 12,
+    /// 擬 (Nǐ) — Simulate / Shadow Dry-run (Yin Fire)
+    Ni = 13,
+    /// 察 (Chá) — Probe / Telemetry AST Grep (Yang Wood)
+    Cha = 14,
+    /// 分 (Fēn) — Decompose / Decouple (Yin Earth)
+    Fen = 15,
+    /// 微 (Wēi) — Micro-Inspect / Line Precision (Yin Water)
+    Wei = 16,
+    /// 照 (Zhào) — Illuminate / Diff Disclosure (Yang Metal)
+    Zhao = 17,
+    /// 醒 (Xǐng) — Awaken / Alert Re-arm (Yang Earth)
+    XingAlert = 18,
+    /// 澄 (Chéng) — Clarify / Filter Settle (Yin Metal)
+    Cheng = 19,
+    /// 受 (Shòu) — Receive / Ingest Listening Channel (Yin Fire)
+    Shou = 20,
+    /// 通 (Tōng) — Permeate / Bridge Boundary (Yin Metal)
+    Tong = 21,
+    /// 芽 (Yá) — Sprout / Fork Branch (Yang Wood)
+    Ya = 22,
+    /// 化 (Huà) — Transmute / Dissolve Compact (Yin Wood)
+    Hua = 23,
 }
 
 impl SutraGlyph {
-    /// All 12 canonical glyphs in standard index order.
-    pub const ALL: [SutraGlyph; CANONICAL_GLYPH_COUNT] = [
+    /// The 12 baseline canonical glyphs.
+    pub const CANONICAL_12: [SutraGlyph; CANONICAL_GLYPH_COUNT] = [
         SutraGlyph::Zheng,
         SutraGlyph::Xing,
         SutraGlyph::Guan,
@@ -73,10 +114,121 @@ impl SutraGlyph {
         SutraGlyph::Sheng,
     ];
 
-    /// Index of this glyph (0..11).
+    /// All 24 canonical and phase-doubled polar glyphs.
+    pub const ALL: [SutraGlyph; EXTENDED_GLYPH_COUNT] = [
+        SutraGlyph::Zheng,
+        SutraGlyph::Xing,
+        SutraGlyph::Guan,
+        SutraGlyph::He,
+        SutraGlyph::Yuan,
+        SutraGlyph::Jing,
+        SutraGlyph::Xi,
+        SutraGlyph::Qing,
+        SutraGlyph::Ying,
+        SutraGlyph::Jie,
+        SutraGlyph::Gen,
+        SutraGlyph::Sheng,
+        SutraGlyph::Bian,
+        SutraGlyph::Ni,
+        SutraGlyph::Cha,
+        SutraGlyph::Fen,
+        SutraGlyph::Wei,
+        SutraGlyph::Zhao,
+        SutraGlyph::XingAlert,
+        SutraGlyph::Cheng,
+        SutraGlyph::Shou,
+        SutraGlyph::Tong,
+        SutraGlyph::Ya,
+        SutraGlyph::Hua,
+    ];
+
+    /// Index of this glyph (0..23).
     #[must_use]
     pub const fn index(self) -> usize {
         self as usize
+    }
+
+    /// Return the Yin/Yang polarity of this glyph.
+    #[must_use]
+    pub const fn polarity(self) -> SutraPolarity {
+        match self {
+            Self::Xing
+            | Self::He
+            | Self::Yuan
+            | Self::Qing
+            | Self::Ying
+            | Self::Jie
+            | Self::Sheng
+            | Self::Bian
+            | Self::Cha
+            | Self::Zhao
+            | Self::XingAlert
+            | Self::Ya => SutraPolarity::Yang,
+
+            Self::Zheng
+            | Self::Guan
+            | Self::Jing
+            | Self::Xi
+            | Self::Gen
+            | Self::Ni
+            | Self::Fen
+            | Self::Wei
+            | Self::Cheng
+            | Self::Shou
+            | Self::Tong
+            | Self::Hua => SutraPolarity::Yin,
+        }
+    }
+
+    /// Return the dominant Wu Xing (Five Elements) phase of this glyph.
+    #[must_use]
+    pub const fn wu_xing(self) -> WuXing {
+        match self {
+            Self::Guan | Self::Gen | Self::Sheng | Self::Cha | Self::Ya | Self::Hua => WuXing::Wood,
+            Self::Xing | Self::Ying | Self::Ni | Self::Shou => WuXing::Fire,
+            Self::He | Self::Xi | Self::Fen | Self::XingAlert => WuXing::Earth,
+            Self::Zheng
+            | Self::Jing
+            | Self::Qing
+            | Self::Jie
+            | Self::Bian
+            | Self::Zhao
+            | Self::Cheng
+            | Self::Tong => WuXing::Metal,
+            Self::Yuan | Self::Wei => WuXing::Water,
+        }
+    }
+
+    /// Return the corresponding polar counterpart (Yin <-> Yang reflection).
+    #[must_use]
+    pub const fn polar_counterpart(self) -> Self {
+        match self {
+            Self::Zheng => Self::Bian,
+            Self::Xing => Self::Ni,
+            Self::Guan => Self::Cha,
+            Self::He => Self::Fen,
+            Self::Yuan => Self::Wei,
+            Self::Jing => Self::Zhao,
+            Self::Xi => Self::XingAlert,
+            Self::Qing => Self::Cheng,
+            Self::Ying => Self::Shou,
+            Self::Jie => Self::Tong,
+            Self::Gen => Self::Ya,
+            Self::Sheng => Self::Hua,
+
+            Self::Bian => Self::Zheng,
+            Self::Ni => Self::Xing,
+            Self::Cha => Self::Guan,
+            Self::Fen => Self::He,
+            Self::Wei => Self::Yuan,
+            Self::Zhao => Self::Jing,
+            Self::XingAlert => Self::Xi,
+            Self::Cheng => Self::Qing,
+            Self::Shou => Self::Ying,
+            Self::Tong => Self::Jie,
+            Self::Ya => Self::Gen,
+            Self::Hua => Self::Sheng,
+        }
     }
 
     /// Single character representation (Classical Chinese).
@@ -95,6 +247,18 @@ impl SutraGlyph {
             Self::Jie => '界',
             Self::Gen => '根',
             Self::Sheng => '生',
+            Self::Bian => '辨',
+            Self::Ni => '擬',
+            Self::Cha => '察',
+            Self::Fen => '分',
+            Self::Wei => '微',
+            Self::Zhao => '照',
+            Self::XingAlert => '醒',
+            Self::Cheng => '澄',
+            Self::Shou => '受',
+            Self::Tong => '通',
+            Self::Ya => '芽',
+            Self::Hua => '化',
         }
     }
 
@@ -102,18 +266,30 @@ impl SutraGlyph {
     #[must_use]
     pub const fn alchemical_char(self) -> char {
         match self {
-            Self::Zheng => '🜅', // Aqua Fortis / Proof / Attestation
-            Self::Xing => '🜂',  // Fire / Action Pulse / Commit
-            Self::Guan => '🜁',  // Air / Perception / Bioelectric Survey
-            Self::He => '🜊',    // Vinegar / Synthesis / Fusion
-            Self::Yuan => '🜄',  // Water / Deep Horizon / Deliberation
-            Self::Jing => '🜅',  // Mirror / Dual Attestation
-            Self::Xi => '🜍',    // Sublimation Salt / Quiescent Sleep
-            Self::Qing => '🜏',  // Aqua Vitae / Refusal Shield / Prune
-            Self::Ying => '🜎',  // Salt / Gap-Junction P2P Swarm
-            Self::Jie => '🜔',   // Salt Alkali / Kekkai Sandbox
-            Self::Gen => '🜃',   // Earth / Origin / Lineage Archaeology
-            Self::Sheng => '🝓', // Sublimation / Autopoietic Speciation
+            Self::Zheng => '🜅',     // Aqua Fortis / Proof / Attestation
+            Self::Xing => '🜂',      // Fire / Action Pulse / Commit
+            Self::Guan => '🜁',      // Air / Perception / Bioelectric Survey
+            Self::He => '🜊',        // Vinegar / Synthesis / Fusion
+            Self::Yuan => '🜄',      // Water / Deep Horizon / Deliberation
+            Self::Jing => '🜅',      // Mirror / Dual Attestation
+            Self::Xi => '🜍',        // Sublimation Salt / Quiescent Sleep
+            Self::Qing => '🜏',      // Aqua Vitae / Refusal Shield / Prune
+            Self::Ying => '🜎',      // Salt / Gap-Junction P2P Swarm
+            Self::Jie => '🜔',       // Salt Alkali / Kekkai Sandbox
+            Self::Gen => '🜃',       // Earth / Origin / Lineage Archaeology
+            Self::Sheng => '🝓',     // Sublimation / Autopoietic Speciation
+            Self::Bian => '🜛',      // Regulus / Fuzz Discrimination
+            Self::Ni => '🜚',        // Gold Shadow / Simulation
+            Self::Cha => '🜑',       // Oil / Telemetry Probe
+            Self::Fen => '🜖',       // Precipitate / Separation
+            Self::Wei => '🝤',       // Quintessence / Micro Precision
+            Self::Zhao => '🝞',      // Radiance / Illumination Diff
+            Self::XingAlert => '🝢', // Crucible Spark / Awaken
+            Self::Cheng => '🝪',     // Distillation / Clarification
+            Self::Shou => '🝯',      // Receptive Vessel / Ingest
+            Self::Tong => '🝰',      // Permeation Channel / Bridge
+            Self::Ya => '🝱',        // Germination / Sprout
+            Self::Hua => '🝲',       // Transmutation / Dissolve
         }
     }
 
@@ -133,6 +309,18 @@ impl SutraGlyph {
             Self::Jie => "金刚护身印 (Diamond Shield / Kekkai)",
             Self::Gen => "厚土承天印 (Heavy Earth / Lineage)",
             Self::Sheng => "九转还丹印 (Rebirth Elixir / Speciate)",
+            Self::Bian => "青龙辨幽印 (Azure Dragon / Fuzz)",
+            Self::Ni => "幻虚拟影印 (Phantom Shadow / Simulate)",
+            Self::Cha => "神目洞察印 (Divine Eye / Probe)",
+            Self::Fen => "太极分形印 (Taiji Fractal / Decompose)",
+            Self::Wei => "芥子入微印 (Mustard Seed / Precision)",
+            Self::Zhao => "烛幽普照印 (Radiant Torch / Illuminate)",
+            Self::XingAlert => "震雷警醒印 (Thunder Shock / Awaken)",
+            Self::Cheng => "渊泉澄清印 (Deep Spring / Clarify)",
+            Self::Shou => "太仓受气印 (Great Granary / Ingest)",
+            Self::Tong => "八荒通达印 (Boundless Permeation / Bridge)",
+            Self::Ya => "灵芽抽秀印 (Sacred Sprout / Fork)",
+            Self::Hua => "大罗造化印 (Cosmic Transmutation / Dissolve)",
         }
     }
 
@@ -152,6 +340,18 @@ impl SutraGlyph {
             Self::Jie => "Jiè",
             Self::Gen => "Gēn",
             Self::Sheng => "Shēng",
+            Self::Bian => "Biàn",
+            Self::Ni => "Nǐ",
+            Self::Cha => "Chá",
+            Self::Fen => "Fēn",
+            Self::Wei => "Wēi",
+            Self::Zhao => "Zhào",
+            Self::XingAlert => "Xǐng",
+            Self::Cheng => "Chéng",
+            Self::Shou => "Shòu",
+            Self::Tong => "Tōng",
+            Self::Ya => "Yá",
+            Self::Hua => "Huà",
         }
     }
 
@@ -171,6 +371,18 @@ impl SutraGlyph {
             Self::Jie => "Kekkai / Sandbox",
             Self::Gen => "Origin / Root",
             Self::Sheng => "Evolve / Speciate",
+            Self::Bian => "Discriminate / Fuzz",
+            Self::Ni => "Simulate / Shadow",
+            Self::Cha => "Probe / Telemetry",
+            Self::Fen => "Decompose / Decouple",
+            Self::Wei => "Micro / Precision",
+            Self::Zhao => "Illuminate / Diff",
+            Self::XingAlert => "Awaken / Alert",
+            Self::Cheng => "Clarify / Settle",
+            Self::Shou => "Receive / Ingest",
+            Self::Tong => "Permeate / Bridge",
+            Self::Ya => "Sprout / Fork",
+            Self::Hua => "Transmute / Dissolve",
         }
     }
 
@@ -202,6 +414,40 @@ impl SutraGlyph {
             Self::Sheng => {
                 "Speciate new variants, genetic mutation, evolutionary promotion, germline action"
             }
+            Self::Bian => {
+                "Discriminate anomalies, fuzz invariants, adversarial boundary penetration, stress test"
+            }
+            Self::Ni => {
+                "Simulate actions in zero-mutation shadow environment, dry run speculative trajectory"
+            }
+            Self::Cha => {
+                "Probe live telemetry, ast dependency traversal, dynamic grep inspection, continuous trace"
+            }
+            Self::Fen => {
+                "Decompose complex monoliths, decouple subsystems, factor out isolated units"
+            }
+            Self::Wei => {
+                "Micro-inspect single tokens and lines, sub-atomic invariant focus, infinitesimal precision"
+            }
+            Self::Zhao => {
+                "Illuminate hidden state diffs, disclose latent mutations, public audit disclosure"
+            }
+            Self::XingAlert => {
+                "Awaken from quiescence, re-arm substrate watchers, raise high-priority alert"
+            }
+            Self::Cheng => {
+                "Clarify conversational noise, settle epistemic dust, filter transient friction"
+            }
+            Self::Shou => {
+                "Receive incoming P2P packets, ingest foreign transcripts, receptive listening channel"
+            }
+            Self::Tong => {
+                "Permeate boundaries, shared memory bridge, transparent cross-process channel"
+            }
+            Self::Ya => {
+                "Sprout novel cognitive branches, fork experimental workspace, germinate new lines"
+            }
+            Self::Hua => "Transmute technical debt, dissolve entropy, compact crystallized wisdom",
         }
     }
 
@@ -221,6 +467,18 @@ impl SutraGlyph {
             Self::Jie => "skel-landlock-jail",
             Self::Gen => "skel-archaeology-tacit",
             Self::Sheng => "skel-edit-lint-check-vanguard",
+            Self::Bian => "skel-adversarial-redteam",
+            Self::Ni => "skel-shadow-dryrun",
+            Self::Cha => "skel-telemetry-probe",
+            Self::Fen => "skel-modular-decouple",
+            Self::Wei => "skel-micro-inspect",
+            Self::Zhao => "skel-diff-reveal",
+            Self::XingAlert => "skel-alarm-rearm",
+            Self::Cheng => "skel-filter-clarify",
+            Self::Shou => "skel-ingest-receive",
+            Self::Tong => "skel-shm-bridge",
+            Self::Ya => "skel-fork-branch",
+            Self::Hua => "skel-transmute-entropy",
         }
     }
 
@@ -288,6 +546,66 @@ impl SutraGlyph {
                 read_write_paths: vec!["vault.jsonl".into()],
                 network_allowed: false,
             },
+            Self::Bian => SutraKekkaiProfile {
+                read_only_paths: vec![".".into()],
+                read_write_paths: vec!["target/".into()],
+                network_allowed: false,
+            },
+            Self::Ni => SutraKekkaiProfile {
+                read_only_paths: vec![".".into()],
+                read_write_paths: vec![],
+                network_allowed: false,
+            },
+            Self::Cha => SutraKekkaiProfile {
+                read_only_paths: vec![".".into()],
+                read_write_paths: vec![],
+                network_allowed: false,
+            },
+            Self::Fen => SutraKekkaiProfile {
+                read_only_paths: vec![".".into()],
+                read_write_paths: vec!["SharedWorkspace/".into()],
+                network_allowed: true,
+            },
+            Self::Wei => SutraKekkaiProfile {
+                read_only_paths: vec![".".into()],
+                read_write_paths: vec!["scratch/".into()],
+                network_allowed: true,
+            },
+            Self::Zhao => SutraKekkaiProfile {
+                read_only_paths: vec![".".into()],
+                read_write_paths: vec!["logs/".into()],
+                network_allowed: false,
+            },
+            Self::XingAlert => SutraKekkaiProfile {
+                read_only_paths: vec![".".into()],
+                read_write_paths: vec!["dream.jsonl".into()],
+                network_allowed: false,
+            },
+            Self::Cheng => SutraKekkaiProfile {
+                read_only_paths: vec![".".into()],
+                read_write_paths: vec![".".into()],
+                network_allowed: false,
+            },
+            Self::Shou => SutraKekkaiProfile {
+                read_only_paths: vec![".".into()],
+                read_write_paths: vec!["/dev/shm".into()],
+                network_allowed: true,
+            },
+            Self::Tong => SutraKekkaiProfile {
+                read_only_paths: vec!["/".into()],
+                read_write_paths: vec!["sandbox/".into()],
+                network_allowed: false,
+            },
+            Self::Ya => SutraKekkaiProfile {
+                read_only_paths: vec![".".into()],
+                read_write_paths: vec![],
+                network_allowed: false,
+            },
+            Self::Hua => SutraKekkaiProfile {
+                read_only_paths: vec![".".into()],
+                read_write_paths: vec!["vault.jsonl".into()],
+                network_allowed: false,
+            },
         }
     }
 
@@ -308,7 +626,20 @@ impl SutraGlyph {
             '界' => Some(Self::Jie),
             '根' => Some(Self::Gen),
             '生' => Some(Self::Sheng),
-            // Alchemical Unicode Logoglyphs (The 12 Mudra Seals)
+            '辨' | '辩' => Some(Self::Bian),
+            '擬' | '拟' => Some(Self::Ni),
+            '察' => Some(Self::Cha),
+            '分' => Some(Self::Fen),
+            '微' => Some(Self::Wei),
+            '照' => Some(Self::Zhao),
+            '醒' => Some(Self::XingAlert),
+            '澄' => Some(Self::Cheng),
+            '受' => Some(Self::Shou),
+            '通' => Some(Self::Tong),
+            '芽' => Some(Self::Ya),
+            '化' => Some(Self::Hua),
+
+            // Alchemical Unicode Logoglyphs (The 24 Seals)
             '🜅' => Some(Self::Zheng), // Aqua Fortis / Proof / Attestation
             '🜂' => Some(Self::Xing),  // Fire / Action Pulse / Commit
             '🜁' => Some(Self::Guan),  // Air / Perception / Bioelectric Survey
@@ -316,10 +647,23 @@ impl SutraGlyph {
             '🜄' => Some(Self::Yuan),  // Water / Deep Horizon / Deliberation
             '🜍' => Some(Self::Xi),    // Sublimation Salt / Quiescent Sleep
             '🜏' => Some(Self::Qing),  // Aqua Vitae / Refusal Shield / Prune
-            '🜎' | '🜖' => Some(Self::Ying), // Salt / Gap-Junction P2P Swarm & Oil / Ganying
+            '🜎' => Some(Self::Ying),  // Salt / Gap-Junction P2P Swarm
             '🜔' => Some(Self::Jie),   // Salt Alkali / Kekkai Sandbox
             '🜃' => Some(Self::Gen),   // Earth / Origin / Lineage Archaeology
             '🝓' => Some(Self::Sheng), // Sublimation / Autopoietic Speciation
+
+            '🜛' => Some(Self::Bian),      // Regulus / Fuzz Discrimination
+            '🜚' => Some(Self::Ni),        // Gold Shadow / Simulation
+            '🜑' => Some(Self::Cha),       // Oil / Telemetry Probe
+            '🜖' => Some(Self::Fen),       // Precipitate / Separation
+            '🝤' => Some(Self::Wei),       // Quintessence / Micro Precision
+            '🝞' => Some(Self::Zhao),      // Radiance / Illumination Diff
+            '🝢' => Some(Self::XingAlert), // Crucible Spark / Awaken
+            '🝪' => Some(Self::Cheng),     // Distillation / Clarification
+            '🝯' => Some(Self::Shou),      // Receptive Vessel / Ingest
+            '🝰' => Some(Self::Tong),      // Permeation Channel / Bridge
+            '🝱' => Some(Self::Ya),        // Germination / Sprout
+            '🝲' => Some(Self::Hua),       // Transmutation / Dissolve
             _ => None,
         }
     }
@@ -366,6 +710,25 @@ impl SutraGlyph {
             | "archaeology" => Some(Self::Gen),
             "sheng" | "shēng" | "evolve" | "speciate" | "mutate" | "birth" | "rebirth"
             | "repair" | "autopoiesis" => Some(Self::Sheng),
+
+            "bian" | "biàn" | "discriminate" | "fuzz" | "adversarial" | "redteam" | "stress" => {
+                Some(Self::Bian)
+            }
+            "ni" | "nǐ" | "simulate" | "shadow" | "dryrun" | "hypothetical" => Some(Self::Ni),
+            "cha" | "chá" | "probe" | "trace" | "grep" | "ast" => Some(Self::Cha),
+            "fen" | "fēn" | "decompose" | "decouple" | "factor" | "split" | "separate" => {
+                Some(Self::Fen)
+            }
+            "wei" | "wēi" | "micro" | "precision" | "infinitesimal" | "fine" => Some(Self::Wei),
+            "zhao" | "zhào" | "illuminate" | "diff" | "reveal" | "disclose" | "radiance" => {
+                Some(Self::Zhao)
+            }
+            "xingalert" | "xǐng" | "awaken" | "alert" | "wake" | "alarm" => Some(Self::XingAlert),
+            "cheng" | "chéng" | "clarify" | "settle" | "filter" | "sediment" => Some(Self::Cheng),
+            "shou" | "shòu" | "receive" | "ingest" | "listen" | "inbox" => Some(Self::Shou),
+            "tong" | "tōng" | "permeate" | "bridge" | "shm" | "channel" => Some(Self::Tong),
+            "ya" | "yá" | "sprout" | "fork" | "branch" | "germinate" => Some(Self::Ya),
+            "hua" | "huà" | "transmute" | "dissolve" | "entropy" | "recycle" => Some(Self::Hua),
             _ => None,
         }
     }
@@ -375,15 +738,33 @@ impl SutraGlyph {
     pub fn vector(self) -> [f32; SUTRA_VECTOR_DIM] {
         let offset = 16 + (self.index() * SUTRA_VECTOR_DIM * 4);
         let mut vec = [0.0f32; SUTRA_VECTOR_DIM];
-        for (i, item) in vec.iter_mut().enumerate() {
-            let start = offset + (i * 4);
-            let bytes = [
-                EMBEDDED_SUTRA_VECTORS[start],
-                EMBEDDED_SUTRA_VECTORS[start + 1],
-                EMBEDDED_SUTRA_VECTORS[start + 2],
-                EMBEDDED_SUTRA_VECTORS[start + 3],
-            ];
-            *item = f32::from_le_bytes(bytes);
+        if offset + (SUTRA_VECTOR_DIM * 4) <= EMBEDDED_SUTRA_VECTORS.len() {
+            for (i, item) in vec.iter_mut().enumerate() {
+                let start = offset + (i * 4);
+                let bytes = [
+                    EMBEDDED_SUTRA_VECTORS[start],
+                    EMBEDDED_SUTRA_VECTORS[start + 1],
+                    EMBEDDED_SUTRA_VECTORS[start + 2],
+                    EMBEDDED_SUTRA_VECTORS[start + 3],
+                ];
+                *item = f32::from_le_bytes(bytes);
+            }
+        } else {
+            // When vector table has fewer entries (e.g. 12 entries), fallback to polar base vector
+            let base_idx = self.index() % 12;
+            let base_offset = 16 + (base_idx * SUTRA_VECTOR_DIM * 4);
+            if base_offset + (SUTRA_VECTOR_DIM * 4) <= EMBEDDED_SUTRA_VECTORS.len() {
+                for (i, item) in vec.iter_mut().enumerate() {
+                    let start = base_offset + (i * 4);
+                    let bytes = [
+                        EMBEDDED_SUTRA_VECTORS[start],
+                        EMBEDDED_SUTRA_VECTORS[start + 1],
+                        EMBEDDED_SUTRA_VECTORS[start + 2],
+                        EMBEDDED_SUTRA_VECTORS[start + 3],
+                    ];
+                    *item = f32::from_le_bytes(bytes);
+                }
+            }
         }
         vec
     }
