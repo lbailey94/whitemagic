@@ -184,18 +184,16 @@ impl SutraGlyph {
     #[must_use]
     pub const fn wu_xing(self) -> WuXing {
         match self {
-            Self::Guan | Self::Gen | Self::Sheng | Self::Cha | Self::Ya | Self::Hua => WuXing::Wood,
-            Self::Xing | Self::Ying | Self::Ni | Self::Shou => WuXing::Fire,
-            Self::He | Self::Xi | Self::Fen | Self::XingAlert => WuXing::Earth,
+            Self::Guan | Self::Gen | Self::Sheng | Self::Cha | Self::Ya => WuXing::Wood,
+            Self::Xing | Self::Ying | Self::Ni | Self::Shou | Self::Zhao => WuXing::Fire,
+            Self::He | Self::Xi | Self::Fen | Self::XingAlert | Self::Hua => WuXing::Earth,
             Self::Zheng
             | Self::Jing
             | Self::Qing
             | Self::Jie
             | Self::Bian
-            | Self::Zhao
-            | Self::Cheng
             | Self::Tong => WuXing::Metal,
-            Self::Yuan | Self::Wei => WuXing::Water,
+            Self::Yuan | Self::Wei | Self::Cheng => WuXing::Water,
         }
     }
 
@@ -493,7 +491,7 @@ impl SutraGlyph {
             },
             Self::Xing => SutraKekkaiProfile {
                 read_only_paths: vec![".".into()],
-                read_write_paths: vec![".git/".into(), "receipts/".into()],
+                read_write_paths: vec!["receipts/".into(), "target/".into()],
                 network_allowed: false,
             },
             Self::Guan => SutraKekkaiProfile {
@@ -523,7 +521,7 @@ impl SutraGlyph {
             },
             Self::Qing => SutraKekkaiProfile {
                 read_only_paths: vec![".".into()],
-                read_write_paths: vec![".".into()],
+                read_write_paths: vec!["staging/".into(), "target/".into()],
                 network_allowed: false,
             },
             Self::Ying => SutraKekkaiProfile {
@@ -532,7 +530,7 @@ impl SutraGlyph {
                 network_allowed: true,
             },
             Self::Jie => SutraKekkaiProfile {
-                read_only_paths: vec!["/".into()],
+                read_only_paths: vec![".".into()],
                 read_write_paths: vec!["sandbox/".into()],
                 network_allowed: false,
             },
@@ -564,12 +562,12 @@ impl SutraGlyph {
             Self::Fen => SutraKekkaiProfile {
                 read_only_paths: vec![".".into()],
                 read_write_paths: vec!["SharedWorkspace/".into()],
-                network_allowed: true,
+                network_allowed: false,
             },
             Self::Wei => SutraKekkaiProfile {
                 read_only_paths: vec![".".into()],
                 read_write_paths: vec!["scratch/".into()],
-                network_allowed: true,
+                network_allowed: false,
             },
             Self::Zhao => SutraKekkaiProfile {
                 read_only_paths: vec![".".into()],
@@ -583,7 +581,7 @@ impl SutraGlyph {
             },
             Self::Cheng => SutraKekkaiProfile {
                 read_only_paths: vec![".".into()],
-                read_write_paths: vec![".".into()],
+                read_write_paths: vec!["staging/".into(), "target/".into()],
                 network_allowed: false,
             },
             Self::Shou => SutraKekkaiProfile {
@@ -592,13 +590,13 @@ impl SutraGlyph {
                 network_allowed: true,
             },
             Self::Tong => SutraKekkaiProfile {
-                read_only_paths: vec!["/".into()],
+                read_only_paths: vec![".".into()],
                 read_write_paths: vec!["sandbox/".into()],
                 network_allowed: false,
             },
             Self::Ya => SutraKekkaiProfile {
                 read_only_paths: vec![".".into()],
-                read_write_paths: vec![],
+                read_write_paths: vec!["branches/".into(), "scratch/".into()],
                 network_allowed: false,
             },
             Self::Hua => SutraKekkaiProfile {
@@ -626,7 +624,7 @@ impl SutraGlyph {
             '界' => Some(Self::Jie),
             '根' => Some(Self::Gen),
             '生' => Some(Self::Sheng),
-            '辨' | '辩' => Some(Self::Bian),
+            '辨' | '辩' | '變' | '变' => Some(Self::Bian),
             '擬' | '拟' => Some(Self::Ni),
             '察' => Some(Self::Cha),
             '分' => Some(Self::Fen),
@@ -937,8 +935,9 @@ impl MudraEnvironment {
                 .map(|m| !m.permissions().readonly())
                 .unwrap_or(true),
         };
-        let landlock_supported = Path::new("/sys/kernel/security/landlock").exists()
-            || Path::new("/proc/sys/kernel").exists();
+        let landlock_supported = std::fs::read_to_string("/sys/kernel/security/lsm")
+            .map(|s| s.contains("landlock"))
+            .unwrap_or_else(|_| Path::new("/sys/kernel/security/landlock").exists());
         let network_egress_allowed = true;
         let mesh_peer_online = true;
         let bioelectric_stream_active = true;
@@ -1074,6 +1073,53 @@ pub const CANONICAL_MUDRAS: &[CanonicalMudraInfo] = &[
         requires_store_write: true,
         requires_landlock: false,
         requires_mesh_net: false,
+    },
+    CanonicalMudraInfo {
+        name: "The Tri-Repo Consilience Seal",
+        glyphs: &[
+            SutraGlyph::Tong,
+            SutraGlyph::Zhao,
+            SutraGlyph::He,
+            SutraGlyph::Zheng,
+        ],
+        taoist_formula: "八荒通达印 ──► 烛幽普照印 ──► 阴阳交泰印 ──► 两仪分形印",
+        description: "Cross-repository bridge permeation, diff illumination, dialectic synthesis, and dual-aspect attestation.",
+        primary_skeleton: "skel-shm-bridge",
+        requires_store_write: true,
+        requires_landlock: false,
+        requires_mesh_net: true,
+    },
+    CanonicalMudraInfo {
+        name: "The Autopoietic Speciation Crucible",
+        glyphs: &[
+            SutraGlyph::Xi,
+            SutraGlyph::Ya,
+            SutraGlyph::Ni,
+            SutraGlyph::Sheng,
+            SutraGlyph::Cheng,
+        ],
+        taoist_formula: "抱元守一印 ──► 灵芽抽秀印 ──► 幻虚拟影印 ──► 九转还丹印 ──► 渊泉澄清印",
+        description: "Quiescent incubation, exploratory workspace forking, shadow simulation, autopoietic speciation, and noise clarification.",
+        primary_skeleton: "speciate-agent",
+        requires_store_write: true,
+        requires_landlock: true,
+        requires_mesh_net: false,
+    },
+    CanonicalMudraInfo {
+        name: "The Post-Quantum Sovereign Horizon Seal",
+        glyphs: &[
+            SutraGlyph::Jie,
+            SutraGlyph::Ying,
+            SutraGlyph::Bian,
+            SutraGlyph::Yuan,
+            SutraGlyph::Jing,
+        ],
+        taoist_formula: "金刚护身印 ──► 风雷飞升印 ──► 青龙辨幽印 ──► 玄武幽冥印 ──► 照胆明镜印",
+        description: "Kekkai sandbox boundary, Gan Ying peer resonance, adversarial fuzz discrimination, 30-year horizon projection, and comparative mirror.",
+        primary_skeleton: "sovereign-guard",
+        requires_store_write: false,
+        requires_landlock: true,
+        requires_mesh_net: true,
     },
 ];
 
@@ -1217,6 +1263,26 @@ impl CompoundSutra {
                 "The Nine-Turn Autopoietic Rebirth (Origin · Quiesce · Synthesize · Speciate)"
                     .into(),
             ),
+            [
+                SutraGlyph::Tong,
+                SutraGlyph::Zhao,
+                SutraGlyph::He,
+                SutraGlyph::Zheng,
+            ] => Some("The Tri-Repo Consilience Seal (Bridge · Illuminate · Synthesize · Verify)".into()),
+            [
+                SutraGlyph::Xi,
+                SutraGlyph::Ya,
+                SutraGlyph::Ni,
+                SutraGlyph::Sheng,
+                SutraGlyph::Cheng,
+            ] => Some("The Autopoietic Speciation Crucible (Quiesce · Fork · Simulate · Evolve · Clarify)".into()),
+            [
+                SutraGlyph::Jie,
+                SutraGlyph::Ying,
+                SutraGlyph::Bian,
+                SutraGlyph::Yuan,
+                SutraGlyph::Jing,
+            ] => Some("The Post-Quantum Sovereign Horizon Seal (Kekkai · Resonate · Discriminate · Horizon · Mirror)".into()),
             _ => None,
         };
 
@@ -1513,5 +1579,54 @@ mod tests {
             stack_num.as_slice(),
             &[SutraGlyph::Zheng, SutraGlyph::Xing, SutraGlyph::Jing]
         );
+    }
+
+    #[test]
+    fn test_new_canonical_mudras_and_wu_xing() {
+        // 1. Tri-Repo Consilience Seal
+        let tri = CompoundSutra::parse("通 照 合 證").expect("tri-repo consilience parses");
+        assert_eq!(
+            tri.canonical_name.as_deref(),
+            Some("The Tri-Repo Consilience Seal (Bridge · Illuminate · Synthesize · Verify)")
+        );
+        assert_eq!(
+            tri.glyphs,
+            vec![SutraGlyph::Tong, SutraGlyph::Zhao, SutraGlyph::He, SutraGlyph::Zheng]
+        );
+        assert!(tri.matched_canonical_mudra().is_some());
+
+        // 2. Autopoietic Speciation Crucible
+        let crucible = CompoundSutra::parse("息 芽 擬 生 澄").expect("crucible parses");
+        assert_eq!(
+            crucible.canonical_name.as_deref(),
+            Some("The Autopoietic Speciation Crucible (Quiesce · Fork · Simulate · Evolve · Clarify)")
+        );
+        assert!(crucible.matched_canonical_mudra().is_some());
+
+        // 3. Post-Quantum Sovereign Horizon Seal
+        let sovereign = CompoundSutra::parse("界 應 辨 遠 鏡").expect("sovereign parses");
+        assert_eq!(
+            sovereign.canonical_name.as_deref(),
+            Some("The Post-Quantum Sovereign Horizon Seal (Kekkai · Resonate · Discriminate · Horizon · Mirror)")
+        );
+        assert!(sovereign.matched_canonical_mudra().is_some());
+
+        // 4. Wu Xing alignment verifications
+        assert_eq!(SutraGlyph::Zhao.wu_xing(), WuXing::Fire);
+        assert_eq!(SutraGlyph::Cheng.wu_xing(), WuXing::Water);
+        assert_eq!(SutraGlyph::Hua.wu_xing(), WuXing::Earth);
+
+        // 5. Bian variant resolution
+        assert_eq!(SutraGlyph::from_char('變'), Some(SutraGlyph::Bian));
+        assert_eq!(SutraGlyph::from_char('变'), Some(SutraGlyph::Bian));
+
+        // 6. Kekkai sandbox confinement
+        let prof_jie = SutraGlyph::Jie.kekkai_profile();
+        assert_eq!(prof_jie.read_only_paths, vec![".".to_string()]);
+        assert_eq!(prof_jie.read_write_paths, vec!["sandbox/".to_string()]);
+
+        let prof_xing = SutraGlyph::Xing.kekkai_profile();
+        assert!(!prof_xing.read_write_paths.contains(&".git/".to_string()));
+        assert!(prof_xing.read_write_paths.contains(&"receipts/".to_string()));
     }
 }

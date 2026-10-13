@@ -1987,102 +1987,148 @@ impl MeshServer {
                                                     &resp_bytes,
                                                 );
                                             }
-                                        } else {
-                                            let details = match CompoundSutra::parse(&pkt.codon) {
-                                                Ok(sutra) => {
-                                                    let name = sutra
-                                                        .canonical_name
-                                                        .clone()
-                                                        .unwrap_or_else(|| "Custom Mudra".into());
-                                                    let formula = sutra.taoist_formula();
-
-                                                    // Check if this is an autonomous dream consolidation mudra
-                                                    let is_dream = sutra.glyphs.iter().any(|g| matches!(g, SutraGlyph::He | SutraGlyph::Xi))
-                                                        || sutra.primary_skeleton_id.contains("skel-dream")
-                                                        || pkt.codon == "复" || pkt.codon == "復" || pkt.codon == "艮";
-
-                                                    if is_dream {
-                                                        let dream_start = std::time::Instant::now();
-                                                        let journal_path = sub_path_inner.join("journal.jsonl");
-                                                        match Substrate::open(&sub_path_inner, Some(&journal_path), crate::constitution::default_view()) {
-                                                            Ok(mut substrate) => {
-                                                                substrate.set_intake_authority(crate::evidence::RatifiedChannel::internal("wm-mesh-dream"));
-                                                                let regime = crate::dream::RegimeVector::from_quiescence(1.0, 0.0);
-                                                                let seed = 42 + now_millis();
-                                                                let dual = crate::dream::execute_dual_phase_sleep_cycle(
-                                                                    crate::dream::IncubationMode::GenuineDreaming,
-                                                                    &regime,
-                                                                    50,
-                                                                    &mut substrate,
-                                                                    seed,
-                                                                );
-                                                                let elapsed_ms = dream_start.elapsed().as_secs_f64() * 1000.0;
-
-                                                                // Ingest synthesized dream insights into insights log
-                                                                let insights_log = sub_path_inner.join("dream_insights.jsonl");
-                                                                if let Ok(mut w) = std::fs::OpenOptions::new()
-                                                                    .create(true)
-                                                                    .append(true)
-                                                                    .open(&insights_log)
-                                                                {
-                                                                    use std::io::Write;
-                                                                    for ins in &dual.rem.committed_insights {
-                                                                        let _ = writeln!(w, "{}", serde_json::to_string(ins).unwrap_or_default());
-                                                                    }
-                                                                }
-
-                                                                // Sync vault skeletons if any were speciated
-                                                                let vault_path = sub_path_inner.join("geneseed_vault.jsonl");
-                                                                let mut vault = crate::bicameral::GeneseedVault::load_or_init(&vault_path);
-                                                                let mut speciated_count = 0;
-                                                                for mut skel in dual.synthesized_skeletons {
-                                                                    if !vault.skeletons.iter().any(|s| s.id == skel.id) {
-                                                                        skel.execution_count = 0;
-                                                                        vault.skeletons.push(skel);
-                                                                        speciated_count += 1;
-                                                                    }
-                                                                }
-                                                                if speciated_count > 0 {
-                                                                    let _ = vault.sync_to_file(&vault_path);
-                                                                }
-
-                                                                format!(
-                                                                    "Mudra {} [{}] triggered dream cycle; NREM: {:.2}x compaction, REM: {} insights, Speciated: {} skeletons in {:.2}ms; formula: {}",
-                                                                    sutra.codon_str, name, dual.nrem.token_compaction_ratio, dual.rem.candidates_committed, speciated_count, elapsed_ms, formula
-                                                                )
-                                                            }
-                                                            Err(e) => {
-                                                                format!(
-                                                                    "Mudra {} [{}] decoded; formula: {} (dream consolidation deferred: {})",
-                                                                    sutra.codon_str, name, formula, e
-                                                                )
-                                                            }
-                                                        }
-                                                    } else {
-                                                        format!(
-                                                            "Mudra {} [{}] decoded; formula: {}",
-                                                            sutra.codon_str, name, formula
-                                                        )
-                                                    }
-                                                }
-                                                Err(e) => format!(
-                                                    "Codon '{}' accepted (unparsed: {})",
-                                                    pkt.codon, e
-                                                ),
-                                            };
-                                            let ack =
-                                                MeshEnvelope::GapJunctionAck(GapJunctionAck {
-                                                    responder_node: node_id_inner.clone(),
-                                                    packet_type: "codon".to_string(),
-                                                    accepted: true,
-                                                    details,
-                                                    timestamp_ms: now_millis(),
-                                                });
-                                            if let Ok(resp_bytes) = serde_json::to_vec(&ack) {
+                                        } else if now_millis().abs_diff(pkt.timestamp_ms) > 60_000 {
+                                            let err = MeshEnvelope::Error(format!(
+                                                "GapJunctionCodon expired or clock skew (drift: {}ms)",
+                                                now_millis().abs_diff(pkt.timestamp_ms)
+                                            ));
+                                            if let Ok(resp_bytes) = serde_json::to_vec(&err) {
                                                 let _ = PhysicalFrameCodec::write_frame(
                                                     &mut stream,
                                                     &resp_bytes,
                                                 );
+                                            }
+                                        } else if !peer_allowlist_inner.is_empty()
+                                            && !peer_allowed(
+                                                &peer_allowlist_inner,
+                                                &pkt.sender_node,
+                                                &pkt.sender_pubkey,
+                                            )
+                                        {
+                                            let err = MeshEnvelope::Error(format!(
+                                                "peer '{}' ({}) is not in WM_MESH_PEER_ALLOWLIST",
+                                                pkt.sender_node,
+                                                hex_encode_key(&pkt.sender_pubkey)
+                                            ));
+                                            if let Ok(resp_bytes) = serde_json::to_vec(&err) {
+                                                let _ = PhysicalFrameCodec::write_frame(
+                                                    &mut stream,
+                                                    &resp_bytes,
+                                                );
+                                            }
+                                        } else {
+                                            let replay_key = format!(
+                                                "codon:{}:{}",
+                                                hex_encode_key(&pkt.sender_pubkey),
+                                                hex_encode_key(&pkt.nonce)
+                                            );
+                                            if let Err(e) = replay_cache_inner.observe(&replay_key, now_secs()) {
+                                                let err = MeshEnvelope::Error(format!(
+                                                    "GapJunctionCodon replay rejected: {e}"
+                                                ));
+                                                if let Ok(resp_bytes) = serde_json::to_vec(&err) {
+                                                    let _ = PhysicalFrameCodec::write_frame(
+                                                        &mut stream,
+                                                        &resp_bytes,
+                                                    );
+                                                }
+                                            } else {
+                                                let details = match CompoundSutra::parse(&pkt.codon) {
+                                                    Ok(sutra) => {
+                                                        let name = sutra
+                                                            .canonical_name
+                                                            .clone()
+                                                            .unwrap_or_else(|| "Custom Mudra".into());
+                                                        let formula = sutra.taoist_formula();
+
+                                                        // Check if this is an autonomous dream consolidation mudra
+                                                        let is_dream = sutra.glyphs.iter().any(|g| matches!(g, SutraGlyph::He | SutraGlyph::Xi))
+                                                            || sutra.primary_skeleton_id.contains("skel-dream")
+                                                            || pkt.codon == "复" || pkt.codon == "復" || pkt.codon == "艮";
+
+                                                        if is_dream {
+                                                            let dream_start = std::time::Instant::now();
+                                                            let journal_path = sub_path_inner.join("journal.jsonl");
+                                                            match Substrate::open(&sub_path_inner, Some(&journal_path), crate::constitution::default_view()) {
+                                                                Ok(mut substrate) => {
+                                                                    substrate.set_intake_authority(crate::evidence::RatifiedChannel::internal("wm-mesh-dream"));
+                                                                    let regime = crate::dream::RegimeVector::from_quiescence(1.0, 0.0);
+                                                                    let seed = 42 + now_millis();
+                                                                    let dual = crate::dream::execute_dual_phase_sleep_cycle(
+                                                                        crate::dream::IncubationMode::GenuineDreaming,
+                                                                        &regime,
+                                                                        50,
+                                                                        &mut substrate,
+                                                                        seed,
+                                                                    );
+                                                                    let elapsed_ms = dream_start.elapsed().as_secs_f64() * 1000.0;
+
+                                                                    // Ingest synthesized dream insights into insights log
+                                                                    let insights_log = sub_path_inner.join("dream_insights.jsonl");
+                                                                    if let Ok(mut w) = std::fs::OpenOptions::new()
+                                                                        .create(true)
+                                                                        .append(true)
+                                                                        .open(&insights_log)
+                                                                    {
+                                                                        use std::io::Write;
+                                                                        for ins in &dual.rem.committed_insights {
+                                                                            let _ = writeln!(w, "{}", serde_json::to_string(ins).unwrap_or_default());
+                                                                        }
+                                                                    }
+
+                                                                    // Sync vault skeletons if any were speciated
+                                                                    let vault_path = sub_path_inner.join("geneseed_vault.jsonl");
+                                                                    let mut vault = crate::bicameral::GeneseedVault::load_or_init(&vault_path);
+                                                                    let mut speciated_count = 0;
+                                                                    for mut skel in dual.synthesized_skeletons {
+                                                                        if !vault.skeletons.iter().any(|s| s.id == skel.id) {
+                                                                            skel.execution_count = 0;
+                                                                            vault.skeletons.push(skel);
+                                                                            speciated_count += 1;
+                                                                        }
+                                                                    }
+                                                                    if speciated_count > 0 {
+                                                                        let _ = vault.sync_to_file(&vault_path);
+                                                                    }
+
+                                                                    format!(
+                                                                        "Mudra {} [{}] triggered dream cycle; NREM: {:.2}x compaction, REM: {} insights, Speciated: {} skeletons in {:.2}ms; formula: {}",
+                                                                        sutra.codon_str, name, dual.nrem.token_compaction_ratio, dual.rem.candidates_committed, speciated_count, elapsed_ms, formula
+                                                                    )
+                                                                }
+                                                                Err(e) => {
+                                                                    format!(
+                                                                        "Mudra {} [{}] decoded; formula: {} (dream consolidation deferred: {})",
+                                                                        sutra.codon_str, name, formula, e
+                                                                    )
+                                                                }
+                                                            }
+                                                        } else {
+                                                            format!(
+                                                                "Mudra {} [{}] decoded; formula: {}",
+                                                                sutra.codon_str, name, formula
+                                                            )
+                                                        }
+                                                    }
+                                                    Err(e) => format!(
+                                                        "Codon '{}' accepted (unparsed: {})",
+                                                        pkt.codon, e
+                                                    ),
+                                                };
+                                                let ack =
+                                                    MeshEnvelope::GapJunctionAck(GapJunctionAck {
+                                                        responder_node: node_id_inner.clone(),
+                                                        packet_type: "codon".to_string(),
+                                                        accepted: true,
+                                                        details,
+                                                        timestamp_ms: now_millis(),
+                                                    });
+                                                if let Ok(resp_bytes) = serde_json::to_vec(&ack) {
+                                                    let _ = PhysicalFrameCodec::write_frame(
+                                                        &mut stream,
+                                                        &resp_bytes,
+                                                    );
+                                                }
                                             }
                                         }
                                     }
@@ -2098,23 +2144,69 @@ impl MeshServer {
                                                     &resp_bytes,
                                                 );
                                             }
-                                        } else {
-                                            let ack =
-                                                MeshEnvelope::GapJunctionAck(GapJunctionAck {
-                                                    responder_node: node_id_inner.clone(),
-                                                    packet_type: "tuple".to_string(),
-                                                    accepted: true,
-                                                    details: format!(
-                                                        "Tuple '{}' ingested across gap junction",
-                                                        pkt.key
-                                                    ),
-                                                    timestamp_ms: now_millis(),
-                                                });
-                                            if let Ok(resp_bytes) = serde_json::to_vec(&ack) {
+                                        } else if now_millis().abs_diff(pkt.timestamp_ms) > 60_000 {
+                                            let err = MeshEnvelope::Error(format!(
+                                                "GapJunctionTuple expired or clock skew (drift: {}ms)",
+                                                now_millis().abs_diff(pkt.timestamp_ms)
+                                            ));
+                                            if let Ok(resp_bytes) = serde_json::to_vec(&err) {
                                                 let _ = PhysicalFrameCodec::write_frame(
                                                     &mut stream,
                                                     &resp_bytes,
                                                 );
+                                            }
+                                        } else if !peer_allowlist_inner.is_empty()
+                                            && !peer_allowed(
+                                                &peer_allowlist_inner,
+                                                &pkt.sender_node,
+                                                &pkt.sender_pubkey,
+                                            )
+                                        {
+                                            let err = MeshEnvelope::Error(format!(
+                                                "peer '{}' ({}) is not in WM_MESH_PEER_ALLOWLIST",
+                                                pkt.sender_node,
+                                                hex_encode_key(&pkt.sender_pubkey)
+                                            ));
+                                            if let Ok(resp_bytes) = serde_json::to_vec(&err) {
+                                                let _ = PhysicalFrameCodec::write_frame(
+                                                    &mut stream,
+                                                    &resp_bytes,
+                                                );
+                                            }
+                                        } else {
+                                            let replay_key = format!(
+                                                "tuple:{}:{}",
+                                                hex_encode_key(&pkt.sender_pubkey),
+                                                hex_encode_key(&pkt.nonce)
+                                            );
+                                            if let Err(e) = replay_cache_inner.observe(&replay_key, now_secs()) {
+                                                let err = MeshEnvelope::Error(format!(
+                                                    "GapJunctionTuple replay rejected: {e}"
+                                                ));
+                                                if let Ok(resp_bytes) = serde_json::to_vec(&err) {
+                                                    let _ = PhysicalFrameCodec::write_frame(
+                                                        &mut stream,
+                                                        &resp_bytes,
+                                                    );
+                                                }
+                                            } else {
+                                                let ack =
+                                                    MeshEnvelope::GapJunctionAck(GapJunctionAck {
+                                                        responder_node: node_id_inner.clone(),
+                                                        packet_type: "tuple".to_string(),
+                                                        accepted: true,
+                                                        details: format!(
+                                                            "Tuple '{}' ingested across gap junction",
+                                                            pkt.key
+                                                        ),
+                                                        timestamp_ms: now_millis(),
+                                                    });
+                                                if let Ok(resp_bytes) = serde_json::to_vec(&ack) {
+                                                    let _ = PhysicalFrameCodec::write_frame(
+                                                        &mut stream,
+                                                        &resp_bytes,
+                                                    );
+                                                }
                                             }
                                         }
                                     }
@@ -2130,24 +2222,70 @@ impl MeshServer {
                                                     &resp_bytes,
                                                 );
                                             }
-                                        } else {
-                                            let ack = MeshEnvelope::GapJunctionAck(
-                                                GapJunctionAck {
-                                                    responder_node: node_id_inner.clone(),
-                                                    packet_type: "telemetry".to_string(),
-                                                    accepted: true,
-                                                    details: format!(
-                                                        "Bioelectric telemetry accepted: V_rest={:.1}mV regime={}",
-                                                        pkt.v_rest_mv, pkt.regime
-                                                    ),
-                                                    timestamp_ms: now_millis(),
-                                                },
-                                            );
-                                            if let Ok(resp_bytes) = serde_json::to_vec(&ack) {
+                                        } else if now_millis().abs_diff(pkt.timestamp_ms) > 60_000 {
+                                            let err = MeshEnvelope::Error(format!(
+                                                "BioelectricTelemetry expired or clock skew (drift: {}ms)",
+                                                now_millis().abs_diff(pkt.timestamp_ms)
+                                            ));
+                                            if let Ok(resp_bytes) = serde_json::to_vec(&err) {
                                                 let _ = PhysicalFrameCodec::write_frame(
                                                     &mut stream,
                                                     &resp_bytes,
                                                 );
+                                            }
+                                        } else if !peer_allowlist_inner.is_empty()
+                                            && !peer_allowed(
+                                                &peer_allowlist_inner,
+                                                &pkt.sender_node,
+                                                &pkt.sender_pubkey,
+                                            )
+                                        {
+                                            let err = MeshEnvelope::Error(format!(
+                                                "peer '{}' ({}) is not in WM_MESH_PEER_ALLOWLIST",
+                                                pkt.sender_node,
+                                                hex_encode_key(&pkt.sender_pubkey)
+                                            ));
+                                            if let Ok(resp_bytes) = serde_json::to_vec(&err) {
+                                                let _ = PhysicalFrameCodec::write_frame(
+                                                    &mut stream,
+                                                    &resp_bytes,
+                                                );
+                                            }
+                                        } else {
+                                            let replay_key = format!(
+                                                "bio:{}:{}",
+                                                hex_encode_key(&pkt.sender_pubkey),
+                                                hex_encode_key(&pkt.nonce)
+                                            );
+                                            if let Err(e) = replay_cache_inner.observe(&replay_key, now_secs()) {
+                                                let err = MeshEnvelope::Error(format!(
+                                                    "BioelectricTelemetry replay rejected: {e}"
+                                                ));
+                                                if let Ok(resp_bytes) = serde_json::to_vec(&err) {
+                                                    let _ = PhysicalFrameCodec::write_frame(
+                                                        &mut stream,
+                                                        &resp_bytes,
+                                                    );
+                                                }
+                                            } else {
+                                                let ack = MeshEnvelope::GapJunctionAck(
+                                                    GapJunctionAck {
+                                                        responder_node: node_id_inner.clone(),
+                                                        packet_type: "telemetry".to_string(),
+                                                        accepted: true,
+                                                        details: format!(
+                                                            "Bioelectric telemetry accepted: V_rest={:.1}mV regime={}",
+                                                            pkt.v_rest_mv, pkt.regime
+                                                        ),
+                                                        timestamp_ms: now_millis(),
+                                                    },
+                                                );
+                                                if let Ok(resp_bytes) = serde_json::to_vec(&ack) {
+                                                    let _ = PhysicalFrameCodec::write_frame(
+                                                        &mut stream,
+                                                        &resp_bytes,
+                                                    );
+                                                }
                                             }
                                         }
                                     }
@@ -3499,6 +3637,40 @@ mod tests {
         assert!(bio_ack.accepted);
         assert_eq!(bio_ack.packet_type, "telemetry");
         assert!(bio_ack.details.contains("-62.5mV"));
+
+        // 4. Replay attack rejection across Gap Junction
+        let pkt = GapJunctionCodonPacket::signed_with(
+            "client-node",
+            "server-node",
+            "⟪ 通 · 照 · 合 · 證 ⟫",
+            409827,
+            &client.signing_key,
+        );
+        let env = MeshEnvelope::GapJunctionCodon(pkt);
+        let env_bytes = serde_json::to_vec(&env).unwrap();
+        PhysicalFrameCodec::write_frame(&mut client.stream, &env_bytes).unwrap();
+        let resp_bytes = PhysicalFrameCodec::read_frame(
+            &mut client.stream,
+            Instant::now(),
+            DEFAULT_FRAME_ASSEMBLY_TIMEOUT,
+        )
+        .unwrap();
+        let resp: MeshEnvelope = serde_json::from_slice(&resp_bytes).unwrap();
+        assert!(matches!(resp, MeshEnvelope::GapJunctionAck(_)));
+
+        // Replaying identical packet must fail with replay rejected
+        PhysicalFrameCodec::write_frame(&mut client.stream, &env_bytes).unwrap();
+        let resp_bytes2 = PhysicalFrameCodec::read_frame(
+            &mut client.stream,
+            Instant::now(),
+            DEFAULT_FRAME_ASSEMBLY_TIMEOUT,
+        )
+        .unwrap();
+        let resp2: MeshEnvelope = serde_json::from_slice(&resp_bytes2).unwrap();
+        match resp2 {
+            MeshEnvelope::Error(msg) => assert!(msg.contains("replay rejected")),
+            other => panic!("expected Error replay rejected, got {:?}", other),
+        }
 
         server.stop();
     }

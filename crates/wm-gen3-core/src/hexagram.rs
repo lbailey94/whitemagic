@@ -727,7 +727,7 @@ pub const HEXAGRAM_CATALOG: [HexagramMeta; 64] = [
         Zhen,
         Xun,
         "Permanent Lineage Attestation",
-        "⟪ 根 · 行 · 恒 ⟫",
+        "⟪ 根 · 行 · 通 ⟫",
         Wood
     ),
     // 33..40
@@ -1007,7 +1007,7 @@ pub const HEXAGRAM_CATALOG: [HexagramMeta; 64] = [
         Li,
         "Peak Computational Activity",
         "⟪ 照 · 行 · 應 ⟫",
-        Fire
+        Wood
     ),
     hex_def!(
         56,
