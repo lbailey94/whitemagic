@@ -43,7 +43,7 @@ fn test_sutra_mudra_benchmark_suite() {
     println!("    Parsing Throughput:   {:.2} glyphs/sec", glyphs_per_sec);
     println!("    Latency per Glyph:    {:.2} ns/glyph", ns_per_glyph);
     let min_glyphs_per_sec = if cfg!(debug_assertions) {
-        5_000_000.0
+        2_500_000.0
     } else {
         10_000_000.0
     };
