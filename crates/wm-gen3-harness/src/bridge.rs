@@ -328,6 +328,8 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "sutra.compile" | "sutra_compile" => "sutra.compile",
         "sutra.canon" | "sutra_canon" => "sutra.canon",
         "sutra.list" | "sutra_list" => "sutra.list",
+        "sutra.hexagram" | "sutra_hexagram" => "sutra.hexagram",
+        "sutra.route" | "sutra_route" | "cognitive.route" | "cognitive_route" => "sutra.route",
         _ => return None,
     })
 }
@@ -485,6 +487,8 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
     ("sutra.compile", &["query"]),
     ("sutra.canon", &[]),
     ("sutra.list", &[]),
+    ("sutra.hexagram", &["query", "mutate_line"]),
+    ("sutra.route", &["inquiry", "utility"]),
 ];
 
 /// Consumed-argument list for a canonical tool route, if declared.
@@ -548,6 +552,30 @@ fn sutra_tool_schemas_cyberbrain(mode_hint: &str) -> Vec<Value> {
             "description": "List all recognized canonical compound Taoist Mudras (印诀式), their formulaic compositions, preconditions, and primary execution skeletons.",
             "inputSchema": { "type": "object", "properties": {} }
         }),
+        json!({
+            "name": "sutra_hexagram",
+            "description": "Inspect or mutate one of the 64 King Wen I Ching Hexagram Macro-Actions. Returns King Wen number, binary symbol, trigrams, Wu Xing element, default codon, nuclear inner, complement (反), reverse (覆), and dynamic line mutation transformations.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "query": { "type": "string", "description": "Hexagram name, pinyin, King Wen number (1-64), or Unicode symbol (e.g. '既济', 'Qian', '1', '䷾')" },
+                    "mutate_line": { "type": "integer", "minimum": 1, "maximum": 6, "description": "Optional line number (1 to 6, bottom to top) to mutate (flip yin/yang) and compute resulting hexagram and codon" }
+                },
+                "required": ["query"]
+            }
+        }),
+        json!({
+            "name": "sutra_route",
+            "description": "Route an inquiry or task intent through the Catuṣkoṭi K3 dialectical cognitive router. Employs Kleene 3-valued logic to resolve dialectical tensions (competing action vectors like execute vs dry-run) and matches 64-hexagram macro-actions, returning System 0/1/2 triage tier, resting potential, plasticity, and bound Action Skeleton.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "inquiry": { "type": "string", "description": "Task description, inquiry, or hexagram name to route" },
+                    "utility": { "type": "number", "minimum": 0.0, "maximum": 1.0, "description": "Expected marginal utility threshold (default: 0.8)" }
+                },
+                "required": ["inquiry"]
+            }
+        }),
     ]
 }
 
@@ -592,6 +620,32 @@ fn sutra_tool_schemas_full(mode_hint: &str) -> Vec<Value> {
             "title": "List Canonical Mudras",
             "description": "List all recognized canonical compound Taoist Mudras (印诀式), their formulaic compositions, preconditions, and primary execution skeletons.",
             "inputSchema": { "type": "object", "properties": {} }
+        }),
+        json!({
+            "name": "sutra.hexagram",
+            "title": "I Ching Hexagram Macro-Action",
+            "description": "Inspect or mutate one of the 64 King Wen I Ching Hexagram Macro-Actions. Returns King Wen number, binary symbol, trigrams, Wu Xing element, default codon, nuclear inner, complement (反), reverse (覆), and dynamic line mutation transformations.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "query": { "type": "string", "description": "Hexagram name, pinyin, King Wen number (1-64), or Unicode symbol (e.g. '既济', 'Qian', '1', '䷾')" },
+                    "mutate_line": { "type": "integer", "minimum": 1, "maximum": 6, "description": "Optional line number (1 to 6, bottom to top) to mutate (flip yin/yang) and compute resulting hexagram and codon" }
+                },
+                "required": ["query"]
+            }
+        }),
+        json!({
+            "name": "sutra.route",
+            "title": "Catuṣkoṭi Dialectical Cognitive Router",
+            "description": "Route an inquiry or task intent through the Catuṣkoṭi K3 dialectical cognitive router. Employs Kleene 3-valued logic to resolve dialectical tensions (competing action vectors like execute vs dry-run) and matches 64-hexagram macro-actions, returning System 0/1/2 triage tier, resting potential, plasticity, and bound Action Skeleton.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "inquiry": { "type": "string", "description": "Task description, inquiry, or hexagram name to route" },
+                    "utility": { "type": "number", "minimum": 0.0, "maximum": 1.0, "description": "Expected marginal utility threshold (default: 0.8)" }
+                },
+                "required": ["inquiry"]
+            }
         }),
     ]
 }
@@ -1492,6 +1546,8 @@ pub fn execute_hybrid_tool_call(
         "sutra.compile" | "sutra_compile" => handle_sutra_compile(args),
         "sutra.canon" | "sutra_canon" => handle_sutra_canon(args),
         "sutra.list" | "sutra_list" => handle_sutra_list(args),
+        "sutra.hexagram" | "sutra_hexagram" => handle_sutra_hexagram(args),
+        "sutra.route" | "sutra_route" | "cognitive.route" | "cognitive_route" => handle_sutra_route(args),
 
         unknown => Err(format!(
             "Unknown tool: '{unknown}'. Supported: memory.create, memory.search, memory.read, memory.list, galaxy.list, galaxy.fork, session.record, session.continuity, session.checkpoint, mandala.status, mandala.triage, mandala.evaluate, mesh_sync, sangha.status, sangha.inbox, sangha.post, sutra.cast, sutra.compile, sutra.canon, sutra.list, wm{SYSTEMONE_TOOL_HINT}{SYSTEM05_TOOL_HINT}{SYSTEM15_TOOL_HINT}"
@@ -5463,6 +5519,115 @@ fn handle_sutra_list(args: &Value) -> Result<Value, String> {
         "status": "success",
         "count": mudras.len(),
         "canonical_mudras": mudras,
+    }))
+}
+
+fn handle_sutra_hexagram(args: &Value) -> Result<Value, String> {
+    reject_unknown_args("sutra.hexagram", args)?;
+    let query = args
+        .get("query")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'query'".to_string())?
+        .trim();
+    if query.is_empty() {
+        return Err("Parameter 'query' cannot be empty".to_string());
+    }
+    let mutate_line = args.get("mutate_line").and_then(Value::as_u64).map(|n| n as usize);
+    if let Some(line) = mutate_line {
+        if !(1..=6).contains(&line) {
+            return Err("mutate_line must be between 1 and 6".to_string());
+        }
+    }
+
+    let hex = wm_gen3_core::hexagram::Hexagram::parse(query)
+        .ok_or_else(|| format!("Hexagram '{query}' not recognized in 64 King Wen canon"))?;
+
+    let mutation_val = mutate_line.map(|line| {
+        let mutated = hex.mutate_line(line);
+        json!({
+            "line": line,
+            "mutated_id": mutated.king_wen_id(),
+            "mutated_symbol": mutated.as_char().to_string(),
+            "mutated_name_zh": mutated.name_zh(),
+            "mutated_name_en": mutated.name_en(),
+            "mutated_codon": mutated.default_codon(),
+        })
+    });
+
+    Ok(json!({
+        "status": "ok",
+        "king_wen_id": hex.king_wen_id(),
+        "symbol": hex.as_char().to_string(),
+        "name_zh": hex.name_zh(),
+        "name_pinyin": hex.name_pinyin(),
+        "name_en": hex.name_en(),
+        "macro_role": hex.macro_role(),
+        "upper_trigram": {
+            "symbol": hex.upper_trigram().as_char().to_string(),
+            "name_zh": hex.upper_trigram().name_zh(),
+            "name_en": hex.upper_trigram().name_en(),
+            "wu_xing": hex.upper_trigram().wu_xing().name_zh(),
+        },
+        "lower_trigram": {
+            "symbol": hex.lower_trigram().as_char().to_string(),
+            "name_zh": hex.lower_trigram().name_zh(),
+            "name_en": hex.lower_trigram().name_en(),
+            "wu_xing": hex.lower_trigram().wu_xing().name_zh(),
+        },
+        "wu_xing_element": hex.dominant_element().name_zh(),
+        "default_codon": hex.default_codon(),
+        "nuclear_inner": {
+            "id": hex.nuclear().king_wen_id(),
+            "name_zh": hex.nuclear().name_zh(),
+            "name_en": hex.nuclear().name_en(),
+        },
+        "complement": {
+            "id": hex.complement().king_wen_id(),
+            "name_zh": hex.complement().name_zh(),
+            "name_en": hex.complement().name_en(),
+        },
+        "reverse": {
+            "id": hex.reverse().king_wen_id(),
+            "name_zh": hex.reverse().name_zh(),
+            "name_en": hex.reverse().name_en(),
+        },
+        "mutation": mutation_val,
+    }))
+}
+
+fn handle_sutra_route(args: &Value) -> Result<Value, String> {
+    reject_unknown_args("sutra.route", args)?;
+    let inquiry = args
+        .get("inquiry")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'inquiry'".to_string())?
+        .trim();
+    if inquiry.is_empty() {
+        return Err("Parameter 'inquiry' cannot be empty".to_string());
+    }
+    let _utility = args.get("utility").and_then(Value::as_f64).map(|u| u as f32);
+
+    let start = std::time::Instant::now();
+    let decision = wm_gen3_core::tripartite_router::TripartiteRouter::route(inquiry, None);
+    let latency_us = start.elapsed().as_micros();
+
+    let tier_str = match decision.tier {
+        wm_gen3_core::tripartite_router::CognitiveTier::System0Sutra => "System0Sutra",
+        wm_gen3_core::tripartite_router::CognitiveTier::System05Vector => "System05Vector",
+        wm_gen3_core::tripartite_router::CognitiveTier::System1LocalOrgan => "System1LocalOrgan",
+        wm_gen3_core::tripartite_router::CognitiveTier::System2FrontierCloud => "System2FrontierCloud",
+    };
+
+    Ok(json!({
+        "status": "ok",
+        "inquiry": inquiry,
+        "tier": tier_str,
+        "latency_micros": latency_us,
+        "confidence": decision.confidence,
+        "rationale": decision.rationale,
+        "selected_glyph": decision.selected_glyph.map(|c| c.to_string()),
+        "catuskoti": decision.catuskoti.map(|c| format!("{c:?}")),
+        "bound_skeleton_id": decision.skeleton_id,
     }))
 }
 

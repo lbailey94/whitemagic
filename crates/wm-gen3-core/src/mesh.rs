@@ -25,7 +25,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::mandala::ContinuityReceipt05;
-use crate::sutra::CompoundSutra;
+use crate::sutra::{CompoundSutra, SutraGlyph};
 
 use crate::bicameral::{ActionSkeleton, GeneseedVault};
 use crate::cladistics::{
@@ -1995,10 +1995,75 @@ impl MeshServer {
                                                         .clone()
                                                         .unwrap_or_else(|| "Custom Mudra".into());
                                                     let formula = sutra.taoist_formula();
-                                                    format!(
-                                                        "Mudra {} [{}] decoded; formula: {}",
-                                                        sutra.codon_str, name, formula
-                                                    )
+
+                                                    // Check if this is an autonomous dream consolidation mudra
+                                                    let is_dream = sutra.glyphs.iter().any(|g| matches!(g, SutraGlyph::He | SutraGlyph::Xi))
+                                                        || sutra.primary_skeleton_id.contains("skel-dream")
+                                                        || pkt.codon == "复" || pkt.codon == "復" || pkt.codon == "艮";
+
+                                                    if is_dream {
+                                                        let dream_start = std::time::Instant::now();
+                                                        let journal_path = sub_path_inner.join("journal.jsonl");
+                                                        match Substrate::open(&sub_path_inner, Some(&journal_path), crate::constitution::default_view()) {
+                                                            Ok(mut substrate) => {
+                                                                substrate.set_intake_authority(crate::evidence::RatifiedChannel::internal("wm-mesh-dream"));
+                                                                let regime = crate::dream::RegimeVector::from_quiescence(1.0, 0.0);
+                                                                let seed = 42 + now_millis();
+                                                                let dual = crate::dream::execute_dual_phase_sleep_cycle(
+                                                                    crate::dream::IncubationMode::GenuineDreaming,
+                                                                    &regime,
+                                                                    50,
+                                                                    &mut substrate,
+                                                                    seed,
+                                                                );
+                                                                let elapsed_ms = dream_start.elapsed().as_secs_f64() * 1000.0;
+
+                                                                // Ingest synthesized dream insights into insights log
+                                                                let insights_log = sub_path_inner.join("dream_insights.jsonl");
+                                                                if let Ok(mut w) = std::fs::OpenOptions::new()
+                                                                    .create(true)
+                                                                    .append(true)
+                                                                    .open(&insights_log)
+                                                                {
+                                                                    use std::io::Write;
+                                                                    for ins in &dual.rem.committed_insights {
+                                                                        let _ = writeln!(w, "{}", serde_json::to_string(ins).unwrap_or_default());
+                                                                    }
+                                                                }
+
+                                                                // Sync vault skeletons if any were speciated
+                                                                let vault_path = sub_path_inner.join("geneseed_vault.jsonl");
+                                                                let mut vault = crate::bicameral::GeneseedVault::load_or_init(&vault_path);
+                                                                let mut speciated_count = 0;
+                                                                for mut skel in dual.synthesized_skeletons {
+                                                                    if !vault.skeletons.iter().any(|s| s.id == skel.id) {
+                                                                        skel.execution_count = 0;
+                                                                        vault.skeletons.push(skel);
+                                                                        speciated_count += 1;
+                                                                    }
+                                                                }
+                                                                if speciated_count > 0 {
+                                                                    let _ = vault.sync_to_file(&vault_path);
+                                                                }
+
+                                                                format!(
+                                                                    "Mudra {} [{}] triggered dream cycle; NREM: {:.2}x compaction, REM: {} insights, Speciated: {} skeletons in {:.2}ms; formula: {}",
+                                                                    sutra.codon_str, name, dual.nrem.token_compaction_ratio, dual.rem.candidates_committed, speciated_count, elapsed_ms, formula
+                                                                )
+                                                            }
+                                                            Err(e) => {
+                                                                format!(
+                                                                    "Mudra {} [{}] decoded; formula: {} (dream consolidation deferred: {})",
+                                                                    sutra.codon_str, name, formula, e
+                                                                )
+                                                            }
+                                                        }
+                                                    } else {
+                                                        format!(
+                                                            "Mudra {} [{}] decoded; formula: {}",
+                                                            sutra.codon_str, name, formula
+                                                        )
+                                                    }
                                                 }
                                                 Err(e) => format!(
                                                     "Codon '{}' accepted (unparsed: {})",

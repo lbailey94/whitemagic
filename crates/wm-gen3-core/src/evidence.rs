@@ -146,6 +146,14 @@ pub struct RatifiedChannel {
 }
 
 impl RatifiedChannel {
+    /// Crate-internal constructor for sovereign subsystems (mesh daemon, dream engine).
+    #[must_use]
+    pub(crate) fn internal(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+        }
+    }
+
     /// Operator-side mint. Enabled only with the `operator` feature; the adaptive
     /// layer never enables it (and never links the admin path anyway).
     #[cfg(feature = "operator")]
