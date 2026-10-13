@@ -1140,6 +1140,11 @@ impl CompoundSutra {
 
         // If no direct glyph characters found, tokenize by separators
         if glyphs.is_empty() {
+            // First check if input matches a 64-Hexagram macro-action seal
+            if let Some(hex) = crate::hexagram::Hexagram::parse(cleaned) {
+                return hex.to_compound_sutra();
+            }
+
             let tokens: Vec<&str> = cleaned
                 .split(|c: char| {
                     c.is_whitespace() || c == '·' || c == ',' || c == '-' || c == '/' || c == '.'
