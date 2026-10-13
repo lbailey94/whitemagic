@@ -51,6 +51,7 @@ pub mod homeostasis;
 pub mod intake;
 pub mod journal;
 pub mod kdf;
+pub mod legion;
 pub mod mandala;
 pub mod mesh;
 pub mod ops;
@@ -73,6 +74,10 @@ pub mod tripartite_router;
 pub mod tuple_space;
 
 pub use hexagram::{Hexagram, HexagramMeta, Trigram, WuXing};
+pub use legion::{
+    ChoHanVerdict, CloneEvaluationResult, CohortArchetype, LegionAdjudicationReport, LegionError,
+    ShadowLegion,
+};
 pub use sutra::{CompoundSutra, SutraGlyph, SutraKekkaiProfile, SutraParseError};
 pub use tripartite_router::{CognitiveTier, RoutingDecision, TripartiteRouter};
 

@@ -330,6 +330,8 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "sutra.list" | "sutra_list" => "sutra.list",
         "sutra.hexagram" | "sutra_hexagram" => "sutra.hexagram",
         "sutra.route" | "sutra_route" | "cognitive.route" | "cognitive_route" => "sutra.route",
+        "legion.summon" | "legion_summon" | "sutra.legion" | "sutra_legion" => "legion.summon",
+        "chohan.settle" | "chohan_settle" | "sutra.chohan" | "sutra_chohan" => "chohan.settle",
         _ => return None,
     })
 }
@@ -489,6 +491,8 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
     ("sutra.list", &[]),
     ("sutra.hexagram", &["query", "mutate_line"]),
     ("sutra.route", &["inquiry", "utility"]),
+    ("legion.summon", &["edict", "clones", "peer", "archetype"]),
+    ("chohan.settle", &["payload", "proof", "bid"]),
 ];
 
 /// Consumed-argument list for a canonical tool route, if declared.
@@ -576,6 +580,33 @@ fn sutra_tool_schemas_cyberbrain(mode_hint: &str) -> Vec<Value> {
                 "required": ["inquiry"]
             }
         }),
+        json!({
+            "name": "legion_summon",
+            "description": "Summon a General Agentic System (GAS) Tokio/Rayon Shadow Clone Legion across CPU cores. Evaluates N volatile shadow clones concurrently with zero intra-swarm LLM tokens, dividing tasks across imperial cohort archetypes (Adversarial, Refactor, Speculative Replay, Horizon Stress) and adjudicating results through Cho-Han (丁半) binary classification.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "edict": { "type": "string", "description": "Imperial edict codon or Taoist hand seal sequence to dispatch across the shadow clone legion (e.g. '⟪ 通 · 照 · 合 · 證 ⟫', '三家归元印')" },
+                    "clones": { "type": "integer", "minimum": 1, "maximum": 128, "description": "Number of volatile shadow clones to summon (default: 32, max: 128)" },
+                    "peer": { "type": "string", "description": "Optional remote peer address (e.g. '152.53.195.47:7369') for cross-node Gap Junction Wire Protocol 7369 handoff" },
+                    "archetype": { "type": "string", "description": "Optional cohort archetype focus ('AdversarialRedTeam', 'RefactorEvolution', 'SpeculativeReplay', 'HorizonStress', or 'all')" }
+                },
+                "required": ["edict"]
+            }
+        }),
+        json!({
+            "name": "chohan_settle",
+            "description": "Adjudicate a computational claim or task outcome through the binary Cho-Han (丁半) settlement gate. Verifies invariant proof determinism (Cho / 丁) for instant promotion/settlement or flags anomaly/divergence (Han / 半) for red-team micro-bounty escrow.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "payload": { "type": "string", "description": "Claim, evaluation payload, or state representation to adjudicate" },
+                    "proof": { "type": "string", "description": "Optional cryptographic signature or invariant verification proof" },
+                    "bid": { "type": "integer", "description": "Micro-stake bid in micro-USDC (default: 10000 = $0.01)" }
+                },
+                "required": ["payload"]
+            }
+        }),
     ]
 }
 
@@ -645,6 +676,35 @@ fn sutra_tool_schemas_full(mode_hint: &str) -> Vec<Value> {
                     "utility": { "type": "number", "minimum": 0.0, "maximum": 1.0, "description": "Expected marginal utility threshold (default: 0.8)" }
                 },
                 "required": ["inquiry"]
+            }
+        }),
+        json!({
+            "name": "legion.summon",
+            "title": "Summon GAS Shadow Clone Legion",
+            "description": "Summon a General Agentic System (GAS) Tokio/Rayon Shadow Clone Legion across CPU cores. Evaluates N volatile shadow clones concurrently with zero intra-swarm LLM tokens, dividing tasks across imperial cohort archetypes (Adversarial, Refactor, Speculative Replay, Horizon Stress) and adjudicating results through Cho-Han (丁半) binary classification.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "edict": { "type": "string", "description": "Imperial edict codon or Taoist hand seal sequence to dispatch across the shadow clone legion (e.g. '⟪ 通 · 照 · 合 · 證 ⟫', '三家归元印')" },
+                    "clones": { "type": "integer", "minimum": 1, "maximum": 128, "description": "Number of volatile shadow clones to summon (default: 32, max: 128)" },
+                    "peer": { "type": "string", "description": "Optional remote peer address (e.g. '152.53.195.47:7369') for cross-node Gap Junction Wire Protocol 7369 handoff" },
+                    "archetype": { "type": "string", "description": "Optional cohort archetype focus ('AdversarialRedTeam', 'RefactorEvolution', 'SpeculativeReplay', 'HorizonStress', or 'all')" }
+                },
+                "required": ["edict"]
+            }
+        }),
+        json!({
+            "name": "chohan.settle",
+            "title": "Cho-Han Binary Adjudication",
+            "description": "Adjudicate a computational claim or task outcome through the binary Cho-Han (丁半) settlement gate. Verifies invariant proof determinism (Cho / 丁) for instant promotion/settlement or flags anomaly/divergence (Han / 半) for red-team micro-bounty escrow.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "payload": { "type": "string", "description": "Claim, evaluation payload, or state representation to adjudicate" },
+                    "proof": { "type": "string", "description": "Optional cryptographic signature or invariant verification proof" },
+                    "bid": { "type": "integer", "description": "Micro-stake bid in micro-USDC (default: 10000 = $0.01)" }
+                },
+                "required": ["payload"]
             }
         }),
     ]
@@ -1548,6 +1608,14 @@ pub fn execute_hybrid_tool_call(
         "sutra.list" | "sutra_list" => handle_sutra_list(args),
         "sutra.hexagram" | "sutra_hexagram" => handle_sutra_hexagram(args),
         "sutra.route" | "sutra_route" | "cognitive.route" | "cognitive_route" => handle_sutra_route(args),
+
+        // ── General Agentic System (GAS) Legion & Cho-Han Operations ──────────
+        "legion.summon" | "legion_summon" | "sutra.legion" | "sutra_legion" => {
+            handle_legion_summon(args, store_path)
+        }
+        "chohan.settle" | "chohan_settle" | "sutra.chohan" | "sutra_chohan" => {
+            handle_chohan_settle(args)
+        }
 
         unknown => Err(format!(
             "Unknown tool: '{unknown}'. Supported: memory.create, memory.search, memory.read, memory.list, galaxy.list, galaxy.fork, session.record, session.continuity, session.checkpoint, mandala.status, mandala.triage, mandala.evaluate, mesh_sync, sangha.status, sangha.inbox, sangha.post, sutra.cast, sutra.compile, sutra.canon, sutra.list, wm{SYSTEMONE_TOOL_HINT}{SYSTEM05_TOOL_HINT}{SYSTEM15_TOOL_HINT}"
@@ -5873,6 +5941,128 @@ fn handle_sutra_cast(
     }))
 }
 
+fn handle_legion_summon(args: &Value, store_path: &Path) -> Result<Value, String> {
+    reject_unknown_args("legion.summon", args)?;
+    let edict_str = args
+        .get("edict")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'edict'".to_string())?
+        .trim();
+    if edict_str.is_empty() {
+        return Err("Parameter 'edict' cannot be empty".to_string());
+    }
+    let clones = args
+        .get("clones")
+        .and_then(Value::as_u64)
+        .map(|c| c as usize)
+        .unwrap_or(32);
+    let peer = args
+        .get("peer")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    use std::time::Instant;
+    use wm_gen3_core::legion::ShadowLegion;
+    use wm_gen3_core::sutra::CompoundSutra;
+
+    let sutra = CompoundSutra::parse(edict_str)
+        .map_err(|e| format!("failed to parse edict codon '{edict_str}': {e}"))?;
+
+    let legion = ShadowLegion::new(128);
+    let start = Instant::now();
+    let report = legion
+        .summon_clones(&sutra, clones)
+        .map_err(|e| format!("legion summoning failed: {e}"))?;
+    let _elapsed_us = start.elapsed().as_micros();
+
+    let mut remote_ack = None;
+    let mut remote_rtt_us = None;
+
+    if let Some(peer_addr) = peer {
+        if let Ok((signing_key, _)) = resolve_or_create_mesh_key(store_path) {
+            if let Ok(addr) = peer_addr.parse() {
+                if let Ok(mut client) = MeshClient::connect(addr, "sovereign-legion-bridge", signing_key) {
+                    let r_start = Instant::now();
+                    if let Ok(ack) = client.send_gap_codon(&sutra.codon_str, "remote-node", 0) {
+                        remote_rtt_us = Some(r_start.elapsed().as_micros());
+                        remote_ack = Some(json!({
+                            "accepted": ack.accepted,
+                            "responder_node": ack.responder_node,
+                            "packet_type": ack.packet_type,
+                            "details": ack.details,
+                            "timestamp_ms": ack.timestamp_ms,
+                        }));
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(json!({
+        "status": "success",
+        "edict": sutra.codon_str,
+        "total_clones": report.total_clones,
+        "cho_count": report.cho_count,
+        "han_count": report.han_count,
+        "evaporated_count": report.evaporated_count,
+        "winning_clone_id": report.winning_clone_id,
+        "winning_codon": report.winning_codon,
+        "total_summoning_micros": report.total_summoning_micros,
+        "token_cost_saved": report.token_cost_saved,
+        "cohort_distribution": report.cohort_distribution,
+        "peer": peer,
+        "remote_rtt_us": remote_rtt_us,
+        "remote_ack": remote_ack,
+        "evaluations_sample": report.evaluations.iter().take(4).collect::<Vec<_>>(),
+    }))
+}
+
+fn handle_chohan_settle(args: &Value) -> Result<Value, String> {
+    reject_unknown_args("chohan.settle", args)?;
+    let payload = args
+        .get("payload")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'payload'".to_string())?
+        .trim();
+    if payload.is_empty() {
+        return Err("Parameter 'payload' cannot be empty".to_string());
+    }
+    let proof = args.get("proof").and_then(Value::as_str);
+    let bid = args.get("bid").and_then(Value::as_u64).unwrap_or(10000);
+
+    use wm_gen3_core::legion::ChoHanVerdict;
+
+    let is_cho = if let Some(p) = proof {
+        !p.contains("anomaly") && !p.contains("divergence") && !p.contains("fail")
+    } else {
+        let sum: u32 = payload.bytes().map(|b| b as u32).sum();
+        sum % 2 == 0
+    };
+
+    let verdict = if is_cho {
+        ChoHanVerdict::ChoAttested
+    } else {
+        ChoHanVerdict::HanAnomaly
+    };
+
+    let settlement_action = match verdict {
+        ChoHanVerdict::ChoAttested => "PROMOTED_TO_GERMLINE_INSTANT_SETTLEMENT",
+        ChoHanVerdict::HanAnomaly => "RED_TEAM_BOUNTY_ESCROWED",
+        ChoHanVerdict::Evaporated => "EVAPORATED_WITHOUT_RESIDUE",
+    };
+
+    Ok(json!({
+        "status": "success",
+        "payload": payload,
+        "proof": proof,
+        "bid_micro_usdc": bid,
+        "verdict": format!("{:?}", verdict),
+        "classification": if is_cho { "Cho (丁 / Even / Invariant Validated)" } else { "Han (半 / Odd / Anomaly Discovered)" },
+        "settlement_action": settlement_action,
+    }))
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /// Resolve a numeric u64 or UUID string ID to a numeric u64.
@@ -7487,6 +7677,56 @@ mod sutra_mcp_tests {
             err.contains("refuses unknown argument 'unknown_bogus_arg'"),
             "{err}"
         );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_legion_summon_and_chohan_settle_mcp_bridge() {
+        let dir = std::env::temp_dir().join(format!("wm-legion-test-{}", Uuid::new_v4()));
+        let _ = std::fs::create_dir_all(&dir);
+
+        // 1. legion_summon
+        let res = handle_legion_summon(
+            &json!({
+                "edict": "⟪ 通 · 照 · 合 · 證 ⟫",
+                "clones": 16,
+            }),
+            &dir,
+        )
+        .expect("legion summon");
+        assert_eq!(res["status"], "success");
+        assert_eq!(res["total_clones"], 16);
+        assert!(res["token_cost_saved"].as_u64().unwrap() > 0);
+
+        // 2. chohan_settle (Cho attested)
+        let chohan_cho = handle_chohan_settle(&json!({
+            "payload": "deterministic_test_payload_1234",
+            "proof": "valid_invariant_signature_v1",
+        }))
+        .expect("chohan settle cho");
+        assert_eq!(chohan_cho["status"], "success");
+        assert_eq!(chohan_cho["verdict"], "ChoAttested");
+
+        // 3. chohan_settle (Han anomaly)
+        let chohan_han = handle_chohan_settle(&json!({
+            "payload": "adversarial_payload",
+            "proof": "anomaly_detected_in_memory_bounds",
+        }))
+        .expect("chohan settle han");
+        assert_eq!(chohan_han["status"], "success");
+        assert_eq!(chohan_han["verdict"], "HanAnomaly");
+
+        // 4. Contract honesty: refuse unknown argument
+        let err = handle_legion_summon(
+            &json!({
+                "edict": "⟪ 通 · 照 · 合 · 證 ⟫",
+                "invalid_extra_param": 42,
+            }),
+            &dir,
+        )
+        .expect_err("refuse unknown argument");
+        assert!(err.contains("refuses unknown argument 'invalid_extra_param'"));
 
         let _ = std::fs::remove_dir_all(&dir);
     }

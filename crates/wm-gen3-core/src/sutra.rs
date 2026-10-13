@@ -870,6 +870,13 @@ impl StackCodon {
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
+
+    /// Format stack codon into canonical string representation (e.g. ⟪ 證 · 行 · 鏡 ⟫).
+    #[must_use]
+    pub fn to_codon_string(&self) -> String {
+        let chars: Vec<String> = self.as_slice().iter().map(|g| g.as_char().to_string()).collect();
+        format!("⟪ {} ⟫", chars.join(" · "))
+    }
 }
 
 /// Parse a string slice into a StackCodon with zero heap allocation.
@@ -1173,6 +1180,19 @@ impl CompoundSutra {
             .trim_matches(|c| c == '⟪' || c == '⟫' || c == '<' || c == '>' || c == '[' || c == ']');
         if cleaned.is_empty() {
             return Err(SutraParseError::EmptyInput);
+        }
+
+        // Check if input matches a canonical mudra by name, alias, or formula
+        for mudra in CANONICAL_MUDRAS {
+            if cleaned.eq_ignore_ascii_case(mudra.name)
+                || (cleaned == "三家归元印" && mudra.name == "The Tri-Repo Consilience Seal")
+                || (cleaned == "九幽造化印" && mudra.name == "The Autopoietic Speciation Crucible")
+                || (cleaned == "玄天金鉴印" && mudra.name == "The Post-Quantum Sovereign Horizon Seal")
+                || (cleaned == "九转还丹印" && mudra.name == "The Nine-Turn Autopoietic Rebirth")
+                || (cleaned == "两仪分形印" && mudra.name == "The Shipwright's Codon")
+            {
+                return Self::from_glyphs(mudra.glyphs.to_vec());
+            }
         }
 
         let mut glyphs = Vec::new();
@@ -1628,5 +1648,11 @@ mod tests {
         let prof_xing = SutraGlyph::Xing.kekkai_profile();
         assert!(!prof_xing.read_write_paths.contains(&".git/".to_string()));
         assert!(prof_xing.read_write_paths.contains(&"receipts/".to_string()));
+
+        // 7. Chinese canonical mudra name direct parsing
+        let direct_tri = CompoundSutra::parse("三家归元印").expect("parse by Chinese name");
+        assert_eq!(direct_tri.glyphs, vec![SutraGlyph::Tong, SutraGlyph::Zhao, SutraGlyph::He, SutraGlyph::Zheng]);
+        let direct_crucible = CompoundSutra::parse("九幽造化印").expect("parse by Chinese name");
+        assert_eq!(direct_crucible.glyphs, vec![SutraGlyph::Xi, SutraGlyph::Ya, SutraGlyph::Ni, SutraGlyph::Sheng, SutraGlyph::Cheng]);
     }
 }

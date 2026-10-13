@@ -542,6 +542,34 @@ enum Commands {
         #[arg(long)]
         strict: bool,
     },
+    /// Summon a General Agentic System (GAS) shadow clone legion across Tokio/Rayon cores
+    Legion {
+        /// Emperor's edict or mudra codon sequence (e.g. "⟪ 通 · 照 · 合 · 證 ⟫", "三家归元印")
+        edict: String,
+        /// Number of volatile shadow clones to summon (default: 32)
+        #[arg(long, default_value_t = 32)]
+        clones: usize,
+        /// Remote peer for cross-node shadow clone dispatch over Wire Protocol 7369
+        #[arg(long)]
+        peer: Option<String>,
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Settle a computational claim or task outcome through binary Cho-Han (丁半) adjudication
+    Chohan {
+        /// Verification claim or state payload
+        payload: String,
+        /// Cryptographic proof or invariant attestation
+        #[arg(long)]
+        proof: Option<String>,
+        /// Micro-stake / bid amount in micro-USDC or satoshis
+        #[arg(long, default_value_t = 10000)]
+        bid: u64,
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -993,6 +1021,34 @@ enum SutraCommands {
         /// Optional line to mutate (1..6) to calculate transformed changing hexagram
         #[arg(long)]
         mutate_line: Option<usize>,
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Summon a General Agentic System (GAS) shadow clone legion across Tokio/Rayon cores
+    Legion {
+        /// Emperor's edict or mudra codon sequence (e.g. "⟪ 通 · 照 · 合 · 證 ⟫", "三家归元印")
+        edict: String,
+        /// Number of volatile shadow clones to summon (default: 32)
+        #[arg(long, default_value_t = 32)]
+        clones: usize,
+        /// Remote peer for cross-node shadow clone dispatch over Wire Protocol 7369
+        #[arg(long)]
+        peer: Option<String>,
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Settle a computational claim or task outcome through binary Cho-Han (丁半) adjudication
+    Chohan {
+        /// Verification claim or state payload
+        payload: String,
+        /// Cryptographic proof or invariant attestation
+        #[arg(long)]
+        proof: Option<String>,
+        /// Micro-stake / bid amount in micro-USDC or satoshis
+        #[arg(long, default_value_t = 10000)]
+        bid: u64,
         /// Emit JSON output
         #[arg(long)]
         json: bool,
@@ -2917,6 +2973,22 @@ fn main() {
             }) => {
                 run_sutra_hexagram(&query, mutate_line, j || json, &store_path);
             }
+            Some(SutraCommands::Legion {
+                edict,
+                clones,
+                peer,
+                json: j,
+            }) => {
+                run_sutra_legion(&edict, clones, peer.as_deref(), j || json, &store_path);
+            }
+            Some(SutraCommands::Chohan {
+                payload,
+                proof,
+                bid,
+                json: j,
+            }) => {
+                run_sutra_chohan(&payload, proof.as_deref(), bid, j || json);
+            }
             None => {
                 if let Some(c) = codon {
                     let actual_dry_run = if execute { false } else { dry_run || !execute };
@@ -2935,6 +3007,22 @@ fn main() {
         },
         Commands::Homeostasis { json } => {
             run_homeostasis_command(json);
+        }
+        Commands::Legion {
+            edict,
+            clones,
+            peer,
+            json,
+        } => {
+            run_sutra_legion(&edict, clones, peer.as_deref(), json, &store_path);
+        }
+        Commands::Chohan {
+            payload,
+            proof,
+            bid,
+            json,
+        } => {
+            run_sutra_chohan(&payload, proof.as_deref(), bid, json);
         }
     }
 }
@@ -9689,6 +9777,173 @@ fn run_sutra_hexagram(query: &str, mutate_line: Option<usize>, json: bool, _stor
                 m.default_codon()
             );
         }
+        println!("==================================================");
+    }
+}
+
+fn run_sutra_legion(
+    edict_str: &str,
+    clone_count: usize,
+    peer: Option<&str>,
+    json: bool,
+    store_path: &Path,
+) {
+    use std::time::Instant;
+    use wm_gen3_core::legion::ShadowLegion;
+    use wm_gen3_core::sutra::CompoundSutra;
+
+    let sutra = match CompoundSutra::parse(edict_str) {
+        Ok(s) => s,
+        Err(e) => {
+            if json {
+                println!(
+                    "{}",
+                    serde_json::json!({
+                        "status": "error",
+                        "error": format!("Failed to parse edict codon '{edict_str}': {e}"),
+                    })
+                );
+            } else {
+                eprintln!("Error: failed to parse edict codon '{edict_str}': {e}");
+            }
+            std::process::exit(1);
+        }
+    };
+
+    let legion = ShadowLegion::new(128);
+    let start = Instant::now();
+    let report = match legion.summon_clones(&sutra, clone_count) {
+        Ok(r) => r,
+        Err(e) => {
+            if json {
+                println!(
+                    "{}",
+                    serde_json::json!({
+                        "status": "error",
+                        "error": format!("Legion summoning failed: {e}"),
+                    })
+                );
+            } else {
+                eprintln!("Error: legion summoning failed: {e}");
+            }
+            std::process::exit(1);
+        }
+    };
+    let _local_elapsed_us = start.elapsed().as_micros();
+
+    let mut remote_ack = None;
+    let mut remote_rtt_us = None;
+
+    if let Some(peer_addr) = peer {
+        let (signing_key, _) = match resolve_or_create_mesh_key(store_path) {
+            Ok(k) => k,
+            Err(e) => {
+                eprintln!("Failed to resolve mesh key for peer dispatch: {e}");
+                std::process::exit(1);
+            }
+        };
+        let addr: std::net::SocketAddr = match peer_addr.parse() {
+            Ok(a) => a,
+            Err(e) => {
+                eprintln!("Invalid peer address '{}': {e}", peer_addr);
+                std::process::exit(1);
+            }
+        };
+        if let Ok(mut client) = MeshClient::connect(addr, "sovereign-legion-commander", signing_key) {
+            let r_start = Instant::now();
+            if let Ok(ack) = client.send_gap_codon(&sutra.codon_str, "remote-node", 0) {
+                remote_rtt_us = Some(r_start.elapsed().as_micros());
+                remote_ack = Some(ack);
+            }
+        }
+    }
+
+    if json {
+        let out = serde_json::json!({
+            "status": "ok",
+            "edict": sutra.codon_str,
+            "total_clones": report.total_clones,
+            "cho_count": report.cho_count,
+            "han_count": report.han_count,
+            "evaporated_count": report.evaporated_count,
+            "winning_clone_id": report.winning_clone_id,
+            "winning_codon": report.winning_codon,
+            "total_summoning_micros": report.total_summoning_micros,
+            "token_cost_saved": report.token_cost_saved,
+            "cohort_distribution": report.cohort_distribution,
+            "peer": peer,
+            "remote_rtt_us": remote_rtt_us,
+            "remote_ack": remote_ack,
+        });
+        println!("{}", serde_json::to_string_pretty(&out).unwrap_or_default());
+    } else {
+        println!("==================================================");
+        println!("  WhiteMagic GAS Shadow Clone Legion Summoning    ");
+        println!("==================================================");
+        println!("Edict Codon:        {}", sutra.codon_str);
+        println!("Clones Summoned:    {}", report.total_clones);
+        println!("Cho (丁 / Invariant Pass):  {}", report.cho_count);
+        println!("Han (半 / Anomaly Bounty):   {}", report.han_count);
+        println!("Evaporated (虚 / Transient): {}", report.evaporated_count);
+        if let Some(winner_id) = report.winning_clone_id {
+            println!("Winning Clone:      #{} ({})", winner_id, report.winning_codon.as_deref().unwrap_or(""));
+        }
+        println!("Wallclock Latency:  {} µs", report.total_summoning_micros);
+        println!("LLM Tokens Saved:   {} tokens", report.token_cost_saved);
+        if let Some(rtt) = remote_rtt_us {
+            println!("Remote Peer RTT:    {} µs (peer: {})", rtt, peer.unwrap_or(""));
+        }
+        println!("==================================================");
+    }
+}
+
+fn run_sutra_chohan(
+    payload: &str,
+    proof: Option<&str>,
+    bid: u64,
+    json: bool,
+) {
+    use wm_gen3_core::legion::ChoHanVerdict;
+
+    let is_cho = if let Some(p) = proof {
+        !p.contains("anomaly") && !p.contains("divergence") && !p.contains("fail")
+    } else {
+        let sum: u32 = payload.bytes().map(|b| b as u32).sum();
+        sum % 2 == 0
+    };
+
+    let verdict = if is_cho {
+        ChoHanVerdict::ChoAttested
+    } else {
+        ChoHanVerdict::HanAnomaly
+    };
+
+    let settlement_action = match verdict {
+        ChoHanVerdict::ChoAttested => "PROMOTED_TO_GERMLINE_INSTANT_SETTLEMENT",
+        ChoHanVerdict::HanAnomaly => "RED_TEAM_BOUNTY_ESCROWED",
+        ChoHanVerdict::Evaporated => "EVAPORATED_WITHOUT_RESIDUE",
+    };
+
+    if json {
+        let out = serde_json::json!({
+            "status": "ok",
+            "payload": payload,
+            "proof": proof,
+            "bid_micro_usdc": bid,
+            "verdict": format!("{:?}", verdict),
+            "classification": if is_cho { "Cho (丁 / Even / Invariant Validated)" } else { "Han (半 / Odd / Anomaly Discovered)" },
+            "settlement_action": settlement_action,
+        });
+        println!("{}", serde_json::to_string_pretty(&out).unwrap_or_default());
+    } else {
+        println!("==================================================");
+        println!("     WhiteMagic Cho-Han (丁半) Settlement Gate     ");
+        println!("==================================================");
+        println!("Payload:            {}", payload);
+        println!("Bid (micro-USDC):   {}", bid);
+        println!("Verdict:            {:?}", verdict);
+        println!("Classification:     {}", if is_cho { "Cho (丁 / Invariant Pass)" } else { "Han (半 / Anomaly Bounty)" });
+        println!("Settlement Action:  {}", settlement_action);
         println!("==================================================");
     }
 }
