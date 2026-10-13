@@ -901,6 +901,15 @@ pub fn parse_stack(input: &str) -> Result<StackCodon, SutraParseError> {
             }
         }
         if !tokens_found {
+            // Check if input references a 64-Hexagram macro-action seal
+            if let Some(hex) = crate::hexagram::Hexagram::parse(input) {
+                if let Ok(compound) = hex.to_compound_sutra() {
+                    for &g in &compound.glyphs {
+                        let _ = codon.push(g);
+                    }
+                    return Ok(codon);
+                }
+            }
             return Err(SutraParseError::EmptyInput);
         }
     }
@@ -1482,5 +1491,22 @@ mod tests {
         env.store_writable = false;
         let err = c.validate_preconditions(&env).unwrap_err();
         assert!(matches!(err, MudraValidationError::PreconditionFailed(_)));
+    }
+
+    #[test]
+    fn test_hexagram_parsing_in_sutra_stack() {
+        let stack = parse_stack("既济").expect("parse hexagram 63 by name");
+        assert_eq!(stack.len(), 3);
+        // Hexagram 63 既济: default codon "⟪ 證 · 行 · 鏡 ⟫"
+        assert_eq!(
+            stack.as_slice(),
+            &[SutraGlyph::Zheng, SutraGlyph::Xing, SutraGlyph::Jing]
+        );
+
+        let stack_num = parse_stack("63").expect("parse hexagram 63 by number");
+        assert_eq!(
+            stack_num.as_slice(),
+            &[SutraGlyph::Zheng, SutraGlyph::Xing, SutraGlyph::Jing]
+        );
     }
 }

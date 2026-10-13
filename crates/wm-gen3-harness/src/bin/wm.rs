@@ -45,8 +45,8 @@ use wm_gen3_harness::bridge::{
 use wm_gen3_harness::host_guard::{self, Action, HostGuardState, Policy, SystemRunner};
 use wm_gen3_harness::mcp_server::{McpBackend, NetworkTransport, serve_network};
 
-/// Build version — WhiteMagic 10.3.
-const WM_VERSION: &str = "10.3";
+/// Build version — WhiteMagic Gen3 v10.
+const WM_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Parser)]
 #[command(
@@ -981,6 +981,18 @@ enum SutraCommands {
         /// Remote peer for cross-node handoff over Wire Protocol 7369 (e.g. 152.53.195.47:7369)
         #[arg(long)]
         peer: Option<String>,
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Inspect or execute the 64 King Wen Hexagram macro-action matrix
+    Hexagram {
+        /// Subcommand or hexagram query (number 1..64, Chinese name e.g. "乾" / "既济", pinyin e.g. "qian", or "list")
+        #[arg(default_value = "list")]
+        query: String,
+        /// Optional line to mutate (1..6) to calculate transformed changing hexagram
+        #[arg(long)]
+        mutate_line: Option<usize>,
         /// Emit JSON output
         #[arg(long)]
         json: bool,
@@ -2897,6 +2909,13 @@ fn main() {
             }) => {
                 let actual_dry_run = if ex { false } else { dr || !ex };
                 run_sutra_cast(&c, actual_dry_run, st, p.as_deref(), j, &store_path);
+            }
+            Some(SutraCommands::Hexagram {
+                query,
+                mutate_line,
+                json: j,
+            }) => {
+                run_sutra_hexagram(&query, mutate_line, j || json, &store_path);
             }
             None => {
                 if let Some(c) = codon {
@@ -9483,6 +9502,195 @@ fn run_sutra_cast(
 #[allow(dead_code)]
 fn run_sutra_command(codon: &str, dry_run: bool, json: bool, store_path: &Path) {
     run_sutra_cast(codon, dry_run, false, None, json, store_path);
+}
+
+fn run_sutra_hexagram(query: &str, mutate_line: Option<usize>, json: bool, _store_path: &Path) {
+    use serde_json::json;
+    use wm_gen3_core::hexagram::Hexagram;
+    if query.trim().eq_ignore_ascii_case("list") {
+        if json {
+            let list: Vec<_> = Hexagram::ALL
+                .iter()
+                .map(|h| {
+                    json!({
+                        "id": h.king_wen_id(),
+                        "char": h.as_char(),
+                        "zh": h.name_zh(),
+                        "pinyin": h.name_pinyin(),
+                        "en": h.name_en(),
+                        "macro_role": h.macro_role(),
+                        "upper_trigram": h.upper_trigram().name_zh(),
+                        "lower_trigram": h.lower_trigram().name_zh(),
+                        "wu_xing": h.dominant_element().name_zh(),
+                        "default_codon": h.default_codon(),
+                    })
+                })
+                .collect();
+            println!("{}", serde_json::to_string_pretty(&list).unwrap());
+        } else {
+            println!(
+                "========================================================================================="
+            );
+            println!(
+                "               WhiteMagic Gen3 — 64 King Wen Hexagram Macro-Action Matrix               "
+            );
+            println!(
+                "========================================================================================="
+            );
+            println!(
+                "{:<4} {:<4} {:<6} {:<12} {:<24} {:<10} {:<10} {:<16}",
+                "ID", "Char", "ZH", "Pinyin", "English Name", "Upper", "Lower", "Default Codon"
+            );
+            println!(
+                "-----------------------------------------------------------------------------------------"
+            );
+            for h in Hexagram::ALL {
+                println!(
+                    "{:<4} {:<4} {:<6} {:<12} {:<24} {:<10} {:<10} {:<16}",
+                    h.king_wen_id(),
+                    h.as_char(),
+                    h.name_zh(),
+                    h.name_pinyin(),
+                    h.name_en(),
+                    format!(
+                        "{} ({})",
+                        h.upper_trigram().name_zh(),
+                        h.upper_trigram().wu_xing().name_zh()
+                    ),
+                    format!(
+                        "{} ({})",
+                        h.lower_trigram().name_zh(),
+                        h.lower_trigram().wu_xing().name_zh()
+                    ),
+                    h.default_codon()
+                );
+            }
+            println!(
+                "========================================================================================="
+            );
+        }
+        return;
+    }
+
+    let hex = match Hexagram::parse(query) {
+        Some(h) => h,
+        None => {
+            eprintln!(
+                "Unknown Hexagram '{query}'. Specify ID (1..64), name (e.g. '乾', '既济'), or 'list'."
+            );
+            std::process::exit(1);
+        }
+    };
+
+    let mutated = mutate_line.map(|l| hex.mutate_line(l.saturating_sub(1)));
+    let nuclear = hex.nuclear();
+    let complement = hex.complement();
+    let reverse = hex.reverse();
+
+    if json {
+        let val = json!({
+            "id": hex.king_wen_id(),
+            "char": hex.as_char(),
+            "zh": hex.name_zh(),
+            "pinyin": hex.name_pinyin(),
+            "en": hex.name_en(),
+            "macro_role": hex.macro_role(),
+            "upper_trigram": {
+                "zh": hex.upper_trigram().name_zh(),
+                "en": hex.upper_trigram().name_en(),
+                "element": hex.upper_trigram().wu_xing().name_zh(),
+            },
+            "lower_trigram": {
+                "zh": hex.lower_trigram().name_zh(),
+                "en": hex.lower_trigram().name_en(),
+                "element": hex.lower_trigram().wu_xing().name_zh(),
+            },
+            "wu_xing": hex.dominant_element().name_zh(),
+            "default_codon": hex.default_codon(),
+            "nuclear": {
+                "id": nuclear.king_wen_id(),
+                "char": nuclear.as_char(),
+                "zh": nuclear.name_zh(),
+                "en": nuclear.name_en(),
+            },
+            "complement": {
+                "id": complement.king_wen_id(),
+                "char": complement.as_char(),
+                "zh": complement.name_zh(),
+                "en": complement.name_en(),
+            },
+            "reverse": {
+                "id": reverse.king_wen_id(),
+                "char": reverse.as_char(),
+                "zh": reverse.name_zh(),
+                "en": reverse.name_en(),
+            },
+            "mutated": mutated.map(|m| json!({
+                "line": mutate_line.unwrap(),
+                "id": m.king_wen_id(),
+                "char": m.as_char(),
+                "zh": m.name_zh(),
+                "en": m.name_en(),
+                "default_codon": m.default_codon(),
+            })),
+        });
+        println!("{}", serde_json::to_string_pretty(&val).unwrap());
+    } else {
+        println!("==================================================");
+        println!("      WhiteMagic Gen3 Hexagram Macro-Action       ");
+        println!("==================================================");
+        println!("Hexagram ID:     #{} {}", hex.king_wen_id(), hex.as_char());
+        println!(
+            "Name:            {} ({}) — {}",
+            hex.name_zh(),
+            hex.name_pinyin(),
+            hex.name_en()
+        );
+        println!("Macro Role:      {}", hex.macro_role());
+        println!(
+            "Upper Trigram:   {} ({}) — {}",
+            hex.upper_trigram().name_zh(),
+            hex.upper_trigram().name_en(),
+            hex.upper_trigram().wu_xing().name_zh()
+        );
+        println!(
+            "Lower Trigram:   {} ({}) — {}",
+            hex.lower_trigram().name_zh(),
+            hex.lower_trigram().name_en(),
+            hex.lower_trigram().wu_xing().name_zh()
+        );
+        println!("Wu Xing Element: {}", hex.dominant_element().name_zh());
+        println!("Default Codon:   {}", hex.default_codon());
+        println!(
+            "Nuclear Inner:   #{} {} ({})",
+            nuclear.king_wen_id(),
+            nuclear.name_zh(),
+            nuclear.name_en()
+        );
+        println!(
+            "Complement (反): #{} {} ({})",
+            complement.king_wen_id(),
+            complement.name_zh(),
+            complement.name_en()
+        );
+        println!(
+            "Reverse (覆):    #{} {} ({})",
+            reverse.king_wen_id(),
+            reverse.name_zh(),
+            reverse.name_en()
+        );
+        if let Some(m) = mutated {
+            println!(
+                "Mutated Line {}:  #{} {} ({}) ──► {}",
+                mutate_line.unwrap(),
+                m.king_wen_id(),
+                m.name_zh(),
+                m.name_en(),
+                m.default_codon()
+            );
+        }
+        println!("==================================================");
+    }
 }
 
 fn run_evolve_command(

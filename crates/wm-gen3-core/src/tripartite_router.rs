@@ -11,6 +11,8 @@
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
+use crate::catuskoti::Corner;
+use crate::hexagram::Hexagram;
 use crate::homeostasis::{BioelectricState, HomeostaticRegime};
 use crate::sutra::SutraGlyph;
 
@@ -34,6 +36,7 @@ pub struct RoutingDecision {
     pub confidence: f32,
     pub rationale: String,
     pub routing_latency_ns: u64,
+    pub catuskoti: Option<Corner>,
 }
 
 pub struct TripartiteRouter;
@@ -62,21 +65,74 @@ impl TripartiteRouter {
                         glyph.taoist_seal()
                     ),
                     routing_latency_ns: t0.elapsed().as_nanos() as u64,
+                    catuskoti: Some(Corner::K1Affirmed),
                 };
             }
         }
 
-        // 2. Keyword heuristic fast-path to System 0
+        // 2. Direct 64-Hexagram Macro-Action Recognition
+        if let Some(hex) = Hexagram::parse(trimmed) {
+            let lower_glyph = hex.lower_trigram().bound_sutra_glyph();
+            return RoutingDecision {
+                tier: CognitiveTier::System0Sutra,
+                selected_glyph: Some(lower_glyph.as_char()),
+                skeleton_id: Some(lower_glyph.bound_skeleton_id().to_string()),
+                confidence: 0.96,
+                rationale: format!(
+                    "Hexagram #{} '{}' ({}, Upper:{}, Lower:{}) matched; dispatching System 0 macro-action",
+                    hex.king_wen_id(),
+                    hex.name_zh(),
+                    hex.name_en(),
+                    hex.upper_trigram().name_zh(),
+                    hex.lower_trigram().name_zh()
+                ),
+                routing_latency_ns: t0.elapsed().as_nanos() as u64,
+                catuskoti: Some(Corner::K1Affirmed),
+            };
+        }
+
+        // 3. Catuṣkoṭi K3 Dialectical Tension Detection & Keyword Matching
         let lower = trimmed.to_lowercase();
-        let keyword_match = if lower.contains("verify")
-            || lower.contains("test")
-            || lower.contains("check")
-        {
-            Some(SutraGlyph::Zheng)
-        } else if lower.contains("execute")
+
+        // Detect potential thesis / antithesis pairs
+        let wants_exec = lower.contains("execute")
             || lower.contains("commit")
             || lower.contains("dispatch")
-        {
+            || lower.contains("run");
+        let wants_sim = lower.contains("simulate")
+            || lower.contains("shadow")
+            || lower.contains("dry-run")
+            || lower.contains("dryrun");
+        let wants_verify = lower.contains("verify")
+            || lower.contains("test")
+            || lower.contains("proof")
+            || lower.contains("check");
+        let wants_fuzz = lower.contains("fuzz")
+            || lower.contains("redteam")
+            || lower.contains("discriminate")
+            || lower.contains("adversarial");
+
+        if (wants_exec && wants_sim) || (wants_verify && wants_fuzz) {
+            // K3 Dialectical tension: Both thesis and antithesis are affirmed
+            let (glyph, skel) = if wants_verify && wants_fuzz {
+                (SutraGlyph::Bian, "skel-adversarial-redteam")
+            } else {
+                (SutraGlyph::Ni, "skel-shadow-dryrun")
+            };
+            return RoutingDecision {
+                tier: CognitiveTier::System0Sutra,
+                selected_glyph: Some(glyph.as_char()),
+                skeleton_id: Some(skel.to_string()),
+                confidence: 0.93,
+                rationale: "Catuṣkoṭi K3 dialectical tension detected (Both Affirmed): dual-layer paraconsistent synthesis dispatched".to_string(),
+                routing_latency_ns: t0.elapsed().as_nanos() as u64,
+                catuskoti: Some(Corner::K3DialecticalContradiction),
+            };
+        }
+
+        let keyword_match = if wants_verify {
+            Some(SutraGlyph::Zheng)
+        } else if wants_exec {
             Some(SutraGlyph::Xing)
         } else if lower.contains("survey")
             || lower.contains("inspect")
@@ -84,6 +140,12 @@ impl TripartiteRouter {
             || lower.contains("status")
         {
             Some(SutraGlyph::Guan)
+        } else if lower.contains("probe") || lower.contains("telemetry") {
+            Some(SutraGlyph::Cha)
+        } else if wants_fuzz {
+            Some(SutraGlyph::Bian)
+        } else if wants_sim {
+            Some(SutraGlyph::Ni)
         } else if lower.contains("clean") || lower.contains("prune") || lower.contains("compact") {
             Some(SutraGlyph::Qing)
         } else if lower.contains("dream") || lower.contains("sleep") || lower.contains("quiesce") {
@@ -99,6 +161,16 @@ impl TripartiteRouter {
             Some(SutraGlyph::Jie)
         } else if lower.contains("synthesize") || lower.contains("unify") {
             Some(SutraGlyph::He)
+        } else if lower.contains("decompose") || lower.contains("decouple") {
+            Some(SutraGlyph::Fen)
+        } else if lower.contains("diff") || lower.contains("illuminate") {
+            Some(SutraGlyph::Zhao)
+        } else if lower.contains("clarify") || lower.contains("settle") {
+            Some(SutraGlyph::Cheng)
+        } else if lower.contains("fork") || lower.contains("sprout") {
+            Some(SutraGlyph::Ya)
+        } else if lower.contains("transmute") || lower.contains("dissolve") {
+            Some(SutraGlyph::Hua)
         } else {
             None
         };
@@ -115,6 +187,7 @@ impl TripartiteRouter {
                     glyph.as_char()
                 ),
                 routing_latency_ns: t0.elapsed().as_nanos() as u64,
+                catuskoti: Some(Corner::K1Affirmed),
             };
         }
 
@@ -124,7 +197,7 @@ impl TripartiteRouter {
             .map(|b| b.regime >= HomeostaticRegime::Stressed)
             .unwrap_or(false);
 
-        // 3. System 0.5: Local Semantic Pattern Routing (~25 µs)
+        // 4. System 0.5: Local Semantic Pattern Routing (~25 µs)
         let word_count = trimmed.split_whitespace().count();
         if word_count <= 8 && !trimmed.contains('?') {
             return RoutingDecision {
@@ -136,6 +209,7 @@ impl TripartiteRouter {
                     "Short operational command routed to System 0.5 semantic vector matching"
                         .to_string(),
                 routing_latency_ns: t0.elapsed().as_nanos() as u64,
+                catuskoti: Some(Corner::K1Affirmed),
             };
         }
 
@@ -151,10 +225,11 @@ impl TripartiteRouter {
                 confidence: 0.90,
                 rationale: "Complex open-ended query requiring multi-hop frontier deliberative reasoning (System 2)".to_string(),
                 routing_latency_ns: t0.elapsed().as_nanos() as u64,
+                catuskoti: Some(Corner::K4NeutralAgnostic),
             };
         }
 
-        // 4. System 1: Local Typed Decision / Classifier (<10 ms)
+        // 5. System 1: Local Typed Decision / Classifier (<10 ms)
         let rationale = if under_stress {
             "Homeostatic stress active: System 2 cloud invocation suspended; routed to local System 1".to_string()
         } else {
@@ -167,6 +242,7 @@ impl TripartiteRouter {
             confidence: 0.72,
             rationale,
             routing_latency_ns: t0.elapsed().as_nanos() as u64,
+            catuskoti: Some(Corner::K1Affirmed),
         }
     }
 }
@@ -226,5 +302,44 @@ mod tests {
 
         let dec_calm = TripartiteRouter::route(long_query, None);
         assert_eq!(dec_calm.tier, CognitiveTier::System2FrontierCloud);
+    }
+
+    #[test]
+    fn test_tripartite_router_hexagram_recognition() {
+        let dec = TripartiteRouter::route("既济", None);
+        assert_eq!(dec.tier, CognitiveTier::System0Sutra);
+        assert_eq!(dec.selected_glyph, Some('證'));
+        assert!(dec.rationale.contains("Hexagram #63 '既济'"));
+        assert_eq!(dec.catuskoti, Some(Corner::K1Affirmed));
+
+        let dec_qian = TripartiteRouter::route("乾", None);
+        assert_eq!(dec_qian.tier, CognitiveTier::System0Sutra);
+        assert_eq!(dec_qian.selected_glyph, Some('行'));
+        assert!(dec_qian.rationale.contains("Hexagram #1 '乾'"));
+    }
+
+    #[test]
+    fn test_tripartite_router_catuskoti_dialectical_contradiction() {
+        // Query has both execution and simulation
+        let dec = TripartiteRouter::route("execute this simulation dry-run now", None);
+        assert_eq!(dec.tier, CognitiveTier::System0Sutra);
+        assert_eq!(dec.selected_glyph, Some('擬'));
+        assert_eq!(dec.skeleton_id.as_deref(), Some("skel-shadow-dryrun"));
+        assert_eq!(dec.catuskoti, Some(Corner::K3DialecticalContradiction));
+        assert!(
+            dec.rationale
+                .contains("Catuṣkoṭi K3 dialectical tension detected")
+        );
+
+        // Query has both verification and adversarial fuzzing
+        let dec_fuzz =
+            TripartiteRouter::route("verify invariants with adversarial fuzz test", None);
+        assert_eq!(dec_fuzz.tier, CognitiveTier::System0Sutra);
+        assert_eq!(dec_fuzz.selected_glyph, Some('辨'));
+        assert_eq!(
+            dec_fuzz.skeleton_id.as_deref(),
+            Some("skel-adversarial-redteam")
+        );
+        assert_eq!(dec_fuzz.catuskoti, Some(Corner::K3DialecticalContradiction));
     }
 }

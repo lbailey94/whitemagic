@@ -5,6 +5,15 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.4.0] — 2026-10-12
+
+### Added
+- **24-Glyph Yin/Yang Phase-Doubled Canon** — Doubled the Sutra Canon from 12 to 24 glyphs with exact polar pairings (0..11 Yang formative / 12..23 Yin reflexive), mapped bijectively to Wu Xing Five Elements and calibrated with 512-dim unit-norm Model2Vec static vectors.
+- **64-Hexagram Combinatorial Matrix & Ba Gua Engine** — Implemented the 64 King Wen hexagrams as macro-action operators in `wm-gen3-core::hexagram`, supporting line mutations, nuclear, complement, and reverse transforms with zero heap allocations.
+- **Catuṣkoṭi K3 Dialectical Router** — Enhanced `TripartiteRouter` to detect dialectical tensions and paraconsistent coexistence between competing action vectors using Buddhist four-corner logic.
+- **Sutra Hexagram CLI & Stack Parser** — Added `wm3 sutra hexagram [list|inspect|mutate]` and integrated hexagram fallback resolution into `StackCodon` and `TripartiteRouter`.
+- **Agent Codex & Sutra Guide** — Added dedicated agent codex in `AGENTS.md` and `docs/SUTRA_GUIDE.md` for zero-allocation mudra execution across AI coding agents.
+
 ## [10.3] — 2026-10-11
 
 ### Added
