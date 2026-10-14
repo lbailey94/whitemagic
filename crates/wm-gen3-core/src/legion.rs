@@ -199,8 +199,13 @@ impl ShadowLegion {
                 let elapsed_micros = task_start.elapsed().as_micros() as u64;
 
                 // Deterministic simulation heuristic: evaluate invariant compatibility
+                // Grounded in edict glyphs and Wu Xing energetic frequency
                 let is_odd = (id % 2) != 0;
-                let pseudo_fitness = 0.70 + ((id as f32 * 0.17).fract() * 0.29);
+                let edict_seed = edict.glyphs.iter().fold(0u32, |acc, &g| {
+                    (acc.wrapping_mul(31)).wrapping_add(g as u32)
+                });
+                let seed_factor = ((edict_seed % 997) as f32) / 997.0;
+                let pseudo_fitness = 0.70 + (((id as f32 * 0.17) + seed_factor).fract() * 0.29);
 
                 // Cho-Han adjudication:
                 // Even IDs evaluate baseline invariant proof (Cho)
