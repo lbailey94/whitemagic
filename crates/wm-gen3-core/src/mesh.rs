@@ -2041,6 +2041,8 @@ impl MeshServer {
                                                             .unwrap_or_else(|| "Custom Mudra".into());
                                                         let formula = sutra.taoist_formula();
 
+                                                        let mut result_parts = Vec::new();
+
                                                         // Check if this is an autonomous dream consolidation mudra
                                                         let is_dream = sutra.glyphs.iter().any(|g| matches!(g, SutraGlyph::He | SutraGlyph::Xi))
                                                             || sutra.primary_skeleton_id.contains("skel-dream")
@@ -2091,22 +2093,54 @@ impl MeshServer {
                                                                         let _ = vault.sync_to_file(&vault_path);
                                                                     }
 
-                                                                    format!(
-                                                                        "Mudra {} [{}] triggered dream cycle; NREM: {:.2}x compaction, REM: {} insights, Speciated: {} skeletons in {:.2}ms; formula: {}",
-                                                                        sutra.codon_str, name, dual.nrem.token_compaction_ratio, dual.rem.candidates_committed, speciated_count, elapsed_ms, formula
-                                                                    )
+                                                                    result_parts.push(format!(
+                                                                        "Dream cycle: NREM {:.2}x compaction, REM {} insights, Speciated {} skeletons in {:.2}ms",
+                                                                        dual.nrem.token_compaction_ratio, dual.rem.candidates_committed, speciated_count, elapsed_ms
+                                                                    ));
                                                                 }
                                                                 Err(e) => {
-                                                                    format!(
-                                                                        "Mudra {} [{}] decoded; formula: {} (dream consolidation deferred: {})",
-                                                                        sutra.codon_str, name, formula, e
-                                                                    )
+                                                                    result_parts.push(format!(
+                                                                        "Dream deferred: {}", e
+                                                                    ));
                                                                 }
                                                             }
-                                                        } else {
+                                                        }
+
+                                                        // Check if this is an execution / GAS shadow clone legion mudra
+                                                        let is_legion = sutra.glyphs.iter().any(|g| matches!(g, SutraGlyph::Xing | SutraGlyph::Bian | SutraGlyph::Hua))
+                                                            || sutra.primary_skeleton_id.contains("legion")
+                                                            || pkt.codon.contains("军") || pkt.codon.contains("軍")
+                                                            || pkt.codon.contains("阵") || pkt.codon.contains("陣")
+                                                            || pkt.codon.contains("三家归元印")
+                                                            || pkt.codon.contains("九幽造化印")
+                                                            || pkt.codon.contains("玄天金鉴印");
+
+                                                        if is_legion {
+                                                            let legion = crate::legion::ShadowLegion::new(64);
+                                                            match legion.summon_clones(&sutra, 64) {
+                                                                Ok(rep) => {
+                                                                    result_parts.push(format!(
+                                                                        "GAS Shadow Legion: 64 clones (Cho {}, Han {}, Evap {}); Winning clone #{:?}; Saved {} tokens in {:.2}ms",
+                                                                        rep.cho_count, rep.han_count, rep.evaporated_count,
+                                                                        rep.winning_clone_id, rep.token_cost_saved,
+                                                                        rep.total_summoning_micros as f64 / 1000.0
+                                                                    ));
+                                                                }
+                                                                Err(e) => {
+                                                                    result_parts.push(format!("Legion summon failed: {}", e));
+                                                                }
+                                                            }
+                                                        }
+
+                                                        if result_parts.is_empty() {
                                                             format!(
                                                                 "Mudra {} [{}] decoded; formula: {}",
                                                                 sutra.codon_str, name, formula
+                                                            )
+                                                        } else {
+                                                            format!(
+                                                                "Mudra {} [{}] dispatched: {}; formula: {}",
+                                                                sutra.codon_str, name, result_parts.join("; "), formula
                                                             )
                                                         }
                                                     }
@@ -3671,6 +3705,35 @@ mod tests {
             MeshEnvelope::Error(msg) => assert!(msg.contains("replay rejected")),
             other => panic!("expected Error replay rejected, got {:?}", other),
         }
+
+        server.stop();
+    }
+
+    #[test]
+    fn test_gap_junction_legion_summon_across_wire() {
+        let (server_key, _) = keypair(33);
+        let (client_key, _) = keypair(44);
+        let dir = TempDir::new("gap-legion");
+        let mut server = MeshServer::new("server-node", server_key, dir.path());
+        let addr = server.listen(0, "127.0.0.1").expect("start server");
+
+        let mut client =
+            MeshClient::connect(addr, "client-node", client_key).expect("client connect");
+
+        let hs = client.handshake(0, 0).expect("handshake");
+        assert_eq!(hs.node_id, "server-node");
+
+        // Transmit Taoist Mudra (九幽造化印) across Gap Junction Wire
+        // Triggers BOTH autonomous dream cycle and 64-clone GAS Shadow Legion execution
+        let ack = client
+            .send_gap_codon("九幽造化印", "server-node", 999123)
+            .expect("send codon");
+        assert!(ack.accepted);
+        assert_eq!(ack.packet_type, "codon");
+        assert!(ack.details.contains("GAS Shadow Legion"));
+        assert!(ack.details.contains("64 clones"));
+        assert!(ack.details.contains("Winning clone"));
+        assert!(ack.details.contains("Dream cycle"));
 
         server.stop();
     }
