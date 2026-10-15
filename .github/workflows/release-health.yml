@@ -98,14 +98,21 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: Retry npm (if lagging)
+        if: ${{ !cancelled() }}
         continue-on-error: true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
+          [ -s release-health.json ] || { echo "no probe record; skipping retry"; exit 0; }
           [ "$(jq -r '.registries.npm.status' release-health.json)" = "live" ] && { echo "npm live"; exit 0; }
           cd npm/whitemagic-mcp
           VERSION="${{ steps.version.outputs.version }}"
-          if [[ "$VERSION" == *-* ]]; then
+          # Phase 2 (2026-10-15): prerelease status comes from the release
+          # object, not a '-' suffix guess — a suffix-less prerelease (10.3.0)
+          # would otherwise publish as npm `latest`.
+          PRERELEASE="$(gh api "repos/${{ github.repository }}/releases/tags/v${VERSION}" --jq '.prerelease' 2>/dev/null || echo true)"
+          if [ "$PRERELEASE" = "true" ]; then
             npm publish --access public --tag next
           else
             npm publish --access public
@@ -120,6 +127,7 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
+          [ -s release-health.json ] || { echo "no probe record; skipping retry"; exit 0; }
           VERSION="${{ steps.version.outputs.version }}"
           TREE_V="$(python3 -c "import tomllib;print(tomllib.load(open('Cargo.toml','rb'))['workspace']['package']['version'])")"
           if [ "$TREE_V" != "$VERSION" ]; then
@@ -141,7 +149,9 @@ jobs:
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
+          [ -s release-health.json ] || { echo "no probe record; skipping retry"; exit 0; }
           if [ "$(jq -r '.registries.docker.status' release-health.json)" = "live" ]; then
             echo "docker live"; exit 0
           fi
@@ -149,7 +159,10 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"; MAJOR="${VERSION%%.*}"
           echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
           # Prereleases tag only the exact version; latest/major stay stable.
-          if [[ "$VERSION" == *-* ]]; then
+          # Phase 2 (2026-10-15): use the release's prerelease flag, not a '-'
+          # suffix guess (a suffix-less prerelease would stomp latest/major).
+          PRERELEASE="$(gh api "repos/${{ github.repository }}/releases/tags/v${VERSION}" --jq '.prerelease' 2>/dev/null || echo true)"
+          if [ "$PRERELEASE" = "true" ]; then
             TAGS=(-t "lbailey94/whitemagic:${VERSION}")
           else
             TAGS=(-t "lbailey94/whitemagic:${VERSION}" -t "lbailey94/whitemagic:${MAJOR}" -t lbailey94/whitemagic:latest)
@@ -164,6 +177,7 @@ jobs:
         if: ${{ !cancelled() }}
         continue-on-error: true
         run: |
+          [ -s release-health.json ] || { echo "no probe record; skipping retry"; exit 0; }
           if [ "$(jq -r '.registries["mcp-registry"].status' release-health.json)" = "live" ]; then
             echo "mcp-registry live"; exit 0
           fi
@@ -177,9 +191,19 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set +e
-          python3 scripts/release_health.py --version "${{ steps.version.outputs.version }}" \
-            --json release-health.json
-          echo "re-probe exit=$? (1 = laggards remain; the gate below decides)"
+          for i in 1 2 3 4 5 6; do
+            python3 scripts/release_health.py --version "${{ steps.version.outputs.version }}" \
+              --json release-health.json
+            rc=$?
+            # The MCP registry read API is eventually consistent (observed
+            # 2026-10-15: publish OK, read "missing" for minutes). Give the
+            # registry a bounded propagation window before the gate decides.
+            if [ "$rc" -eq 0 ] || [ "$(jq -r '.registries["mcp-registry"].status' release-health.json)" = "live" ]; then
+              break
+            fi
+            sleep 30
+          done
+          echo "re-probe finished (gate below decides)"
 
       # ── Install certification: the published artifacts must run ──
 

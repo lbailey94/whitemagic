@@ -364,15 +364,21 @@ jobs:
       - name: Publish npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           cd npm/whitemagic-mcp
           VERSION="${GITHUB_REF_NAME#v}"
           if npm view "whitemagic-mcp@${VERSION}" version >/dev/null 2>&1; then
             echo "npm ${VERSION} already published - skipping"
-          elif [[ "$VERSION" == *-* ]]; then
-            npm publish --access public --tag next
           else
-            npm publish --access public
+            # Phase 2 (2026-10-15): use the release's prerelease flag, not a
+            # '-' suffix guess (a suffix-less prerelease would publish latest).
+            PRERELEASE="$(gh api "repos/${{ github.repository }}/releases/tags/${GITHUB_REF_NAME}" --jq '.prerelease' 2>/dev/null || echo true)"
+            if [ "$PRERELEASE" = "true" ]; then
+              npm publish --access public --tag next
+            else
+              npm publish --access public
+            fi
           fi
 
       - name: Wait for npm propagation (advisory)
@@ -397,14 +403,17 @@ jobs:
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ -z "${DOCKERHUB_TOKEN:-}" ]; then echo "DOCKERHUB_TOKEN not set - skipping"; exit 0; fi
           VERSION="${GITHUB_REF_NAME#v}"; MAJOR="${VERSION%%.*}"
           echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
           # Prereleases publish only the exact version tag; `latest` and the
           # major alias stay on the newest stable so `docker run ...:latest`
-          # never silently jumps to an alpha.
-          if [[ "$VERSION" == *-* ]]; then
+          # never silently jumps to an alpha. Phase 2 (2026-10-15): use the
+          # release's prerelease flag, not a '-' suffix guess.
+          PRERELEASE="$(gh api "repos/${{ github.repository }}/releases/tags/${GITHUB_REF_NAME}" --jq '.prerelease' 2>/dev/null || echo true)"
+          if [ "$PRERELEASE" = "true" ]; then
             TAGS=(-t "lbailey94/whitemagic:${VERSION}")
           else
             TAGS=(-t "lbailey94/whitemagic:${VERSION}" -t "lbailey94/whitemagic:${MAJOR}" -t lbailey94/whitemagic:latest)
