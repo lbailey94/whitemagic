@@ -1607,7 +1607,9 @@ pub fn execute_hybrid_tool_call(
         "sutra.canon" | "sutra_canon" => handle_sutra_canon(args),
         "sutra.list" | "sutra_list" => handle_sutra_list(args),
         "sutra.hexagram" | "sutra_hexagram" => handle_sutra_hexagram(args),
-        "sutra.route" | "sutra_route" | "cognitive.route" | "cognitive_route" => handle_sutra_route(args),
+        "sutra.route" | "sutra_route" | "cognitive.route" | "cognitive_route" => {
+            handle_sutra_route(args)
+        }
 
         // ── General Agentic System (GAS) Legion & Cho-Han Operations ──────────
         "legion.summon" | "legion_summon" | "sutra.legion" | "sutra_legion" => {
@@ -5600,7 +5602,10 @@ fn handle_sutra_hexagram(args: &Value) -> Result<Value, String> {
     if query.is_empty() {
         return Err("Parameter 'query' cannot be empty".to_string());
     }
-    let mutate_line = args.get("mutate_line").and_then(Value::as_u64).map(|n| n as usize);
+    let mutate_line = args
+        .get("mutate_line")
+        .and_then(Value::as_u64)
+        .map(|n| n as usize);
     if let Some(line) = mutate_line {
         if !(1..=6).contains(&line) {
             return Err("mutate_line must be between 1 and 6".to_string());
@@ -5673,7 +5678,10 @@ fn handle_sutra_route(args: &Value) -> Result<Value, String> {
     if inquiry.is_empty() {
         return Err("Parameter 'inquiry' cannot be empty".to_string());
     }
-    let _utility = args.get("utility").and_then(Value::as_f64).map(|u| u as f32);
+    let _utility = args
+        .get("utility")
+        .and_then(Value::as_f64)
+        .map(|u| u as f32);
 
     let start = std::time::Instant::now();
     let decision = wm_gen3_core::tripartite_router::TripartiteRouter::route(inquiry, None);
@@ -5683,7 +5691,9 @@ fn handle_sutra_route(args: &Value) -> Result<Value, String> {
         wm_gen3_core::tripartite_router::CognitiveTier::System0Sutra => "System0Sutra",
         wm_gen3_core::tripartite_router::CognitiveTier::System05Vector => "System05Vector",
         wm_gen3_core::tripartite_router::CognitiveTier::System1LocalOrgan => "System1LocalOrgan",
-        wm_gen3_core::tripartite_router::CognitiveTier::System2FrontierCloud => "System2FrontierCloud",
+        wm_gen3_core::tripartite_router::CognitiveTier::System2FrontierCloud => {
+            "System2FrontierCloud"
+        }
     };
 
     Ok(json!({
@@ -5982,7 +5992,9 @@ fn handle_legion_summon(args: &Value, store_path: &Path) -> Result<Value, String
     if let Some(peer_addr) = peer {
         if let Ok((signing_key, _)) = resolve_or_create_mesh_key(store_path) {
             if let Ok(addr) = peer_addr.parse() {
-                if let Ok(mut client) = MeshClient::connect(addr, "sovereign-legion-bridge", signing_key) {
+                if let Ok(mut client) =
+                    MeshClient::connect(addr, "sovereign-legion-bridge", signing_key)
+                {
                     let r_start = Instant::now();
                     if let Ok(ack) = client.send_gap_codon(&sutra.codon_str, "remote-node", 0) {
                         remote_rtt_us = Some(r_start.elapsed().as_micros());

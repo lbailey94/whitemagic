@@ -2022,7 +2022,9 @@ impl MeshServer {
                                                 hex_encode_key(&pkt.sender_pubkey),
                                                 hex_encode_key(&pkt.nonce)
                                             );
-                                            if let Err(e) = replay_cache_inner.observe(&replay_key, now_secs()) {
+                                            if let Err(e) =
+                                                replay_cache_inner.observe(&replay_key, now_secs())
+                                            {
                                                 let err = MeshEnvelope::Error(format!(
                                                     "GapJunctionCodon replay rejected: {e}"
                                                 ));
@@ -2033,25 +2035,43 @@ impl MeshServer {
                                                     );
                                                 }
                                             } else {
-                                                let details = match CompoundSutra::parse(&pkt.codon) {
+                                                let details = match CompoundSutra::parse(&pkt.codon)
+                                                {
                                                     Ok(sutra) => {
                                                         let name = sutra
                                                             .canonical_name
                                                             .clone()
-                                                            .unwrap_or_else(|| "Custom Mudra".into());
+                                                            .unwrap_or_else(|| {
+                                                                "Custom Mudra".into()
+                                                            });
                                                         let formula = sutra.taoist_formula();
 
                                                         let mut result_parts = Vec::new();
 
                                                         // Check if this is an autonomous dream consolidation mudra
-                                                        let is_dream = sutra.glyphs.iter().any(|g| matches!(g, SutraGlyph::He | SutraGlyph::Xi))
-                                                            || sutra.primary_skeleton_id.contains("skel-dream")
-                                                            || pkt.codon == "复" || pkt.codon == "復" || pkt.codon == "艮";
+                                                        let is_dream =
+                                                            sutra.glyphs.iter().any(|g| {
+                                                                matches!(
+                                                                    g,
+                                                                    SutraGlyph::He | SutraGlyph::Xi
+                                                                )
+                                                            }) || sutra
+                                                                .primary_skeleton_id
+                                                                .contains("skel-dream")
+                                                                || pkt.codon == "复"
+                                                                || pkt.codon == "復"
+                                                                || pkt.codon == "艮";
 
                                                         if is_dream {
-                                                            let dream_start = std::time::Instant::now();
-                                                            let journal_path = sub_path_inner.join("journal.jsonl");
-                                                            match Substrate::open(&sub_path_inner, Some(&journal_path), crate::constitution::default_view()) {
+                                                            let dream_start =
+                                                                std::time::Instant::now();
+                                                            let journal_path = sub_path_inner
+                                                                .join("journal.jsonl");
+                                                            match Substrate::open(
+                                                                &sub_path_inner,
+                                                                Some(&journal_path),
+                                                                crate::constitution::default_view(),
+                                                            ) {
                                                                 Ok(mut substrate) => {
                                                                     substrate.set_intake_authority(crate::evidence::RatifiedChannel::internal("wm-mesh-dream"));
                                                                     let regime = crate::dream::RegimeVector::from_quiescence(1.0, 0.0);
@@ -2063,34 +2083,60 @@ impl MeshServer {
                                                                         &mut substrate,
                                                                         seed,
                                                                     );
-                                                                    let elapsed_ms = dream_start.elapsed().as_secs_f64() * 1000.0;
+                                                                    let elapsed_ms = dream_start
+                                                                        .elapsed()
+                                                                        .as_secs_f64()
+                                                                        * 1000.0;
 
                                                                     // Ingest synthesized dream insights into insights log
-                                                                    let insights_log = sub_path_inner.join("dream_insights.jsonl");
-                                                                    if let Ok(mut w) = std::fs::OpenOptions::new()
-                                                                        .create(true)
-                                                                        .append(true)
-                                                                        .open(&insights_log)
+                                                                    let insights_log =
+                                                                        sub_path_inner.join(
+                                                                            "dream_insights.jsonl",
+                                                                        );
+                                                                    if let Ok(mut w) =
+                                                                        std::fs::OpenOptions::new()
+                                                                            .create(true)
+                                                                            .append(true)
+                                                                            .open(&insights_log)
                                                                     {
                                                                         use std::io::Write;
-                                                                        for ins in &dual.rem.committed_insights {
+                                                                        for ins in &dual
+                                                                            .rem
+                                                                            .committed_insights
+                                                                        {
                                                                             let _ = writeln!(w, "{}", serde_json::to_string(ins).unwrap_or_default());
                                                                         }
                                                                     }
 
                                                                     // Sync vault skeletons if any were speciated
-                                                                    let vault_path = sub_path_inner.join("geneseed_vault.jsonl");
+                                                                    let vault_path = sub_path_inner
+                                                                        .join(
+                                                                            "geneseed_vault.jsonl",
+                                                                        );
                                                                     let mut vault = crate::bicameral::GeneseedVault::load_or_init(&vault_path);
                                                                     let mut speciated_count = 0;
-                                                                    for mut skel in dual.synthesized_skeletons {
-                                                                        if !vault.skeletons.iter().any(|s| s.id == skel.id) {
-                                                                            skel.execution_count = 0;
-                                                                            vault.skeletons.push(skel);
+                                                                    for mut skel in
+                                                                        dual.synthesized_skeletons
+                                                                    {
+                                                                        if !vault
+                                                                            .skeletons
+                                                                            .iter()
+                                                                            .any(|s| {
+                                                                                s.id == skel.id
+                                                                            })
+                                                                        {
+                                                                            skel.execution_count =
+                                                                                0;
+                                                                            vault
+                                                                                .skeletons
+                                                                                .push(skel);
                                                                             speciated_count += 1;
                                                                         }
                                                                     }
                                                                     if speciated_count > 0 {
-                                                                        let _ = vault.sync_to_file(&vault_path);
+                                                                        let _ = vault.sync_to_file(
+                                                                            &vault_path,
+                                                                        );
                                                                     }
 
                                                                     result_parts.push(format!(
@@ -2100,23 +2146,38 @@ impl MeshServer {
                                                                 }
                                                                 Err(e) => {
                                                                     result_parts.push(format!(
-                                                                        "Dream deferred: {}", e
+                                                                        "Dream deferred: {}",
+                                                                        e
                                                                     ));
                                                                 }
                                                             }
                                                         }
 
                                                         // Check if this is an execution / GAS shadow clone legion mudra
-                                                        let is_legion = sutra.glyphs.iter().any(|g| matches!(g, SutraGlyph::Xing | SutraGlyph::Bian | SutraGlyph::Hua))
-                                                            || sutra.primary_skeleton_id.contains("legion")
-                                                            || pkt.codon.contains("军") || pkt.codon.contains("軍")
-                                                            || pkt.codon.contains("阵") || pkt.codon.contains("陣")
-                                                            || pkt.codon.contains("三家归元印")
-                                                            || pkt.codon.contains("九幽造化印")
-                                                            || pkt.codon.contains("玄天金鉴印");
+                                                        let is_legion =
+                                                            sutra.glyphs.iter().any(|g| {
+                                                                matches!(
+                                                                    g,
+                                                                    SutraGlyph::Xing
+                                                                        | SutraGlyph::Bian
+                                                                        | SutraGlyph::Hua
+                                                                )
+                                                            }) || sutra
+                                                                .primary_skeleton_id
+                                                                .contains("legion")
+                                                                || pkt.codon.contains("军")
+                                                                || pkt.codon.contains("軍")
+                                                                || pkt.codon.contains("阵")
+                                                                || pkt.codon.contains("陣")
+                                                                || pkt.codon.contains("三家归元印")
+                                                                || pkt.codon.contains("九幽造化印")
+                                                                || pkt.codon.contains("玄天金鉴印");
 
                                                         if is_legion {
-                                                            let legion = crate::legion::ShadowLegion::new(64);
+                                                            let legion =
+                                                                crate::legion::ShadowLegion::new(
+                                                                    64,
+                                                                );
                                                             match legion.summon_clones(&sutra, 64) {
                                                                 Ok(rep) => {
                                                                     result_parts.push(format!(
@@ -2127,7 +2188,10 @@ impl MeshServer {
                                                                     ));
                                                                 }
                                                                 Err(e) => {
-                                                                    result_parts.push(format!("Legion summon failed: {}", e));
+                                                                    result_parts.push(format!(
+                                                                        "Legion summon failed: {}",
+                                                                        e
+                                                                    ));
                                                                 }
                                                             }
                                                         }
@@ -2140,7 +2204,10 @@ impl MeshServer {
                                                         } else {
                                                             format!(
                                                                 "Mudra {} [{}] dispatched: {}; formula: {}",
-                                                                sutra.codon_str, name, result_parts.join("; "), formula
+                                                                sutra.codon_str,
+                                                                name,
+                                                                result_parts.join("; "),
+                                                                formula
                                                             )
                                                         }
                                                     }
@@ -2213,7 +2280,9 @@ impl MeshServer {
                                                 hex_encode_key(&pkt.sender_pubkey),
                                                 hex_encode_key(&pkt.nonce)
                                             );
-                                            if let Err(e) = replay_cache_inner.observe(&replay_key, now_secs()) {
+                                            if let Err(e) =
+                                                replay_cache_inner.observe(&replay_key, now_secs())
+                                            {
                                                 let err = MeshEnvelope::Error(format!(
                                                     "GapJunctionTuple replay rejected: {e}"
                                                 ));
@@ -2224,8 +2293,8 @@ impl MeshServer {
                                                     );
                                                 }
                                             } else {
-                                                let ack =
-                                                    MeshEnvelope::GapJunctionAck(GapJunctionAck {
+                                                let ack = MeshEnvelope::GapJunctionAck(
+                                                    GapJunctionAck {
                                                         responder_node: node_id_inner.clone(),
                                                         packet_type: "tuple".to_string(),
                                                         accepted: true,
@@ -2234,7 +2303,8 @@ impl MeshServer {
                                                             pkt.key
                                                         ),
                                                         timestamp_ms: now_millis(),
-                                                    });
+                                                    },
+                                                );
                                                 if let Ok(resp_bytes) = serde_json::to_vec(&ack) {
                                                     let _ = PhysicalFrameCodec::write_frame(
                                                         &mut stream,
@@ -2291,7 +2361,9 @@ impl MeshServer {
                                                 hex_encode_key(&pkt.sender_pubkey),
                                                 hex_encode_key(&pkt.nonce)
                                             );
-                                            if let Err(e) = replay_cache_inner.observe(&replay_key, now_secs()) {
+                                            if let Err(e) =
+                                                replay_cache_inner.observe(&replay_key, now_secs())
+                                            {
                                                 let err = MeshEnvelope::Error(format!(
                                                     "BioelectricTelemetry replay rejected: {e}"
                                                 ));

@@ -9849,7 +9849,8 @@ fn run_sutra_legion(
                 std::process::exit(1);
             }
         };
-        if let Ok(mut client) = MeshClient::connect(addr, "sovereign-legion-commander", signing_key) {
+        if let Ok(mut client) = MeshClient::connect(addr, "sovereign-legion-commander", signing_key)
+        {
             let r_start = Instant::now();
             if let Ok(ack) = client.send_gap_codon(&sutra.codon_str, "remote-node", 0) {
                 remote_rtt_us = Some(r_start.elapsed().as_micros());
@@ -9886,23 +9887,26 @@ fn run_sutra_legion(
         println!("Han (半 / Anomaly Bounty):   {}", report.han_count);
         println!("Evaporated (虚 / Transient): {}", report.evaporated_count);
         if let Some(winner_id) = report.winning_clone_id {
-            println!("Winning Clone:      #{} ({})", winner_id, report.winning_codon.as_deref().unwrap_or(""));
+            println!(
+                "Winning Clone:      #{} ({})",
+                winner_id,
+                report.winning_codon.as_deref().unwrap_or("")
+            );
         }
         println!("Wallclock Latency:  {} µs", report.total_summoning_micros);
         println!("LLM Tokens Saved:   {} tokens", report.token_cost_saved);
         if let Some(rtt) = remote_rtt_us {
-            println!("Remote Peer RTT:    {} µs (peer: {})", rtt, peer.unwrap_or(""));
+            println!(
+                "Remote Peer RTT:    {} µs (peer: {})",
+                rtt,
+                peer.unwrap_or("")
+            );
         }
         println!("==================================================");
     }
 }
 
-fn run_sutra_chohan(
-    payload: &str,
-    proof: Option<&str>,
-    bid: u64,
-    json: bool,
-) {
+fn run_sutra_chohan(payload: &str, proof: Option<&str>, bid: u64, json: bool) {
     use wm_gen3_core::legion::ChoHanVerdict;
 
     let is_cho = if let Some(p) = proof {
@@ -9942,7 +9946,14 @@ fn run_sutra_chohan(
         println!("Payload:            {}", payload);
         println!("Bid (micro-USDC):   {}", bid);
         println!("Verdict:            {:?}", verdict);
-        println!("Classification:     {}", if is_cho { "Cho (丁 / Invariant Pass)" } else { "Han (半 / Anomaly Bounty)" });
+        println!(
+            "Classification:     {}",
+            if is_cho {
+                "Cho (丁 / Invariant Pass)"
+            } else {
+                "Han (半 / Anomaly Bounty)"
+            }
+        );
         println!("Settlement Action:  {}", settlement_action);
         println!("==================================================");
     }

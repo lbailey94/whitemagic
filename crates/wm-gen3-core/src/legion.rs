@@ -41,10 +41,16 @@ impl CohortArchetype {
     #[must_use]
     pub const fn description(self) -> &'static str {
         match self {
-            Self::AdversarialRedTeam => "Qi (奇): Adversarial boundary fuzzing and red-team penetration",
+            Self::AdversarialRedTeam => {
+                "Qi (奇): Adversarial boundary fuzzing and red-team penetration"
+            }
             Self::RefactorEvolution => "Qi (奇): Speculative AST mutation and clean refactoring",
-            Self::SpeculativeReplay => "Zheng (正): Deterministic historical replay and invariant audit",
-            Self::HorizonStress => "Zheng (正): 30-year horizon projection and blast-radius mitigation",
+            Self::SpeculativeReplay => {
+                "Zheng (正): Deterministic historical replay and invariant audit"
+            }
+            Self::HorizonStress => {
+                "Zheng (正): 30-year horizon projection and blast-radius mitigation"
+            }
         }
     }
 }
@@ -109,7 +115,9 @@ pub enum LegionError {
 impl fmt::Display for LegionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ZeroClonesRequested => write!(f, "Legion summon error: must request at least 1 clone"),
+            Self::ZeroClonesRequested => {
+                write!(f, "Legion summon error: must request at least 1 clone")
+            }
             Self::EmptyEdict => write!(f, "Legion summon error: edict codon cannot be empty"),
             Self::ExecutionFailed(msg) => write!(f, "Legion execution failed: {msg}"),
         }
@@ -293,7 +301,10 @@ mod tests {
         let report = legion.summon_clones(&edict, 64).expect("legion summons");
 
         assert_eq!(report.total_clones, 64);
-        assert!(report.cho_count > 0, "must have at least one Cho attested clone");
+        assert!(
+            report.cho_count > 0,
+            "must have at least one Cho attested clone"
+        );
         assert!(report.winning_clone_id.is_some());
         assert!(report.token_cost_saved >= 64 * 1500);
 
@@ -317,7 +328,9 @@ mod tests {
         ));
 
         // Requesting 128 clones completes successfully
-        let report = legion.summon_clones(&edict, 128).expect("128 clones summon");
+        let report = legion
+            .summon_clones(&edict, 128)
+            .expect("128 clones summon");
         assert_eq!(report.total_clones, 128);
         assert_eq!(report.token_cost_saved, 128 * 1500);
     }
