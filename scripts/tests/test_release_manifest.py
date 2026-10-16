@@ -106,6 +106,123 @@ class ReleaseManifestFactsTest(unittest.TestCase):
         text = workflow.read_text(encoding="utf-8")
         self.assertIn("--channel", text)
 
+    def test_manifest_generator_refuses_mismatched_sidecar(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            art = Path(tmp) / "artifacts"
+            art.mkdir()
+            binary = art / "wm-linux-x86_64"
+            binary.write_bytes(b"real-binary-bytes")
+            (art / "wm-linux-x86_64.sha256").write_text(
+                "0" * 64 + "  wm-linux-x86_64\n", encoding="utf-8"
+            )
+            old_argv = sys.argv
+            sys.argv = [
+                "release_manifest.py",
+                "--version",
+                "10.3.0",
+                "--channel",
+                "open alpha",
+                "--artifacts-dir",
+                str(art),
+                "--out",
+                str(art / "release-manifest.json"),
+            ]
+            try:
+                with contextlib.redirect_stderr(io.StringIO()):
+                    rc = rm.main()
+                self.assertEqual(rc, 1)
+                self.assertFalse((art / "release-manifest.json").exists())
+            finally:
+                sys.argv = old_argv
+
+    def test_health_probe_fails_valid_signature_over_wrong_target_digest(self) -> None:
+        import release_health as rh
+        from unittest.mock import patch
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+        priv = Ed25519PrivateKey.generate()
+        pub_hex = priv.public_key().public_bytes_raw().hex()
+        good_sha = "a" * 64
+        wrong_sha = "b" * 64
+        base_dl = "https://github.com/lbailey94/whitemagic/releases/download/v10.3.0"
+
+        def make_signed_manifest(linux_sha: str) -> tuple[bytes, bytes]:
+            doc = {
+                "schema": 1,
+                "version": "10.3.0",
+                "channel": "open alpha",
+                "targets": {
+                    "linux-x86_64": {
+                        "url": f"{base_dl}/wm-linux-x86_64",
+                        "sha256": linux_sha,
+                        "size": 1000,
+                        "install_gated": True,
+                    },
+                    "linux-aarch64": {
+                        "url": f"{base_dl}/wm-linux-aarch64",
+                        "sha256": good_sha,
+                        "size": 1000,
+                        "install_gated": True,
+                    },
+                    "macos-aarch64": {
+                        "url": f"{base_dl}/wm-macos-aarch64",
+                        "sha256": good_sha,
+                        "size": 1000,
+                        "install_gated": True,
+                    },
+                },
+            }
+            raw = json.dumps(doc, sort_keys=True).encode("utf-8")
+            sig = priv.sign(raw).hex().encode("utf-8")
+            return raw, sig
+
+        gh_release = {
+            "published_at": "2026-10-16T00:00:00Z",
+            "assets": [
+                {"name": name, "size": 1000, "digest": f"sha256:{good_sha}"}
+                for name in rh.REQUIRED_RELEASE_ASSETS
+            ],
+        }
+
+        bad_raw, bad_sig = make_signed_manifest(wrong_sha)
+
+        def fake_fetch_bytes_bad(url: str, timeout: int = 20):
+            if url.endswith("/release-manifest.json"):
+                return 200, bad_raw
+            if url.endswith("/release-manifest.json.sig"):
+                return 200, bad_sig
+            if url.endswith(".sha256"):
+                return 200, f"{good_sha}  bin\n".encode("utf-8")
+            return 404, b""
+
+        with patch.object(rh, "fetch_json", return_value=(200, gh_release)), patch.object(
+            rh, "fetch_bytes", side_effect=fake_fetch_bytes_bad
+        ):
+            res = rh.probe_github("lbailey94/whitemagic", "10.3.0", pubkey_hex=pub_hex)
+            self.assertEqual(res["status"], "lagging")
+            self.assertTrue(res["manifest_signature_valid"])
+            self.assertEqual(res["artifact_integrity"], "failed")
+            self.assertIn("linux-x86_64", res["manifest_error"])
+
+        good_raw, good_sig = make_signed_manifest(good_sha)
+
+        def fake_fetch_bytes_good(url: str, timeout: int = 20):
+            if url.endswith("/release-manifest.json"):
+                return 200, good_raw
+            if url.endswith("/release-manifest.json.sig"):
+                return 200, good_sig
+            if url.endswith(".sha256"):
+                return 200, f"{good_sha}  bin\n".encode("utf-8")
+            return 404, b""
+
+        with patch.object(rh, "fetch_json", return_value=(200, gh_release)), patch.object(
+            rh, "fetch_bytes", side_effect=fake_fetch_bytes_good
+        ):
+            res2 = rh.probe_github("lbailey94/whitemagic", "10.3.0", pubkey_hex=pub_hex)
+            self.assertEqual(res2["status"], "live")
+            self.assertTrue(res2["manifest_signature_valid"])
+            self.assertEqual(res2["artifact_integrity"], "verified")
+
 
 if __name__ == "__main__":
     unittest.main()

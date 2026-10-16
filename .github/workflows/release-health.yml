@@ -77,6 +77,7 @@ jobs:
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          WM_RELEASE_PUBKEY: ${{ vars.WM_RELEASE_PUBKEY }}
         run: |
           python3 scripts/release_health.py --version "${{ steps.version.outputs.version }}" \
             --json release-health.json
@@ -189,6 +190,7 @@ jobs:
       - name: Re-probe (final record)
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          WM_RELEASE_PUBKEY: ${{ vars.WM_RELEASE_PUBKEY }}
         run: |
           set +e
           for i in 1 2 3 4 5 6; do
@@ -225,6 +227,12 @@ jobs:
           python3 - <<'PY'
           import json, pathlib
           rec = json.loads(pathlib.Path("release-health.json").read_text())
+          gh = rec.get("registries", {}).get("github-release", {})
+          integrity_ok = (
+              gh.get("manifest_signature_valid") is True
+              and gh.get("artifact_integrity") == "verified"
+          )
+          manifest_sha = gh.get("manifest_sha256")
           certs = {}
           for name in ("npm", "docker"):
               p = pathlib.Path(f"{name}-selftest.json")
@@ -237,27 +245,41 @@ jobs:
               if data is not None:
                   # The binary's selftest JSON reports {"status":"ok",
                   # "invariants":"pass"}; accept the legacy `passed` boolean
-                  # too. (Checking only `passed` marked two good installs as
-                  # fail on 2026-10-05 — alpha.3's record showed status ok,
-                  # invariants pass, certification fail.)
-                  passed = bool(data.get("passed")) or data.get("status") == "ok"
-                  certs[name] = {"status": "pass" if passed else "fail", "selftest": data}
+                  # too. Keep runtime_selftest explicit and separate from overall
+                  # certification status, which also requires signed artifact
+                  # identity/integrity verification on github-release.
+                  selftest_ok = bool(data.get("passed")) or data.get("status") == "ok"
+                  certs[name] = {
+                      "status": "pass" if (selftest_ok and integrity_ok) else "fail",
+                      "runtime_selftest": "pass" if selftest_ok else "fail",
+                      "artifact_integrity": gh.get("artifact_integrity", "unverified"),
+                      "bound_manifest_sha256": manifest_sha,
+                      "selftest": data,
+                  }
               elif p.exists():
                   # The certify step ran but produced no JSON (it failed and
                   # continue-on-error swallowed it). Record the fail honestly;
                   # an empty file must not crash this merge step.
                   certs[name] = {
                       "status": "fail",
+                      "runtime_selftest": "fail",
+                      "artifact_integrity": gh.get("artifact_integrity", "unverified"),
+                      "bound_manifest_sha256": manifest_sha,
                       "selftest": None,
                       "note": "certification produced no JSON (step failed; see job log)",
                   }
               else:
-                  certs[name] = {"status": "not-run"}
+                  certs[name] = {
+                      "status": "not-run",
+                      "runtime_selftest": "not-run",
+                      "artifact_integrity": gh.get("artifact_integrity", "unverified"),
+                      "bound_manifest_sha256": manifest_sha,
+                  }
           rec["install_certification"] = certs
           pathlib.Path("release-health.json").write_text(
               json.dumps(rec, indent=2, sort_keys=True) + "\n")
           PY
-          jq -c '.install_certification | map_values(.status)' release-health.json
+          jq -c '.install_certification | map_values({status, runtime_selftest, artifact_integrity})' release-health.json
 
       - name: Upload the record to the GitHub Release
         env:
@@ -276,11 +298,14 @@ jobs:
           name: release-health
           path: release-health*.json
 
-      - name: Gate — every surface live and every install certified
+      - name: Gate — every surface live, artifact integrity verified, and every install certified
         run: |
           jq -e '.status == "healthy"' release-health.json >/dev/null \
-            || { echo "registries still lagging:"; jq -c '.registries | to_entries[] | select(.value.status != "live") | {key, status: .value.status}' release-health.json; exit 1; }
+            || { echo "registries still lagging:"; jq -c '.registries | to_entries[] | select(.value.status != "live") | {key, status: .value.status, manifest_error: .value.manifest_error}' release-health.json; exit 1; }
+          jq -e '.registries["github-release"].manifest_signature_valid == true
+                 and .registries["github-release"].artifact_integrity == "verified"' release-health.json >/dev/null \
+            || { echo "signed artifact integrity not verified:"; jq -c '.registries["github-release"]' release-health.json; exit 1; }
           jq -e '.install_certification.npm.status == "pass"
                  and .install_certification.docker.status == "pass"' release-health.json >/dev/null \
-            || { echo "install certification not passing:"; jq -c '.install_certification | map_values(.status)' release-health.json; exit 1; }
+            || { echo "install certification not passing:"; jq -c '.install_certification | map_values({status, runtime_selftest, artifact_integrity})' release-health.json; exit 1; }
           echo "release v${{ steps.version.outputs.version }} is healthy and certified"

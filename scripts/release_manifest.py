@@ -138,11 +138,29 @@ def main() -> int:
         binary = artifacts / filename
         if not binary.is_file():
             continue
+        sha = sha256_file(binary)
         checksum_file = artifacts / f"{filename}.sha256"
         if checksum_file.is_file():
-            sha = checksum_file.read_text(encoding="utf-8").split()[0].strip()
-        else:
-            sha = sha256_file(binary)
+            sidecar_sha = checksum_file.read_text(encoding="utf-8").split()[0].strip().lower()
+            if sidecar_sha != sha.lower():
+                print(
+                    f"integrity error: {checksum_file} declares {sidecar_sha} "
+                    f"but {binary} hashes to {sha}",
+                    file=sys.stderr,
+                )
+                return 1
+        gz_file = artifacts / f"{filename}.gz"
+        gz_checksum = artifacts / f"{filename}.gz.sha256"
+        if gz_file.is_file() and gz_checksum.is_file():
+            actual_gz_sha = sha256_file(gz_file)
+            sidecar_gz_sha = gz_checksum.read_text(encoding="utf-8").split()[0].strip().lower()
+            if sidecar_gz_sha != actual_gz_sha.lower():
+                print(
+                    f"integrity error: {gz_checksum} declares {sidecar_gz_sha} "
+                    f"but {gz_file} hashes to {actual_gz_sha}",
+                    file=sys.stderr,
+                )
+                return 1
         bundle = artifacts / f"{filename}.bundle"
         targets[key] = {
             "url": f"https://github.com/{args.repo}/releases/download/v{args.version}/{filename}",

@@ -216,6 +216,30 @@ class VersionTruthTest(unittest.TestCase):
             )
             self.assertEqual(vt.open_changelog(root, "9.1.5", dry_run=False), 1)
 
+    def test_channel_context_allows_stable_pin_only_in_context(self) -> None:
+        tmp, root = make_tree("10.4.0")
+        with tmp:
+            (root / "README.md").write_text(
+                "# WhiteMagic 10.4.0\n"
+                "- **Install path: Linux** — (Windows and Intel macOS remain on the stable Gen 2 `v9.3.4` release line).\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(vt.check(root, None), 0)
+            # If 9.3.4 appears outside the stable fallback context, it must be flagged as drift.
+            (root / "README.md").write_text(
+                "# WhiteMagic 9.3.4\n"
+                "- **Install path: Linux** — (Windows and Intel macOS remain on the stable Gen 2 `v9.3.4` release line).\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(vt.check(root, None), 1)
+            # If the stable fallback pin is falsely rewritten to 10.4.0, it must be flagged as drift.
+            (root / "README.md").write_text(
+                "# WhiteMagic 10.4.0\n"
+                "- **Install path: Linux** — (Windows and Intel macOS remain on the stable Gen 2 `v10.4.0` release line).\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(vt.check(root, None), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
