@@ -136,92 +136,134 @@ class ReleaseManifestFactsTest(unittest.TestCase):
                 sys.argv = old_argv
 
     def test_health_probe_fails_valid_signature_over_wrong_target_digest(self) -> None:
+        import subprocess
         import release_health as rh
         from unittest.mock import patch
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-        priv = Ed25519PrivateKey.generate()
-        pub_hex = priv.public_key().public_bytes_raw().hex()
-        good_sha = "a" * 64
-        wrong_sha = "b" * 64
-        base_dl = "https://github.com/lbailey94/whitemagic/releases/download/v10.3.0"
+        with tempfile.TemporaryDirectory() as key_td:
+            td_path = Path(key_td)
+            priv_pem = td_path / "priv.pem"
+            pub_der = td_path / "pub.der"
+            subprocess.run(
+                ["openssl", "genpkey", "-algorithm", "ED25519", "-out", str(priv_pem)],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                [
+                    "openssl",
+                    "pkey",
+                    "-in",
+                    str(priv_pem),
+                    "-pubout",
+                    "-outform",
+                    "DER",
+                    "-out",
+                    str(pub_der),
+                ],
+                check=True,
+                capture_output=True,
+            )
+            pub_hex = pub_der.read_bytes()[-32:].hex()
+            good_sha = "a" * 64
+            wrong_sha = "b" * 64
+            base_dl = "https://github.com/lbailey94/whitemagic/releases/download/v10.3.0"
 
-        def make_signed_manifest(linux_sha: str) -> tuple[bytes, bytes]:
-            doc = {
-                "schema": 1,
-                "version": "10.3.0",
-                "channel": "open alpha",
-                "targets": {
-                    "linux-x86_64": {
-                        "url": f"{base_dl}/wm-linux-x86_64",
-                        "sha256": linux_sha,
-                        "size": 1000,
-                        "install_gated": True,
+            def make_signed_manifest(linux_sha: str) -> tuple[bytes, bytes]:
+                doc = {
+                    "schema": 1,
+                    "version": "10.3.0",
+                    "channel": "open alpha",
+                    "targets": {
+                        "linux-x86_64": {
+                            "url": f"{base_dl}/wm-linux-x86_64",
+                            "sha256": linux_sha,
+                            "size": 1000,
+                            "install_gated": True,
+                        },
+                        "linux-aarch64": {
+                            "url": f"{base_dl}/wm-linux-aarch64",
+                            "sha256": good_sha,
+                            "size": 1000,
+                            "install_gated": True,
+                        },
+                        "macos-aarch64": {
+                            "url": f"{base_dl}/wm-macos-aarch64",
+                            "sha256": good_sha,
+                            "size": 1000,
+                            "install_gated": True,
+                        },
                     },
-                    "linux-aarch64": {
-                        "url": f"{base_dl}/wm-linux-aarch64",
-                        "sha256": good_sha,
-                        "size": 1000,
-                        "install_gated": True,
-                    },
-                    "macos-aarch64": {
-                        "url": f"{base_dl}/wm-macos-aarch64",
-                        "sha256": good_sha,
-                        "size": 1000,
-                        "install_gated": True,
-                    },
-                },
+                }
+                raw = json.dumps(doc, sort_keys=True).encode("utf-8")
+                msg_file = td_path / "msg.bin"
+                sig_file = td_path / "sig.bin"
+                msg_file.write_bytes(raw)
+                subprocess.run(
+                    [
+                        "openssl",
+                        "pkeyutl",
+                        "-sign",
+                        "-inkey",
+                        str(priv_pem),
+                        "-rawin",
+                        "-in",
+                        str(msg_file),
+                        "-out",
+                        str(sig_file),
+                    ],
+                    check=True,
+                    capture_output=True,
+                )
+                sig = sig_file.read_bytes().hex().encode("utf-8")
+                return raw, sig
+
+            gh_release = {
+                "published_at": "2026-10-16T00:00:00Z",
+                "assets": [
+                    {"name": name, "size": 1000, "digest": f"sha256:{good_sha}"}
+                    for name in rh.REQUIRED_RELEASE_ASSETS
+                ],
             }
-            raw = json.dumps(doc, sort_keys=True).encode("utf-8")
-            sig = priv.sign(raw).hex().encode("utf-8")
-            return raw, sig
 
-        gh_release = {
-            "published_at": "2026-10-16T00:00:00Z",
-            "assets": [
-                {"name": name, "size": 1000, "digest": f"sha256:{good_sha}"}
-                for name in rh.REQUIRED_RELEASE_ASSETS
-            ],
-        }
+            bad_raw, bad_sig = make_signed_manifest(wrong_sha)
 
-        bad_raw, bad_sig = make_signed_manifest(wrong_sha)
+            def fake_fetch_bytes_bad(url: str, timeout: int = 20):
+                if url.endswith("/release-manifest.json"):
+                    return 200, bad_raw
+                if url.endswith("/release-manifest.json.sig"):
+                    return 200, bad_sig
+                if url.endswith(".sha256"):
+                    return 200, f"{good_sha}  bin\n".encode("utf-8")
+                return 404, b""
 
-        def fake_fetch_bytes_bad(url: str, timeout: int = 20):
-            if url.endswith("/release-manifest.json"):
-                return 200, bad_raw
-            if url.endswith("/release-manifest.json.sig"):
-                return 200, bad_sig
-            if url.endswith(".sha256"):
-                return 200, f"{good_sha}  bin\n".encode("utf-8")
-            return 404, b""
+            with patch.object(rh, "fetch_json", return_value=(200, gh_release)), patch.object(
+                rh, "fetch_bytes", side_effect=fake_fetch_bytes_bad
+            ):
+                res = rh.probe_github("lbailey94/whitemagic", "10.3.0", pubkey_hex=pub_hex)
+                self.assertEqual(res["status"], "lagging")
+                self.assertTrue(res["manifest_signature_valid"])
+                self.assertEqual(res["artifact_integrity"], "failed")
+                self.assertIn("linux-x86_64", res["manifest_error"])
 
-        with patch.object(rh, "fetch_json", return_value=(200, gh_release)), patch.object(
-            rh, "fetch_bytes", side_effect=fake_fetch_bytes_bad
-        ):
-            res = rh.probe_github("lbailey94/whitemagic", "10.3.0", pubkey_hex=pub_hex)
-            self.assertEqual(res["status"], "lagging")
-            self.assertTrue(res["manifest_signature_valid"])
-            self.assertEqual(res["artifact_integrity"], "failed")
-            self.assertIn("linux-x86_64", res["manifest_error"])
+            good_raw, good_sig = make_signed_manifest(good_sha)
 
-        good_raw, good_sig = make_signed_manifest(good_sha)
+            def fake_fetch_bytes_good(url: str, timeout: int = 20):
+                if url.endswith("/release-manifest.json"):
+                    return 200, good_raw
+                if url.endswith("/release-manifest.json.sig"):
+                    return 200, good_sig
+                if url.endswith(".sha256"):
+                    return 200, f"{good_sha}  bin\n".encode("utf-8")
+                return 404, b""
 
-        def fake_fetch_bytes_good(url: str, timeout: int = 20):
-            if url.endswith("/release-manifest.json"):
-                return 200, good_raw
-            if url.endswith("/release-manifest.json.sig"):
-                return 200, good_sig
-            if url.endswith(".sha256"):
-                return 200, f"{good_sha}  bin\n".encode("utf-8")
-            return 404, b""
-
-        with patch.object(rh, "fetch_json", return_value=(200, gh_release)), patch.object(
-            rh, "fetch_bytes", side_effect=fake_fetch_bytes_good
-        ):
-            res2 = rh.probe_github("lbailey94/whitemagic", "10.3.0", pubkey_hex=pub_hex)
-            self.assertEqual(res2["status"], "live")
-            self.assertTrue(res2["manifest_signature_valid"])
-            self.assertEqual(res2["artifact_integrity"], "verified")
+            with patch.object(rh, "fetch_json", return_value=(200, gh_release)), patch.object(
+                rh, "fetch_bytes", side_effect=fake_fetch_bytes_good
+            ):
+                res2 = rh.probe_github("lbailey94/whitemagic", "10.3.0", pubkey_hex=pub_hex)
+                self.assertEqual(res2["status"], "live")
+                self.assertTrue(res2["manifest_signature_valid"])
+                self.assertEqual(res2["artifact_integrity"], "verified")
 
 
 if __name__ == "__main__":
