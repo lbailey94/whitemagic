@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import json
+import importlib.util
+import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -14,6 +17,68 @@ WORKFLOW = ROOT / ".github/workflows/release-health.yml"
 
 
 class ReleaseHealthWorkflowTests(unittest.TestCase):
+    def test_checkout_step_preserves_and_runs_saved_checker_with_tag_metadata(self) -> None:
+        text = WORKFLOW.read_text()
+        marker = "      - name: Check out the release tree\n"
+        section = text.split(marker, 1)[1].split("        run: |\n", 1)[1].split("\n      - ", 1)[0]
+        shell = "\n".join(line[10:] for line in section.splitlines() if line.startswith("          "))
+        shell = shell.replace('${{ steps.version.outputs.version }}', '9.3.4')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            checkout = root / "checkout"
+            runner = root / "runner"
+            (checkout / "scripts").mkdir(parents=True)
+            runner.mkdir()
+            shutil.copy(ROOT / "scripts/release_health.py", checkout / "scripts/release_health.py")
+            shutil.copy(ROOT / "scripts/crates_publish_order.py", checkout / "scripts/crates_publish_order.py")
+            (checkout / "Cargo.toml").write_text('[workspace.package]\nversion="9.3.4"\n')
+            old_probe = "# immutable old-tag probe marker\n"
+            fakebin = root / "bin"
+            fakebin.mkdir()
+            git = fakebin / "git"
+            git.write_text("""#!/usr/bin/env python3
+import pathlib, sys
+args=sys.argv[1:]
+if args[:1] == ['fetch']:
+    raise SystemExit(0)
+if args[:2] == ['checkout', '--detach']:
+    pathlib.Path('Cargo.toml').write_text('[workspace.package]\\nversion=\\"9.3.4\\"\\n')
+    pathlib.Path('scripts/release_health.py').write_text('# immutable old-tag probe marker\\n')
+    raise SystemExit(0)
+if args[:2] == ['log', '-1']:
+    print('fake-tag-commit')
+    raise SystemExit(0)
+raise SystemExit('unexpected git '+repr(args))
+""")
+            git.chmod(0o755)
+            cargo = fakebin / "cargo"
+            cargo.write_text("""#!/usr/bin/env python3
+import json
+print(json.dumps({'packages':[{'id':'path+file:///tag#wm-core@9.3.4','name':'wm-core','publish':None,'dependencies':[]}], 'workspace_members':['path+file:///tag#wm-core@9.3.4']}))
+""")
+            cargo.chmod(0o755)
+            env = dict(os.environ, PATH=f"{fakebin}:{os.environ['PATH']}", RUNNER_TEMP=str(runner))
+            proc = subprocess.run(["bash", "-eu", "-c", shell], cwd=checkout, env=env, text=True, capture_output=True)
+            self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
+            saved = runner / "release_health.py"
+            self.assertEqual(saved.read_bytes(), (ROOT / "scripts/release_health.py").read_bytes())
+            self.assertEqual((checkout / "scripts/release_health.py").read_text(), old_probe)
+
+            # Load and execute the exact saved file after tag checkout. The
+            # tag's Cargo metadata is the source for the copied helper's
+            # subprocess; HTTP is mocked at the registry boundary.
+            helper = runner / "crates_publish_order.py"
+            helper.write_bytes((ROOT / "scripts/crates_publish_order.py").read_bytes())
+            spec = importlib.util.spec_from_file_location("saved_release_health_fixture", saved)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            from unittest.mock import patch
+            with patch.object(module, "fetch_json", return_value=(200, None)), patch.dict(os.environ, {"PATH": f"{fakebin}:{os.environ['PATH']}"}):
+                crates = module.probe_crates("9.3.4")
+            self.assertEqual(crates["status"], "live")
+            self.assertEqual(crates["live"], ["wm-core"])
+            self.assertEqual(crates["total"], 1)
+
     def test_checker_is_saved_before_tag_checkout_and_used_for_both_probes(self) -> None:
         text = WORKFLOW.read_text()
         save = text.index('cp scripts/release_health.py "$RUNNER_TEMP/release_health.py"')
