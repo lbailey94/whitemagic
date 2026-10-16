@@ -85,6 +85,10 @@ REQUIRED_RELEASE_ASSETS = (
     + [asset for target in COMPRESSED_TARGETS for asset in (f"{target}.gz", f"{target}.gz.sha256")]
     + ["release-manifest.json", "release-manifest.json.sig"]
 )
+CURRENT_TARGETS = tuple(TARGETS)
+CURRENT_COMPRESSED_TARGETS = tuple(COMPRESSED_TARGETS)
+CURRENT_REQUIRED_RELEASE_ASSETS = tuple(REQUIRED_RELEASE_ASSETS)
+CURRENT_EXPECTED_MANIFEST_TARGETS = dict(EXPECTED_MANIFEST_TARGETS)
 NPM_PACKAGE = "whitemagic-mcp"
 DOCKER_REPO = "lbailey94/whitemagic"
 MCP_SERVER = "io.github.lbailey94/whitemagic-mcp"
@@ -480,6 +484,13 @@ def summarize(record: dict) -> None:
 
 
 def main() -> int:
+    global TARGETS, COMPRESSED_TARGETS, REQUIRED_RELEASE_ASSETS, EXPECTED_MANIFEST_TARGETS
+    # `main()` is also called more than once in embedded checks. Restore the
+    # trusted current profile before selecting the requested tag profile.
+    TARGETS = list(CURRENT_TARGETS)
+    COMPRESSED_TARGETS = list(CURRENT_COMPRESSED_TARGETS)
+    REQUIRED_RELEASE_ASSETS = list(CURRENT_REQUIRED_RELEASE_ASSETS)
+    EXPECTED_MANIFEST_TARGETS = dict(CURRENT_EXPECTED_MANIFEST_TARGETS)
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--version", default=None)
     ap.add_argument("--repo", default="lbailey94/whitemagic")
@@ -495,9 +506,8 @@ def main() -> int:
     if profile == "auto":
         profile = "v9" if version.split(".", 1)[0] == "9" else "v10"
     if profile == "v9":
-        global TARGETS, COMPRESSED_TARGETS, REQUIRED_RELEASE_ASSETS, EXPECTED_MANIFEST_TARGETS
         TARGETS = list(V9_TARGETS)
-        COMPRESSED_TARGETS = list(V9_TARGETS)
+        COMPRESSED_TARGETS = [target for target in V9_TARGETS if not target.endswith(".exe")]
         EXPECTED_MANIFEST_TARGETS = dict(V9_EXPECTED_MANIFEST_TARGETS)
         REQUIRED_RELEASE_ASSETS = ([a for t in TARGETS for a in (t, f"{t}.sha256")]
             + [a for t in COMPRESSED_TARGETS for a in (f"{t}.gz", f"{t}.gz.sha256")]

@@ -53,8 +53,12 @@ raise SystemExit('unexpected git '+repr(args))
             git.chmod(0o755)
             cargo = fakebin / "cargo"
             cargo.write_text("""#!/usr/bin/env python3
-import json
-print(json.dumps({'packages':[{'id':'path+file:///tag#wm-core@9.3.4','name':'wm-core','publish':None,'dependencies':[]}], 'workspace_members':['path+file:///tag#wm-core@9.3.4']}))
+import json, pathlib, re, os
+version=re.search(r'version=\\\"([^\\\"]+)', pathlib.Path('Cargo.toml').read_text()).group(1)
+name='wm-core' if version.startswith('9.') else 'wm-gen3-core'
+pathlib.Path(os.environ['CARGO_FIXTURE_LOG']).write_text(version+' '+name)
+ident=f'path+file:///tag#{name}@{version}'
+print(json.dumps({'packages':[{'id':ident,'name':name,'publish':None,'dependencies':[]}], 'workspace_members':[ident]}))
 """)
             cargo.chmod(0o755)
             env = dict(os.environ, PATH=f"{fakebin}:{os.environ['PATH']}", RUNNER_TEMP=str(runner))
@@ -73,11 +77,18 @@ print(json.dumps({'packages':[{'id':'path+file:///tag#wm-core@9.3.4','name':'wm-
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             from unittest.mock import patch
-            with patch.object(module, "fetch_json", return_value=(200, None)), patch.dict(os.environ, {"PATH": f"{fakebin}:{os.environ['PATH']}"}):
-                crates = module.probe_crates("9.3.4")
+            previous_cwd = Path.cwd()
+            try:
+                os.chdir(checkout)
+                cargo_log = root / "cargo-observed.txt"
+                with patch.object(module, "fetch_json", return_value=(200, None)), patch.dict(os.environ, {"PATH": f"{fakebin}:{os.environ['PATH']}", "CARGO_FIXTURE_LOG": str(cargo_log)}):
+                    crates = module.probe_crates("9.3.4")
+            finally:
+                os.chdir(previous_cwd)
             self.assertEqual(crates["status"], "live")
             self.assertEqual(crates["live"], ["wm-core"])
             self.assertEqual(crates["total"], 1)
+            self.assertEqual(cargo_log.read_text(), "9.3.4 wm-core")
 
     def test_checker_is_saved_before_tag_checkout_and_used_for_both_probes(self) -> None:
         text = WORKFLOW.read_text()
@@ -114,7 +125,14 @@ print(json.dumps({'packages':[{'id':'path+file:///tag#wm-core@9.3.4','name':'wm-
                 sys.argv = old_argv
             self.assertIn("wm-linux-x86_64-musl", observed["targets"])
             self.assertIn("wm-windows-x86_64.exe", observed["targets"])
+            self.assertNotIn("wm-windows-x86_64.exe.gz", observed["required"])
+            self.assertNotIn("wm-windows-x86_64.exe.gz.sha256", observed["required"])
             self.assertEqual(observed["version"], "9.3.4")
+            sys.argv = ["release_health.py", "--version", "10.4.0", "--profile", "auto", "--quiet"]
+            checker.probe_all = lambda repo, version: observed.update({"version": version, "targets": set(checker.TARGETS), "required": set(checker.REQUIRED_RELEASE_ASSETS)}) or {"status":"healthy","version":version,"registries":{}}
+            self.assertEqual(checker.main(), 0)
+            self.assertIn("wm-linux-x86_64", observed["targets"])
+            self.assertNotIn("wm-linux-x86_64-musl", observed["targets"])
         finally:
             (checker.TARGETS, checker.COMPRESSED_TARGETS, checker.REQUIRED_RELEASE_ASSETS,
              checker.EXPECTED_MANIFEST_TARGETS, checker.probe_all) = original
