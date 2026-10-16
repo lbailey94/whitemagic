@@ -438,6 +438,7 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
             "n",
             "session_id",
             "current_session_id",
+            "track",
             "since",
             "until",
             "max_content_bytes",
@@ -492,7 +493,16 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
     ("session.digest", &["session_id", "n", "crystallize"]),
     (
         "sutra.cast",
-        &["codon", "execute", "dry_run", "strict", "peer"],
+        &[
+            "codon",
+            "execute",
+            "dry_run",
+            "strict",
+            "peer",
+            "session_id",
+            "resolves",
+            "track",
+        ],
     ),
     ("sutra.compile", &["query"]),
     ("sutra.canon", &[]),
@@ -538,7 +548,10 @@ fn sutra_tool_schemas_cyberbrain(mode_hint: &str) -> Vec<Value> {
                     "execute": { "type": "boolean", "description": "Whether to execute the bound Action Skeleton against the substrate (default: false / dry-run)" },
                     "dry_run": { "type": "boolean", "description": "Alias for !execute; if true, only validates preconditions and returns deterministic plan" },
                     "strict": { "type": "boolean", "description": "Fails closed if preconditions (read-only, landlock, mesh net) are unsatisfied" },
-                    "peer": { "type": "string", "description": "Target peer address (e.g. '152.53.195.47:7369') for remote Swarm Mudra Handoff via Wire Protocol 7369" }
+                    "peer": { "type": "string", "description": "Target peer address (e.g. '152.53.195.47:7369') for remote Swarm Mudra Handoff via Wire Protocol 7369" },
+                    "session_id": { "type": "string", "description": "Optional session ID to record the executed Sutra DiAML turn into" },
+                    "resolves": { "type": "string", "description": "Optional DiAML turn ID resolved by this Sutra execution (defaults to latest open arc when omitted)" },
+                    "track": { "type": "string", "description": "Optional track slug for the recorded Sutra turn" }
                 },
                 "required": ["codon"]
             }
@@ -604,7 +617,10 @@ fn sutra_tool_schemas_full(mode_hint: &str) -> Vec<Value> {
                     "execute": { "type": "boolean", "description": "Whether to execute the bound Action Skeleton against the substrate (default: false / dry-run)" },
                     "dry_run": { "type": "boolean", "description": "Alias for !execute; if true, only validates preconditions and returns deterministic plan" },
                     "strict": { "type": "boolean", "description": "Fails closed if preconditions (read-only, landlock, mesh net) are unsatisfied" },
-                    "peer": { "type": "string", "description": "Target peer address (e.g. '152.53.195.47:7369') for remote Swarm Mudra Handoff via Wire Protocol 7369" }
+                    "peer": { "type": "string", "description": "Target peer address (e.g. '152.53.195.47:7369') for remote Swarm Mudra Handoff via Wire Protocol 7369" },
+                    "session_id": { "type": "string", "description": "Optional session ID to record the executed Sutra DiAML turn into" },
+                    "resolves": { "type": "string", "description": "Optional DiAML turn ID resolved by this Sutra execution (defaults to latest open arc when omitted)" },
+                    "track": { "type": "string", "description": "Optional track slug for the recorded Sutra turn" }
                 },
                 "required": ["codon"]
             }
@@ -764,11 +780,12 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
         },
         {
             "name": "session_continuity",
-            "description": "Retrieve the latest compounding session continuity state, summary, and action queue for an agent session.",
+            "description": "Retrieve the latest compounding session continuity state, summary, action queue, and related track crystals for an agent session.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "session_id": { "type": "string", "description": "Optional session identifier filter; if omitted, returns the latest checkpoint across all sessions" }
+                    "session_id": { "type": "string", "description": "Optional session identifier filter; if omitted, returns the latest checkpoint across all sessions" },
+                    "track": { "type": "string", "description": "Optional track slug to surface prior crystallized codex memories for this track" }
                 }
             }
         },
@@ -1021,13 +1038,14 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
         {
             "name": "session.continuity",
             "title": "Session Continuity",
-            "description": "Recall where the previous session left off: recent turns, checkpoints, and open queues.",
+            "description": "Recall where the previous session left off: recent turns, salient anchors, unresolved DiAML arcs, related track crystals, checkpoints, and open queues.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "n": { "type": "integer", "description": "Number of recent turns to recall (default: 5)" },
                     "session_id": { "type": "string", "description": "Target session (default: most recent)" },
                     "current_session_id": { "type": "string", "description": "Session to exclude (optional)" },
+                    "track": { "type": "string", "description": "Optional track slug to surface prior crystallized codex memories for this track" },
                     "since": { "type": "string", "description": "Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD" },
                     "until": { "type": "string", "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD" },
                     "max_content_bytes": { "type": "integer", "description": "Per-turn content cap in bytes (default 8192)" },
@@ -3156,6 +3174,7 @@ fn compose_briefing(
     turns: &[SessionTurn],
     salient_turns: &[SessionTurn],
     unresolved_arcs: &[SessionTurn],
+    related_crystals: &[Value],
 ) -> String {
     let mut out = String::new();
     out.push_str(&format!("Session {session}\n"));
@@ -3210,6 +3229,14 @@ fn compose_briefing(
             ));
         }
     }
+    if !related_crystals.is_empty() {
+        out.push_str("Related codex crystals:\n");
+        for crystal in related_crystals {
+            let rec_id = crystal["record_id"].as_u64().unwrap_or(0);
+            let text = crystal["preview"].as_str().unwrap_or("");
+            out.push_str(&format!("- [crystal #{rec_id}] {text}\n"));
+        }
+    }
     if let Some(last) = turns.last() {
         out.push_str(&format!(
             "Latest turn ({}): {}\n",
@@ -3223,6 +3250,7 @@ fn compose_briefing(
 fn crystallize_session_to_codex(
     session_id: &str,
     summary_override: Option<&str>,
+    track_override: Option<&str>,
     checkpoint_rec_id: Option<u64>,
     store_path: &Path,
     substrate: &mut Substrate,
@@ -3232,12 +3260,18 @@ fn crystallize_session_to_codex(
         .iter()
         .filter(|t| !t.is_start_marker() && t.session_id == session_id && t.superseded_by.is_none())
         .collect();
+    let effective_track = track_override
+        .map(str::to_string)
+        .or_else(|| session_turns.iter().rev().find_map(|t| t.track.clone()));
     let anchors: Vec<&&SessionTurn> = session_turns
         .iter()
         .filter(|t| t.is_salient_anchor(0.75))
         .collect();
 
     let mut body = format!("[session_crystal:{session_id}]\n");
+    if let Some(track) = &effective_track {
+        body.push_str(&format!("Track: {track}\n"));
+    }
     if let Some(summary) = summary_override {
         body.push_str(&format!("Summary: {summary}\n"));
     }
@@ -3261,7 +3295,10 @@ fn crystallize_session_to_codex(
         ));
     }
 
-    let source = format!("corpus:codex:session_crystal:{session_id}");
+    let source = match &effective_track {
+        Some(track) => format!("corpus:codex:session_crystal:{session_id}:track:{track}"),
+        None => format!("corpus:codex:session_crystal:{session_id}"),
+    };
     let item = RememberItem {
         content: body,
         source,
@@ -3275,10 +3312,13 @@ fn crystallize_session_to_codex(
         None => return Err("Session crystallization produced no record".to_string()),
     };
 
-    let tags = vec![
+    let mut tags = vec![
         "session_crystal".to_string(),
         format!("session:{session_id}"),
     ];
+    if let Some(track) = &effective_track {
+        tags.push(format!("track:{track}"));
+    }
     append_record_meta(substrate.store().path(), crystal_rec_id, &tags, Some(0.85));
     let crystal_uuid = substrate.get_or_create_uuid(crystal_rec_id);
 
@@ -3292,9 +3332,78 @@ fn crystallize_session_to_codex(
         "record_id": crystal_rec_id,
         "uuid": crystal_uuid.to_string(),
         "galaxy": "codex",
+        "track": effective_track,
         "anchored_turns": anchors.len(),
         "linked_checkpoint_record_id": checkpoint_rec_id
     }))
+}
+
+fn collect_related_crystals(
+    substrate: &Substrate,
+    session_label: &str,
+    active_track: Option<&str>,
+    checkpoint_rec_id: Option<u64>,
+) -> Vec<Value> {
+    let records = substrate.store().iter_records().unwrap_or_default();
+    let linked_to_cp: HashSet<u64> = checkpoint_rec_id
+        .map(|cp_id| {
+            substrate
+                .store()
+                .iter_relations()
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|r| r.state() != RelationState::Cold)
+                .filter_map(|r| {
+                    if r.src() == cp_id {
+                        Some(r.dst())
+                    } else if r.dst() == cp_id {
+                        Some(r.src())
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let mut crystals = Vec::new();
+    for rec in records.iter().rev() {
+        let src = rec.source();
+        if !src.starts_with("corpus:codex:session_crystal:") {
+            continue;
+        }
+        let matches_track = active_track.is_some_and(|t| {
+            src.ends_with(&format!(":track:{t}"))
+                || rec.content().contains(&format!("Track: {t}\n"))
+        });
+        let matches_session = src.contains(&format!("session_crystal:{session_label}"));
+        let matches_link = linked_to_cp.contains(&rec.id());
+
+        if matches_track || matches_session || matches_link {
+            let uuid = substrate
+                .lookup_uuid_by_id(rec.id())
+                .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &rec.id().to_be_bytes()));
+            let assoc = handle_memory_associations(
+                &json!({"id": rec.id(), "direction": "from", "hops": 1, "limit": 3}),
+                substrate,
+            )
+            .ok()
+            .and_then(|v| v.get("associations").cloned())
+            .unwrap_or_else(|| json!([]));
+
+            crystals.push(json!({
+                "record_id": rec.id(),
+                "uuid": uuid.to_string(),
+                "source": src,
+                "preview": preview(rec.content(), 200),
+                "associations": assoc
+            }));
+            if crystals.len() >= 5 {
+                break;
+            }
+        }
+    }
+    crystals
 }
 
 fn handle_session_record(
@@ -3437,6 +3546,7 @@ fn handle_session_continuity(
     reject_unknown_args("session.continuity", args)?;
     let explicit_session = args.get("session_id").and_then(Value::as_str);
     let current_session = args.get("current_session_id").and_then(Value::as_str);
+    let explicit_track = args.get("track").and_then(Value::as_str);
     let n = args.get("n").and_then(Value::as_u64).unwrap_or(5) as usize;
     let since = args
         .get("since")
@@ -3560,6 +3670,21 @@ fn handle_session_continuity(
         .as_ref()
         .map(|view| view.open_flags.clone())
         .unwrap_or_default();
+    let active_track = explicit_track
+        .map(str::to_string)
+        .or_else(|| checkpoint.as_ref().and_then(|cp| cp.track.clone()))
+        .or_else(|| {
+            session_active_turns
+                .iter()
+                .rev()
+                .find_map(|t| t.track.clone())
+        });
+    let related_crystals = collect_related_crystals(
+        substrate,
+        &session_label,
+        active_track.as_deref(),
+        checkpoint.as_ref().map(|cp| cp.record_id),
+    );
     let briefing = include_briefing.then(|| {
         json!({
             "text": compose_briefing(
@@ -3568,6 +3693,7 @@ fn handle_session_continuity(
                 &recent,
                 &salient_turns,
                 &unresolved_arcs,
+                &related_crystals,
             ),
         })
     });
@@ -3575,10 +3701,12 @@ fn handle_session_continuity(
     let mut response = json!({
         "status": "success",
         "session_id": session_label,
+        "track": active_track,
         "turns_count": recent.len(),
         "recent_turns": recent,
         "salient_turns": salient_turns,
         "unresolved_arcs": unresolved_arcs,
+        "related_crystals": related_crystals,
         "turns_omitted": turns_omitted,
         "content_truncated": content_truncated,
         "next_queue": next_queue,
@@ -3693,6 +3821,7 @@ fn handle_session_checkpoint(
         Some(crystallize_session_to_codex(
             session_id,
             Some(summary),
+            track,
             Some(rec_id),
             store_path,
             substrate,
@@ -4140,6 +4269,7 @@ fn handle_session_digest(
         Some(crystallize_session_to_codex(
             &label,
             checkpoint.as_ref().map(|cp| cp.summary.as_str()),
+            checkpoint.as_ref().and_then(|cp| cp.track.as_deref()),
             checkpoint.as_ref().map(|cp| cp.record_id),
             store_path,
             substrate,
@@ -6145,6 +6275,9 @@ fn handle_sutra_cast(
         .and_then(Value::as_str)
         .map(str::trim)
         .filter(|s| !s.is_empty());
+    let explicit_session = args.get("session_id").and_then(Value::as_str);
+    let explicit_resolves = args.get("resolves").and_then(Value::as_str);
+    let explicit_track = args.get("track").and_then(Value::as_str);
 
     use std::time::Instant;
     let start = Instant::now();
@@ -6197,7 +6330,11 @@ fn handle_sutra_cast(
         }));
     }
 
+    let (diaml_turn_type, diaml_qualifier, auto_resolves_arc) =
+        sutra.diaml_profile(!dry_run, pre_result.is_ok());
+
     let mut execution_receipt = None;
+    let mut diaml_turn = None;
     if !dry_run {
         if readonly {
             return Err("read-only mode: sutra execution refused by Article 1".to_string());
@@ -6216,6 +6353,45 @@ fn handle_sutra_cast(
                     "execution_count": res.execution_count,
                     "status": res.status,
                 }));
+
+                let target_session = explicit_session
+                    .map(str::to_string)
+                    .or_else(|| last_session_lane(store_path))
+                    .unwrap_or_else(|| "default".to_string());
+                let resolved_id = if let Some(r) = explicit_resolves {
+                    Some(r.to_string())
+                } else if auto_resolves_arc {
+                    read_session_turns(store_path)
+                        .into_iter()
+                        .rev()
+                        .find(|t| t.session_id == target_session && t.is_open_arc())
+                        .map(|t| t.turn_id)
+                } else {
+                    None
+                };
+
+                let mut rec_args = json!({
+                    "session_id": target_session,
+                    "role": "ai",
+                    "turn_type": diaml_turn_type,
+                    "qualifier": diaml_qualifier,
+                    "importance": 0.88,
+                    "content": format!(
+                        "Cast Sutra {} [{}]: executed skeleton '{}'",
+                        sutra.codon_str,
+                        sutra.taoist_formula(),
+                        sutra.primary_skeleton_id
+                    ),
+                });
+                if let Some(r_id) = resolved_id {
+                    rec_args["resolves"] = json!(r_id);
+                }
+                if let Some(tr) = explicit_track {
+                    rec_args["track"] = json!(tr);
+                }
+                diaml_turn = Some(handle_session_record(
+                    &rec_args, substrate, store_path, readonly,
+                )?);
             }
             Err(e) => {
                 return Err(format!(
@@ -6235,6 +6411,12 @@ fn handle_sutra_cast(
         "preconditions_error": pre_result.err().map(|e| e.to_string()),
         "taoist_formula": sutra.taoist_formula(),
         "alchemical_formula": sutra.alchemical_formula(),
+        "diaml_profile": {
+            "turn_type": diaml_turn_type,
+            "qualifier": diaml_qualifier,
+            "resolves_open_arc": auto_resolves_arc,
+        },
+        "diaml_turn": diaml_turn,
         "glyphs": sutra.glyphs.iter().map(|g| {
             json!({
                 "glyph": g.as_char().to_string(),
@@ -8673,6 +8855,124 @@ mod diaml_and_salience_refinement_tests {
             cont_us,
             walk_us,
         );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn cross_session_track_crystals_and_sutra_diaml_resolution() {
+        let (mut substrate, dir) = setup("track-sutra");
+
+        // Session A on track 'sutra-diaml': record an architectural decision and crystallize at checkpoint
+        handle_session_record(
+            &json!({
+                "session_id": "sess-alpha",
+                "role": "ai",
+                "turn_type": "decision",
+                "track": "sutra-diaml",
+                "content": "Session Alpha invariant: bind Sutra execution to DiAML open-arc resolution.",
+                "importance": 0.94,
+                "qualifier": "verified"
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("record sess-alpha decision");
+
+        let cp_alpha = handle_session_checkpoint(
+            &json!({
+                "session_id": "sess-alpha",
+                "summary": "Session Alpha completed initial Sutra-DiAML design.",
+                "track": "sutra-diaml",
+                "crystallize": true
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("checkpoint sess-alpha");
+        let alpha_crystal_id = cp_alpha["crystallized"]["record_id"]
+            .as_u64()
+            .expect("alpha crystal id");
+        assert_eq!(cp_alpha["crystallized"]["track"], "sutra-diaml");
+
+        // Session B on the SAME track 'sutra-diaml':
+        // 1) Open an inquiry question turn
+        let q_beta = handle_session_record(
+            &json!({
+                "session_id": "sess-beta",
+                "role": "user",
+                "turn_type": "question",
+                "track": "sutra-diaml",
+                "content": "Can casting 觀 證 合 execute the bound skeleton and auto-resolve this open question?",
+                "importance": 0.75
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("record sess-beta question");
+        let q_beta_id = q_beta["turn_id"].as_str().unwrap().to_string();
+
+        // Verify q_beta is currently an unresolved arc in sess-beta
+        let pre_cont = handle_session_continuity(
+            &json!({"session_id": "sess-beta", "include_briefing_text": true}),
+            &substrate,
+            &dir,
+        )
+        .expect("pre continuity");
+        assert_eq!(pre_cont["unresolved_arcs"].as_array().unwrap().len(), 1);
+        assert_eq!(pre_cont["unresolved_arcs"][0]["turn_id"], q_beta_id);
+
+        // And verify Session B automatically wakes up with Session A's codex crystal via shared track 'sutra-diaml'!
+        let related = pre_cont["related_crystals"]
+            .as_array()
+            .expect("related_crystals");
+        assert!(
+            related
+                .iter()
+                .any(|c| c["record_id"].as_u64() == Some(alpha_crystal_id)),
+            "Session B must automatically surface Session A's crystallized codex record on track 'sutra-diaml'"
+        );
+        assert!(
+            pre_cont["briefing"]["text"]
+                .as_str()
+                .unwrap()
+                .contains("Related codex crystals:")
+        );
+
+        // 2) Cast Sutra '觀 證 合' with execute=true in sess-beta (without passing explicit 'resolves'):
+        // Because the codon contains Synthesis (合) + Verification (證), it automatically records
+        // a 'verified' 'decision' turn and auto-resolves the latest open arc (q_beta_id)!
+        let cast = handle_sutra_cast(
+            &json!({
+                "codon": "觀 證 合",
+                "execute": true,
+                "session_id": "sess-beta",
+                "track": "sutra-diaml"
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("sutra cast execute");
+        assert_eq!(cast["diaml_profile"]["turn_type"], "decision");
+        assert_eq!(cast["diaml_profile"]["qualifier"], "verified");
+        assert_eq!(cast["diaml_profile"]["resolves_open_arc"], true);
+        assert_eq!(cast["diaml_turn"]["resolves"], q_beta_id);
+
+        // 3) Check continuity on sess-beta again: q_beta is now resolved (0 unresolved_arcs),
+        // and the Sutra turn is present and verified!
+        let post_cont =
+            handle_session_continuity(&json!({"session_id": "sess-beta"}), &substrate, &dir)
+                .expect("post continuity");
+        assert_eq!(
+            post_cont["unresolved_arcs"].as_array().unwrap().len(),
+            0,
+            "Sutra execution must resolve the open DiAML question arc"
+        );
+        assert_eq!(post_cont["turns_count"], 2);
 
         let _ = std::fs::remove_dir_all(&dir);
     }

@@ -1444,6 +1444,62 @@ impl CompoundSutra {
         }
         Ok(())
     }
+
+    /// Map this compound Sutra codon to its DiAML communicative turn type,
+    /// epistemic qualifier, and whether executing it resolves an open arc.
+    #[must_use]
+    pub fn diaml_profile(
+        &self,
+        executed: bool,
+        preconditions_ok: bool,
+    ) -> (&'static str, &'static str, bool) {
+        let has_synthesis = self.glyphs.iter().any(|g| {
+            matches!(
+                g,
+                SutraGlyph::He | SutraGlyph::Cheng | SutraGlyph::Hua | SutraGlyph::Qing
+            )
+        });
+        let has_verify = self
+            .glyphs
+            .iter()
+            .any(|g| matches!(g, SutraGlyph::Zheng | SutraGlyph::Jing | SutraGlyph::Jie));
+        let has_kinetic = self
+            .glyphs
+            .iter()
+            .any(|g| matches!(g, SutraGlyph::Xing | SutraGlyph::Sheng | SutraGlyph::Ying));
+        let has_speculative = self.glyphs.iter().any(|g| {
+            matches!(
+                g,
+                SutraGlyph::Yuan | SutraGlyph::Ni | SutraGlyph::Ya | SutraGlyph::Xi
+            )
+        });
+
+        let turn_type = if has_synthesis {
+            "decision"
+        } else if has_verify {
+            "confirm"
+        } else if has_kinetic {
+            "milestone"
+        } else if has_speculative {
+            "hypothesis"
+        } else {
+            "observation"
+        };
+
+        let qualifier = if !preconditions_ok {
+            "conditional"
+        } else if executed {
+            "verified"
+        } else if has_speculative {
+            "hypothesis"
+        } else {
+            "conditional"
+        };
+
+        let resolves_open_arc =
+            executed && preconditions_ok && (has_synthesis || has_verify || has_kinetic);
+        (turn_type, qualifier, resolves_open_arc)
+    }
 }
 
 #[cfg(test)]
