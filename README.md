@@ -74,8 +74,8 @@ alpha** — public alpha for MCP agents. The version number is a compatibility
 signal; the channel is an evidence claim (beta and stable each require their
 own exit conditions, not a version milestone).
 
-- **Install path: Linux x86-64, Linux arm64, macOS arm64, and Windows x86_64** — install-gated. Linux builds are dynamically linked (glibc 2.39+): the ONNX runtime the v10 line loads has no static musl build (pre-v10 releases still ship musl). Releases also publish gzipped distributables (~58% smaller) that the installer prefers on slow links. macOS installs through the same checksum-verified installer (hardware smoke evidence in [issue #2](https://github.com/lbailey94/whitemagic/issues/2)); Windows installs through `scripts/install.ps1`. Every gated installer path is certified against the published release in CI.
-- **Support window:** the current minor and the previous minor on the install-gated lines (Linux x86-64, Linux arm64, macOS arm64, Windows x86_64) receive fixes; older minors are archival — see [`SECURITY.md`](SECURITY.md).
+- **Install path: Linux x86-64, Linux arm64, and macOS arm64 (v10 open-alpha matrix)** — install-gated (Windows x86_64 and Intel macOS x86_64 remain on the stable Gen 2 `v9.3.4` release line while v10 ONNX Runtime packaging is Linux glibc 2.39+ and macOS arm64). Releases also publish gzipped distributables (~58% smaller) that the installer prefers on slow links. macOS installs through the same checksum-verified installer (hardware smoke evidence in [issue #2](https://github.com/lbailey94/whitemagic/issues/2)); Windows installs the stable line through `scripts/install.ps1`. Every gated installer path in the active matrix is certified against the published release in CI.
+- **Support window:** the current minor and the previous minor on the install-gated lines receive fixes; older minors are archival — see [`SECURITY.md`](SECURITY.md).
 - Trusted, local-first, single-user operation with Landlock containment and firebreak guards.
 
 ## What it does

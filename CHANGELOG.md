@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sutra Hexagram CLI & Stack Parser** — Added `wm3 sutra hexagram [list|inspect|mutate]` and integrated hexagram fallback resolution into `StackCodon` and `TripartiteRouter`.
 - **Agent Codex & Sutra Guide** — Added dedicated agent codex in `AGENTS.md` and `docs/SUTRA_GUIDE.md` for zero-allocation mudra execution across AI coding agents.
 
-## [10.3] — 2026-10-11
+## [10.3.0] — 2026-10-11
 
 ### Added
 - **Post-Quantum Dual-Signing** — Native dual-signing in `wm-gen3-core::mandala` combining Ed25519 with NIST FIPS 204 ML-DSA-44/65 and FIPS 205 SLH-DSA post-quantum signatures; multi-policy verification (`LegacyOnly`, `HybridPreferred`, `PqRequired`) aligning with W3C CCG and Continuity Receipt 0.6-pq.

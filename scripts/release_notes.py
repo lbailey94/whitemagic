@@ -26,10 +26,17 @@ CHANNELS = (
     "(crates.io) · `docker run -i lbailey94/whitemagic:9 serve` (Docker Hub)."
 )
 
-PLATFORMS = (
+PLATFORMS_STABLE = (
     "Linux x86-64, Linux arm64, macOS arm64 + x86_64, and Windows x86_64 are "
     "install-gated (checksum-verified installers, each certified against the "
     "published release in CI)."
+)
+
+PLATFORMS_V10_ALPHA = (
+    "Linux x86-64, Linux arm64, and macOS arm64 are install-gated in the v10 "
+    "open-alpha matrix (checksum-verified installers, each certified against "
+    "the published release in CI). Windows x86_64 and Intel macOS (x86_64) "
+    "remain on the stable Gen 2 (v9.3.4) channel."
 )
 
 CHANGELOG_URL = "https://github.com/lbailey94/whitemagic/blob/main/CHANGELOG.md"
@@ -39,9 +46,12 @@ def extract_section(changelog: str, version: str) -> str | None:
     """Return the `## [<version>]` section body (without the heading)."""
     lines = changelog.splitlines()
     start = None
-    pattern = re.compile(rf"^## \[{re.escape(version)}\]")
+    candidates = [version]
+    if version.endswith(".0"):
+        candidates.append(version[:-2])
+    patterns = [re.compile(rf"^## \[{re.escape(c)}\]") for c in candidates]
     for i, line in enumerate(lines):
-        if pattern.match(line):
+        if any(p.match(line) for p in patterns):
             start = i + 1
             break
     if start is None:
@@ -56,6 +66,7 @@ def extract_section(changelog: str, version: str) -> str | None:
 
 
 def render(version: str, section: str) -> str:
+    platforms = PLATFORMS_V10_ALPHA if version.startswith("10.") else PLATFORMS_STABLE
     return f"""# WhiteMagic {version}
 
 Local-first memory and continuity for MCP agents. Full history:
@@ -71,7 +82,7 @@ Local-first memory and continuity for MCP agents. Full history:
 
 ## Platforms
 
-{PLATFORMS}
+{platforms}
 
 ## What changed in {version}
 

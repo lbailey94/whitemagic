@@ -108,13 +108,33 @@ def probe_github(repo: str, version: str) -> dict:
         return {**base, "status": "missing", "missing_assets": REQUIRED_RELEASE_ASSETS}
     names = {asset.get("name") for asset in (data or {}).get("assets", [])}
     missing = [a for a in REQUIRED_RELEASE_ASSETS if a not in names]
-    return {
+    manifest_error = None
+    if not missing:
+        m_url = f"https://github.com/{repo}/releases/download/v{version}/release-manifest.json"
+        m_status, m_data = fetch_json(m_url)
+        if m_status != 200 or not isinstance(m_data, dict):
+            manifest_error = f"release-manifest.json HTTP {m_status}"
+        elif m_data.get("version") != version:
+            manifest_error = f"manifest version {m_data.get('version')!r} != {version!r}"
+        else:
+            expected_prefix = f"https://github.com/{repo}/releases/download/v{version}/"
+            bad_urls = [
+                t.get("url")
+                for t in (m_data.get("targets") or {}).values()
+                if isinstance(t, dict) and not str(t.get("url", "")).startswith(expected_prefix)
+            ]
+            if bad_urls:
+                manifest_error = f"manifest target URLs do not match v{version}: {bad_urls[0]}"
+    out = {
         **base,
-        "status": "live" if not missing else "lagging",
+        "status": "live" if (not missing and not manifest_error) else "lagging",
         "published_at": (data or {}).get("published_at"),
         "found_assets": len(names),
         "missing_assets": missing,
     }
+    if manifest_error:
+        out["manifest_error"] = manifest_error
+    return out
 
 
 def probe_crates(version: str) -> dict:

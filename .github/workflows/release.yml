@@ -271,7 +271,7 @@ jobs:
         with:
           files: artifacts/*
           body_path: release-notes.md
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(github.ref_name, '-') || startsWith(github.ref_name, 'v10.') }}
 
   certify-install:
     name: Certify install.sh (${{ matrix.arch }})
