@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -26,6 +29,31 @@ class ReleaseHealthWorkflowTests(unittest.TestCase):
         self.assertIn('"$TREE_V" = "$V"', text)
         self.assertEqual(tag_version.split('.')[0], '9')
 
+    def test_saved_checker_selects_v9_asset_matrix_for_old_tag(self) -> None:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import release_health as checker
+        original = (checker.TARGETS, checker.COMPRESSED_TARGETS, checker.REQUIRED_RELEASE_ASSETS,
+                    checker.EXPECTED_MANIFEST_TARGETS, checker.probe_all)
+        try:
+            observed = {}
+            checker.probe_all = lambda repo, version: observed.update({
+                "version": version, "targets": set(checker.TARGETS),
+                "manifest": set(checker.EXPECTED_MANIFEST_TARGETS),
+                "required": set(checker.REQUIRED_RELEASE_ASSETS),
+            }) or {"status": "healthy", "version": version, "registries": {}}
+            old_argv = sys.argv
+            sys.argv = ["release_health.py", "--version", "9.3.4", "--profile", "auto", "--quiet"]
+            try:
+                self.assertEqual(checker.main(), 0)
+            finally:
+                sys.argv = old_argv
+            self.assertIn("wm-linux-x86_64-musl", observed["targets"])
+            self.assertIn("wm-windows-x86_64.exe", observed["targets"])
+            self.assertEqual(observed["version"], "9.3.4")
+        finally:
+            (checker.TARGETS, checker.COMPRESSED_TARGETS, checker.REQUIRED_RELEASE_ASSETS,
+             checker.EXPECTED_MANIFEST_TARGETS, checker.probe_all) = original
+
     def test_final_gate_binds_each_certification_to_verified_manifest(self) -> None:
         text = WORKFLOW.read_text()
         self.assertIn('.install_certification.npm.bound_manifest_sha256 == .registries["github-release"].manifest_sha256', text)
@@ -35,6 +63,22 @@ class ReleaseHealthWorkflowTests(unittest.TestCase):
         code = (ROOT / "scripts/release_health.py").read_text()
         self.assertIn("GitHub asset size missing or invalid", code)
         self.assertIn("GitHub asset digest missing or unsupported", code)
+
+    def test_extracted_final_gate_accepts_exact_binding_and_rejects_wrong_or_missing(self) -> None:
+        text = WORKFLOW.read_text()
+        marker = "      - name: Gate — every surface live, artifact integrity verified, and every install certified\n"
+        section = text.split(marker, 1)[1].split("        run: |\n", 1)[1].split("\n      - ", 1)[0]
+        shell = "\n".join(line[10:] for line in section.splitlines() if line.startswith("          "))
+        shell = shell.replace("${{ steps.version.outputs.version }}", "10.3.0")
+        sha = "a" * 64
+        for binding, expected in ((sha, True), ("b" * 64, False), (None, False)):
+            with tempfile.TemporaryDirectory() as temp:
+                record = {"status":"healthy", "registries":{"github-release":{"manifest_signature_valid":True,"artifact_integrity":"verified","manifest_sha256":sha}}, "install_certification":{}}
+                for channel in ("npm", "docker"):
+                    record["install_certification"][channel] = {"status":"pass","bound_manifest_sha256":binding}
+                Path(temp, "release-health.json").write_text(json.dumps(record))
+                proc = subprocess.run(["bash", "-eu", "-c", shell], cwd=temp, text=True, capture_output=True)
+                self.assertEqual(proc.returncode == 0, expected, proc.stderr or proc.stdout)
 
 
 if __name__ == "__main__":

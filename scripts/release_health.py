@@ -59,6 +59,17 @@ EXPECTED_MANIFEST_TARGETS = {
     "linux-aarch64": "wm-linux-aarch64",
     "macos-aarch64": "wm-macos-aarch64",
 }
+V9_TARGETS = [
+    "wm-linux-x86_64", "wm-linux-x86_64-musl", "wm-linux-aarch64",
+    "wm-linux-aarch64-musl", "wm-macos-aarch64", "wm-macos-x86_64",
+    "wm-windows-x86_64.exe",
+]
+V9_EXPECTED_MANIFEST_TARGETS = {
+    "linux-x86_64": "wm-linux-x86_64", "linux-x86_64-musl": "wm-linux-x86_64-musl",
+    "linux-aarch64": "wm-linux-aarch64", "linux-aarch64-musl": "wm-linux-aarch64-musl",
+    "macos-aarch64": "wm-macos-aarch64", "macos-x86_64": "wm-macos-x86_64",
+    "windows-x86_64": "wm-windows-x86_64.exe",
+}
 # Windows is out of the alpha matrix until the ONNX Runtime link/DLL work
 # lands (2026-10-05, see release.yml); its asset must not be listed here or
 # every probe would report a guaranteed false LAGGING.
@@ -476,9 +487,21 @@ def main() -> int:
         "--json", default=None, help="write the record to PATH ('-' = stdout)"
     )
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--profile", choices=("auto", "v9", "v10"), default="auto")
     args = ap.parse_args()
 
     version = args.version or latest_version(args.repo)
+    profile = args.profile
+    if profile == "auto":
+        profile = "v9" if version.split(".", 1)[0] == "9" else "v10"
+    if profile == "v9":
+        global TARGETS, COMPRESSED_TARGETS, REQUIRED_RELEASE_ASSETS, EXPECTED_MANIFEST_TARGETS
+        TARGETS = list(V9_TARGETS)
+        COMPRESSED_TARGETS = list(V9_TARGETS)
+        EXPECTED_MANIFEST_TARGETS = dict(V9_EXPECTED_MANIFEST_TARGETS)
+        REQUIRED_RELEASE_ASSETS = ([a for t in TARGETS for a in (t, f"{t}.sha256")]
+            + [a for t in COMPRESSED_TARGETS for a in (f"{t}.gz", f"{t}.gz.sha256")]
+            + ["release-manifest.json", "release-manifest.json.sig"])
     record = probe_all(args.repo, version)
 
     if args.json == "-":
