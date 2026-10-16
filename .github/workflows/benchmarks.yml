@@ -27,6 +27,17 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Qualify PEB-10 timing (repeated release-mode samples)
+        run: python3 benchmarks/qualify_peb10_timing.py
+
+      - name: Upload PEB-10 timing samples
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: peb10-timing-${{ github.run_id }}-${{ github.run_attempt }}
+          path: benchmark-results/peb10-timing.json
+          if-no-files-found: warn
+
       - name: Run existing PEB-0 and PEB-0.1 release tests
         shell: bash
         run: |
