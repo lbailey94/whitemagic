@@ -1329,35 +1329,50 @@ impl Substrate {
             let realm = self.intake_realm_id()?;
             let mut results = Vec::with_capacity(items.len());
             for (ordinal, item) in items.iter().enumerate() {
-                let epoch = match self.intake_epoch() {
-                    Ok(value) => value,
-                    Err(error) => {
-                        results.push(Err(error));
-                        continue;
+                let mut item_res = Err("intake retry exhausted".to_string());
+                for _attempt in 0..4 {
+                    let epoch = match self.intake_epoch() {
+                        Ok(value) => value,
+                        Err(error) => {
+                            item_res = Err(error);
+                            break;
+                        }
+                    };
+                    let mut operation = [0_u8; 16];
+                    if let Err(error) = getrandom::fill(&mut operation) {
+                        item_res = Err(format!("operation id randomness: {error}"));
+                        break;
                     }
-                };
-                let mut operation = [0_u8; 16];
-                if let Err(error) = getrandom::fill(&mut operation) {
-                    results.push(Err(format!("operation id randomness: {error}")));
-                    continue;
+                    let request = IntakeRequest::new(
+                        &authority,
+                        crate::intake::OperationId::from_bytes(operation),
+                        realm,
+                        epoch,
+                        ordinal as u64,
+                        item.kind.into(),
+                        item.content.clone(),
+                        item.source.clone(),
+                    )
+                    .map_err(|error| error.to_string());
+                    match request {
+                        Ok(request) => match self.remember_authorized(&authority, request) {
+                            Ok(outcome) => {
+                                item_res = Ok(outcome.receipt.record_id);
+                                break;
+                            }
+                            Err(err) if err.contains("stale epoch:") => continue,
+                            Err(err) => {
+                                item_res = Err(err);
+                                break;
+                            }
+                        },
+                        Err(error) => {
+                            item_res = Err(error);
+                            break;
+                        }
+                    }
                 }
-                let request = IntakeRequest::new(
-                    &authority,
-                    crate::intake::OperationId::from_bytes(operation),
-                    realm,
-                    epoch,
-                    ordinal as u64,
-                    item.kind.into(),
-                    item.content.clone(),
-                    item.source.clone(),
-                )
-                .map_err(|error| error.to_string());
-                results.push(match request {
-                    Ok(request) => self
-                        .remember_authorized(&authority, request)
-                        .map(|outcome| outcome.receipt.record_id),
-                    Err(error) => Err(error),
-                });
+                results.push(item_res);
             }
             Ok::<_, String>(results)
         })();

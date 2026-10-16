@@ -64,14 +64,20 @@ jobs:
         # the crate list, npm package, and Dockerfile are version-specific.
         # Probing an old release with main's scripts was the 2026-10-04
         # false-LAGGING class (main's gen3 crate list vs a v9 release).
+        # We preserve main's hardened release verification scripts so that
+        # checking an existing release does not discard the integrity checker.
         run: |
           set -eu
           V="${{ steps.version.outputs.version }}"
+          mkdir -p /tmp/hardened-scripts
+          cp -r scripts/* /tmp/hardened-scripts/
           git fetch --depth=1 origin "refs/tags/v${V}"
           git checkout --detach FETCH_HEAD
+          cp /tmp/hardened-scripts/release_health.py scripts/release_health.py
+          cp /tmp/hardened-scripts/release_manifest.py scripts/release_manifest.py 2>/dev/null || true
           TREE_V="$(python3 -c "import tomllib;print(tomllib.load(open('Cargo.toml','rb'))['workspace']['package']['version'])")"
           [ "$TREE_V" = "$V" ] || { echo "::error::tag v${V} tree declares workspace version ${TREE_V}"; exit 1; }
-          echo "probing from tag v${V} tree ($(git log -1 --format='%h %s'))"
+          echo "probing from tag v${V} tree ($(git log -1 --format='%h %s')) with hardened scripts"
 
       - name: Probe registries (initial)
         continue-on-error: true
@@ -305,7 +311,13 @@ jobs:
           jq -e '.registries["github-release"].manifest_signature_valid == true
                  and .registries["github-release"].artifact_integrity == "verified"' release-health.json >/dev/null \
             || { echo "signed artifact integrity not verified:"; jq -c '.registries["github-release"]' release-health.json; exit 1; }
-          jq -e '.install_certification.npm.status == "pass"
-                 and .install_certification.docker.status == "pass"' release-health.json >/dev/null \
-            || { echo "install certification not passing:"; jq -c '.install_certification | map_values({status, runtime_selftest, artifact_integrity})' release-health.json; exit 1; }
+          jq -e '
+            .registries["github-release"].manifest_sha256 as $msha |
+            ($msha | type == "string" and length == 64) and
+            .install_certification.npm.status == "pass" and
+            .install_certification.npm.bound_manifest_sha256 == $msha and
+            .install_certification.docker.status == "pass" and
+            .install_certification.docker.bound_manifest_sha256 == $msha
+          ' release-health.json >/dev/null \
+            || { echo "install certification not passing or manifest binding mismatched:"; jq -c '.install_certification | map_values({status, runtime_selftest, artifact_integrity, bound_manifest_sha256})' release-health.json; exit 1; }
           echo "release v${{ steps.version.outputs.version }} is healthy and certified"

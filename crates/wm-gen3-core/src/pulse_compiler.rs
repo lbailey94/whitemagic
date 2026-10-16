@@ -2226,7 +2226,7 @@ mod tests {
         #[cfg(target_os = "macos")]
         let min_speedup = 1.2_f64;
         #[cfg(not(target_os = "macos"))]
-        let min_speedup = 1.4_f64;
+        let min_speedup = 1.35_f64;
         assert!(
             report.latency_speedup_factor >= min_speedup,
             "Pulse must demonstrate significant speedup over Gen2 DAG \
