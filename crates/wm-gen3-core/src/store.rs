@@ -1032,21 +1032,21 @@ impl Store {
             IntakeKind::Simulated => Domain::Simulated,
         };
         let duplicate = if !derived_terms.is_empty() {
-            let mut candidate_ids: Option<Vec<u64>> = None;
+            let mut smallest_bytes: Option<&[u8]> = None;
+            let mut missing_term = false;
             for term in &derived_terms {
                 match txn.get(self.postings, term) {
                     Ok(bytes) => {
-                        let ids: Vec<u64> = rmp_serde::from_slice(bytes)?;
-                        if ids.is_empty() {
-                            candidate_ids = Some(Vec::new());
+                        if bytes.is_empty() {
+                            missing_term = true;
                             break;
                         }
-                        if candidate_ids.as_ref().is_none_or(|c| ids.len() < c.len()) {
-                            candidate_ids = Some(ids);
+                        if smallest_bytes.is_none_or(|best| bytes.len() < best.len()) {
+                            smallest_bytes = Some(bytes);
                         }
                     }
                     Err(lmdb::Error::NotFound) => {
-                        candidate_ids = Some(Vec::new());
+                        missing_term = true;
                         break;
                     }
                     Err(e) => return Err(e.into()),
@@ -1054,16 +1054,19 @@ impl Store {
             }
 
             let mut found = false;
-            if let Some(ids) = candidate_ids {
-                for candidate_id in ids {
-                    if let Ok(bytes) = txn.get(self.records, &bytes_u64(candidate_id)) {
-                        let r = self.decode_stored_record(candidate_id, bytes)?;
-                        if r.domain() == domain
-                            && r.content() == request.content()
-                            && r.source() == request.source()
-                        {
-                            found = true;
-                            break;
+            if !missing_term {
+                if let Some(bytes) = smallest_bytes {
+                    let ids: Vec<u64> = rmp_serde::from_slice(bytes)?;
+                    for candidate_id in ids {
+                        if let Ok(rec_bytes) = txn.get(self.records, &bytes_u64(candidate_id)) {
+                            let r = self.decode_stored_record(candidate_id, rec_bytes)?;
+                            if r.domain() == domain
+                                && r.content() == request.content()
+                                && r.source() == request.source()
+                            {
+                                found = true;
+                                break;
+                            }
                         }
                     }
                 }

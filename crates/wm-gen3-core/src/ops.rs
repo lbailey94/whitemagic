@@ -1039,6 +1039,24 @@ impl Substrate {
         &self.identity
     }
 
+    /// Preload the process-local exact-identity index from all stored records in
+    /// one sequential cursor pass. Used by bulk `wm ingest` runs so duplicate-heavy
+    /// JSONL backfills filter already-committed records in O(1) memory without
+    /// opening per-line LMDB write transactions or decoding postings lists.
+    pub fn preload_identity_index(&mut self) -> Result<usize, String> {
+        let records = self.store.iter_records().map_err(|e| e.to_string())?;
+        self.identity.reserve(records.len());
+        for record in records {
+            let key = identity_key(
+                record.content(),
+                record.source(),
+                domain_tag(record.domain()),
+            );
+            self.identity.insert(key, record.id());
+        }
+        Ok(self.identity.len())
+    }
+
     /// Authoritative exact-duplicate probe. Session-local index first, then a
     /// bounded durable probe over the rarest term's postings list (only
     /// candidates are decoded; the store is never fully hydrated). Returns the

@@ -6812,6 +6812,11 @@ fn run_ingest(
     println!("Batch Size:      {}", batch_size);
     println!("Default Source:  {}", default_source);
     println!("Default Kind:    {:?}", kind);
+    let preloaded = substrate.preload_identity_index().unwrap_or(0);
+    println!(
+        "Identity Cache:  {} existing record(s) preloaded",
+        preloaded
+    );
     println!("==================================================");
 
     let mut batch: Vec<RememberItem> = Vec::with_capacity(batch_size);
