@@ -251,12 +251,16 @@ def probe_github(repo: str, version: str, pubkey_hex: str | None = None) -> dict
                             continue
                         gh_asset = assets_by_name.get(asset_name) or {}
                         gh_size = gh_asset.get("size")
-                        if gh_size is not None and t_size != gh_size:
+                        if not isinstance(gh_size, int) or gh_size < 0:
+                            integrity_errors.append(f"{t_key}: GitHub asset size missing or invalid")
+                        elif not isinstance(t_size, int) or t_size != gh_size:
                             integrity_errors.append(
                                 f"{t_key}: manifest size {t_size} != GitHub asset size {gh_size}"
                             )
                         gh_digest = str(gh_asset.get("digest") or "").strip().lower()
-                        if gh_digest.startswith("sha256:") and gh_digest != f"sha256:{t_sha}":
+                        if not gh_digest.startswith("sha256:"):
+                            integrity_errors.append(f"{t_key}: GitHub asset digest missing or unsupported")
+                        elif gh_digest != f"sha256:{t_sha}":
                             integrity_errors.append(
                                 f"{t_key}: manifest sha256 {t_sha[:12]}… != GitHub asset {gh_digest[:19]}…"
                             )
