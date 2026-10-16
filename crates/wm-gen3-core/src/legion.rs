@@ -66,22 +66,30 @@ pub enum ChoHanVerdict {
     Evaporated,
 }
 
-/// Execution outcome returned by an atomic shadow clone task.
+/// Execution outcome returned by an atomic shadow clone simulation trial.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CloneEvaluationResult {
     pub clone_id: u32,
     pub archetype: CohortArchetype,
     pub codon: String,
+    pub simulated: bool,
     pub invariant_satisfied: bool,
+    /// Deterministic heuristic score in [0.70, 0.99] (simulation model, not measured task evaluation).
     pub fitness_score: f32,
     pub execution_micros: u64,
-    pub mutation_signature: Option<String>,
+    /// Deterministic simulation trial identifier (NOT a cryptographic signature).
+    #[serde(alias = "mutation_signature")]
+    pub simulated_trial_id: Option<String>,
     pub verdict: ChoHanVerdict,
 }
 
-/// Comprehensive report aggregating legion execution and Cho-Han adjudication.
+/// Comprehensive report aggregating legion simulation and Cho-Han heuristic adjudication.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LegionAdjudicationReport {
+    /// Indicates that clone evaluations are deterministic stack-codon simulations.
+    pub simulated: bool,
+    /// Explicit disclosure of simulation scope.
+    pub simulation_note: String,
     /// Total shadow clones summoned in this cohort.
     pub total_clones: usize,
     /// Distribution across cohort archetypes.
@@ -98,8 +106,9 @@ pub struct LegionAdjudicationReport {
     pub winning_codon: Option<String>,
     /// Total wall-clock execution time across the entire legion in microseconds.
     pub total_summoning_micros: u64,
-    /// Total estimated tokens saved vs conventional LLM agent chat negotiation.
-    pub token_cost_saved: usize,
+    /// Modeled token budget delta vs a hypothetical 1,500-token/clone LLM chat loop (heuristic estimate, not measured).
+    #[serde(alias = "token_cost_saved")]
+    pub estimated_token_budget_delta: usize,
     /// Individual clone trial outcomes.
     pub evaluations: Vec<CloneEvaluationResult>,
 }
@@ -226,16 +235,18 @@ impl ShadowLegion {
                     (ChoHanVerdict::Evaporated, false)
                 };
 
-                let signature = format!("sig-clone-{:04}-{:x}", id, (id as u64 * 31337) ^ 0xcafe);
+                // SIMULATION: deterministic trial identifier (not a cryptographic signature)
+                let trial_id = format!("sim-trial-{:04}-{:x}", id, (id as u64 * 31337) ^ 0xcafe);
 
                 CloneEvaluationResult {
                     clone_id: id as u32,
                     archetype: arch,
                     codon: stack.to_codon_string(),
+                    simulated: true,
                     invariant_satisfied: satisfied,
                     fitness_score: pseudo_fitness,
                     execution_micros: elapsed_micros.max(1),
-                    mutation_signature: Some(signature),
+                    simulated_trial_id: Some(trial_id),
                     verdict,
                 }
             })
@@ -270,11 +281,12 @@ impl ShadowLegion {
             }
         }
 
-        // Conventional LLM agent negotiation benchmark:
-        // ~1,500 tokens per subagent coordination round
-        let token_cost_saved = effective_count * 1500;
+        // SIMULATION: modeled token budget delta assuming 1,500 tokens per hypothetical subagent chat round
+        let estimated_token_budget_delta = effective_count * 1500;
 
         Ok(LegionAdjudicationReport {
+            simulated: true,
+            simulation_note: "Heuristic stack-codon cohort simulation; fitness_score and estimated_token_budget_delta are deterministic model estimates, not measured LLM execution or cryptographic attestation.".to_string(),
             total_clones: effective_count,
             cohort_distribution,
             cho_count,
@@ -283,7 +295,7 @@ impl ShadowLegion {
             winning_clone_id,
             winning_codon,
             total_summoning_micros,
-            token_cost_saved,
+            estimated_token_budget_delta,
             evaluations,
         })
     }
@@ -300,13 +312,14 @@ mod tests {
 
         let report = legion.summon_clones(&edict, 64).expect("legion summons");
 
+        assert!(report.simulated);
         assert_eq!(report.total_clones, 64);
         assert!(
             report.cho_count > 0,
             "must have at least one Cho attested clone"
         );
         assert!(report.winning_clone_id.is_some());
-        assert!(report.token_cost_saved >= 64 * 1500);
+        assert!(report.estimated_token_budget_delta >= 64 * 1500);
 
         // 64 clones must complete in sub-millisecond to low millisecond range
         assert!(
@@ -332,7 +345,7 @@ mod tests {
             .summon_clones(&edict, 128)
             .expect("128 clones summon");
         assert_eq!(report.total_clones, 128);
-        assert_eq!(report.token_cost_saved, 128 * 1500);
+        assert_eq!(report.estimated_token_budget_delta, 128 * 1500);
     }
 
     #[test]

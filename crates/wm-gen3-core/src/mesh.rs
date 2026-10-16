@@ -2181,9 +2181,9 @@ impl MeshServer {
                                                             match legion.summon_clones(&sutra, 64) {
                                                                 Ok(rep) => {
                                                                     result_parts.push(format!(
-                                                                        "GAS Shadow Legion: 64 clones (Cho {}, Han {}, Evap {}); Winning clone #{:?}; Saved {} tokens in {:.2}ms",
+                                                                        "GAS Shadow Legion (simulated): 64 clones (Cho {}, Han {}, Evap {}); Winning clone #{:?}; Est. budget delta {} tokens in {:.2}ms",
                                                                         rep.cho_count, rep.han_count, rep.evaporated_count,
-                                                                        rep.winning_clone_id, rep.token_cost_saved,
+                                                                        rep.winning_clone_id, rep.estimated_token_budget_delta,
                                                                         rep.total_summoning_micros as f64 / 1000.0
                                                                     ));
                                                                 }

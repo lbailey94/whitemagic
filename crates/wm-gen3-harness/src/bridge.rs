@@ -580,33 +580,6 @@ fn sutra_tool_schemas_cyberbrain(mode_hint: &str) -> Vec<Value> {
                 "required": ["inquiry"]
             }
         }),
-        json!({
-            "name": "legion_summon",
-            "description": "Summon a General Agentic System (GAS) Tokio/Rayon Shadow Clone Legion across CPU cores. Evaluates N volatile shadow clones concurrently with zero intra-swarm LLM tokens, dividing tasks across imperial cohort archetypes (Adversarial, Refactor, Speculative Replay, Horizon Stress) and adjudicating results through Cho-Han (丁半) binary classification.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "edict": { "type": "string", "description": "Imperial edict codon or Taoist hand seal sequence to dispatch across the shadow clone legion (e.g. '⟪ 通 · 照 · 合 · 證 ⟫', '三家归元印')" },
-                    "clones": { "type": "integer", "minimum": 1, "maximum": 128, "description": "Number of volatile shadow clones to summon (default: 32, max: 128)" },
-                    "peer": { "type": "string", "description": "Optional remote peer address (e.g. '152.53.195.47:7369') for cross-node Gap Junction Wire Protocol 7369 handoff" },
-                    "archetype": { "type": "string", "description": "Optional cohort archetype focus ('AdversarialRedTeam', 'RefactorEvolution', 'SpeculativeReplay', 'HorizonStress', or 'all')" }
-                },
-                "required": ["edict"]
-            }
-        }),
-        json!({
-            "name": "chohan_settle",
-            "description": "Adjudicate a computational claim or task outcome through the binary Cho-Han (丁半) settlement gate. Verifies invariant proof determinism (Cho / 丁) for instant promotion/settlement or flags anomaly/divergence (Han / 半) for red-team micro-bounty escrow.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "payload": { "type": "string", "description": "Claim, evaluation payload, or state representation to adjudicate" },
-                    "proof": { "type": "string", "description": "Optional cryptographic signature or invariant verification proof" },
-                    "bid": { "type": "integer", "description": "Micro-stake bid in micro-USDC (default: 10000 = $0.01)" }
-                },
-                "required": ["payload"]
-            }
-        }),
     ]
 }
 
@@ -680,8 +653,8 @@ fn sutra_tool_schemas_full(mode_hint: &str) -> Vec<Value> {
         }),
         json!({
             "name": "legion.summon",
-            "title": "Summon GAS Shadow Clone Legion",
-            "description": "Summon a General Agentic System (GAS) Tokio/Rayon Shadow Clone Legion across CPU cores. Evaluates N volatile shadow clones concurrently with zero intra-swarm LLM tokens, dividing tasks across imperial cohort archetypes (Adversarial, Refactor, Speculative Replay, Horizon Stress) and adjudicating results through Cho-Han (丁半) binary classification.",
+            "title": "Summon GAS Shadow Clone Legion (Experimental Simulation)",
+            "description": "[Experimental / Simulation] Run a deterministic Rayon stack-codon cohort simulation across CPU cores. Evaluates N candidate codon variants across four archetypes (Adversarial, Refactor, Speculative Replay, Horizon Stress) and classifies heuristic outcomes via Cho-Han (丁半). Scores and token-budget deltas are modeled estimates, not measured LLM execution.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -695,14 +668,14 @@ fn sutra_tool_schemas_full(mode_hint: &str) -> Vec<Value> {
         }),
         json!({
             "name": "chohan.settle",
-            "title": "Cho-Han Binary Adjudication",
-            "description": "Adjudicate a computational claim or task outcome through the binary Cho-Han (丁半) settlement gate. Verifies invariant proof determinism (Cho / 丁) for instant promotion/settlement or flags anomaly/divergence (Han / 半) for red-team micro-bounty escrow.",
+            "title": "Cho-Han Binary Classification (Experimental Advisory)",
+            "description": "[Experimental / Simulation] Classify a payload or proof string into Cho (丁 / even / pass) or Han (半 / odd / anomaly). Advisory string/parity classification only; does not independently verify execution proofs or perform on-chain escrow.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "payload": { "type": "string", "description": "Claim, evaluation payload, or state representation to adjudicate" },
-                    "proof": { "type": "string", "description": "Optional cryptographic signature or invariant verification proof" },
-                    "bid": { "type": "integer", "description": "Micro-stake bid in micro-USDC (default: 10000 = $0.01)" }
+                    "proof": { "type": "string", "description": "Optional proof label or invariant note" },
+                    "bid": { "type": "integer", "description": "Advisory stake label in micro-USDC (default: 10000; not escrowed)" }
                 },
                 "required": ["payload"]
             }
@@ -5944,6 +5917,8 @@ fn handle_sutra_cast(
             "read_only_paths": sutra.kekkai_profile.read_only_paths,
             "read_write_paths": sutra.kekkai_profile.read_write_paths,
             "network_allowed": sutra.kekkai_profile.network_allowed,
+            "enforcement_mode": "computed_advisory_profile",
+            "note": "Statically computed capability profile from codon glyphs; OS kernel enforcement requires running under Mandala gate-lite (bwrap) or WM_LANDLOCK=1.",
         },
         "primary_skeleton_id": sutra.primary_skeleton_id,
         "dry_run": dry_run,
@@ -6013,6 +5988,8 @@ fn handle_legion_summon(args: &Value, store_path: &Path) -> Result<Value, String
 
     Ok(json!({
         "status": "success",
+        "simulated": report.simulated,
+        "simulation_note": report.simulation_note,
         "edict": sutra.codon_str,
         "total_clones": report.total_clones,
         "cho_count": report.cho_count,
@@ -6021,7 +5998,7 @@ fn handle_legion_summon(args: &Value, store_path: &Path) -> Result<Value, String
         "winning_clone_id": report.winning_clone_id,
         "winning_codon": report.winning_codon,
         "total_summoning_micros": report.total_summoning_micros,
-        "token_cost_saved": report.token_cost_saved,
+        "estimated_token_budget_delta": report.estimated_token_budget_delta,
         "cohort_distribution": report.cohort_distribution,
         "peer": peer,
         "remote_rtt_us": remote_rtt_us,
@@ -6059,18 +6036,22 @@ fn handle_chohan_settle(args: &Value) -> Result<Value, String> {
     };
 
     let settlement_action = match verdict {
-        ChoHanVerdict::ChoAttested => "PROMOTED_TO_GERMLINE_INSTANT_SETTLEMENT",
-        ChoHanVerdict::HanAnomaly => "RED_TEAM_BOUNTY_ESCROWED",
+        ChoHanVerdict::ChoAttested => "ADVISORY_PROMOTE_CANDIDATE",
+        ChoHanVerdict::HanAnomaly => "ADVISORY_FLAG_ANOMALY",
         ChoHanVerdict::Evaporated => "EVAPORATED_WITHOUT_RESIDUE",
     };
 
     Ok(json!({
         "status": "success",
+        "simulated": true,
+        "advisory_only": true,
+        "escrow_enforced": false,
+        "simulation_note": "Heuristic string/parity classification only; does not independently verify execution proofs or perform on-chain escrow.",
         "payload": payload,
         "proof": proof,
         "bid_micro_usdc": bid,
         "verdict": format!("{:?}", verdict),
-        "classification": if is_cho { "Cho (丁 / Even / Invariant Validated)" } else { "Han (半 / Odd / Anomaly Discovered)" },
+        "classification": if is_cho { "Cho (丁 / Even / Advisory Pass)" } else { "Han (半 / Odd / Advisory Anomaly)" },
         "settlement_action": settlement_action,
     }))
 }
@@ -7708,8 +7689,9 @@ mod sutra_mcp_tests {
         )
         .expect("legion summon");
         assert_eq!(res["status"], "success");
+        assert_eq!(res["simulated"], true);
         assert_eq!(res["total_clones"], 16);
-        assert!(res["token_cost_saved"].as_u64().unwrap() > 0);
+        assert!(res["estimated_token_budget_delta"].as_u64().unwrap() > 0);
 
         // 2. chohan_settle (Cho attested)
         let chohan_cho = handle_chohan_settle(&json!({

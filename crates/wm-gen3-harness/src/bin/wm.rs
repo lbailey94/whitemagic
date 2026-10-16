@@ -9862,6 +9862,8 @@ fn run_sutra_legion(
     if json {
         let out = serde_json::json!({
             "status": "ok",
+            "simulated": report.simulated,
+            "simulation_note": report.simulation_note,
             "edict": sutra.codon_str,
             "total_clones": report.total_clones,
             "cho_count": report.cho_count,
@@ -9870,7 +9872,7 @@ fn run_sutra_legion(
             "winning_clone_id": report.winning_clone_id,
             "winning_codon": report.winning_codon,
             "total_summoning_micros": report.total_summoning_micros,
-            "token_cost_saved": report.token_cost_saved,
+            "estimated_token_budget_delta": report.estimated_token_budget_delta,
             "cohort_distribution": report.cohort_distribution,
             "peer": peer,
             "remote_rtt_us": remote_rtt_us,
@@ -9879,12 +9881,12 @@ fn run_sutra_legion(
         println!("{}", serde_json::to_string_pretty(&out).unwrap_or_default());
     } else {
         println!("==================================================");
-        println!("  WhiteMagic GAS Shadow Clone Legion Summoning    ");
+        println!("  WhiteMagic GAS Shadow Clone Legion (Simulation) ");
         println!("==================================================");
         println!("Edict Codon:        {}", sutra.codon_str);
-        println!("Clones Summoned:    {}", report.total_clones);
-        println!("Cho (丁 / Invariant Pass):  {}", report.cho_count);
-        println!("Han (半 / Anomaly Bounty):   {}", report.han_count);
+        println!("Clones Simulated:   {}", report.total_clones);
+        println!("Cho (丁 / Advisory Pass):   {}", report.cho_count);
+        println!("Han (半 / Advisory Flag):   {}", report.han_count);
         println!("Evaporated (虚 / Transient): {}", report.evaporated_count);
         if let Some(winner_id) = report.winning_clone_id {
             println!(
@@ -9894,7 +9896,10 @@ fn run_sutra_legion(
             );
         }
         println!("Wallclock Latency:  {} µs", report.total_summoning_micros);
-        println!("LLM Tokens Saved:   {} tokens", report.token_cost_saved);
+        println!(
+            "Est. Budget Delta:  {} tokens (modeled @ 1500/clone)",
+            report.estimated_token_budget_delta
+        );
         if let Some(rtt) = remote_rtt_us {
             println!(
                 "Remote Peer RTT:    {} µs (peer: {})",
@@ -9923,38 +9928,41 @@ fn run_sutra_chohan(payload: &str, proof: Option<&str>, bid: u64, json: bool) {
     };
 
     let settlement_action = match verdict {
-        ChoHanVerdict::ChoAttested => "PROMOTED_TO_GERMLINE_INSTANT_SETTLEMENT",
-        ChoHanVerdict::HanAnomaly => "RED_TEAM_BOUNTY_ESCROWED",
+        ChoHanVerdict::ChoAttested => "ADVISORY_PROMOTE_CANDIDATE",
+        ChoHanVerdict::HanAnomaly => "ADVISORY_FLAG_ANOMALY",
         ChoHanVerdict::Evaporated => "EVAPORATED_WITHOUT_RESIDUE",
     };
 
     if json {
         let out = serde_json::json!({
             "status": "ok",
+            "simulated": true,
+            "advisory_only": true,
+            "escrow_enforced": false,
             "payload": payload,
             "proof": proof,
             "bid_micro_usdc": bid,
             "verdict": format!("{:?}", verdict),
-            "classification": if is_cho { "Cho (丁 / Even / Invariant Validated)" } else { "Han (半 / Odd / Anomaly Discovered)" },
+            "classification": if is_cho { "Cho (丁 / Even / Advisory Pass)" } else { "Han (半 / Odd / Advisory Anomaly)" },
             "settlement_action": settlement_action,
         });
         println!("{}", serde_json::to_string_pretty(&out).unwrap_or_default());
     } else {
         println!("==================================================");
-        println!("     WhiteMagic Cho-Han (丁半) Settlement Gate     ");
+        println!("  WhiteMagic Cho-Han (丁半) Advisory Classifier   ");
         println!("==================================================");
         println!("Payload:            {}", payload);
-        println!("Bid (micro-USDC):   {}", bid);
+        println!("Advisory Stake:     {} micro-USDC (not escrowed)", bid);
         println!("Verdict:            {:?}", verdict);
         println!(
             "Classification:     {}",
             if is_cho {
-                "Cho (丁 / Invariant Pass)"
+                "Cho (丁 / Advisory Pass)"
             } else {
-                "Han (半 / Anomaly Bounty)"
+                "Han (半 / Advisory Anomaly)"
             }
         );
-        println!("Settlement Action:  {}", settlement_action);
+        println!("Advisory Action:    {}", settlement_action);
         println!("==================================================");
     }
 }

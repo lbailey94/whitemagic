@@ -18,7 +18,8 @@ try:
 except ImportError:  # Keep the test module importable when the optional package is absent.
     InvalidTag = ValueError
 
-SCRIPTS = Path(__file__).resolve().parents[1]
+_PARENT = Path(__file__).resolve().parents[1]
+SCRIPTS = _PARENT / "src" if (_PARENT / "src" / "crystal_client.py").is_file() else _PARENT
 sys.path.insert(0, str(SCRIPTS))
 import crystal_client as cc  # noqa: E402
 
@@ -250,6 +251,40 @@ class CrystalClientTest(unittest.TestCase):
                 output.truncate(0)
         finally:
             sys.argv = original_argv
+
+    def test_i1_i2_kek_version_cell_id_binding_rotation_and_dek_erasure(self) -> None:
+        kek_v1 = bytes(range(32))
+        kek_v2 = bytes(reversed(range(32)))
+        plaintext = b"SAIHM-aligned non-custodial crystal payload"
+
+        env = cc.seal_crystal(plaintext, kek_v1, "test-tenant", cipher="chacha20-poly1305", kek_version=1)
+        self.assertEqual(env["kek_version"], 1)
+        self.assertEqual(env["id_kek_version"], 1)
+        self.assertIsNotNone(env["wrapped_dek"])
+        self.assertEqual(cc.unseal_crystal(env, kek_v1), plaintext)
+
+        # I1: mutating nonce or id_kek_version must fail content-address verification before AEAD
+        tampered_nonce = copy.deepcopy(env)
+        tampered_nonce["nonce"] = cc.base64.urlsafe_b64encode(b"0" * 12).decode("ascii")
+        with self.assertRaisesRegex(ValueError, "content-address verification failed"):
+            cc.unseal_crystal(tampered_nonce, kek_v1)
+
+        # I2: KEK rotation re-wraps DEK under kek_v2 (version 2) without changing crystal_id
+        rotated = cc.rotate_crystal_kek(env, kek_v1, kek_v2, 2)
+        self.assertEqual(rotated["crystal_id"], env["crystal_id"])
+        self.assertEqual(rotated["id_kek_version"], 1)
+        self.assertEqual(rotated["kek_version"], 2)
+        self.assertNotEqual(rotated["wrapped_dek"], env["wrapped_dek"])
+        with self.assertRaises((ValueError, InvalidTag)):
+            cc.unseal_crystal(rotated, kek_v1)
+        self.assertEqual(cc.unseal_crystal(rotated, kek_v2), plaintext)
+
+        # I2/I3: destroying the wrapped DEK renders the crystal permanently undecryptable
+        erased = cc.destroy_crystal_dek(rotated)
+        self.assertIsNone(erased["wrapped_dek"])
+        self.assertTrue(erased["dek_destroyed"])
+        with self.assertRaisesRegex(ValueError, "cryptographically destroyed"):
+            cc.unseal_crystal(erased, kek_v2)
 
 
 if __name__ == "__main__":
