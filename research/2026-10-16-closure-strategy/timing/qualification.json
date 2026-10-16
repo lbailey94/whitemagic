@@ -1,0 +1,51 @@
+{
+  "qualification": "repeatable wall-clock comparison; DAG baseline is emulated",
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+  "machine": "x86_64",
+  "python": "3.12.3",
+  "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)\nbinary: rustc\ncommit-hash: 88d9e12ae178fab0fb5cc050a94da85685d449ea\ncommit-date: 2026-08-18\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.0\nLLVM version: 22.1.8",
+  "repeats": 7,
+  "source_revision": "2394e01116a8c930a24b93c2d84d0fd1fbca21e9",
+  "pulse_compiler_sha256": "33e90d19524350f5255e03735e6b12b9899df8cb7709c82cb8180c2f60576ace",
+  "samples": [
+    {
+      "pulse_avg_us": 28.339966,
+      "dag_emulated_avg_us": 44.681414,
+      "speedup_x": 1.576622004416
+    },
+    {
+      "pulse_avg_us": 28.376254,
+      "dag_emulated_avg_us": 44.232324,
+      "speedup_x": 1.558779534466
+    },
+    {
+      "pulse_avg_us": 29.739826,
+      "dag_emulated_avg_us": 46.705228,
+      "speedup_x": 1.570460701418
+    },
+    {
+      "pulse_avg_us": 44.689076,
+      "dag_emulated_avg_us": 68.966128,
+      "speedup_x": 1.543243543456
+    },
+    {
+      "pulse_avg_us": 46.0574,
+      "dag_emulated_avg_us": 72.982156,
+      "speedup_x": 1.584591314316
+    },
+    {
+      "pulse_avg_us": 45.955746,
+      "dag_emulated_avg_us": 71.703496,
+      "speedup_x": 1.560272702352
+    },
+    {
+      "pulse_avg_us": 47.977812,
+      "dag_emulated_avg_us": 74.673368,
+      "speedup_x": 1.556414619324
+    }
+  ],
+  "median_speedup_x": 1.560272702352,
+  "min_speedup_x": 1.543243543456,
+  "max_speedup_x": 1.584591314316,
+  "retained_floor_x": 1.4
+}
