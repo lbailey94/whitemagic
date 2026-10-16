@@ -61,11 +61,12 @@ UNRELEASED_RE = re.compile(r"(?m)^## \[Unreleased\][^\n]*?(\d+\.\d+(?:\.\d+)?)")
 RELEASED_HEADING_RE = re.compile(r"^## \[(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9.]+)?)]")
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
-# Historical version mentions that must never count as drift or be rewritten
-# (they describe past releases, not current version truth). No current surface
-# carries historical-only references; the unit tests inject an entry to cover
-# the mechanism (test_historical_versions_are_exempt).
-EXEMPT: dict[str, set[str]] = {}
+# Historical or cross-channel version mentions that must never count as drift
+# or be rewritten (e.g. README.md notes that Windows/Intel macOS remain on the
+# stable Gen 2 v9.3.4 release line while v10 is on the open-alpha matrix).
+EXEMPT: dict[str, set[str]] = {
+    "README.md": {"9.3.4"},
+}
 
 
 def versions_in(text: str, exempt: frozenset[str] = frozenset()) -> list[str]:
