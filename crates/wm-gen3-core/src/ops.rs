@@ -190,9 +190,10 @@ pub struct SessionContinuityView {
 ///
 /// Fields default so records written by earlier versions (or by Gen2 session
 /// migration, which adds `sequence`/`migrated_from`) still parse. Unknown
-/// fields are ignored by serde. `superseded_by` is derived at read time from
-/// `supersedes` links; it is not trusted from the file.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+/// fields are ignored by serde. `superseded_by`, `resolved_by`, and `lineage`
+/// are derived at read time from `supersedes` and `resolves` links; they are
+/// never trusted from the file.
+#[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SessionTurn {
     #[serde(default)]
     pub turn_id: String,
@@ -216,6 +217,14 @@ pub struct SessionTurn {
     pub supersedes: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub superseded_by: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolves: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_by: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub qualifier: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub lineage: Vec<String>,
     #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
     pub entry_type: Option<String>,
 }
@@ -231,6 +240,125 @@ impl SessionTurn {
     #[must_use]
     pub fn estimated_tokens(&self) -> u64 {
         (self.content.chars().count() as u64).div_ceil(4) + 4
+    }
+
+    /// True when this turn represents an open-ended DiAML dialogue act
+    /// (`question`, `proposal`, `hypothesis`, `blocker`, `offer`) that has
+    /// neither been superseded nor resolved by a subsequent turn.
+    #[must_use]
+    pub fn is_open_arc(&self) -> bool {
+        if self.is_start_marker() || self.superseded_by.is_some() || self.resolved_by.is_some() {
+            return false;
+        }
+        matches!(
+            self.turn_type.as_str(),
+            "question" | "proposal" | "hypothesis" | "blocker" | "offer" | "open_question"
+        ) || self.qualifier.as_deref() == Some("hypothesis")
+    }
+
+    /// True when this turn is a non-superseded, non-speculative durable
+    /// salience anchor suitable for pinning across long session windows.
+    #[must_use]
+    pub fn is_salient_anchor(&self, min_importance: f64) -> bool {
+        if self.is_start_marker() || self.superseded_by.is_some() {
+            return false;
+        }
+        if matches!(
+            self.qualifier.as_deref(),
+            Some("speculative" | "hypothesis")
+        ) {
+            return false;
+        }
+        self.importance >= min_importance
+            || matches!(
+                self.turn_type.as_str(),
+                "decision" | "milestone" | "constraint" | "confirm"
+            )
+    }
+
+    /// Derive `superseded_by`, `resolved_by`, and transitive `lineage` chains
+    /// in-place from `supersedes` and `resolves` pointers.
+    pub fn resolve_links(turns: &mut [Self]) {
+        for turn in turns.iter_mut() {
+            turn.superseded_by = None;
+            turn.resolved_by = None;
+            turn.lineage.clear();
+        }
+
+        let index_by_id: std::collections::HashMap<String, usize> = turns
+            .iter()
+            .enumerate()
+            .filter(|(_, t)| !t.turn_id.is_empty())
+            .map(|(i, t)| (t.turn_id.clone(), i))
+            .collect();
+
+        let supersede_links: Vec<(usize, String)> = turns
+            .iter()
+            .filter_map(|t| {
+                let prior = t.supersedes.as_ref()?;
+                let idx = *index_by_id.get(prior)?;
+                Some((idx, t.turn_id.clone()))
+            })
+            .collect();
+        for (idx, by_id) in supersede_links {
+            turns[idx].superseded_by = Some(by_id);
+        }
+
+        let resolve_links: Vec<(usize, String)> = turns
+            .iter()
+            .filter_map(|t| {
+                let prior = t.resolves.as_ref()?;
+                let idx = *index_by_id.get(prior)?;
+                Some((idx, t.turn_id.clone()))
+            })
+            .collect();
+        for (idx, by_id) in resolve_links {
+            turns[idx].resolved_by = Some(by_id);
+        }
+
+        let parent_ids: Vec<Option<String>> = turns
+            .iter()
+            .map(|t| t.supersedes.clone().or_else(|| t.resolves.clone()))
+            .collect();
+
+        for i in 0..turns.len() {
+            let mut chain = Vec::new();
+            let mut visited = std::collections::HashSet::new();
+            visited.insert(i);
+            let mut cur = parent_ids[i].clone();
+            while let Some(pid) = cur {
+                let Some(&pidx) = index_by_id.get(&pid) else {
+                    chain.push(pid);
+                    break;
+                };
+                if !visited.insert(pidx) {
+                    break;
+                }
+                chain.push(pid);
+                cur = parent_ids[pidx].clone();
+            }
+            chain.reverse();
+            turns[i].lineage = chain;
+        }
+    }
+
+    /// Read `<store_path>/session_log.jsonl` and derive all dialogue links.
+    #[must_use]
+    pub fn read_log(store_path: &std::path::Path) -> Vec<Self> {
+        let mut turns: Vec<Self> = Vec::new();
+        if let Ok(content) = std::fs::read_to_string(store_path.join("session_log.jsonl")) {
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                if let Ok(turn) = serde_json::from_str::<Self>(trimmed) {
+                    turns.push(turn);
+                }
+            }
+        }
+        Self::resolve_links(&mut turns);
+        turns
     }
 }
 
@@ -2891,6 +3019,28 @@ pub fn compose_session_digest(
         }
         None => markdown.push_str("## Latest Checkpoint\n\n_No checkpoint recorded._\n\n"),
     }
+
+    let unresolved_arcs: Vec<&SessionTurn> =
+        turns.iter().filter(|turn| turn.is_open_arc()).collect();
+    let salient_anchors: Vec<&SessionTurn> = turns
+        .iter()
+        .filter(|turn| turn.is_salient_anchor(0.8))
+        .collect();
+
+    if !unresolved_arcs.is_empty() {
+        markdown.push_str(&format!(
+            "### Unresolved Dialogue Arcs ({})\n\n",
+            unresolved_arcs.len()
+        ));
+        for arc in &unresolved_arcs {
+            markdown.push_str(&format!(
+                "- [{}] {}: {} (turn_id={})\n",
+                arc.turn_type, arc.role, arc.content, arc.turn_id
+            ));
+        }
+        markdown.push('\n');
+    }
+
     markdown.push_str(&format!("## Turns ({})\n\n", turns.len()));
     for turn in turns {
         let track = turn
@@ -2898,14 +3048,41 @@ pub fn compose_session_digest(
             .as_deref()
             .map(|track| format!(" track={track}"))
             .unwrap_or_default();
+        let qualifier = turn
+            .qualifier
+            .as_deref()
+            .map(|q| format!(" [{q}]"))
+            .unwrap_or_default();
         let superseded = turn
             .superseded_by
             .as_ref()
             .map(|id| format!(" (superseded by {id})"))
             .unwrap_or_default();
+        let resolved = turn
+            .resolved_by
+            .as_ref()
+            .map(|id| format!(" (resolved by {id})"))
+            .unwrap_or_default();
+        let lineage = if turn.lineage.is_empty() {
+            String::new()
+        } else {
+            format!(
+                " [converged from {} prior turn(s): {}]",
+                turn.lineage.len(),
+                turn.lineage.join(" -> ")
+            )
+        };
         markdown.push_str(&format!(
-            "- [{}] {}/{}: {}{}{}\n",
-            turn.timestamp, turn.role, turn.turn_type, turn.content, track, superseded
+            "- [{}] {}/{}{}: {}{}{}{}{}\n",
+            turn.timestamp,
+            turn.role,
+            turn.turn_type,
+            qualifier,
+            turn.content,
+            track,
+            superseded,
+            resolved,
+            lineage
         ));
     }
 
@@ -2914,6 +3091,8 @@ pub fn compose_session_digest(
         "generated_at": generated_at,
         "turn_count": turns.len(),
         "turns": turns,
+        "unresolved_arcs": unresolved_arcs,
+        "salient_anchors": salient_anchors,
         "checkpoint": checkpoint,
     });
     (markdown, json)
@@ -4892,10 +5071,7 @@ mod cache_boundary_tests {
             importance: 0.9,
             timestamp: 100,
             track: Some("mission-a".into()),
-            agent_id: None,
-            supersedes: None,
-            superseded_by: None,
-            entry_type: None,
+            ..Default::default()
         }];
         let view = SessionContinuityView {
             record_id: 1,
@@ -4924,6 +5100,100 @@ mod cache_boundary_tests {
         assert_eq!(json["checkpoint"]["commit"], "abc");
         let (_, empty) = compose_session_digest("none", &[], None);
         assert!(empty["checkpoint"].is_null());
+    }
+
+    #[test]
+    fn session_turn_diaml_links_and_lineage_resolve_cleanly() {
+        let mut turns = vec![
+            SessionTurn {
+                turn_id: "q1".into(),
+                session_id: "lane".into(),
+                role: "user".into(),
+                turn_type: "question".into(),
+                content: "Should we use FTS5 or Tantivy?".into(),
+                importance: 0.6,
+                timestamp: 10,
+                ..Default::default()
+            },
+            SessionTurn {
+                turn_id: "q2".into(),
+                session_id: "lane".into(),
+                role: "user".into(),
+                turn_type: "proposal".into(),
+                content: "Maybe add hub penalty to spreading activation?".into(),
+                importance: 0.7,
+                timestamp: 20,
+                ..Default::default()
+            },
+            SessionTurn {
+                turn_id: "h1".into(),
+                session_id: "lane".into(),
+                role: "ai".into(),
+                turn_type: "experiment".into(),
+                content: "Tried unpenalized walk; hubs dominated.".into(),
+                importance: 0.9,
+                qualifier: Some("hypothesis".into()),
+                timestamp: 30,
+                ..Default::default()
+            },
+            SessionTurn {
+                turn_id: "h2".into(),
+                session_id: "lane".into(),
+                role: "ai".into(),
+                turn_type: "experiment".into(),
+                content: "Tried linear degree penalty; too aggressive.".into(),
+                importance: 0.85,
+                supersedes: Some("h1".into()),
+                qualifier: Some("hypothesis".into()),
+                timestamp: 40,
+                ..Default::default()
+            },
+            SessionTurn {
+                turn_id: "d1".into(),
+                session_id: "lane".into(),
+                role: "ai".into(),
+                turn_type: "decision".into(),
+                content: "Adopted 1 / (1 + ln(1 + degree)) hub penalty with Tantivy.".into(),
+                importance: 0.95,
+                supersedes: Some("h2".into()),
+                resolves: Some("q1".into()),
+                qualifier: Some("verified".into()),
+                timestamp: 50,
+                ..Default::default()
+            },
+        ];
+
+        SessionTurn::resolve_links(&mut turns);
+
+        // q1 was resolved by d1 -> no longer an open arc
+        assert_eq!(turns[0].resolved_by.as_deref(), Some("d1"));
+        assert!(!turns[0].is_open_arc());
+
+        // q2 was never resolved or superseded -> remains an open arc
+        assert!(turns[1].is_open_arc());
+
+        // h1 -> h2 -> d1 supersession chain
+        assert_eq!(turns[2].superseded_by.as_deref(), Some("h2"));
+        assert_eq!(turns[3].superseded_by.as_deref(), Some("d1"));
+        assert!(!turns[2].is_salient_anchor(0.8));
+        assert!(!turns[3].is_salient_anchor(0.8));
+
+        // d1 carries full converged lineage ["h1", "h2"] and is a salient anchor
+        assert_eq!(turns[4].lineage, vec!["h1".to_string(), "h2".to_string()]);
+        assert!(turns[4].is_salient_anchor(0.8));
+
+        let active_turns: Vec<SessionTurn> = turns
+            .into_iter()
+            .filter(|t| t.superseded_by.is_none())
+            .collect();
+        let (markdown, json) = compose_session_digest("lane", &active_turns, None);
+        assert!(markdown.contains("### Unresolved Dialogue Arcs (1)"));
+        assert!(markdown.contains("turn_id=q2"));
+        assert!(markdown.contains("[converged from 2 prior turn(s): h1 -> h2]"));
+        assert_eq!(json["unresolved_arcs"].as_array().unwrap().len(), 1);
+        assert_eq!(json["unresolved_arcs"][0]["turn_id"], "q2");
+        assert_eq!(json["salient_anchors"].as_array().unwrap().len(), 1);
+        assert_eq!(json["salient_anchors"][0]["turn_id"], "d1");
     }
 
     /// Read-only snapshot recall with projection: a query-vector cache miss must

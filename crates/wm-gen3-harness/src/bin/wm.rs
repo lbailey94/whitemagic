@@ -6265,34 +6265,7 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                     }
                 };
 
-            let mut turns: Vec<SessionTurn> = Vec::new();
-            if let Ok(content) = std::fs::read_to_string(store_path.join("session_log.jsonl")) {
-                for line in content.lines() {
-                    let trimmed = line.trim();
-                    if trimmed.is_empty() {
-                        continue;
-                    }
-                    if let Ok(mut turn) = serde_json::from_str::<SessionTurn>(trimmed) {
-                        turn.superseded_by = None;
-                        turns.push(turn);
-                    }
-                }
-            }
-            let links: Vec<(String, String)> = turns
-                .iter()
-                .filter_map(|turn| {
-                    turn.supersedes
-                        .as_ref()
-                        .map(|prior| (prior.clone(), turn.turn_id.clone()))
-                })
-                .collect();
-            for (prior, new) in links {
-                for turn in turns.iter_mut() {
-                    if turn.turn_id == prior {
-                        turn.superseded_by = Some(new.clone());
-                    }
-                }
-            }
+            let turns = SessionTurn::read_log(store_path);
 
             let effective = session_id.clone().or_else(|| {
                 turns

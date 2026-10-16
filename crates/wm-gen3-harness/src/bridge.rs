@@ -24,6 +24,7 @@ use uuid::Uuid;
 
 use wm_gen3_core::compat::{Gen2EpisodicRecord, Gen2Reader};
 use wm_gen3_core::evidence::RatifiedChannel;
+use wm_gen3_core::field::{RelationKind, RelationState};
 use wm_gen3_core::firebreak::{Firebreak, FirebreakGate};
 use wm_gen3_core::mandala::{
     Signature, Signer, SigningKey, Verifier, VerifyingKey, resolve_or_create_mandala_gate_key,
@@ -379,6 +380,10 @@ fn profile_allows_tool(profile: McpProfile, name: &str) -> bool {
 pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
     ("memory.pin", &["id", "galaxy", "pinned"]),
     (
+        "memory.associations",
+        &["id", "limit", "direction", "hops", "decay"],
+    ),
+    (
         "memory.update",
         &[
             "id",
@@ -420,6 +425,8 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
             "importance",
             "session_id",
             "supersedes",
+            "resolves",
+            "qualifier",
             "track",
             "agent_id",
             "log_type",
@@ -450,6 +457,7 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
             "branch",
             "tests_green",
             "lease_id",
+            "crystallize",
             "agent_id",
             "checkpoint_type",
             "context_token",
@@ -481,7 +489,7 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
     ),
     ("session.recall", &["session_id", "query", "limit"]),
     ("receipts.emit", &["kind", "session_id", "out", "limit"]),
-    ("session.digest", &["session_id", "n"]),
+    ("session.digest", &["session_id", "n", "crystallize"]),
     (
         "sutra.cast",
         &["codon", "execute", "dry_run", "strict", "peer"],
@@ -748,7 +756,8 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
                     "checkpoint_type": { "type": "string", "description": "Checkpoint type: 'turn', 'handoff', 'milestone', 'compact'" },
                     "next_queue": { "type": "array", "items": { "type": "string" }, "description": "Queued action items for next turn / next agent" },
                     "open_flags": { "type": "array", "items": { "type": "string" }, "description": "Open flags, blockers, or warnings" },
-                    "context_token": { "type": "string", "description": "Optional ContextCache token for prefix cache stabilization" }
+                    "context_token": { "type": "string", "description": "Optional ContextCache token for prefix cache stabilization" },
+                    "crystallize": { "type": "boolean", "description": "Optional: crystallize converged session decisions into a linked codex memory record (default false)" }
                 },
                 "required": ["session_id", "summary"]
             }
@@ -772,7 +781,10 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
                     "session_id": { "type": "string", "description": "Session identifier" },
                     "content": { "type": "string", "description": "Log content text" },
                     "agent_id": { "type": "string", "description": "Agent identifier (default: 'agent')" },
-                    "log_type": { "type": "string", "description": "Log type (e.g. 'note', 'tool_output', 'decision')" }
+                    "log_type": { "type": "string", "description": "Log type (e.g. 'note', 'tool_output', 'decision')" },
+                    "supersedes": { "type": "string", "description": "Turn id of an earlier turn this record replaces" },
+                    "resolves": { "type": "string", "description": "DiAML turn id of an earlier question, proposal, or hypothesis this turn resolves" },
+                    "qualifier": { "type": "string", "enum": ["verified", "hypothesis", "speculative", "conditional"], "description": "Epistemic qualifier for this turn" }
                 },
                 "required": ["session_id", "content"]
             }
@@ -995,10 +1007,12 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
                 "properties": {
                     "content": { "type": "string", "description": "Turn content to persist" },
                     "role": { "type": "string", "enum": ["user", "ai"], "description": "Who produced the turn" },
-                    "turn_type": { "type": "string", "description": "Turn type (e.g. 'decision', 'milestone', 'observation')" },
+                    "turn_type": { "type": "string", "description": "Turn type (e.g. 'decision', 'milestone', 'observation', 'question', 'proposal', 'hypothesis')" },
                     "importance": { "type": "number", "description": "0.0 to 1.0 salience" },
                     "session_id": { "type": "string", "description": "Target session ID" },
                     "supersedes": { "type": "string", "description": "Memory id of an earlier turn this record replaces" },
+                    "resolves": { "type": "string", "description": "DiAML turn id of an earlier question, proposal, or hypothesis this turn resolves" },
+                    "qualifier": { "type": "string", "enum": ["verified", "hypothesis", "speculative", "conditional"], "description": "Epistemic qualifier for this turn" },
                     "track": { "type": "string", "description": "Optional track slug" }
                 },
                 "required": ["content"]
@@ -1076,7 +1090,8 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
                     "commit": { "type": "string", "description": "Commit hash persisted with the checkpoint" },
                     "tests_green": { "type": "boolean", "description": "Whether the test suite was green at checkpoint time." },
                     "lease_id": { "type": "string", "description": "Claimed scope lease_id that remains held at this handoff" },
-                    "branch": { "type": "string", "description": "Branch name persisted with the checkpoint" }
+                    "branch": { "type": "string", "description": "Branch name persisted with the checkpoint" },
+                    "crystallize": { "type": "boolean", "description": "Optional: crystallize converged session decisions into a linked codex memory record (default false)" }
                 }
             }
         },
@@ -1178,13 +1193,15 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
         {
             "name": "memory.associations",
             "title": "Associative Graph Neighbours",
-            "description": "Traverse associative graph neighbours of a memory over spreading activation.",
+            "description": "Traverse associative graph neighbours of a memory over hub-penalized multi-hop spreading activation.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "id": { "description": "Source memory UUID or numeric record_id" },
                     "limit": { "type": "integer", "description": "Maximum neighbours to return (default: 10)" },
-                    "direction": { "type": "string", "description": "Direction: from | to | both (default: both)" }
+                    "direction": { "type": "string", "description": "Direction: from | to | both (default: both)" },
+                    "hops": { "type": "integer", "minimum": 1, "maximum": 3, "description": "Spreading activation depth in hops (1 to 3, default: 1)" },
+                    "decay": { "type": "number", "minimum": 0.01, "maximum": 1.0, "description": "Per-hop spreading activation decay factor (default: 0.75)" }
                 },
                 "required": ["id"]
             }
@@ -1295,7 +1312,7 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
         {
             "name": "session.replay",
             "title": "Replay Session",
-            "description": "Replay the chronological trajectory of a session: 'full' returns all turns, 'selective' filters by min_importance/turn_types, and 'progressive' keeps the most recent turns within token_budget.",
+            "description": "Replay the chronological trajectory of a session: 'full' returns all turns, 'selective' filters by min_importance/turn_types, 'progressive' keeps the most recent turns within token_budget, and 'hybrid' combines earlier high-salience anchor turns (up to 30% of token_budget) with the most recent turns.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -1304,22 +1321,23 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
                     "until": { "type": "string", "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD" },
                     "n": { "type": "integer", "minimum": 1, "description": "Maximum turns (default 50)" },
                     "include_superseded": { "type": "boolean", "description": "Also return turns replaced via supersedes (default false)." },
-                    "min_importance": { "type": "number", "description": "Selective mode floor (default 0.7)" },
-                    "token_budget": { "type": "integer", "description": "Progressive mode token budget (default 2000)" },
-                    "turn_types": { "type": "array", "items": { "type": "string" }, "description": "Selective mode: turn types to keep" },
-                    "mode": { "type": "string", "enum": ["full", "selective", "progressive"], "description": "Replay mode (default full)" }
+                    "min_importance": { "type": "number", "description": "Selective/hybrid mode floor (default 0.7)" },
+                    "token_budget": { "type": "integer", "description": "Progressive/hybrid mode token budget (default 2000)" },
+                    "turn_types": { "type": "array", "items": { "type": "string" }, "description": "Selective/hybrid mode: turn types to keep" },
+                    "mode": { "type": "string", "enum": ["full", "selective", "progressive", "hybrid"], "description": "Replay mode (default full)" }
                 }
             }
         },
         {
             "name": "session.digest",
             "title": "Session Digest",
-            "description": "Compose a read-only digest from typed session-log turns and the latest checkpoint (markdown text plus JSON).",
+            "description": "Compose a digest from typed session-log turns and the latest checkpoint (markdown text plus JSON, with optional codex crystallization).",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "session_id": { "type": "string", "description": "Target session (default: most recent lane)" },
-                    "n": { "type": "integer", "minimum": 1, "description": "Maximum turns to include (default 20)" }
+                    "n": { "type": "integer", "minimum": 1, "description": "Maximum turns to include (default 20)" },
+                    "crystallize": { "type": "boolean", "description": "Optional: crystallize converged session decisions into a linked codex memory record (default false)" }
                 }
             }
         },
@@ -1516,13 +1534,13 @@ pub fn execute_hybrid_tool_call(
             handle_session_continuity(args, substrate, store_path)
         }
         "session.checkpoint" | "session_checkpoint" => {
-            handle_session_checkpoint(args, substrate, readonly)
+            handle_session_checkpoint(args, substrate, store_path, readonly)
         }
         "session.start" => handle_session_start(args, store_path),
         "session.list" | "session_list" => handle_session_list(args, substrate, store_path),
         "session.recall" => handle_session_recall(args, store_path),
         "session.replay" => handle_session_replay(args, store_path),
-        "session.digest" => handle_session_digest(args, substrate, store_path),
+        "session.digest" => handle_session_digest(args, substrate, store_path, readonly),
 
         // ── Receipts & Evidence ────────────────────────────────────────────
         "receipts.emit" => handle_receipts_emit(args, substrate, store_path, readonly),
@@ -2365,6 +2383,7 @@ fn handle_memory_revisions(args: &Value, substrate: &Substrate) -> Result<Value,
 }
 
 fn handle_memory_associations(args: &Value, substrate: &Substrate) -> Result<Value, String> {
+    reject_unknown_args("memory.associations", args)?;
     let id_val = args
         .get("id")
         .ok_or_else(|| "Missing required parameter 'id'".to_string())?;
@@ -2372,22 +2391,117 @@ fn handle_memory_associations(args: &Value, substrate: &Substrate) -> Result<Val
         .ok_or_else(|| format!("Record not found: {id_val}"))?;
 
     let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(10) as usize;
-    let all_rels = substrate.store().iter_relations().unwrap_or_default();
+    let direction = args
+        .get("direction")
+        .and_then(Value::as_str)
+        .unwrap_or("both");
+    if !matches!(direction, "from" | "to" | "both") {
+        return Err(format!(
+            "memory.associations refuses direction '{direction}': supported directions are 'from', 'to', 'both'"
+        ));
+    }
+    let hops = args.get("hops").and_then(Value::as_u64).unwrap_or(1) as usize;
+    if !(1..=3).contains(&hops) {
+        return Err("memory.associations: 'hops' must be between 1 and 3".to_string());
+    }
+    let decay = args.get("decay").and_then(Value::as_f64).unwrap_or(0.75);
+    if !(decay > 0.0 && decay <= 1.0) {
+        return Err("memory.associations: 'decay' must be in (0.0, 1.0]".to_string());
+    }
 
-    let neighbours: Vec<Value> = all_rels
+    let active_rels: Vec<_> = substrate
+        .store()
+        .iter_relations()
+        .unwrap_or_default()
         .into_iter()
-        .filter(|r| r.src() == rec_id || r.dst() == rec_id)
-        .take(limit)
-        .map(|r| {
-            let other_id = if r.src() == rec_id { r.dst() } else { r.src() };
+        .filter(|r| r.state() != RelationState::Cold)
+        .collect();
+
+    let mut degree_map: HashMap<u64, usize> = HashMap::new();
+    for r in &active_rels {
+        *degree_map.entry(r.src()).or_insert(0) += 1;
+        if r.dst() != r.src() {
+            *degree_map.entry(r.dst()).or_insert(0) += 1;
+        }
+    }
+
+    // (activation_score, raw_weight, hop, degree, relation_kind)
+    let mut best_by_node: HashMap<u64, (f64, f32, usize, usize, String)> = HashMap::new();
+    let mut frontier: Vec<(u64, f64)> = vec![(rec_id, 1.0)];
+
+    for hop in 1..=hops {
+        let step_decay = if hop == 1 { 1.0 } else { decay };
+        let mut next_frontier: HashMap<u64, f64> = HashMap::new();
+
+        for (u, u_act) in &frontier {
+            for r in &active_rels {
+                let candidate = match direction {
+                    "from" if r.src() == *u => Some(r.dst()),
+                    "to" if r.dst() == *u => Some(r.src()),
+                    "both" if r.src() == *u => Some(r.dst()),
+                    "both" if r.dst() == *u => Some(r.src()),
+                    _ => None,
+                };
+                let Some(v) = candidate else {
+                    continue;
+                };
+                if v == rec_id {
+                    continue;
+                }
+                let deg_v = degree_map.get(&v).copied().unwrap_or(1);
+                let hub_penalty = 1.0 + (deg_v.saturating_sub(1) as f64).ln_1p();
+                let raw_w = r.weight();
+                let score = (*u_act * (raw_w as f64) * step_decay) / hub_penalty;
+                let kind_str = format!("{:?}", r.kind());
+
+                let should_update = best_by_node
+                    .get(&v)
+                    .is_none_or(|(prev_score, _, _, _, _)| score > *prev_score);
+                if should_update {
+                    best_by_node.insert(v, (score, raw_w, hop, deg_v, kind_str));
+                    next_frontier
+                        .entry(v)
+                        .and_modify(|prev| {
+                            if score > *prev {
+                                *prev = score;
+                            }
+                        })
+                        .or_insert(score);
+                }
+            }
+        }
+        if next_frontier.is_empty() {
+            break;
+        }
+        frontier = next_frontier.into_iter().collect();
+        frontier.sort_by_key(|(id, _)| *id);
+    }
+
+    let mut ranked: Vec<(u64, f64, f32, usize, usize, String)> = best_by_node
+        .into_iter()
+        .map(|(id, (score, raw_w, hop, deg, kind))| (id, score, raw_w, hop, deg, kind))
+        .collect();
+    ranked.sort_by(|a, b| {
+        b.1.partial_cmp(&a.1)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.0.cmp(&b.0))
+    });
+    ranked.truncate(limit);
+
+    let neighbours: Vec<Value> = ranked
+        .into_iter()
+        .map(|(other_id, score, raw_w, hop, deg, kind)| {
             let other_uuid = substrate
                 .lookup_uuid_by_id(other_id)
                 .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &other_id.to_be_bytes()));
             json!({
                 "record_id": other_id,
                 "uuid": other_uuid.to_string(),
-                "weight": r.weight(),
-                "relation_kind": format!("{:?}", r.kind())
+                "weight": raw_w,
+                "activation_score": score,
+                "hop": hop,
+                "degree": deg,
+                "relation_kind": kind
             })
         })
         .collect();
@@ -2395,6 +2509,8 @@ fn handle_memory_associations(args: &Value, substrate: &Substrate) -> Result<Val
     Ok(json!({
         "status": "success",
         "record_id": rec_id,
+        "direction": direction,
+        "hops": hops,
         "count": neighbours.len(),
         "associations": neighbours
     }))
@@ -2982,38 +3098,11 @@ fn now_epoch_secs() -> u64 {
         .unwrap_or(0)
 }
 
-/// Read and derive the typed session log. Supersession is recomputed from
-/// `supersedes` links, never trusted from a stored `superseded_by`.
+/// Read and derive the typed session log. `superseded_by`, `resolved_by`, and
+/// `lineage` are recomputed from `supersedes` and `resolves` links, never
+/// trusted from the file.
 fn read_session_turns(store_path: &Path) -> Vec<SessionTurn> {
-    let mut turns: Vec<SessionTurn> = Vec::new();
-    if let Ok(content) = std::fs::read_to_string(store_path.join("session_log.jsonl")) {
-        for line in content.lines() {
-            let trimmed = line.trim();
-            if trimmed.is_empty() {
-                continue;
-            }
-            if let Ok(mut turn) = serde_json::from_str::<SessionTurn>(trimmed) {
-                turn.superseded_by = None;
-                turns.push(turn);
-            }
-        }
-    }
-    let links: Vec<(String, String)> = turns
-        .iter()
-        .filter_map(|turn| {
-            turn.supersedes
-                .as_ref()
-                .map(|prior| (prior.clone(), turn.turn_id.clone()))
-        })
-        .collect();
-    for (prior, new) in links {
-        for turn in turns.iter_mut() {
-            if turn.turn_id == prior {
-                turn.superseded_by = Some(new.clone());
-            }
-        }
-    }
-    turns
+    SessionTurn::read_log(store_path)
 }
 
 /// Parse an epoch-seconds, RFC 3339, or `YYYY-MM-DD` time bound.
@@ -3065,6 +3154,8 @@ fn compose_briefing(
     session: &str,
     checkpoint: Option<&SessionContinuityView>,
     turns: &[SessionTurn],
+    salient_turns: &[SessionTurn],
+    unresolved_arcs: &[SessionTurn],
 ) -> String {
     let mut out = String::new();
     out.push_str(&format!("Session {session}\n"));
@@ -3098,6 +3189,27 @@ fn compose_briefing(
         }
         None => out.push_str("No checkpoint recorded.\n"),
     }
+    if !salient_turns.is_empty() {
+        out.push_str("Salient session anchors:\n");
+        for anchor in salient_turns {
+            out.push_str(&format!(
+                "- [{}] {}\n",
+                anchor.turn_type,
+                preview(&anchor.content, 160)
+            ));
+        }
+    }
+    if !unresolved_arcs.is_empty() {
+        out.push_str("Unresolved dialogue arcs:\n");
+        for arc in unresolved_arcs {
+            out.push_str(&format!(
+                "- [{}] {} (turn_id={})\n",
+                arc.turn_type,
+                preview(&arc.content, 160),
+                arc.turn_id
+            ));
+        }
+    }
     if let Some(last) = turns.last() {
         out.push_str(&format!(
             "Latest turn ({}): {}\n",
@@ -3106,6 +3218,83 @@ fn compose_briefing(
         ));
     }
     out
+}
+
+fn crystallize_session_to_codex(
+    session_id: &str,
+    summary_override: Option<&str>,
+    checkpoint_rec_id: Option<u64>,
+    store_path: &Path,
+    substrate: &mut Substrate,
+) -> Result<Value, String> {
+    let all_turns = read_session_turns(store_path);
+    let session_turns: Vec<&SessionTurn> = all_turns
+        .iter()
+        .filter(|t| !t.is_start_marker() && t.session_id == session_id && t.superseded_by.is_none())
+        .collect();
+    let anchors: Vec<&&SessionTurn> = session_turns
+        .iter()
+        .filter(|t| t.is_salient_anchor(0.75))
+        .collect();
+
+    let mut body = format!("[session_crystal:{session_id}]\n");
+    if let Some(summary) = summary_override {
+        body.push_str(&format!("Summary: {summary}\n"));
+    }
+    if !anchors.is_empty() {
+        body.push_str("Converged Decisions & Milestones:\n");
+        for turn in &anchors {
+            let lineage_note = if turn.lineage.is_empty() {
+                String::new()
+            } else {
+                format!(" [converged from {} prior turn(s)]", turn.lineage.len())
+            };
+            body.push_str(&format!(
+                "- ({}) {}: {}{}\n",
+                turn.turn_type, turn.turn_id, turn.content, lineage_note
+            ));
+        }
+    } else if let Some(last) = session_turns.last() {
+        body.push_str(&format!(
+            "Latest turn ({}): {}\n",
+            last.turn_type, last.content
+        ));
+    }
+
+    let source = format!("corpus:codex:session_crystal:{session_id}");
+    let item = RememberItem {
+        content: body,
+        source,
+        kind: ImportKind::System,
+    };
+    substrate.set_intake_authority(RatifiedChannel::mint("wm-session-crystal"));
+    let results = substrate.remember_batch(&[item]);
+    let crystal_rec_id = match results.into_iter().next() {
+        Some(Ok(id)) => id,
+        Some(Err(e)) => return Err(format!("Failed to crystallize session into codex: {e}")),
+        None => return Err("Session crystallization produced no record".to_string()),
+    };
+
+    let tags = vec![
+        "session_crystal".to_string(),
+        format!("session:{session_id}"),
+    ];
+    append_record_meta(substrate.store().path(), crystal_rec_id, &tags, Some(0.85));
+    let crystal_uuid = substrate.get_or_create_uuid(crystal_rec_id);
+
+    if let Some(cp_id) = checkpoint_rec_id {
+        if cp_id != crystal_rec_id {
+            let _ = substrate.add_relation(RelationKind::Associates, crystal_rec_id, cp_id, 0.9);
+        }
+    }
+
+    Ok(json!({
+        "record_id": crystal_rec_id,
+        "uuid": crystal_uuid.to_string(),
+        "galaxy": "codex",
+        "anchored_turns": anchors.len(),
+        "linked_checkpoint_record_id": checkpoint_rec_id
+    }))
 }
 
 fn handle_session_record(
@@ -3142,15 +3331,38 @@ fn handle_session_record(
         .unwrap_or(0.5);
     let track = args.get("track").and_then(Value::as_str);
     let supersedes = args.get("supersedes").and_then(Value::as_str);
+    let resolves = args.get("resolves").and_then(Value::as_str);
+    let qualifier = args.get("qualifier").and_then(Value::as_str);
 
-    if let Some(prior_turn) = supersedes {
-        let exists = read_session_turns(store_path)
-            .iter()
-            .any(|turn| turn.turn_id == prior_turn && turn.session_id == session_id);
-        if !exists {
+    if let Some(q) = qualifier {
+        if !matches!(q, "verified" | "hypothesis" | "speculative" | "conditional") {
             return Err(format!(
-                "session.record cannot supersede turn '{prior_turn}': no such turn id in lane '{session_id}'"
+                "session.record refuses qualifier '{q}': supported qualifiers are 'verified', 'hypothesis', 'speculative', 'conditional'"
             ));
+        }
+    }
+
+    if supersedes.is_some() || resolves.is_some() {
+        let existing_turns = read_session_turns(store_path);
+        if let Some(prior_turn) = supersedes {
+            let exists = existing_turns
+                .iter()
+                .any(|turn| turn.turn_id == prior_turn && turn.session_id == session_id);
+            if !exists {
+                return Err(format!(
+                    "session.record cannot supersede turn '{prior_turn}': no such turn id in lane '{session_id}'"
+                ));
+            }
+        }
+        if let Some(target_turn) = resolves {
+            let exists = existing_turns
+                .iter()
+                .any(|turn| turn.turn_id == target_turn && turn.session_id == session_id);
+            if !exists {
+                return Err(format!(
+                    "session.record cannot resolve turn '{target_turn}': no such turn id in lane '{session_id}'"
+                ));
+            }
         }
     }
 
@@ -3175,6 +3387,12 @@ fn handle_session_record(
     }
     if let Some(supersedes) = supersedes {
         entry["supersedes"] = json!(supersedes);
+    }
+    if let Some(resolves) = resolves {
+        entry["resolves"] = json!(resolves);
+    }
+    if let Some(qualifier) = qualifier {
+        entry["qualifier"] = json!(qualifier);
     }
 
     if let Ok(mut file) = std::fs::OpenOptions::new()
@@ -3205,6 +3423,8 @@ fn handle_session_record(
         "session_id": session_id,
         "track": track,
         "supersedes": supersedes,
+        "resolves": resolves,
+        "qualifier": qualifier,
         "recorded_at": now
     }))
 }
@@ -3278,6 +3498,7 @@ fn handle_session_continuity(
         }
     }
 
+    let session_active_turns = turns.clone();
     let total_turns = turns.len();
     if turns.len() > n {
         turns.drain(..turns.len() - n);
@@ -3295,6 +3516,18 @@ fn handle_session_continuity(
     }
     recent.reverse();
     let turns_omitted = total_turns.saturating_sub(recent.len());
+
+    let recent_ids: HashSet<String> = recent.iter().map(|t| t.turn_id.clone()).collect();
+    let salient_turns: Vec<SessionTurn> = session_active_turns
+        .iter()
+        .filter(|t| !recent_ids.contains(&t.turn_id) && t.is_salient_anchor(0.8))
+        .cloned()
+        .collect();
+    let unresolved_arcs: Vec<SessionTurn> = session_active_turns
+        .iter()
+        .filter(|t| t.is_open_arc())
+        .cloned()
+        .collect();
 
     let session_label = effective_session
         .clone()
@@ -3329,7 +3562,13 @@ fn handle_session_continuity(
         .unwrap_or_default();
     let briefing = include_briefing.then(|| {
         json!({
-            "text": compose_briefing(&session_label, checkpoint.as_ref(), &recent),
+            "text": compose_briefing(
+                &session_label,
+                checkpoint.as_ref(),
+                &recent,
+                &salient_turns,
+                &unresolved_arcs,
+            ),
         })
     });
 
@@ -3338,6 +3577,8 @@ fn handle_session_continuity(
         "session_id": session_label,
         "turns_count": recent.len(),
         "recent_turns": recent,
+        "salient_turns": salient_turns,
+        "unresolved_arcs": unresolved_arcs,
         "turns_omitted": turns_omitted,
         "content_truncated": content_truncated,
         "next_queue": next_queue,
@@ -3354,6 +3595,7 @@ fn handle_session_continuity(
 fn handle_session_checkpoint(
     args: &Value,
     substrate: &mut Substrate,
+    store_path: &Path,
     readonly: bool,
 ) -> Result<Value, String> {
     reject_unknown_args("session.checkpoint", args)?;
@@ -3401,6 +3643,10 @@ fn handle_session_checkpoint(
     let branch = args.get("branch").and_then(Value::as_str);
     let tests_green = args.get("tests_green").and_then(Value::as_bool);
     let lease_id = args.get("lease_id").and_then(Value::as_str);
+    let crystallize = args
+        .get("crystallize")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
     let context_token = args
         .get("context_token")
         .and_then(Value::as_str)
@@ -3443,6 +3689,18 @@ fn handle_session_checkpoint(
         .session_checkpoint_enriched(&cp, &meta)
         .map_err(|e| format!("Failed to record checkpoint: {e}"))?;
 
+    let crystallized = if crystallize {
+        Some(crystallize_session_to_codex(
+            session_id,
+            Some(summary),
+            Some(rec_id),
+            store_path,
+            substrate,
+        )?)
+    } else {
+        None
+    };
+
     let mut response = json!({
         "status": "success",
         "session_id": session_id,
@@ -3455,6 +3713,9 @@ fn handle_session_checkpoint(
         "lease_id": lease_id,
         "epoch": substrate.store().epoch().unwrap_or(0)
     });
+    if let Some(crystal) = crystallized {
+        response["crystallized"] = crystal;
+    }
     if !deprecated_args.is_empty() {
         response["deprecated_args"] = json!(deprecated_args);
     }
@@ -3748,9 +4009,62 @@ fn handle_session_replay(args: &Value, store_path: &Path) -> Result<Value, Strin
             selected.reverse();
             turns = selected;
         }
+        "hybrid" => {
+            let anchor_budget = (token_budget * 2) / 5;
+            let mut selected_indices: std::collections::BTreeSet<usize> =
+                std::collections::BTreeSet::new();
+            let mut anchor_tokens = 0u64;
+
+            let mut candidate_anchors: Vec<usize> = turns
+                .iter()
+                .enumerate()
+                .filter(|(_, turn)| {
+                    let matches_type = turn_types
+                        .as_ref()
+                        .is_none_or(|types| types.contains(&turn.turn_type));
+                    turn.is_salient_anchor(min_importance) && matches_type
+                })
+                .map(|(idx, _)| idx)
+                .collect();
+            candidate_anchors.sort_by(|&a, &b| {
+                turns[b]
+                    .importance
+                    .partial_cmp(&turns[a].importance)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+                    .then_with(|| b.cmp(&a))
+            });
+
+            for idx in candidate_anchors {
+                let cost = turns[idx].estimated_tokens();
+                if anchor_tokens + cost <= anchor_budget
+                    || (selected_indices.is_empty() && cost <= token_budget)
+                {
+                    anchor_tokens += cost;
+                    selected_indices.insert(idx);
+                }
+            }
+            token_estimate = anchor_tokens;
+
+            for (idx, turn) in turns.iter().enumerate().rev() {
+                if selected_indices.contains(&idx) {
+                    continue;
+                }
+                let cost = turn.estimated_tokens();
+                if !selected_indices.is_empty() && token_estimate + cost > token_budget {
+                    break;
+                }
+                token_estimate += cost;
+                selected_indices.insert(idx);
+            }
+
+            turns = selected_indices
+                .into_iter()
+                .map(|idx| turns[idx].clone())
+                .collect();
+        }
         other => {
             return Err(format!(
-                "session.replay refuses mode '{other}': supported modes are 'full', 'selective', 'progressive'"
+                "session.replay refuses mode '{other}': supported modes are 'full', 'selective', 'progressive', 'hybrid'"
             ));
         }
     }
@@ -3759,7 +4073,7 @@ fn handle_session_replay(args: &Value, store_path: &Path) -> Result<Value, Strin
     if turns.len() > n {
         turns.drain(..turns.len() - n);
     }
-    if mode != "progressive" {
+    if !matches!(mode, "progressive" | "hybrid") || turns.len() < after_filter {
         token_estimate = turns.iter().map(SessionTurn::estimated_tokens).sum();
     }
 
@@ -3782,8 +4096,9 @@ fn handle_session_replay(args: &Value, store_path: &Path) -> Result<Value, Strin
 
 fn handle_session_digest(
     args: &Value,
-    substrate: &Substrate,
+    substrate: &mut Substrate,
     store_path: &Path,
+    readonly: bool,
 ) -> Result<Value, String> {
     reject_unknown_args("session.digest", args)?;
     let session_filter = args
@@ -3792,6 +4107,13 @@ fn handle_session_digest(
         .map(str::to_string)
         .or_else(|| last_session_lane(store_path));
     let n = args.get("n").and_then(Value::as_u64).unwrap_or(20).max(1) as usize;
+    let crystallize = args
+        .get("crystallize")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    if crystallize && readonly {
+        return Err("read-only mode: session.digest with crystallize=true refused".to_string());
+    }
 
     let mut turns: Vec<SessionTurn> = read_session_turns(store_path)
         .into_iter()
@@ -3814,12 +4136,28 @@ fn handle_session_digest(
         .flatten();
     let (markdown, json_digest) = compose_session_digest(&label, &turns, checkpoint.as_ref());
 
-    Ok(json!({
+    let crystallized = if crystallize {
+        Some(crystallize_session_to_codex(
+            &label,
+            checkpoint.as_ref().map(|cp| cp.summary.as_str()),
+            checkpoint.as_ref().map(|cp| cp.record_id),
+            store_path,
+            substrate,
+        )?)
+    } else {
+        None
+    };
+
+    let mut response = json!({
         "status": "success",
         "session_id": label,
         "markdown": markdown,
         "json": json_digest
-    }))
+    });
+    if let Some(crystal) = crystallized {
+        response["crystallized"] = crystal;
+    }
+    Ok(response)
 }
 
 // ── Receipts & Evidence ────────────────────────────────────────────────────
@@ -6872,6 +7210,7 @@ mod contract_truth_tests {
     /// must be a subset of the arguments its handler actually consumes.
     const SCOPED_TOOLS: &[&str] = &[
         "memory.pin",
+        "memory.associations",
         "memory.update",
         "memory.revisions",
         "memory.aggregate",
@@ -7486,6 +7825,7 @@ mod honesty_behavior_tests {
                 "data": {"k": 1}
             }),
             &mut substrate,
+            &dir,
             false,
         )
         .expect("legacy checkpoint shape");
@@ -7721,6 +8061,618 @@ mod sutra_mcp_tests {
         )
         .expect_err("refuse unknown argument");
         assert!(err.contains("refuses unknown argument 'invalid_extra_param'"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod diaml_and_salience_refinement_tests {
+    use super::*;
+
+    fn setup(tag: &str) -> (Substrate, std::path::PathBuf) {
+        let dir = std::env::temp_dir().join(format!("wm-diaml-{tag}-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("substrate");
+        substrate.set_budget(1_000_000);
+        substrate.set_noise_enabled(false);
+        (substrate, dir)
+    }
+
+    #[test]
+    fn continuity_and_hybrid_replay_preserve_early_salience_and_unresolved_diaml_arcs() {
+        let (mut substrate, dir) = setup("continuity-hybrid");
+
+        // Turn 1: early high-salience architectural decision
+        let d1 = handle_session_record(
+            &json!({
+                "session_id": "lane-1",
+                "role": "ai",
+                "turn_type": "decision",
+                "content": "Architecture invariant: keep store local-first in LMDB.",
+                "importance": 0.95,
+                "qualifier": "verified"
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("d1");
+        let d1_id = d1["turn_id"].as_str().unwrap().to_string();
+
+        // Turn 2: open DiAML question that will be resolved later
+        let q1 = handle_session_record(
+            &json!({
+                "session_id": "lane-1",
+                "role": "user",
+                "turn_type": "question",
+                "content": "How should we penalize hub nodes in graph walks?",
+                "importance": 0.6
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("q1");
+        let q1_id = q1["turn_id"].as_str().unwrap().to_string();
+
+        // Turn 3: open DiAML proposal that remains UNRESOLVED at session end
+        let p1 = handle_session_record(
+            &json!({
+                "session_id": "lane-1",
+                "role": "user",
+                "turn_type": "proposal",
+                "content": "Consider adding persistent KV cache snapshots in wave 2.",
+                "importance": 0.65
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("p1");
+        let p1_id = p1["turn_id"].as_str().unwrap().to_string();
+
+        // Turn 4 -> Turn 5: experimental hypothesis chain converging to resolution of q1
+        let h1 = handle_session_record(
+            &json!({
+                "session_id": "lane-1",
+                "role": "ai",
+                "turn_type": "observation",
+                "content": "Experiment 1: linear degree penalty over-suppresses 2-hop bridges.",
+                "importance": 0.9,
+                "qualifier": "hypothesis"
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("h1");
+        let h1_id = h1["turn_id"].as_str().unwrap().to_string();
+
+        let d2 = handle_session_record(
+            &json!({
+                "session_id": "lane-1",
+                "role": "ai",
+                "turn_type": "decision",
+                "content": "Adopted logarithmic hub penalty 1 / (1 + ln(1 + deg)).",
+                "importance": 0.92,
+                "supersedes": h1_id,
+                "resolves": q1_id,
+                "qualifier": "verified"
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("d2");
+        let d2_id = d2["turn_id"].as_str().unwrap().to_string();
+
+        // Append 10 low-salience recent chatter turns so d1, q1, p1, d2 fall outside n=3
+        for idx in 0..10 {
+            handle_session_record(
+                &json!({
+                    "session_id": "lane-1",
+                    "role": "ai",
+                    "turn_type": "message",
+                    "content": format!("routine status check #{idx}"),
+                    "importance": 0.2
+                }),
+                &mut substrate,
+                &dir,
+                false,
+            )
+            .expect("routine turn");
+        }
+
+        // 1. session.continuity with n=3: recent_turns has 3 items, but salient_turns
+        // preserves d1 & d2 (excluding h1 because superseded and hypothesis), and
+        // unresolved_arcs surfaces p1 (excluding q1 because resolved by d2).
+        let cont = handle_session_continuity(
+            &json!({"session_id": "lane-1", "n": 3, "include_briefing_text": true}),
+            &substrate,
+            &dir,
+        )
+        .expect("continuity");
+        assert_eq!(cont["turns_count"], 3);
+        let salient = cont["salient_turns"].as_array().expect("salient_turns");
+        let salient_ids: Vec<&str> = salient
+            .iter()
+            .map(|t| t["turn_id"].as_str().unwrap())
+            .collect();
+        assert_eq!(salient_ids, vec![d1_id.as_str(), d2_id.as_str()]);
+        assert_eq!(salient[1]["lineage"][0].as_str(), Some(h1_id.as_str()));
+
+        let arcs = cont["unresolved_arcs"].as_array().expect("unresolved_arcs");
+        assert_eq!(arcs.len(), 1);
+        assert_eq!(arcs[0]["turn_id"], p1_id);
+
+        let briefing = cont["briefing"]["text"].as_str().expect("briefing text");
+        assert!(briefing.contains("Salient session anchors:"));
+        assert!(briefing.contains("Unresolved dialogue arcs:"));
+        assert!(briefing.contains(&p1_id));
+
+        // 2. session.replay in 'hybrid' mode vs 'progressive' mode under a tight token budget
+        let prog = handle_session_replay(
+            &json!({"session_id": "lane-1", "mode": "progressive", "token_budget": 120}),
+            &dir,
+        )
+        .expect("progressive");
+        let prog_ids: Vec<&str> = prog["trajectory"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|t| t["turn_id"].as_str().unwrap())
+            .collect();
+        assert!(
+            !prog_ids.contains(&d1_id.as_str()),
+            "pure progressive drops early decision d1 under tight token_budget"
+        );
+
+        let hybrid = handle_session_replay(
+            &json!({"session_id": "lane-1", "mode": "hybrid", "token_budget": 120}),
+            &dir,
+        )
+        .expect("hybrid");
+        let hybrid_ids: Vec<&str> = hybrid["trajectory"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|t| t["turn_id"].as_str().unwrap())
+            .collect();
+        assert!(
+            hybrid_ids.contains(&d1_id.as_str()),
+            "hybrid mode retains early high-salience anchor d1"
+        );
+        assert_eq!(
+            hybrid_ids.last().copied(),
+            prog_ids.last().copied(),
+            "hybrid mode still ends with the newest turn"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn checkpoint_crystallization_and_hub_penalized_multihop_associations() {
+        let (mut substrate, dir) = setup("crystal-assoc");
+
+        handle_session_record(
+            &json!({
+                "session_id": "lane-crystal",
+                "role": "ai",
+                "turn_type": "decision",
+                "content": "Use Reciprocal Rank Fusion + spreading activation for sparse projects.",
+                "importance": 0.95,
+                "qualifier": "verified"
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("record decision");
+
+        let cp = handle_session_checkpoint(
+            &json!({
+                "session_id": "lane-crystal",
+                "summary": "Completed sparse-project memory bridge.",
+                "crystallize": true
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("checkpoint with crystallize");
+        let cp_rec_id = cp["checkpoint_record_id"].as_u64().expect("cp_rec_id");
+        let crystal_rec_id = cp["crystallized"]["record_id"]
+            .as_u64()
+            .expect("crystal_rec_id");
+        assert_eq!(cp["crystallized"]["anchored_turns"], 1);
+        assert_eq!(
+            cp["crystallized"]["linked_checkpoint_record_id"],
+            json!(cp_rec_id)
+        );
+
+        // Build a graph around `crystal_rec_id`:
+        // - `hub_id` has high degree (connected to 10 dummy records) with raw weight 0.90
+        // - `leaf_id` has degree 2 (connected to `leaf2_id` at hop 2) with raw weight 0.85
+        let hub = handle_memory_create(
+            &json!({"content": "generic folder index hub", "galaxy": "codex"}),
+            &mut substrate,
+            false,
+        )
+        .unwrap()["record_id"]
+            .as_u64()
+            .unwrap();
+        let leaf = handle_memory_create(
+            &json!({"content": "specific sparse-project leaf note", "galaxy": "codex"}),
+            &mut substrate,
+            false,
+        )
+        .unwrap()["record_id"]
+            .as_u64()
+            .unwrap();
+        let leaf2 = handle_memory_create(
+            &json!({"content": "2-hop connected deep leaf insight", "galaxy": "codex"}),
+            &mut substrate,
+            false,
+        )
+        .unwrap()["record_id"]
+            .as_u64()
+            .unwrap();
+
+        substrate
+            .add_relation(RelationKind::Associates, crystal_rec_id, hub, 0.90)
+            .unwrap();
+        substrate
+            .add_relation(RelationKind::Associates, crystal_rec_id, leaf, 0.85)
+            .unwrap();
+        substrate
+            .add_relation(RelationKind::Associates, leaf, leaf2, 0.95)
+            .unwrap();
+
+        for idx in 0..10 {
+            let dummy = handle_memory_create(
+                &json!({"content": format!("hub spoke #{idx}"), "galaxy": "codex"}),
+                &mut substrate,
+                false,
+            )
+            .unwrap()["record_id"]
+                .as_u64()
+                .unwrap();
+            substrate
+                .add_relation(RelationKind::Associates, hub, dummy, 0.50)
+                .unwrap();
+        }
+
+        // 1-hop outgoing ('from') associations from crystal_rec_id:
+        // Despite hub having slightly higher raw weight (0.90 vs 0.85), leaf has
+        // much lower degree (2 vs 11) so leaf ranks ABOVE hub by activation_score!
+        let assoc_1hop = handle_memory_associations(
+            &json!({"id": crystal_rec_id, "direction": "from", "hops": 1, "limit": 10}),
+            &substrate,
+        )
+        .expect("1-hop associations");
+        let list_1 = assoc_1hop["associations"].as_array().unwrap();
+        let leaf_pos = list_1
+            .iter()
+            .position(|x| x["record_id"].as_u64() == Some(leaf))
+            .expect("leaf present");
+        let hub_pos = list_1
+            .iter()
+            .position(|x| x["record_id"].as_u64() == Some(hub))
+            .expect("hub present");
+        assert!(
+            leaf_pos < hub_pos,
+            "hub-degree penalty must rank specific leaf (pos {leaf_pos}) above noisy hub (pos {hub_pos})"
+        );
+
+        // 2-hop outgoing ('from') associations reaches leaf2 at hop=2
+        let assoc_2hop = handle_memory_associations(
+            &json!({"id": crystal_rec_id, "direction": "from", "hops": 2, "decay": 0.8, "limit": 20}),
+            &substrate,
+        )
+        .expect("2-hop associations");
+        let list_2 = assoc_2hop["associations"].as_array().unwrap();
+        let hop2_entry = list_2
+            .iter()
+            .find(|x| x["record_id"].as_u64() == Some(leaf2))
+            .expect("2-hop leaf2 reached");
+        assert_eq!(hop2_entry["hop"], 2);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn empirical_benchmark_compaction_modes_diaml_and_hub_penalized_walk() {
+        let (mut substrate, dir) = setup("bench-suite");
+
+        // Build a 50-turn realistic engineering session:
+        // - 4 early/mid verified architectural decisions (importance 0.90..0.96)
+        // - 3 DiAML questions/proposals (2 resolved later, 1 left open)
+        // - 1 4-step experimental trial chain (h1 -> h2 -> h3 -> d_final)
+        // - 38 routine status/observation turns (importance 0.20..0.40)
+        let mut expected_anchor_ids: Vec<String> = Vec::new();
+        for i in 0..3 {
+            let rec = handle_session_record(
+                &json!({
+                    "session_id": "bench-lane",
+                    "role": "ai",
+                    "turn_type": "decision",
+                    "content": format!("Core architectural invariant #{i}: deterministic state transitions."),
+                    "importance": 0.92,
+                    "qualifier": "verified"
+                }),
+                &mut substrate,
+                &dir,
+                false,
+            )
+            .unwrap();
+            expected_anchor_ids.push(rec["turn_id"].as_str().unwrap().to_string());
+        }
+
+        let q_resolved = handle_session_record(
+            &json!({
+                "session_id": "bench-lane",
+                "role": "user",
+                "turn_type": "question",
+                "content": "Should we use RRF fusion for sparse project recall?",
+                "importance": 0.65
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .unwrap()["turn_id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let q_open = handle_session_record(
+            &json!({
+                "session_id": "bench-lane",
+                "role": "user",
+                "turn_type": "proposal",
+                "content": "Open proposal: benchmark optical context compression on long tables.",
+                "importance": 0.70
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .unwrap()["turn_id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        // 4-step experiment chain: h1 -> h2 -> h3 -> d_final (which also resolves q_resolved)
+        let mut prev_exp_id: Option<String> = None;
+        for step in 1..=3 {
+            let mut payload = json!({
+                "session_id": "bench-lane",
+                "role": "ai",
+                "turn_type": "observation",
+                "content": format!("Experiment attempt #{step}: tuning RRF k parameter."),
+                "importance": 0.88,
+                "qualifier": "hypothesis"
+            });
+            if let Some(prev) = &prev_exp_id {
+                payload["supersedes"] = json!(prev);
+            }
+            let rec = handle_session_record(&payload, &mut substrate, &dir, false).unwrap();
+            prev_exp_id = Some(rec["turn_id"].as_str().unwrap().to_string());
+        }
+
+        let d_final = handle_session_record(
+            &json!({
+                "session_id": "bench-lane",
+                "role": "ai",
+                "turn_type": "decision",
+                "content": "Converged experiment result: RRF k=60 + logarithmic hub penalty.",
+                "importance": 0.95,
+                "supersedes": prev_exp_id.unwrap(),
+                "resolves": q_resolved,
+                "qualifier": "verified"
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .unwrap();
+        let d_final_id = d_final["turn_id"].as_str().unwrap().to_string();
+        expected_anchor_ids.push(d_final_id.clone());
+
+        for idx in 0..41 {
+            handle_session_record(
+                &json!({
+                    "session_id": "bench-lane",
+                    "role": "ai",
+                    "turn_type": "message",
+                    "content": format!("Routine execution log step #{idx}: running incremental check."),
+                    "importance": 0.25
+                }),
+                &mut substrate,
+                &dir,
+                false,
+            )
+            .unwrap();
+        }
+
+        // Measure session.replay across modes (token_budget = 260)
+        let t0 = std::time::Instant::now();
+        let full = handle_session_replay(
+            &json!({"session_id": "bench-lane", "mode": "full", "n": 100}),
+            &dir,
+        )
+        .unwrap();
+        let full_us = t0.elapsed().as_micros();
+
+        let t1 = std::time::Instant::now();
+        let prog = handle_session_replay(
+            &json!({"session_id": "bench-lane", "mode": "progressive", "token_budget": 260, "n": 100}),
+            &dir,
+        )
+        .unwrap();
+        let prog_us = t1.elapsed().as_micros();
+
+        let t2 = std::time::Instant::now();
+        let sel = handle_session_replay(
+            &json!({"session_id": "bench-lane", "mode": "selective", "min_importance": 0.8, "n": 100}),
+            &dir,
+        )
+        .unwrap();
+        let sel_us = t2.elapsed().as_micros();
+
+        let t3 = std::time::Instant::now();
+        let hyb = handle_session_replay(
+            &json!({"session_id": "bench-lane", "mode": "hybrid", "min_importance": 0.8, "token_budget": 260, "n": 100}),
+            &dir,
+        )
+        .unwrap();
+        let hyb_us = t3.elapsed().as_micros();
+
+        let t4 = std::time::Instant::now();
+        let cont = handle_session_continuity(
+            &json!({"session_id": "bench-lane", "n": 5, "include_briefing_text": true}),
+            &substrate,
+            &dir,
+        )
+        .unwrap();
+        let cont_us = t4.elapsed().as_micros();
+
+        let count_anchors = |traj: &Value| -> usize {
+            let ids: HashSet<&str> = traj
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|t| t["turn_id"].as_str().unwrap())
+                .collect();
+            expected_anchor_ids
+                .iter()
+                .filter(|id| ids.contains(id.as_str()))
+                .count()
+        };
+
+        let full_anchors = count_anchors(&full["trajectory"]);
+        let prog_anchors = count_anchors(&prog["trajectory"]);
+        let sel_anchors = count_anchors(&sel["trajectory"]);
+        let hyb_anchors = count_anchors(&hyb["trajectory"]);
+
+        assert_eq!(full_anchors, 4);
+        assert_eq!(prog_anchors, 0, "pure progressive misses early anchors");
+        assert_eq!(sel_anchors, 4);
+        assert_eq!(hyb_anchors, 4, "hybrid retains 100% of verified anchors");
+        assert!(
+            hyb["returned"].as_u64().unwrap() > 4,
+            "hybrid also packs recent turns after anchors"
+        );
+        assert_eq!(cont["salient_turns"].as_array().unwrap().len(), 4);
+        assert_eq!(cont["unresolved_arcs"].as_array().unwrap().len(), 1);
+        assert_eq!(cont["unresolved_arcs"][0]["turn_id"], q_open);
+
+        // Benchmark 2-hop hub-penalized spreading activation on a 60-edge graph
+        let root_rec = handle_memory_create(
+            &json!({"content": "root query concept", "galaxy": "codex"}),
+            &mut substrate,
+            false,
+        )
+        .unwrap()["record_id"]
+            .as_u64()
+            .unwrap();
+        let noisy_hub = handle_memory_create(
+            &json!({"content": "noisy index hub", "galaxy": "codex"}),
+            &mut substrate,
+            false,
+        )
+        .unwrap()["record_id"]
+            .as_u64()
+            .unwrap();
+        let target_leaf_1 = handle_memory_create(
+            &json!({"content": "high-signal 1-hop leaf", "galaxy": "codex"}),
+            &mut substrate,
+            false,
+        )
+        .unwrap()["record_id"]
+            .as_u64()
+            .unwrap();
+        let target_leaf_2 = handle_memory_create(
+            &json!({"content": "high-signal 2-hop leaf", "galaxy": "codex"}),
+            &mut substrate,
+            false,
+        )
+        .unwrap()["record_id"]
+            .as_u64()
+            .unwrap();
+
+        substrate
+            .add_relation(RelationKind::Associates, root_rec, noisy_hub, 0.95)
+            .unwrap();
+        substrate
+            .add_relation(RelationKind::Associates, root_rec, target_leaf_1, 0.88)
+            .unwrap();
+        substrate
+            .add_relation(RelationKind::Associates, target_leaf_1, target_leaf_2, 0.92)
+            .unwrap();
+        for s in 0..40 {
+            let spoke = handle_memory_create(
+                &json!({"content": format!("spoke {s}"), "galaxy": "codex"}),
+                &mut substrate,
+                false,
+            )
+            .unwrap()["record_id"]
+                .as_u64()
+                .unwrap();
+            substrate
+                .add_relation(RelationKind::Associates, noisy_hub, spoke, 0.60)
+                .unwrap();
+        }
+
+        let t5 = std::time::Instant::now();
+        let walk = handle_memory_associations(
+            &json!({"id": root_rec, "direction": "from", "hops": 2, "decay": 0.85, "limit": 5}),
+            &substrate,
+        )
+        .unwrap();
+        let walk_us = t5.elapsed().as_micros();
+        let top_ids: Vec<u64> = walk["associations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| x["record_id"].as_u64().unwrap())
+            .collect();
+        assert_eq!(top_ids[0], target_leaf_1);
+        assert_eq!(top_ids[1], target_leaf_2);
+
+        println!(
+            "\n=== WhiteMagic Gen3 Session & Graph Refinements Benchmark ===\n\
+             full replay        : {:>4} turns | {:>4} tokens | {:>2}/4 anchors | {:>4} µs\n\
+             progressive (260t) : {:>4} turns | {:>4} tokens | {:>2}/4 anchors | {:>4} µs\n\
+             selective (>=0.8)  : {:>4} turns | {:>4} tokens | {:>2}/4 anchors | {:>4} µs\n\
+             hybrid (260t)      : {:>4} turns | {:>4} tokens | {:>2}/4 anchors | {:>4} µs\n\
+             session.continuity : {:>4} recent + {} salient + {} open arc | {:>4} µs\n\
+             2-hop hub-penalized: top-2 = [leaf1, leaf2] over 40-spoke hub | {:>4} µs",
+            full["returned"],
+            full["token_estimate"],
+            full_anchors,
+            full_us,
+            prog["returned"],
+            prog["token_estimate"],
+            prog_anchors,
+            prog_us,
+            sel["returned"],
+            sel["token_estimate"],
+            sel_anchors,
+            sel_us,
+            hyb["returned"],
+            hyb["token_estimate"],
+            hyb_anchors,
+            hyb_us,
+            cont["turns_count"],
+            cont["salient_turns"].as_array().unwrap().len(),
+            cont["unresolved_arcs"].as_array().unwrap().len(),
+            cont_us,
+            walk_us,
+        );
 
         let _ = std::fs::remove_dir_all(&dir);
     }
