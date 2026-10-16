@@ -59,6 +59,17 @@ EXPECTED_MANIFEST_TARGETS = {
     "linux-aarch64": "wm-linux-aarch64",
     "macos-aarch64": "wm-macos-aarch64",
 }
+V9_TARGETS = [
+    "wm-linux-x86_64", "wm-linux-x86_64-musl", "wm-linux-aarch64",
+    "wm-linux-aarch64-musl", "wm-macos-aarch64", "wm-macos-x86_64",
+    "wm-windows-x86_64.exe",
+]
+V9_EXPECTED_MANIFEST_TARGETS = {
+    "linux-x86_64": "wm-linux-x86_64", "linux-x86_64-musl": "wm-linux-x86_64-musl",
+    "linux-aarch64": "wm-linux-aarch64", "linux-aarch64-musl": "wm-linux-aarch64-musl",
+    "macos-aarch64": "wm-macos-aarch64", "macos-x86_64": "wm-macos-x86_64",
+    "windows-x86_64": "wm-windows-x86_64.exe",
+}
 # Windows is out of the alpha matrix until the ONNX Runtime link/DLL work
 # lands (2026-10-05, see release.yml); its asset must not be listed here or
 # every probe would report a guaranteed false LAGGING.
@@ -74,6 +85,10 @@ REQUIRED_RELEASE_ASSETS = (
     + [asset for target in COMPRESSED_TARGETS for asset in (f"{target}.gz", f"{target}.gz.sha256")]
     + ["release-manifest.json", "release-manifest.json.sig"]
 )
+CURRENT_TARGETS = tuple(TARGETS)
+CURRENT_COMPRESSED_TARGETS = tuple(COMPRESSED_TARGETS)
+CURRENT_REQUIRED_RELEASE_ASSETS = tuple(REQUIRED_RELEASE_ASSETS)
+CURRENT_EXPECTED_MANIFEST_TARGETS = dict(EXPECTED_MANIFEST_TARGETS)
 NPM_PACKAGE = "whitemagic-mcp"
 DOCKER_REPO = "lbailey94/whitemagic"
 MCP_SERVER = "io.github.lbailey94/whitemagic-mcp"
@@ -251,12 +266,16 @@ def probe_github(repo: str, version: str, pubkey_hex: str | None = None) -> dict
                             continue
                         gh_asset = assets_by_name.get(asset_name) or {}
                         gh_size = gh_asset.get("size")
-                        if gh_size is not None and t_size != gh_size:
+                        if not isinstance(gh_size, int) or gh_size < 0:
+                            integrity_errors.append(f"{t_key}: GitHub asset size missing or invalid")
+                        elif not isinstance(t_size, int) or t_size != gh_size:
                             integrity_errors.append(
                                 f"{t_key}: manifest size {t_size} != GitHub asset size {gh_size}"
                             )
                         gh_digest = str(gh_asset.get("digest") or "").strip().lower()
-                        if gh_digest.startswith("sha256:") and gh_digest != f"sha256:{t_sha}":
+                        if not gh_digest.startswith("sha256:"):
+                            integrity_errors.append(f"{t_key}: GitHub asset digest missing or unsupported")
+                        elif gh_digest != f"sha256:{t_sha}":
                             integrity_errors.append(
                                 f"{t_key}: manifest sha256 {t_sha[:12]}… != GitHub asset {gh_digest[:19]}…"
                             )
@@ -465,6 +484,13 @@ def summarize(record: dict) -> None:
 
 
 def main() -> int:
+    global TARGETS, COMPRESSED_TARGETS, REQUIRED_RELEASE_ASSETS, EXPECTED_MANIFEST_TARGETS
+    # `main()` is also called more than once in embedded checks. Restore the
+    # trusted current profile before selecting the requested tag profile.
+    TARGETS = list(CURRENT_TARGETS)
+    COMPRESSED_TARGETS = list(CURRENT_COMPRESSED_TARGETS)
+    REQUIRED_RELEASE_ASSETS = list(CURRENT_REQUIRED_RELEASE_ASSETS)
+    EXPECTED_MANIFEST_TARGETS = dict(CURRENT_EXPECTED_MANIFEST_TARGETS)
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--version", default=None)
     ap.add_argument("--repo", default="lbailey94/whitemagic")
@@ -472,9 +498,20 @@ def main() -> int:
         "--json", default=None, help="write the record to PATH ('-' = stdout)"
     )
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--profile", choices=("auto", "v9", "v10"), default="auto")
     args = ap.parse_args()
 
     version = args.version or latest_version(args.repo)
+    profile = args.profile
+    if profile == "auto":
+        profile = "v9" if version.split(".", 1)[0] == "9" else "v10"
+    if profile == "v9":
+        TARGETS = list(V9_TARGETS)
+        COMPRESSED_TARGETS = [target for target in V9_TARGETS if not target.endswith(".exe")]
+        EXPECTED_MANIFEST_TARGETS = dict(V9_EXPECTED_MANIFEST_TARGETS)
+        REQUIRED_RELEASE_ASSETS = ([a for t in TARGETS for a in (t, f"{t}.sha256")]
+            + [a for t in COMPRESSED_TARGETS for a in (f"{t}.gz", f"{t}.gz.sha256")]
+            + ["release-manifest.json", "release-manifest.json.sig"])
     record = probe_all(args.repo, version)
 
     if args.json == "-":

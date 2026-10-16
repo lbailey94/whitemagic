@@ -265,6 +265,22 @@ class ReleaseManifestFactsTest(unittest.TestCase):
                 self.assertTrue(res2["manifest_signature_valid"])
                 self.assertEqual(res2["artifact_integrity"], "verified")
 
+                # GitHub API identity fields are mandatory even when the
+                # signature and sidecar happen to agree.
+                for field, value in (("size", None), ("digest", "sha512:" + good_sha)):
+                    broken_release = json.loads(json.dumps(gh_release))
+                    for asset in broken_release["assets"]:
+                        if asset["name"] == "wm-linux-x86_64":
+                            if value is None:
+                                asset.pop(field)
+                            else:
+                                asset[field] = value
+                    with patch.object(rh, "fetch_json", return_value=(200, broken_release)):
+                        failed = rh.probe_github("lbailey94/whitemagic", "10.3.0", pubkey_hex=pub_hex)
+                    self.assertEqual(failed["status"], "lagging")
+                    self.assertEqual(failed["artifact_integrity"], "failed")
+                    self.assertIn("missing or invalid" if field == "size" else "unsupported", failed["manifest_error"])
+
 
 if __name__ == "__main__":
     unittest.main()

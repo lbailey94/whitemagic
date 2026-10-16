@@ -67,6 +67,11 @@ jobs:
         run: |
           set -eu
           V="${{ steps.version.outputs.version }}"
+          # Preserve the workflow's hardened verifier before replacing the
+          # checkout with the immutable release tree. Metadata-driven release
+          # checks use the tag tree's scripts and package manifests below.
+          cp scripts/release_health.py "$RUNNER_TEMP/release_health.py"
+          cp scripts/crates_publish_order.py "$RUNNER_TEMP/crates_publish_order.py"
           git fetch --depth=1 origin "refs/tags/v${V}"
           git checkout --detach FETCH_HEAD
           TREE_V="$(python3 -c "import tomllib;print(tomllib.load(open('Cargo.toml','rb'))['workspace']['package']['version'])")"
@@ -79,7 +84,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           WM_RELEASE_PUBKEY: ${{ vars.WM_RELEASE_PUBKEY }}
         run: |
-          python3 scripts/release_health.py --version "${{ steps.version.outputs.version }}" \
+          python3 "$RUNNER_TEMP/release_health.py" --version "${{ steps.version.outputs.version }}" \
             --json release-health.json
 
       - name: Show laggards
@@ -194,7 +199,7 @@ jobs:
         run: |
           set +e
           for i in 1 2 3 4 5 6; do
-            python3 scripts/release_health.py --version "${{ steps.version.outputs.version }}" \
+            python3 "$RUNNER_TEMP/release_health.py" --version "${{ steps.version.outputs.version }}" \
               --json release-health.json
             rc=$?
             # The MCP registry read API is eventually consistent (observed
@@ -306,6 +311,8 @@ jobs:
                  and .registries["github-release"].artifact_integrity == "verified"' release-health.json >/dev/null \
             || { echo "signed artifact integrity not verified:"; jq -c '.registries["github-release"]' release-health.json; exit 1; }
           jq -e '.install_certification.npm.status == "pass"
-                 and .install_certification.docker.status == "pass"' release-health.json >/dev/null \
+                 and .install_certification.docker.status == "pass"
+                 and .install_certification.npm.bound_manifest_sha256 == .registries["github-release"].manifest_sha256
+                 and .install_certification.docker.bound_manifest_sha256 == .registries["github-release"].manifest_sha256' release-health.json >/dev/null \
             || { echo "install certification not passing:"; jq -c '.install_certification | map_values({status, runtime_selftest, artifact_integrity})' release-health.json; exit 1; }
           echo "release v${{ steps.version.outputs.version }} is healthy and certified"
