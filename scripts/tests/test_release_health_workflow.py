@@ -163,6 +163,42 @@ print(json.dumps({'packages':[{'id':ident,'name':name,'publish':None,'dependenci
                 proc = subprocess.run(["bash", "-eu", "-c", shell], cwd=temp, text=True, capture_output=True)
                 self.assertEqual(proc.returncode == 0, expected, proc.stderr or proc.stdout)
 
+    def test_merge_and_gate_require_valid_manifest_digest(self) -> None:
+        text = WORKFLOW.read_text()
+
+        def step(name: str) -> str:
+            section = text.split(f"      - name: {name}\n", 1)[1].split("        run: |\n", 1)[1].split("\n      - ", 1)[0]
+            return "\n".join(line[10:] for line in section.splitlines() if line.startswith("          ")).replace("${{ steps.version.outputs.version }}", "10.3.0")
+
+        merge = step("Merge certifications into the record")
+        gate = step("Gate — every surface live, artifact integrity verified, and every install certified")
+        absent = object()
+        cases = (absent, None, "", "not-a-sha256", "a" * 63, "g" * 64, 123, ["a" * 64], "a" * 64)
+        for digest in cases:
+            valid = digest == "a" * 64
+            for run_merge in (False, True):
+                with self.subTest(digest=str(digest), merge=run_merge), tempfile.TemporaryDirectory() as temp:
+                    gh = {"manifest_signature_valid": True, "artifact_integrity": "verified"}
+                    if digest is not absent:
+                        gh["manifest_sha256"] = digest
+                    record = {"status": "healthy", "registries": {"github-release": gh}, "install_certification": {}}
+                    for channel in ("npm", "docker"):
+                        cert = {"status": "pass"}
+                        if digest is not absent:
+                            cert["bound_manifest_sha256"] = digest
+                        record["install_certification"][channel] = cert
+                        Path(temp, f"{channel}-selftest.json").write_text('{"status":"ok","invariants":"pass"}')
+                    path = Path(temp, "release-health.json")
+                    path.write_text(json.dumps(record))
+                    if run_merge:
+                        merged = subprocess.run(["bash", "-eu", "-c", merge], cwd=temp, text=True, capture_output=True)
+                        self.assertEqual(merged.returncode, 0, merged.stderr or merged.stdout)
+                        result = json.loads(path.read_text())
+                        for cert in result["install_certification"].values():
+                            self.assertEqual(cert["status"], "pass" if valid else "fail")
+                    proc = subprocess.run(["bash", "-eu", "-c", gate], cwd=temp, text=True, capture_output=True)
+                    self.assertEqual(proc.returncode == 0, valid, proc.stderr or proc.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

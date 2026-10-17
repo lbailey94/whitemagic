@@ -230,14 +230,16 @@ jobs:
       - name: Merge certifications into the record
         run: |
           python3 - <<'PY'
-          import json, pathlib
+          import json, pathlib, re
           rec = json.loads(pathlib.Path("release-health.json").read_text())
           gh = rec.get("registries", {}).get("github-release", {})
+          manifest_sha = gh.get("manifest_sha256")
           integrity_ok = (
               gh.get("manifest_signature_valid") is True
               and gh.get("artifact_integrity") == "verified"
+              and isinstance(manifest_sha, str)
+              and re.fullmatch(r"[0-9a-fA-F]{64}", manifest_sha) is not None
           )
-          manifest_sha = gh.get("manifest_sha256")
           certs = {}
           for name in ("npm", "docker"):
               p = pathlib.Path(f"{name}-selftest.json")
@@ -308,7 +310,8 @@ jobs:
           jq -e '.status == "healthy"' release-health.json >/dev/null \
             || { echo "registries still lagging:"; jq -c '.registries | to_entries[] | select(.value.status != "live") | {key, status: .value.status, manifest_error: .value.manifest_error}' release-health.json; exit 1; }
           jq -e '.registries["github-release"].manifest_signature_valid == true
-                 and .registries["github-release"].artifact_integrity == "verified"' release-health.json >/dev/null \
+                 and .registries["github-release"].artifact_integrity == "verified"
+                 and (.registries["github-release"].manifest_sha256 | if type == "string" then test("^[0-9a-fA-F]{64}$") else false end)' release-health.json >/dev/null \
             || { echo "signed artifact integrity not verified:"; jq -c '.registries["github-release"]' release-health.json; exit 1; }
           jq -e '.install_certification.npm.status == "pass"
                  and .install_certification.docker.status == "pass"
