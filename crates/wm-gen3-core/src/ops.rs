@@ -732,7 +732,7 @@ impl Substrate {
         #[cfg(not(test))]
         let intake_authority = None;
         let usage_issuer = UsageSnapshotIssuer::new().map_err(|e| e.to_string())?;
-        Ok(Self {
+        let mut substrate = Self {
             store,
             evidence,
             journal,
@@ -759,7 +759,9 @@ impl Substrate {
             id_to_uuid,
             revision_counter: None,
             dedupe_full_scan,
-        })
+        };
+        substrate.recover_revision_intents()?;
+        Ok(substrate)
     }
 
     /// Returns the monotonic record ID associated with a legacy Gen2 UUID, if indexed.
@@ -2660,6 +2662,7 @@ impl Substrate {
     fn append_store_sidecar(&self, file: &str, value: &serde_json::Value) -> Result<(), String> {
         use std::io::Write as _;
         let path = self.store.path().join(file);
+        let sidecar_existed = path.exists();
         let mut handle = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
@@ -2669,8 +2672,16 @@ impl Substrate {
         line.push('\n');
         handle
             .write_all(line.as_bytes())
-            .and_then(|_| handle.sync_data())
+            .and_then(|_| handle.sync_all())
             .map_err(|e| format!("{file} append: {e}"))
+            .and_then(|_| {
+                if !sidecar_existed {
+                    std::fs::File::open(self.store.path())
+                        .and_then(|directory| directory.sync_all())
+                        .map_err(|error| format!("{file} parent directory sync failed: {error}"))?;
+                }
+                Ok(())
+            })
     }
 
     /// Parse one sidecar line, salvaging the first JSON object when a crash
@@ -2701,6 +2712,229 @@ impl Substrate {
             .lines()
             .filter_map(Self::parse_sidecar_line)
             .collect()
+    }
+
+    fn revision_intent_events(&self) -> Result<Vec<serde_json::Value>, String> {
+        let path = self.store.path().join("revision_intents.jsonl");
+        let content = match std::fs::read_to_string(&path) {
+            Ok(text) => text,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(error) => {
+                return Err(format!(
+                    "revision intent read failed ({}): {error}",
+                    path.display()
+                ));
+            }
+        };
+        content
+            .lines()
+            .enumerate()
+            .map(|(index, line)| {
+                serde_json::from_str::<serde_json::Value>(line).map_err(|error| {
+                    format!("revision intent log corrupt at line {}: {error}", index + 1)
+                })
+            })
+            .collect()
+    }
+
+    fn append_revision_intent_resolution(
+        &self,
+        operation: &str,
+        outcome: &str,
+        record_id: Option<u64>,
+    ) -> Result<(), String> {
+        self.append_store_sidecar(
+            "revision_intents.jsonl",
+            &serde_json::json!({
+                "kind":"resolution", "operation":operation, "outcome":outcome, "record_id":record_id
+            }),
+        )
+    }
+
+    /// Durably mark an update candidate before ingest so process death between
+    /// ingest and lineage commit can be recovered without guessing by content.
+    pub fn begin_revision_intent(
+        &self,
+        prior_id: u64,
+        operation: &str,
+        source: &str,
+        content: &str,
+    ) -> Result<(), String> {
+        self.require_writable("memory.update intent")?;
+        self.append_store_sidecar(
+            "revision_intents.jsonl",
+            &serde_json::json!({
+                "kind":"intent", "operation":operation, "prior_id":prior_id,
+                "candidate_source":source, "content_sha256":sha256_hex(content.as_bytes())
+            }),
+        )
+    }
+
+    pub fn finish_revision_intent(
+        &self,
+        operation: &str,
+        outcome: &str,
+        record_id: Option<u64>,
+    ) -> Result<(), String> {
+        self.append_revision_intent_resolution(operation, outcome, record_id)
+    }
+
+    fn recover_revision_intents(&mut self) -> Result<(), String> {
+        let events = self.revision_intent_events()?;
+        let mut intents: HashMap<String, serde_json::Value> = HashMap::new();
+        let mut resolved = HashSet::new();
+        for event in events {
+            let operation = event
+                .get("operation")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| "revision intent event missing operation".to_string())?
+                .to_string();
+            match event.get("kind").and_then(serde_json::Value::as_str) {
+                Some("intent") => {
+                    if intents.insert(operation.clone(), event).is_some() {
+                        return Err(format!("duplicate revision intent operation {operation}"));
+                    }
+                }
+                Some("resolution") => {
+                    resolved.insert(operation);
+                }
+                _ => {
+                    return Err(format!(
+                        "revision intent operation {operation} has unknown event kind"
+                    ));
+                }
+            }
+        }
+        for (operation, intent) in intents {
+            if resolved.contains(&operation) {
+                continue;
+            }
+            let prior_id = intent
+                .get("prior_id")
+                .and_then(serde_json::Value::as_u64)
+                .ok_or_else(|| format!("revision intent {operation} missing prior_id"))?;
+            let source = intent
+                .get("candidate_source")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| format!("revision intent {operation} missing candidate_source"))?;
+            let content_hash = intent
+                .get("content_sha256")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| format!("revision intent {operation} missing content_sha256"))?;
+            let matches: Vec<_> = self
+                .store
+                .iter_records()
+                .map_err(|e| e.to_string())?
+                .into_iter()
+                .filter(|record| {
+                    record.source() == source
+                        && sha256_hex(record.content().as_bytes()) == content_hash
+                })
+                .collect();
+            if matches.len() > 1 {
+                return Err(format!(
+                    "revision intent {operation} matches multiple candidate records"
+                ));
+            }
+            let candidate = matches.first().map(|record| record.id());
+            let removal_started =
+                self.read_store_sidecar("compensations.jsonl")
+                    .iter()
+                    .any(|event| {
+                        event["kind"] == "unrevised_candidate_remove_started"
+                            && event["operation"] == operation
+                    });
+            let revision_path = self.store.path().join("revisions.jsonl");
+            let revision_content = match std::fs::read_to_string(&revision_path) {
+                Ok(text) => text,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+                Err(error) => {
+                    return Err(format!(
+                        "revision intent {operation} cannot inspect authoritative revision log: {error}"
+                    ));
+                }
+            };
+            let authoritative: Vec<RevisionEntry> = revision_content.lines().enumerate().map(|(index, line)| {
+                serde_json::from_str(line).map_err(|error| format!("revision intent {operation} cannot safely recover: revisions.jsonl line {} is invalid: {error}", index + 1))
+            }).collect::<Result<_, _>>()?;
+            let committed_entry = authoritative
+                .iter()
+                .find(|entry| entry.record_id == prior_id);
+            if let Some(id) = candidate {
+                let committed = committed_entry.is_some_and(|entry| entry.new_record_id == id);
+                if committed {
+                    if !self.store.is_readonly() {
+                        self.append_revision_intent_resolution(&operation, "committed", Some(id))?;
+                    } else {
+                        return Err(format!(
+                            "unresolved committed revision intent {operation}; writable recovery required"
+                        ));
+                    }
+                } else if self.store.is_readonly() {
+                    return Err(format!(
+                        "unresolved revision intent {operation} has candidate {id}; writable recovery required"
+                    ));
+                } else {
+                    self.append_store_sidecar(
+                        "compensations.jsonl",
+                        &serde_json::json!({
+                            "kind":"unrevised_candidate_remove_started", "operation":operation,
+                            "record_id":id, "prior_id":prior_id, "content_sha256":content_hash
+                        }),
+                    )?;
+                    self.store.remove_record_and_indexes(id).map_err(|error| {
+                        format!("revision intent {operation} candidate cleanup failed: {error}")
+                    })?;
+                    self.append_store_sidecar(
+                        "compensations.jsonl",
+                        &serde_json::json!({
+                            "kind":"unrevised_candidate_removed", "operation":operation,
+                            "record_id":id, "prior_id":prior_id, "content_sha256":content_hash
+                        }),
+                    )?;
+                    self.append_revision_intent_resolution(
+                        &operation,
+                        "recovered_removed",
+                        Some(id),
+                    )?;
+                }
+            } else if removal_started {
+                if !self.store.is_readonly() {
+                    self.append_store_sidecar(
+                        "compensations.jsonl",
+                        &serde_json::json!({
+                            "kind":"unrevised_candidate_removed", "operation":operation,
+                            "record_id":null, "prior_id":prior_id, "content_sha256":content_hash,
+                            "recovered_after_restart":true
+                        }),
+                    )?;
+                    self.append_revision_intent_resolution(&operation, "recovered_removed", None)?;
+                } else {
+                    return Err(format!(
+                        "unresolved compensation {operation}; writable recovery required"
+                    ));
+                }
+            } else if let Some(entry) = committed_entry {
+                if !self.store.is_readonly() {
+                    self.append_revision_intent_resolution(
+                        &operation,
+                        "committed_existing_target",
+                        Some(entry.new_record_id),
+                    )?;
+                } else {
+                    return Err(format!(
+                        "unresolved committed revision intent {operation}; writable recovery required"
+                    ));
+                }
+            } else if !self.store.is_readonly() {
+                self.append_revision_intent_resolution(&operation, "no_candidate", None)?;
+            } else {
+                return Err(format!(
+                    "unresolved revision intent {operation} requires writable recovery"
+                ));
+            }
+        }
+        Ok(())
     }
 
     /// Next revision sequence, cached after the first scan so repeated updates
@@ -2820,26 +3054,100 @@ impl Substrate {
         source: &str,
         kind: ImportKind,
     ) -> Result<Option<u64>, String> {
-        if let Some(id) = self.exact_duplicate_id(content, source, kind)? {
-            return Ok(Some(id));
-        }
-        let target_domain = kind_tag(kind);
         let superseded: HashSet<u64> = self
             .revision_entries()
             .into_iter()
             .map(|e| e.record_id)
             .collect();
-        let mut fallback = None;
+        if let Some(id) = self.exact_duplicate_id(content, source, kind)? {
+            return if superseded.contains(&id) {
+                Ok(None)
+            } else {
+                Ok(Some(id))
+            };
+        }
+        let target_domain = kind_tag(kind);
         for record in self.store.iter_records().map_err(|e| e.to_string())? {
             if record.content() == content && domain_tag(record.domain()) == target_domain {
                 let rid = record.id();
                 if !superseded.contains(&rid) {
                     return Ok(Some(rid));
                 }
-                fallback = Some(rid);
             }
         }
-        Ok(fallback)
+        // Retired content is not a valid consolidation target. Reinstating it
+        // must create a new active record with a new identity.
+        Ok(None)
+    }
+
+    /// Validate the logical revision transition before callers create a new
+    /// record. This prevents a rejected fork from leaving active orphan content.
+    pub fn validate_revision_transition(&self, prior_id: u64, new_id: u64) -> Result<(), String> {
+        if prior_id == new_id {
+            return Err("revision prior and new record ids must differ".into());
+        }
+        for existing in self.revision_entries() {
+            if existing.record_id == prior_id && existing.new_record_id != new_id {
+                return Err(format!(
+                    "record {prior_id} is already superseded by record {}",
+                    existing.new_record_id
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn validate_revision_prior(&self, prior_id: u64) -> Result<(), String> {
+        if let Some(existing) = self
+            .revision_entries()
+            .into_iter()
+            .find(|entry| entry.record_id == prior_id)
+        {
+            return Err(format!(
+                "record {prior_id} is already superseded by record {}",
+                existing.new_record_id
+            ));
+        }
+        Ok(())
+    }
+
+    /// Remove an inserted candidate whose required revision commit failed.
+    /// This is a compensating LMDB transaction; the monotonic ID and immutable
+    /// intake receipt remain as audit history, while the candidate is no longer
+    /// addressable or recallable.
+    pub fn rollback_unrevised_candidate(
+        &mut self,
+        record_id: u64,
+        operation: &str,
+    ) -> Result<(), String> {
+        let record = self
+            .store
+            .get_record(record_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("candidate record {record_id} disappeared before rollback"))?;
+        self.append_store_sidecar("compensations.jsonl", &serde_json::json!({
+            "kind":"unrevised_candidate_remove_started", "operation":operation, "record_id":record_id,
+            "content_sha256":sha256_hex(record.content().as_bytes())
+        }))?;
+        self.store
+            .remove_record_and_indexes(record_id)
+            .map_err(|e| format!("candidate rollback failed: {e}"))?;
+        let key = identity_key(
+            record.content(),
+            record.source(),
+            kind_tag(ImportKind::Reported),
+        );
+        self.identity.remove(&key);
+        self.append_store_sidecar(
+            "compensations.jsonl",
+            &serde_json::json!({
+                "kind":"unrevised_candidate_removed", "operation":operation, "record_id":record_id,
+                "content_sha256":sha256_hex(record.content().as_bytes()),
+                "source":record.source(),
+            }),
+        )
+        .map_err(|e| format!("candidate was removed, but compensation audit append failed: {e}"))?;
+        Ok(())
     }
 
     pub fn record_revision_with_tags(
@@ -2850,9 +3158,7 @@ impl Substrate {
         tags: &[String],
     ) -> Result<RevisionEntry, String> {
         self.require_writable("memory.update")?;
-        if prior_id == new_id {
-            return Err("revision prior and new record ids must differ".to_string());
-        }
+        self.validate_revision_transition(prior_id, new_id)?;
         let existing_entries = self.revision_entries();
         let mut out_edges: HashMap<u64, u64> = HashMap::new();
         for existing in &existing_entries {
@@ -5117,6 +5423,169 @@ mod cache_boundary_tests {
             assert_eq!(ro.revision_chain(id).len(), 1);
             assert_eq!(ro.verify_revision_chain(id).unwrap()["valid"], true);
         }
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn revision_preflight_rejects_forks_and_compensating_delete_survives_restart() {
+        let path = temp_store("revision-preflight-rollback");
+        let (prior, next, orphan) = {
+            let mut s = Substrate::open(&path, None, default_view()).expect("open");
+            s.set_noise_enabled(false);
+            let prior = s
+                .remember_batch(&[item("original active memory")])
+                .remove(0)
+                .unwrap();
+            let next = s
+                .remember_batch(&[item("legitimate revised memory")])
+                .remove(0)
+                .unwrap();
+            s.record_revision(prior, next, "legitimate").unwrap();
+            assert!(s.validate_revision_prior(prior).is_err());
+            let orphan = s
+                .remember_batch(&[item("candidate to compensate")])
+                .remove(0)
+                .unwrap();
+            s.rollback_unrevised_candidate(orphan, "test-rollback-operation")
+                .expect("rollback candidate");
+            assert!(
+                !s.store()
+                    .iter_records()
+                    .unwrap()
+                    .iter()
+                    .any(|r| r.id() == orphan)
+            );
+            (prior, next, orphan)
+        };
+        let reopened = Substrate::open_readonly(&path, None, default_view()).expect("restart");
+        assert!(
+            !reopened
+                .store()
+                .iter_records()
+                .unwrap()
+                .iter()
+                .any(|r| r.id() == orphan)
+        );
+        assert_eq!(
+            reopened.revision_chain(prior).last().unwrap().new_record_id,
+            next
+        );
+        assert!(reopened.verify_revision_chain(prior).unwrap()["valid"] == true);
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn retired_content_is_not_a_consolidation_target() {
+        let path = temp_store("retired-consolidation");
+        let mut s = Substrate::open(&path, None, default_view()).expect("open");
+        s.set_noise_enabled(false);
+        let old = s
+            .remember_batch(&[item("historical wording")])
+            .remove(0)
+            .unwrap();
+        let head = s
+            .remember_batch(&[item("current wording")])
+            .remove(0)
+            .unwrap();
+        s.record_revision(old, head, "updated").unwrap();
+        assert_eq!(
+            s.find_existing_record_for_consolidation(
+                "historical wording",
+                "agent:update",
+                ImportKind::Reported
+            )
+            .unwrap(),
+            None
+        );
+        assert_eq!(
+            s.find_existing_record_for_consolidation(
+                "current wording",
+                "agent:update",
+                ImportKind::Reported
+            )
+            .unwrap(),
+            Some(head)
+        );
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn unresolved_revision_intent_fails_readonly_and_recovers_crash_orphan() {
+        let path = temp_store("revision-intent-crash-window");
+        let operation = "test-operation-uuid";
+        let source = format!("agent:update:{operation}");
+        {
+            let mut s = Substrate::open(&path, None, default_view()).expect("open");
+            s.set_noise_enabled(false);
+            let prior = s
+                .remember_batch(&[item("crash-window prior")])
+                .remove(0)
+                .unwrap();
+            s.begin_revision_intent(prior, operation, &source, "crash-window candidate")
+                .unwrap();
+            s.remember_batch(&[RememberItem {
+                content: "crash-window candidate".into(),
+                source,
+                kind: ImportKind::Reported,
+            }])
+            .remove(0)
+            .unwrap();
+            // Simulate process death immediately after durable ingest and before
+            // record_revision or intent resolution.
+        }
+        assert!(Substrate::open_readonly(&path, None, default_view()).is_err());
+        {
+            let recovered =
+                Substrate::open(&path, None, default_view()).expect("writable recovery");
+            assert!(
+                !recovered
+                    .store()
+                    .iter_records()
+                    .unwrap()
+                    .iter()
+                    .any(|record| record.content() == "crash-window candidate")
+            );
+            assert!(
+                recovered
+                    .revision_intent_events()
+                    .unwrap()
+                    .iter()
+                    .any(|event| event["kind"] == "resolution" && event["operation"] == operation)
+            );
+        }
+        assert!(Substrate::open_readonly(&path, None, default_view()).is_ok());
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn unresolved_intent_with_committed_revision_retains_target_on_reopen() {
+        let path = temp_store("revision-intent-committed");
+        let operation = "committed-operation-uuid";
+        let source = format!("agent:update:{operation}");
+        let target = {
+            let mut s = Substrate::open(&path, None, default_view()).unwrap();
+            s.set_noise_enabled(false);
+            let prior = s
+                .remember_batch(&[item("intent committed prior")])
+                .remove(0)
+                .unwrap();
+            s.begin_revision_intent(prior, operation, &source, "intent committed target")
+                .unwrap();
+            let target = s
+                .remember_batch(&[RememberItem {
+                    content: "intent committed target".into(),
+                    source,
+                    kind: ImportKind::Reported,
+                }])
+                .remove(0)
+                .unwrap();
+            s.record_revision(prior, target, "committed before process death")
+                .unwrap();
+            target
+        };
+        let recovered = Substrate::open(&path, None, default_view()).unwrap();
+        assert!(recovered.store().get_record(target).unwrap().is_some());
+        assert!(recovered.is_superseded(0));
         let _ = std::fs::remove_dir_all(&path);
     }
 

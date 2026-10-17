@@ -791,7 +791,7 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
                     "session_id": { "type": "string", "description": "Optional session identifier filter; if omitted, returns the latest checkpoint across all sessions" },
                     "current_session_id": { "type": "string", "description": "Optional active session identifier to exclude when selecting a prior session" },
                     "track": { "type": "string", "description": "Optional track slug to surface prior crystallized codex memories and select the latest prior session on this track" },
-                    "token_budget": { "type": "integer", "description": "Optional token budget cap across returned continuity items and briefing" }
+                    "token_budget": { "type": "integer", "description": "Optional cap for compact agent_context.text: UTF-8 byte cap is token_budget × 4; estimated_tokens is a byte-based heuristic, not tokenizer-guaranteed. Zero produces empty context." }
                 }
             }
         },
@@ -1056,7 +1056,7 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
                     "until": { "type": "string", "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD" },
                     "max_content_bytes": { "type": "integer", "description": "Per-turn content cap in bytes (default 8192)" },
                     "max_response_bytes": { "type": "integer", "description": "Turns budget in bytes (default 49152)" },
-                    "token_budget": { "type": "integer", "description": "Optional token budget cap across returned continuity items and briefing" },
+                    "token_budget": { "type": "integer", "description": "Optional cap for compact agent_context.text: UTF-8 byte cap is token_budget × 4; estimated_tokens is a byte-based heuristic, not tokenizer-guaranteed. Zero produces empty context." },
                     "include_briefing_text": { "type": "boolean", "description": "Include the ready-to-inject briefing.text block" }
                 }
             }
@@ -1963,6 +1963,16 @@ fn handle_memory_read(args: &Value, substrate: &Substrate) -> Result<Value, Stri
         .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &record_id.to_be_bytes()));
 
     let galaxy = crate::starter_galaxy::extract_galaxy_from_source(record.source());
+    let revision_chain = substrate.revision_chain(record_id);
+    let superseded_by = substrate
+        .revision_entries()
+        .into_iter()
+        .find(|entry| entry.record_id == record_id)
+        .map(|entry| entry.new_record_id);
+    let authoritative_head_id = revision_chain
+        .last()
+        .map(|entry| entry.new_record_id)
+        .unwrap_or(record_id);
 
     Ok(json!({
         "status": "success",
@@ -1977,7 +1987,9 @@ fn handle_memory_read(args: &Value, substrate: &Substrate) -> Result<Value, Stri
             "status": format!("{:?}", record.status()),
             "created_at": record.created_at(),
             "confidence": record.confidence(),
-            "galaxy": galaxy
+            "galaxy": galaxy,
+            "superseded_by": superseded_by,
+            "authoritative_head_id": authoritative_head_id
         }
     }))
 }
@@ -2267,6 +2279,9 @@ fn handle_memory_update(
         .and_then(Value::as_str)
         .unwrap_or("memory.update");
 
+    // Refuse known-invalid updates before any candidate record can be ingested.
+    substrate.validate_revision_prior(old_id)?;
+
     // Legacy (pre-honesty) arguments are accepted: tags/importance are applied
     // where the store can carry them; title/topic/galaxy have no durable slot.
     let legacy_tags: Vec<String> = args
@@ -2297,6 +2312,7 @@ fn handle_memory_update(
         );
     }
 
+    let mut revision_intent: Option<String> = None;
     let (new_id, consolidated_to_existing) = if let Some(target_val) =
         args.get("superseded_by_id").filter(|v| !v.is_null())
     {
@@ -2305,6 +2321,9 @@ fn handle_memory_update(
         if existing_id == old_id {
             return Err("memory.update cannot supersede a record with itself".to_string());
         }
+        substrate.validate_revision_prior(existing_id).map_err(|_| {
+            format!("memory.update cannot target retired record {existing_id}; target its active revision explicitly")
+        })?;
         (existing_id, true)
     } else {
         let content = args
@@ -2322,15 +2341,26 @@ fn handle_memory_update(
             .ok_or_else(|| format!("Record {old_id} does not exist in store"))?
             .source()
             .to_string();
+        let operation = Uuid::new_v4().to_string();
+        revision_intent = Some(operation.clone());
         let source = if prior_source.starts_with("corpus:") {
-            format!("{prior_source}:revision")
+            format!("{prior_source}:revision:{operation}")
         } else {
-            "agent:update".to_string()
+            format!("agent:update:{operation}")
         };
 
-        if let Some(existing_id) =
-            substrate.find_existing_record_for_consolidation(content, &source, ImportKind::Reported)?
-        {
+        // Logical transition validation occurs before remember_batch, avoiding
+        // durable active content for a refusal (for example, an existing fork).
+        substrate.validate_revision_prior(old_id)?;
+        if let Some(operation) = revision_intent.as_deref() {
+            substrate.begin_revision_intent(old_id, operation, &source, content)?;
+        }
+
+        if let Some(existing_id) = substrate.find_existing_record_for_consolidation(
+            content,
+            &source,
+            ImportKind::Reported,
+        )? {
             if existing_id == old_id {
                 return Err(
                     "memory.update: new content is identical to the target record".to_string(),
@@ -2354,7 +2384,49 @@ fn handle_memory_update(
         }
     };
 
-    let revision = substrate.record_revision_with_tags(old_id, new_id, reason, &legacy_tags)?;
+    let revision = match substrate.record_revision_with_tags(old_id, new_id, reason, &legacy_tags) {
+        Ok(revision) => revision,
+        Err(error) => {
+            let committed = substrate
+                .revision_entries()
+                .iter()
+                .any(|entry| entry.record_id == old_id && entry.new_record_id == new_id);
+            if committed {
+                if let Some(operation) = revision_intent.as_deref() {
+                    substrate.finish_revision_intent(
+                        operation,
+                        "committed_relation_repair_required",
+                        Some(new_id),
+                    )?;
+                }
+                return Ok(
+                    json!({"status":"committed_repair_required", "operation_committed":true,
+                    "superseded_record_id":old_id, "record_id":new_id,
+                    "message":format!("revision lineage committed; derived relation update requires repair: {error}")}),
+                );
+            }
+            if !consolidated_to_existing {
+                substrate.rollback_unrevised_candidate(new_id, revision_intent.as_deref().unwrap_or("unknown-operation")).map_err(|rollback| {
+                    format!("update revision failed ({error}); candidate rollback failed ({rollback}); outcome requires operator recovery")
+                })?;
+                if let Some(operation) = revision_intent.as_deref() {
+                    substrate.finish_revision_intent(operation, "rolled_back", Some(new_id))?;
+                }
+            }
+            return Err(format!(
+                "Update failed without changing revision lineage: {error}"
+            ));
+        }
+    };
+    if let Some(operation) = revision_intent.as_deref() {
+        if let Err(error) = substrate.finish_revision_intent(operation, "committed", Some(new_id)) {
+            return Ok(
+                json!({"status":"committed_repair_required", "operation_committed":true,
+                "record_id":new_id, "superseded_record_id":old_id,
+                "message":format!("revision committed; intent resolution requires recovery: {error}")}),
+            );
+        }
+    }
     if legacy_importance.is_some() {
         append_record_meta(
             substrate.store().path(),
@@ -3592,8 +3664,7 @@ fn resolve_continuity_session_lane(
                     .iter()
                     .rev()
                     .find(|t| {
-                        t.session_id == cur
-                            && t.track.as_deref().is_some_and(|trk| !trk.is_empty())
+                        t.session_id == cur && t.track.as_deref().is_some_and(|trk| !trk.is_empty())
                     })
                     .and_then(|t| t.track.clone())
             })
@@ -3604,8 +3675,7 @@ fn resolve_continuity_session_lane(
                     .iter()
                     .rev()
                     .find(|t| {
-                        t.session_id == req
-                            && t.track.as_deref().is_some_and(|trk| !trk.is_empty())
+                        t.session_id == req && t.track.as_deref().is_some_and(|trk| !trk.is_empty())
                     })
                     .and_then(|t| t.track.clone())
             })
@@ -3656,6 +3726,21 @@ fn resolve_continuity_session_lane(
         {
             return Some(prior_sid);
         }
+        // A scoped track with no prior session stays scoped to the requested
+        // session (or to an empty lane); never import the globally latest lane.
+        if let Some(current) = current_session {
+            return Some(current.to_string());
+        }
+        if explicit_session.is_some() {
+            return explicit_session.map(str::to_string);
+        }
+        return None;
+    }
+
+    // An explicitly named current session is a scope boundary even when it has
+    // no turns yet and therefore no track can be inferred.
+    if let Some(current) = current_session {
+        return Some(current.to_string());
     }
 
     all_turns
@@ -3861,24 +3946,32 @@ fn handle_session_continuity(
         active_track.as_deref(),
         checkpoint.as_ref().map(|cp| cp.record_id),
     );
-    let briefing = include_briefing.then(|| {
-        let mut text = compose_briefing(
+    let briefing_text = include_briefing.then(|| {
+        compose_briefing(
             &session_label,
             checkpoint.as_ref(),
             &recent,
             &salient_turns,
             &unresolved_arcs,
             &related_crystals,
-        );
-        if let Some(budget) = token_budget {
-            let max_briefing_bytes = (budget as usize).saturating_mul(4);
-            if max_briefing_bytes > 0 && text.len() > max_briefing_bytes {
-                text = truncate_utf8(&text, max_briefing_bytes);
-            }
-        }
-        json!({
-            "text": text,
-        })
+        )
+    });
+
+    let agent_context = token_budget.map(|budget| {
+        let byte_cap = usize::try_from(budget)
+            .unwrap_or(usize::MAX)
+            .saturating_mul(4);
+        compact_agent_context(
+            byte_cap,
+            &recent,
+            &salient_turns,
+            &unresolved_arcs,
+            checkpoint.as_ref(),
+            &next_queue,
+            &open_flags,
+            &related_crystals,
+            briefing_text.as_deref(),
+        )
     });
 
     let mut response = json!({
@@ -3897,11 +3990,105 @@ fn handle_session_continuity(
         "open_flags": open_flags,
         "checkpoint": checkpoint,
     });
-    if let Some(briefing) = briefing {
-        response["briefing"] = briefing;
+    if let Some(text) = briefing_text {
+        response["briefing"] =
+            json!({"text":text, "scope":"transport metadata outside agent_context byte cap"});
+    }
+    if let Some(context) = agent_context {
+        response["agent_context"] = context;
+        response["context_budget_disclosure"] = json!(
+            "agent_context.text is the compact agent-consumed projection; other response fields are diagnostic/transport metadata outside its cap. estimated_tokens is ceil(UTF-8 bytes/4), a heuristic rather than a tokenizer guarantee."
+        );
     }
 
     Ok(response)
+}
+
+fn compact_agent_context(
+    byte_cap: usize,
+    recent: &[SessionTurn],
+    salient: &[SessionTurn],
+    arcs: &[SessionTurn],
+    checkpoint: Option<&SessionContinuityView>,
+    queue: &[String],
+    flags: &[String],
+    crystals: &[Value],
+    briefing: Option<&str>,
+) -> Value {
+    let mut selected: Vec<(u8, &SessionTurn)> = Vec::new();
+    let mut seen = HashSet::new();
+    for turn in arcs {
+        if seen.insert(turn.turn_id.clone()) {
+            selected.push((0, turn));
+        }
+    }
+    for turn in salient {
+        if seen.insert(turn.turn_id.clone()) {
+            selected.push((if turn.turn_type == "decision" { 1 } else { 2 }, turn));
+        }
+    }
+    for turn in recent {
+        if seen.insert(turn.turn_id.clone()) {
+            selected.push((if turn.turn_type == "decision" { 1 } else { 3 }, turn));
+        }
+    }
+    selected.sort_by_key(|(priority, turn)| (*priority, turn.timestamp));
+    let mut turns: Vec<Value> = selected.iter().map(|(priority, turn)| json!({
+        "kind": if *priority == 0 { "arc" } else if turn.turn_type == "decision" { "decision" } else if *priority == 2 { "salient" } else { "recent" },
+        "text": turn.content
+    })).collect();
+    let total_selected_turns = turns.len();
+    let mut cp = checkpoint.map(|c| {
+        json!({"status": c.checkpoint_type, "created_at": c.timestamp_iso,
+        "summary": c.summary, "record_id": c.record_id, "track": c.track})
+    });
+    let mut q: Vec<Value> = queue.iter().cloned().map(Value::String).collect();
+    let mut f: Vec<Value> = flags.iter().cloned().map(Value::String).collect();
+    let mut c: Vec<Value> = crystals.iter().map(|item| json!({"id": item["record_id"], "title": item["title"], "preview": item["preview"]})).collect();
+    let briefing_duplicates_projection = briefing.is_some()
+        && (!turns.is_empty() || cp.is_some() || !q.is_empty() || !f.is_empty() || !c.is_empty());
+    let mut brief = if briefing_duplicates_projection {
+        None
+    } else {
+        briefing.map(str::to_string)
+    };
+    let mut omitted_turns = 0usize;
+    let mut omitted_other = usize::from(briefing_duplicates_projection);
+    loop {
+        let value = json!({"turns": turns, "checkpoint": cp, "queue": q, "flags": f, "crystals": c, "briefing": brief});
+        let text = serde_json::to_string(&value).unwrap_or_else(|_| "{}".into());
+        if byte_cap == 0 {
+            return json!({"text":"", "byte_cap":0, "bytes_used":0, "estimated_tokens":0, "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":total_selected_turns, "omitted_other":queue.len()+flags.len()+crystals.len()+usize::from(checkpoint.is_some())+usize::from(briefing.is_some())});
+        }
+        if text.len() <= byte_cap {
+            return json!({"text":text, "byte_cap":byte_cap, "bytes_used":text.len(), "estimated_tokens":text.len().div_ceil(4), "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":omitted_turns, "omitted_other":omitted_other, "briefing_omitted_as_duplicate":briefing_duplicates_projection});
+        }
+        if !q.is_empty() {
+            q.pop();
+            omitted_other += 1;
+        } else if !f.is_empty() {
+            f.pop();
+            omitted_other += 1;
+        } else if !c.is_empty() {
+            c.pop();
+            omitted_other += 1;
+        } else if cp.is_some() {
+            cp = None;
+            omitted_other += 1;
+        } else if let Some(text) = brief.as_mut() {
+            if text.is_empty() {
+                brief = None;
+            } else {
+                *text = truncate_utf8(text, text.len() / 2);
+            }
+            omitted_other += 1;
+        } else if !turns.is_empty() {
+            turns.pop();
+            omitted_turns += 1;
+        } else {
+            return json!({"text":"", "byte_cap":byte_cap, "bytes_used":0, "estimated_tokens":0, "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":total_selected_turns, "omitted_other":omitted_other});
+        }
+    }
 }
 
 fn handle_session_checkpoint(
@@ -4293,20 +4480,18 @@ fn handle_session_replay(args: &Value, store_path: &Path) -> Result<Value, Strin
         });
 
     let all_turns = read_session_turns(store_path);
-    let effective_session = if explicit_session.is_none()
-        && current_session.is_none()
-        && explicit_track.is_none()
-    {
-        None
-    } else {
-        resolve_continuity_session_lane(
-            explicit_session,
-            current_session,
-            explicit_track,
-            &all_turns,
-            None,
-        )
-    };
+    let effective_session =
+        if explicit_session.is_none() && current_session.is_none() && explicit_track.is_none() {
+            None
+        } else {
+            resolve_continuity_session_lane(
+                explicit_session,
+                current_session,
+                explicit_track,
+                &all_turns,
+                None,
+            )
+        };
 
     let mut turns: Vec<SessionTurn> = all_turns
         .into_iter()
@@ -7591,6 +7776,120 @@ mod profile_and_allowlist_tests {
 }
 
 #[cfg(test)]
+mod compact_agent_context_tests {
+    use super::*;
+
+    fn turn(id: &str, kind: &str, timestamp: u64, content: &str) -> SessionTurn {
+        SessionTurn {
+            turn_id: id.into(),
+            turn_type: kind.into(),
+            timestamp,
+            content: content.into(),
+            importance: 1.0,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn compact_projection_is_valid_json_deduplicated_and_byte_capped() {
+        let d = turn("d", "decision", 1, "decision: choose bounded retries");
+        let d2 = turn("d2", "decision", 2, "decision: retain exact citations");
+        let d3 = turn("d3", "decision", 3, "decision: cap context by bytes");
+        let d4 = turn("d4", "decision", 4, "decision: preserve recovery state");
+        let a = turn("a", "question", 2, "open arc: what is the recovery rule?");
+        let giant = turn("g", "note", 3, &"checkpoint ".repeat(1000));
+        let huge = vec!["flag".repeat(500); 10];
+        let checkpoint = SessionContinuityView {
+            record_id: 99,
+            epoch: 1,
+            session_id: "s".into(),
+            agent_id: "a".into(),
+            checkpoint_type: "handoff".into(),
+            summary: "oversized ".repeat(1000),
+            next_queue: huge.clone(),
+            open_flags: huge.clone(),
+            context_token: None,
+            representation: None,
+            timestamp_iso: None,
+            raw_content: "duplicate raw checkpoint".into(),
+            track: Some("track".into()),
+            commit: None,
+            branch: None,
+            tests_green: None,
+            lease_id: None,
+        };
+        let crystals =
+            vec![json!({"record_id":1,"title":"crystal","preview":"crystal ".repeat(500)})];
+        for budget in [0usize, 1, 280] {
+            let ctx = compact_agent_context(
+                budget * 4,
+                &[
+                    d.clone(),
+                    d2.clone(),
+                    d3.clone(),
+                    d4.clone(),
+                    a.clone(),
+                    giant.clone(),
+                ],
+                &[d.clone(), d2.clone(), d3.clone(), d4.clone()],
+                &[a.clone()],
+                Some(&checkpoint),
+                &huge,
+                &huge,
+                &crystals,
+                Some(&"briefing ".repeat(1000)),
+            );
+            let text = ctx["text"].as_str().unwrap();
+            assert!(text.len() <= budget * 4);
+            assert_eq!(ctx["bytes_used"].as_u64().unwrap() as usize, text.len());
+            assert_eq!(
+                ctx["estimated_tokens"].as_u64().unwrap() as usize,
+                text.len().div_ceil(4)
+            );
+            if budget == 0 {
+                assert_eq!(text, "");
+            } else if !text.is_empty() {
+                let parsed: Value =
+                    serde_json::from_str(text).expect("projection stays valid JSON");
+                let turns = parsed["turns"].as_array().unwrap();
+                assert!(turns.iter().filter(|t| t["kind"] == "decision").count() <= 4);
+                assert!(turns.iter().filter(|t| t["kind"] == "arc").count() <= 1);
+                if budget == 280 {
+                    assert_eq!(turns.iter().filter(|t| t["kind"] == "decision").count(), 4);
+                    assert_eq!(turns.iter().filter(|t| t["kind"] == "arc").count(), 1);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn fresh_scoped_track_never_falls_back_to_unrelated_global_session() {
+        let unrelated = SessionTurn {
+            session_id: "unrelated".into(),
+            track: Some("other-track".into()),
+            content: "foreign unresolved question".into(),
+            turn_type: "question".into(),
+            ..Default::default()
+        };
+        let turns = vec![unrelated];
+        assert_eq!(
+            resolve_continuity_session_lane(
+                None,
+                Some("brand_new"),
+                Some("new-track"),
+                &turns,
+                None
+            ),
+            Some("brand_new".into())
+        );
+        assert_eq!(
+            resolve_continuity_session_lane(None, Some("brand_new"), None, &turns, None),
+            Some("brand_new".into())
+        );
+    }
+}
+
+#[cfg(test)]
 mod contract_truth_tests {
     use super::*;
 
@@ -9224,6 +9523,16 @@ mod diaml_and_salience_refinement_tests {
         assert_eq!(u1["status"], "success");
         assert_eq!(u1["record_id"], r3_id);
         assert_eq!(u1["consolidated_to_existing"], true);
+        let retired_read = handle_memory_read(&json!({"id":r1_id}), &substrate).unwrap();
+        assert_eq!(retired_read["record"]["superseded_by"], json!(r3_id));
+        assert_eq!(
+            retired_read["record"]["authoritative_head_id"],
+            json!(r3_id)
+        );
+        assert_eq!(
+            retired_read["record"]["content"],
+            "Retry policy v1: 12 retries with 250ms fixed sleep."
+        );
 
         // Consolidate r2 into existing r3 via explicit superseded_by_id
         let u2 = handle_memory_update(
@@ -9238,11 +9547,9 @@ mod diaml_and_salience_refinement_tests {
 
         // Verify revision chain (converging DAG) from r1, r2, and r3
         for check_id in [r1_id, r2_id, r3_id] {
-            let rev = handle_memory_revisions(
-                &json!({"id": check_id, "action": "verify"}),
-                &substrate,
-            )
-            .expect("verify revisions");
+            let rev =
+                handle_memory_revisions(&json!({"id": check_id, "action": "verify"}), &substrate)
+                    .expect("verify revisions");
             assert_eq!(
                 rev["verify"]["valid"], true,
                 "DAG verify failed for {check_id}: {rev}"
@@ -9251,9 +9558,11 @@ mod diaml_and_salience_refinement_tests {
         }
 
         // Verify active search ranks r3 first and marks both r1 and r2 as superseded by r3
-        let search =
-            handle_memory_search(&json!({"query": "Retry policy", "limit": 5}), &mut substrate)
-                .expect("search");
+        let search = handle_memory_search(
+            &json!({"query": "Retry policy", "limit": 5}),
+            &mut substrate,
+        )
+        .expect("search");
         let results = search["results"].as_array().unwrap();
         assert!(!results.is_empty());
         assert_eq!(results[0]["record_id"], r3_id);
@@ -9263,6 +9572,110 @@ mod diaml_and_salience_refinement_tests {
         }
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn refused_fork_and_revision_append_failure_leave_no_active_candidate_after_restart() {
+        let dir = std::env::temp_dir().join(format!("wm-update-rollback-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut substrate =
+            Substrate::open(&dir, None, wm_gen3_core::constitution::default_view()).unwrap();
+        let first = handle_memory_create(
+            &json!({"content":"root claim version one"}),
+            &mut substrate,
+            false,
+        )
+        .unwrap();
+        let second = handle_memory_create(
+            &json!({"content":"root claim version two"}),
+            &mut substrate,
+            false,
+        )
+        .unwrap();
+        let old = first["record_id"].as_u64().unwrap();
+        let head = second["record_id"].as_u64().unwrap();
+        handle_memory_update(
+            &json!({"id":old,"content":"root claim version two"}),
+            &mut substrate,
+            false,
+        )
+        .unwrap();
+        let before = substrate.store().iter_records().unwrap().len();
+        let refused = handle_memory_update(
+            &json!({"id":old,"content":"poison should never persist"}),
+            &mut substrate,
+            false,
+        );
+        assert!(refused.is_err());
+        assert_eq!(substrate.store().iter_records().unwrap().len(), before);
+        assert_eq!(
+            substrate.revision_chain(old).last().unwrap().new_record_id,
+            head
+        );
+
+        // A directory at the sidecar path forces an append error after candidate
+        // ingestion, exercising the LMDB compensation and its restart behavior.
+        let fail_dir =
+            std::env::temp_dir().join(format!("wm-update-append-fail-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&fail_dir).unwrap();
+        let mut failing =
+            Substrate::open(&fail_dir, None, wm_gen3_core::constitution::default_view()).unwrap();
+        let fresh = handle_memory_create(
+            &json!({"content":"unrevised source to update"}),
+            &mut failing,
+            false,
+        )
+        .unwrap();
+        let fresh_id = fresh["record_id"].as_u64().unwrap();
+        std::fs::create_dir(fail_dir.join("revisions.jsonl")).unwrap();
+        let failure = handle_memory_update(
+            &json!({"id":fresh_id,"content":"candidate must be rolled back"}),
+            &mut failing,
+            false,
+        );
+        assert!(
+            failure
+                .unwrap_err()
+                .contains("without changing revision lineage")
+        );
+        assert!(
+            !failing
+                .store()
+                .iter_records()
+                .unwrap()
+                .iter()
+                .any(|r| r.content() == "candidate must be rolled back")
+        );
+        drop(failing);
+        let reopened =
+            Substrate::open_readonly(&fail_dir, None, wm_gen3_core::constitution::default_view())
+                .unwrap();
+        assert!(
+            !reopened
+                .store()
+                .iter_records()
+                .unwrap()
+                .iter()
+                .any(|r| r.content() == "candidate must be rolled back")
+        );
+        drop(reopened);
+        assert!(
+            !substrate
+                .store()
+                .iter_records()
+                .unwrap()
+                .iter()
+                .any(|r| r.content() == "poison should never persist")
+        );
+        drop(substrate);
+        let reopened_main =
+            Substrate::open_readonly(&dir, None, wm_gen3_core::constitution::default_view())
+                .unwrap();
+        assert!(!reopened_main.store().iter_records().unwrap().iter().any(|r| r.content() == "poison should never persist"));
+        assert_eq!(reopened_main.revision_chain(old).last().unwrap().new_record_id, head);
+        drop(reopened_main);
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::remove_dir_all(&fail_dir);
     }
 
     #[test]
@@ -9330,7 +9743,12 @@ mod diaml_and_salience_refinement_tests {
         .expect("continuity pattern A");
         assert_eq!(cont_a["session_id"], "c1_arch_s1");
         assert!(cont_a["token_estimate"].as_u64().unwrap() <= 120);
-        assert!(cont_a["briefing"]["text"].as_str().unwrap().contains("BLAKE3"));
+        assert!(
+            cont_a["briefing"]["text"]
+                .as_str()
+                .unwrap()
+                .contains("BLAKE3")
+        );
 
         // Pattern B: New session 'c1_arch_s2' records an opening turn on 'arch' and queries via current_session_id
         handle_session_record(

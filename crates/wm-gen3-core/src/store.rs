@@ -1441,6 +1441,42 @@ impl Store {
         }
     }
 
+    /// Compensate an uncommitted higher-level operation by removing the newly
+    /// ingested record and all recall indexes in one LMDB transaction. IDs are
+    /// intentionally never reused; immutable intake receipts remain audit data.
+    pub(crate) fn remove_record_and_indexes(&self, id: u64) -> Result<bool, StoreError> {
+        self.ensure_writable()?;
+        let Some(record) = self.get_record(id)? else {
+            return Ok(false);
+        };
+        let mut txn = self.env.begin_rw_txn()?;
+        txn.del(self.records, &bytes_u64(id), None)?;
+        for term in crate::field::tokenize(record.content()) {
+            let mut ids: Vec<u64> = match txn.get(self.postings, &term) {
+                Ok(bytes) => rmp_serde::from_slice(bytes)?,
+                Err(lmdb::Error::NotFound) => continue,
+                Err(error) => return Err(error.into()),
+            };
+            ids.retain(|candidate| *candidate != id);
+            if ids.is_empty() {
+                txn.del(self.postings, &term, None)?;
+            } else {
+                txn.put(
+                    self.postings,
+                    &term,
+                    &rmp_serde::to_vec(&ids)?,
+                    lmdb::WriteFlags::empty(),
+                )?;
+            }
+        }
+        match txn.del(self.embeddings, &bytes_u64(id), None) {
+            Ok(()) | Err(lmdb::Error::NotFound) => {}
+            Err(error) => return Err(error.into()),
+        }
+        txn.commit()?;
+        Ok(true)
+    }
+
     pub fn iter_records(&self) -> Result<Vec<EvidenceRecord>, StoreError> {
         let txn = self.env.begin_ro_txn()?;
         let db = self.records;
