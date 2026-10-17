@@ -5,7 +5,7 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [10.4.0] — 2026-10-12
+## [10.4.0] — 2026-10-17
 
 ### Added
 - **24-Glyph Yin/Yang Phase-Doubled Canon** — Doubled the Sutra Canon from 12 to 24 glyphs with exact polar pairings (0..11 Yang formative / 12..23 Yin reflexive), mapped bijectively to Wu Xing Five Elements and calibrated with 512-dim unit-norm Model2Vec static vectors.
@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Catuṣkoṭi K3 Dialectical Router** — Enhanced `TripartiteRouter` to detect dialectical tensions and paraconsistent coexistence between competing action vectors using Buddhist four-corner logic.
 - **Sutra Hexagram CLI & Stack Parser** — Added `wm3 sutra hexagram [list|inspect|mutate]` and integrated hexagram fallback resolution into `StackCodon` and `TripartiteRouter`.
 - **Agent Codex & Sutra Guide** — Added dedicated agent codex in `AGENTS.md` and `docs/SUTRA_GUIDE.md` for zero-allocation mudra execution across AI coding agents.
+- **Track 2 Evaluation & Track-Aware Continuity** — 32-scenario deterministic evaluation suite (`benchmarks/pinned_task_eval.py`) covering cross-session decision continuity under single-call 280-token budget, stale/conflicting memory resolution into converging revision DAGs, surgical bad-memory repair, and cue-guided discovery.
+- **Fail-Closed Crystal Notarization & Hybrid Verification** — Hardened offline Crystal verification (`scripts/crystal_client.py`) refusing unsigned or tampered notarizations, enforcing pinned notary public keys, and refusing unsupported hybrid KEK rotations before post-wrap signing.
+- **Atomic Revision Compensation & Crash Intent Recovery** — Ingest-failure rollback removing candidate records and posting lists in a single LMDB transaction; sidecar compensation audit logging; startup crash-intent recovery.
+
+### Fixed
+- **Security Vulnerability Remediation** — Vendored `candle-core 0.9.2` with exact `zip = "9.0.4"` to resolve RUSTSEC-2026-0367, RUSTSEC-2026-0368, and RUSTSEC-2026-0369.
 
 ## [10.3.0] — 2026-10-11
 
