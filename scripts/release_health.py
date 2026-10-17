@@ -444,13 +444,23 @@ def probe_all(repo: str, version: str) -> dict:
         "generated_at": utc_now(),
         "generator": "scripts/release_health.py",
         "status": status,
+        "scope": [
+            "distribution availability",
+            "artifact integrity",
+            "install certification when attached",
+        ],
+        "unmeasured_excludes": [
+            "CI status",
+            "source-level test qualification",
+            "performance qualification",
+        ],
         "registries": registries,
     }
 
 
 def summarize(record: dict) -> None:
     print(
-        f"wm release health — {record['tag']} ({record['repo']}) "
+        f"wm distribution health — {record['tag']} ({record['repo']}) "
         f"@ {record['generated_at']}"
     )
     for name, entry in record["registries"].items():
@@ -480,7 +490,9 @@ def summarize(record: dict) -> None:
                 else f"versions seen: {', '.join(entry.get('versions_seen', []))}"
             )
         print(f"  {name:<16} {entry.get('status', '?'):<11} {detail}")
-    print(f"status: {record['status'].upper()}")
+    print(f"distribution status: {record['status'].upper()}")
+    if record.get("unmeasured_excludes"):
+        print("not measured here: " + ", ".join(record["unmeasured_excludes"]))
 
 
 def main() -> int:

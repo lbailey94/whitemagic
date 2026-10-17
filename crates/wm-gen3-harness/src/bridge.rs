@@ -2352,9 +2352,6 @@ fn handle_memory_update(
         // Logical transition validation occurs before remember_batch, avoiding
         // durable active content for a refusal (for example, an existing fork).
         substrate.validate_revision_prior(old_id)?;
-        if let Some(operation) = revision_intent.as_deref() {
-            substrate.begin_revision_intent(old_id, operation, &source, content)?;
-        }
 
         if let Some(existing_id) = substrate.find_existing_record_for_consolidation(
             content,
@@ -2366,8 +2363,14 @@ fn handle_memory_update(
                     "memory.update: new content is identical to the target record".to_string(),
                 );
             }
+            if let Some(operation) = revision_intent.as_deref() {
+                substrate.begin_revision_intent(old_id, operation, &source, content)?;
+            }
             (existing_id, true)
         } else {
+            if let Some(operation) = revision_intent.as_deref() {
+                substrate.begin_revision_intent(old_id, operation, &source, content)?;
+            }
             let item = RememberItem {
                 content: content.to_string(),
                 source: source.clone(),
@@ -3961,17 +3964,17 @@ fn handle_session_continuity(
         let byte_cap = usize::try_from(budget)
             .unwrap_or(usize::MAX)
             .saturating_mul(4);
-        compact_agent_context(
+        compact_agent_context(CompactAgentContextInput {
             byte_cap,
-            &recent,
-            &salient_turns,
-            &unresolved_arcs,
-            checkpoint.as_ref(),
-            &next_queue,
-            &open_flags,
-            &related_crystals,
-            briefing_text.as_deref(),
-        )
+            recent: &recent,
+            salient: &salient_turns,
+            arcs: &unresolved_arcs,
+            checkpoint: checkpoint.as_ref(),
+            queue: &next_queue,
+            flags: &open_flags,
+            crystals: &related_crystals,
+            briefing: briefing_text.as_deref(),
+        })
     });
 
     let mut response = json!({
@@ -4004,17 +4007,30 @@ fn handle_session_continuity(
     Ok(response)
 }
 
-fn compact_agent_context(
+struct CompactAgentContextInput<'a> {
     byte_cap: usize,
-    recent: &[SessionTurn],
-    salient: &[SessionTurn],
-    arcs: &[SessionTurn],
-    checkpoint: Option<&SessionContinuityView>,
-    queue: &[String],
-    flags: &[String],
-    crystals: &[Value],
-    briefing: Option<&str>,
-) -> Value {
+    recent: &'a [SessionTurn],
+    salient: &'a [SessionTurn],
+    arcs: &'a [SessionTurn],
+    checkpoint: Option<&'a SessionContinuityView>,
+    queue: &'a [String],
+    flags: &'a [String],
+    crystals: &'a [Value],
+    briefing: Option<&'a str>,
+}
+
+fn compact_agent_context(input: CompactAgentContextInput<'_>) -> Value {
+    let CompactAgentContextInput {
+        byte_cap,
+        recent,
+        salient,
+        arcs,
+        checkpoint,
+        queue,
+        flags,
+        crystals,
+        briefing,
+    } = input;
     let mut selected: Vec<(u8, &SessionTurn)> = Vec::new();
     let mut seen = HashSet::new();
     for turn in arcs {
@@ -7821,9 +7837,9 @@ mod compact_agent_context_tests {
         let crystals =
             vec![json!({"record_id":1,"title":"crystal","preview":"crystal ".repeat(500)})];
         for budget in [0usize, 1, 280] {
-            let ctx = compact_agent_context(
-                budget * 4,
-                &[
+            let ctx = compact_agent_context(CompactAgentContextInput {
+                byte_cap: budget * 4,
+                recent: &[
                     d.clone(),
                     d2.clone(),
                     d3.clone(),
@@ -7831,14 +7847,14 @@ mod compact_agent_context_tests {
                     a.clone(),
                     giant.clone(),
                 ],
-                &[d.clone(), d2.clone(), d3.clone(), d4.clone()],
-                &[a.clone()],
-                Some(&checkpoint),
-                &huge,
-                &huge,
-                &crystals,
-                Some(&"briefing ".repeat(1000)),
-            );
+                salient: &[d.clone(), d2.clone(), d3.clone(), d4.clone()],
+                arcs: std::slice::from_ref(&a),
+                checkpoint: Some(&checkpoint),
+                queue: &huge,
+                flags: &huge,
+                crystals: &crystals,
+                briefing: Some(&"briefing ".repeat(1000)),
+            });
             let text = ctx["text"].as_str().unwrap();
             assert!(text.len() <= budget * 4);
             assert_eq!(ctx["bytes_used"].as_u64().unwrap() as usize, text.len());
@@ -9575,6 +9591,34 @@ mod diaml_and_salience_refinement_tests {
     }
 
     #[test]
+    fn identical_memory_update_refusal_does_not_leave_unresolved_intent() {
+        let dir = std::env::temp_dir().join(format!("wm-identical-update-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("create temp store");
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("open substrate");
+        let content = "unchanged active memory";
+        let created = handle_memory_create(&json!({"content":content}), &mut substrate, false)
+            .expect("create prior");
+        let prior_id = created["record_id"].as_u64().unwrap();
+
+        assert!(
+            handle_memory_update(
+                &json!({"id":prior_id,"content":content}),
+                &mut substrate,
+                false,
+            )
+            .is_err()
+        );
+        assert!(!dir.join("revision_intents.jsonl").exists());
+        drop(substrate);
+        assert!(
+            Substrate::open_readonly(&dir, None, wm_gen3_core::constitution::default_view(),)
+                .is_ok()
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn refused_fork_and_revision_append_failure_leave_no_active_candidate_after_restart() {
         let dir = std::env::temp_dir().join(format!("wm-update-rollback-{}", Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
@@ -9671,8 +9715,22 @@ mod diaml_and_salience_refinement_tests {
         let reopened_main =
             Substrate::open_readonly(&dir, None, wm_gen3_core::constitution::default_view())
                 .unwrap();
-        assert!(!reopened_main.store().iter_records().unwrap().iter().any(|r| r.content() == "poison should never persist"));
-        assert_eq!(reopened_main.revision_chain(old).last().unwrap().new_record_id, head);
+        assert!(
+            !reopened_main
+                .store()
+                .iter_records()
+                .unwrap()
+                .iter()
+                .any(|r| r.content() == "poison should never persist")
+        );
+        assert_eq!(
+            reopened_main
+                .revision_chain(old)
+                .last()
+                .unwrap()
+                .new_record_id,
+            head
+        );
         drop(reopened_main);
         let _ = std::fs::remove_dir_all(&dir);
         let _ = std::fs::remove_dir_all(&fail_dir);

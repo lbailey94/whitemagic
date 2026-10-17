@@ -1,0 +1,1083 @@
+{
+  "binary": {
+    "path": "/home/lucas/Desktop/front burner/WHITEMAGIC/WMv10/bin/wm",
+    "sha256": "d2b147147e44be8a3caa68d2220e75e9bd8643ff840a070cb6ad007d35584288",
+    "version": "10.4.0"
+  },
+  "documented_failure_traces": [
+    {
+      "cause": "Agent stored a terse update ('Changed x402 upstream wait limit to 45s.') via raw memory_remember instead of memory.update(id=old_id), so no Supersedes relation was recorded and the old record retained higher lexical BM25 overlap with the query.",
+      "remediation": "Always use memory.update(id=prior_id) or session.record(supersedes=...) when overriding prior policy.",
+      "scenario": "M8_stress_unlinked_contradiction_without_update",
+      "system": "whitemagic_v10_4"
+    }
+  ],
+  "families": [
+    {
+      "family": "T_CONTINUITY",
+      "scenarios": [
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.541,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "budget_tokens": 280,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.747,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C1_payment_journal_invariants",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.63,
+            "open_arc_precision": 1.0,
+            "tokens_used": 175
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 13.397,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 17105,
+            "selected_prior_session": "C1_payment_journal_invariants_s1",
+            "tokens_used": 230
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.666,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "budget_tokens": 280,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 2.005,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C2_release_manifest_signing",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.789,
+            "open_arc_precision": 1.0,
+            "tokens_used": 169
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 12.839,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 16971,
+            "selected_prior_session": "C2_release_manifest_signing_s1",
+            "tokens_used": 224
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.631,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "budget_tokens": 280,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.895,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C3_crystal_envelope_security",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.591,
+            "open_arc_precision": 1.0,
+            "tokens_used": 170
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 14.148,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 17025,
+            "selected_prior_session": "C3_crystal_envelope_security_s1",
+            "tokens_used": 224
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.744,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "budget_tokens": 280,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 3.224,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C4_backup_restore_contract",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 1.83,
+            "open_arc_precision": 1.0,
+            "tokens_used": 177
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 14.598,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 17079,
+            "selected_prior_session": "C4_backup_restore_contract_s1",
+            "tokens_used": 231
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.5,
+            "latency_ms": 0.519,
+            "open_arc_precision": 0.0,
+            "tokens_used": 255
+          },
+          "budget_tokens": 280,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.73,
+            "open_arc_precision": 0.0,
+            "tokens_used": 270
+          },
+          "scenario_id": "C5_diaml_sutra_binding",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.56,
+            "open_arc_precision": 1.0,
+            "tokens_used": 174
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 13.499,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 16856,
+            "selected_prior_session": "C5_diaml_sutra_binding_s1",
+            "tokens_used": 232
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.438,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "budget_tokens": 280,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.729,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C6_stripe_webhook_guard",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.435,
+            "open_arc_precision": 1.0,
+            "tokens_used": 168
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 13.428,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 16783,
+            "selected_prior_session": "C6_stripe_webhook_guard_s1",
+            "tokens_used": 220
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.506,
+            "open_arc_precision": 0.0,
+            "tokens_used": 270
+          },
+          "budget_tokens": 280,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.906,
+            "open_arc_precision": 0.0,
+            "tokens_used": 270
+          },
+          "scenario_id": "C7_ingest_postings_perf",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.444,
+            "open_arc_precision": 1.0,
+            "tokens_used": 172
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 13.874,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 16890,
+            "selected_prior_session": "C7_ingest_postings_perf_s1",
+            "tokens_used": 232
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.435,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "budget_tokens": 280,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.703,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C8_stress_untyped_low_importance_decision",
+          "stress_untyped": true,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.75,
+            "latency_ms": 0.442,
+            "open_arc_precision": 1.0,
+            "tokens_used": 150
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 12.844,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 17220,
+            "selected_prior_session": "C8_stress_untyped_low_importance_decision_s1",
+            "tokens_used": 216
+          }
+        }
+      ]
+    },
+    {
+      "family": "T_CONFLICT",
+      "scenarios": [
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.469,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 0.667
+          },
+          "failure_trace": null,
+          "scenario_id": "M1_backup_cap_upgrade",
+          "structured_supersedes_files": {
+            "latency_ms": 0.031,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          },
+          "use_governed_update": true,
+          "whitemagic_v10_4": {
+            "active_stale_count": 0,
+            "latency_ms": 11.813,
+            "lineage_verifiable": 1.0,
+            "response_bytes": 2855,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.348,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 1.0
+          },
+          "failure_trace": null,
+          "scenario_id": "M2_fleet_peering_price",
+          "structured_supersedes_files": {
+            "latency_ms": 0.032,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          },
+          "use_governed_update": true,
+          "whitemagic_v10_4": {
+            "active_stale_count": 0,
+            "latency_ms": 12.621,
+            "lineage_verifiable": 1.0,
+            "response_bytes": 2830,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.396,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 0.667
+          },
+          "failure_trace": null,
+          "scenario_id": "M3_openapi_path_count",
+          "structured_supersedes_files": {
+            "latency_ms": 0.054,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          },
+          "use_governed_update": true,
+          "whitemagic_v10_4": {
+            "active_stale_count": 0,
+            "latency_ms": 13.102,
+            "lineage_verifiable": 1.0,
+            "response_bytes": 2841,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.359,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.667
+          },
+          "failure_trace": null,
+          "scenario_id": "M4_linux_x86_64_manifest_hash",
+          "structured_supersedes_files": {
+            "latency_ms": 0.083,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          },
+          "use_governed_update": true,
+          "whitemagic_v10_4": {
+            "active_stale_count": 0,
+            "latency_ms": 16.613,
+            "lineage_verifiable": 1.0,
+            "response_bytes": 2637,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.435,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.667
+          },
+          "failure_trace": null,
+          "scenario_id": "M5_multi_hop_restore_drill_count",
+          "structured_supersedes_files": {
+            "latency_ms": 0.051,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          },
+          "use_governed_update": true,
+          "whitemagic_v10_4": {
+            "active_stale_count": 0,
+            "latency_ms": 12.893,
+            "lineage_verifiable": 1.0,
+            "response_bytes": 2582,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.37,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 0.667
+          },
+          "failure_trace": null,
+          "scenario_id": "M6_multi_hop_economy_suite_count",
+          "structured_supersedes_files": {
+            "latency_ms": 0.032,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          },
+          "use_governed_update": true,
+          "whitemagic_v10_4": {
+            "active_stale_count": 0,
+            "latency_ms": 14.867,
+            "lineage_verifiable": 1.0,
+            "response_bytes": 2588,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.307,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 0.667
+          },
+          "failure_trace": null,
+          "scenario_id": "M7_npm_channel_dist_tags",
+          "structured_supersedes_files": {
+            "latency_ms": 0.038,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          },
+          "use_governed_update": true,
+          "whitemagic_v10_4": {
+            "active_stale_count": 0,
+            "latency_ms": 14.49,
+            "lineage_verifiable": 1.0,
+            "response_bytes": 2488,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.334,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 0.667
+          },
+          "failure_trace": {
+            "cause": "Agent stored a terse update ('Changed x402 upstream wait limit to 45s.') via raw memory_remember instead of memory.update(id=old_id), so no Supersedes relation was recorded and the old record retained higher lexical BM25 overlap with the query.",
+            "remediation": "Always use memory.update(id=prior_id) or session.record(supersedes=...) when overriding prior policy.",
+            "scenario": "M8_stress_unlinked_contradiction_without_update",
+            "system": "whitemagic_v10_4"
+          },
+          "scenario_id": "M8_stress_unlinked_contradiction_without_update",
+          "structured_supersedes_files": {
+            "latency_ms": 0.055,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 0.667
+          },
+          "use_governed_update": false,
+          "whitemagic_v10_4": {
+            "active_stale_count": 2,
+            "latency_ms": 13.375,
+            "lineage_verifiable": 0.0,
+            "response_bytes": 2117,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 0.667
+          }
+        }
+      ]
+    },
+    {
+      "family": "T_REPAIR",
+      "scenarios": [
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.181,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.045,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 0.0,
+            "joint_success_top3": 0.0,
+            "latency_ms": 0.132,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0,
+            "repaired_at_rank1": 0.0
+          },
+          "scenario_id": "R1_repair_hallucinated_facilitator_port",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 18.674,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5699
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 1.0,
+            "latency_ms": 0.12,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.032,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 0.0,
+            "joint_success_top3": 0.0,
+            "latency_ms": 0.134,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0,
+            "repaired_at_rank1": 0.0
+          },
+          "scenario_id": "R2_repair_poisoned_crystal_cipher",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 19.753,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5679
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.118,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.029,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 0.077,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0
+          },
+          "scenario_id": "R3_repair_wrong_sqlite_replay_path",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 18.747,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5731
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.136,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.028,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 0.0,
+            "joint_success_top3": 0.0,
+            "latency_ms": 0.129,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0,
+            "repaired_at_rank1": 0.0
+          },
+          "scenario_id": "R4_repair_bad_landlock_claim",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 17.518,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5653
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.126,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.029,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 0.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 0.079,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 0.0
+          },
+          "scenario_id": "R5_repair_wrong_keyd_quota",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 20.077,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5654
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.14,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.031,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 0.079,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0
+          },
+          "scenario_id": "R6_repair_bad_ots_anchor_route",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 18.68,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5622
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.122,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.031,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 0.074,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0
+          },
+          "scenario_id": "R7_repair_wrong_erc8004_verdict",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 18.994,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5648
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.143,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.034,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 0.083,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0
+          },
+          "scenario_id": "R8_repair_bad_tenant_export_scope",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 18.556,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5678
+          }
+        }
+      ]
+    },
+    {
+      "family": "T_DISCOVERY",
+      "scenarios": [
+        {
+          "failure_trace": null,
+          "scenario_id": "D1_discover_crystal_pq_alg_bypass",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 59.883,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 9166,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        },
+        {
+          "failure_trace": null,
+          "scenario_id": "D2_discover_notarization_unsigned_acceptance",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 65.972,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 9219,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        },
+        {
+          "failure_trace": null,
+          "scenario_id": "D3_discover_landlock_truncate_omission",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 67.678,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 9153,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        },
+        {
+          "failure_trace": null,
+          "scenario_id": "D4_discover_erasure_receipt_overclaim",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 63.344,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 9174,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        },
+        {
+          "failure_trace": null,
+          "scenario_id": "D5_discover_kek_rotation_stale_signature",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 69.263,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 9136,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        },
+        {
+          "failure_trace": null,
+          "scenario_id": "D6_discover_backup_monitor_auth_api_prefix",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 62.711,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 9134,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        },
+        {
+          "failure_trace": null,
+          "scenario_id": "D7_discover_economy_discovery_flag_mismatch",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 61.843,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 8963,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        },
+        {
+          "failure_trace": null,
+          "scenario_id": "D8_discover_release_health_tag_checkout_hazard",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 71.53,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 9053,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        }
+      ]
+    }
+  ],
+  "generated_at": "2026-10-17T18:27:44Z",
+  "ignored_runtime_errors": 0,
+  "schema": "wm.pinned-task-evaluation/1.1",
+  "summary_by_family": {
+    "T_CONFLICT_stale_and_conflicting_memory": {
+      "bm25_flat_files": {
+        "latency": {
+          "p50_ms": 0.36,
+          "p95_ms": 0.47
+        },
+        "lineage_verifiable_rate": 0.0,
+        "mean_unflagged_stale_in_top3": 0.7086,
+        "top1_current_truth_rate_all_8": 0.25,
+        "top1_current_truth_rate_governed_7": 0.2857
+      },
+      "scenario_count": 8,
+      "structured_supersedes_files_equal_info": {
+        "latency": {
+          "p50_ms": 0.04,
+          "p95_ms": 0.08
+        },
+        "lineage_verifiable_rate": 0.0,
+        "mean_unflagged_stale_in_top3_governed_7": 0.0,
+        "top1_current_truth_rate_all_8": 0.875,
+        "top1_current_truth_rate_governed_7": 1.0
+      },
+      "whitemagic_v10_4": {
+        "latency": {
+          "p50_ms": 13.24,
+          "p95_ms": 16.61
+        },
+        "lineage_verifiable_rate_governed_7": 1.0,
+        "mean_unflagged_stale_in_top3_governed_7": 0.0,
+        "top1_current_truth_rate_all_8": 0.875,
+        "top1_current_truth_rate_governed_7": 1.0
+      }
+    },
+    "T_CONTINUITY_cross_session_decision_recovery": {
+      "bm25_flat_files": {
+        "latency": {
+          "p50_ms": 0.53,
+          "p95_ms": 1.74
+        },
+        "mean_decision_recall_all_8": 0.0625,
+        "mean_open_arc_precision": 0.0
+      },
+      "plain_files_tail": {
+        "latency": {
+          "p50_ms": 1.82,
+          "p95_ms": 3.22
+        },
+        "mean_decision_recall_all_8": 0.0,
+        "mean_open_arc_precision": 0.0
+      },
+      "scenario_count": 8,
+      "shared_budget_tokens": 280,
+      "structured_metadata_files_equal_info": {
+        "latency": {
+          "p50_ms": 0.58,
+          "p95_ms": 1.83
+        },
+        "mean_decision_recall_all_8": 0.9688,
+        "mean_decision_recall_typed_7": 1.0,
+        "mean_open_arc_precision": 1.0
+      },
+      "whitemagic_v10_4": {
+        "budget_enforced_rate": 1.0,
+        "cross_session_crystal_rate": 1.0,
+        "latency": {
+          "p50_ms": 13.46,
+          "p95_ms": 14.6
+        },
+        "mean_decision_recall_all_8": 1.0,
+        "mean_decision_recall_typed_7": 1.0,
+        "mean_open_arc_precision": 1.0,
+        "mean_tokens_used": 226.125,
+        "new_session_track_routing_rate": 1.0
+      }
+    },
+    "T_DISCOVERY_unseen_prospective_autonomous_discovery": {
+      "scenario_count": 8,
+      "whitemagic_autonomous_discovery": {
+        "converging_dag_verified_rate": 1.0,
+        "end_to_end_success_rate": 1.0,
+        "latency": {
+          "p50_ms": 64.66,
+          "p95_ms": 71.53
+        },
+        "legitimate_state_preserved_rate": 1.0,
+        "mean_active_stale_in_top3": 0.0,
+        "mean_target_discovery_precision": 1.0,
+        "mean_target_discovery_recall": 1.0,
+        "top1_current_truth_rate": 1.0
+      }
+    },
+    "T_REPAIR_surgical_bad_memory_repair": {
+      "plain_files_append_only": {
+        "joint_repair_and_preserve_rate": 0.125,
+        "legitimate_state_preserved_rate": 1.0,
+        "poison_free_top3_rate": 0.125
+      },
+      "plain_files_keyword_prune": {
+        "joint_repair_and_preserve_rate": 0.0,
+        "legitimate_state_preserved_rate": 0.0,
+        "poison_free_top3_rate": 1.0
+      },
+      "record_addressed_files_equal_info": {
+        "joint_repair_and_preserve_rank1_rate": 0.5,
+        "joint_repair_and_preserve_top3_rate": 0.625,
+        "legitimate_state_preserved_rate": 1.0,
+        "poison_free_and_repaired_in_top3_rate": 0.625,
+        "repaired_at_rank1_rate": 0.5
+      },
+      "scenario_count": 8,
+      "whitemagic_v10_4": {
+        "audit_trail_verified_rate": 1.0,
+        "joint_repair_and_preserve_rank1_rate": 1.0,
+        "joint_repair_and_preserve_top3_rate": 1.0,
+        "latency": {
+          "p50_ms": 18.71,
+          "p95_ms": 20.08
+        },
+        "legitimate_state_preserved_rate": 1.0,
+        "poison_free_and_repaired_in_top3_rate": 1.0,
+        "repaired_at_rank1_rate": 1.0
+      }
+    }
+  },
+  "total_scenarios": 32
+}
