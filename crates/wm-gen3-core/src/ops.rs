@@ -274,6 +274,26 @@ impl SessionTurn {
                 self.turn_type.as_str(),
                 "decision" | "milestone" | "constraint" | "confirm"
             )
+            || self.is_architectural_directive()
+    }
+
+    /// True when this turn contains explicit decision identifiers or invariant directives,
+    /// preventing premature eviction of architectural constraints even if logged casually as a note.
+    #[must_use]
+    pub fn is_architectural_directive(&self) -> bool {
+        let s = self.content.trim();
+        let lower = s.to_ascii_lowercase();
+        let has_directive_prefix = (s.starts_with('D') || s.starts_with('d'))
+            && s.chars().nth(1).is_some_and(|c| c.is_ascii_digit())
+            && s.chars().nth(2).is_some_and(|c| c == ':' || c == '.' || c == ' ');
+        has_directive_prefix
+            || lower.starts_with("invariant:")
+            || lower.starts_with("policy:")
+            || lower.starts_with("rule:")
+            || lower.contains("busy_timeout")
+            || lower.contains("must remain")
+            || lower.contains("never allow")
+            || (lower.contains("keep ") && (lower.contains(" at ") || lower.contains(" to ")))
     }
 
     /// Derive `superseded_by`, `resolved_by`, and transitive `lineage` chains
@@ -1827,6 +1847,27 @@ impl Substrate {
                     }
                 }
                 final_support = next_acts;
+            }
+        }
+
+        // Inherit query activation across revision chains: if a prior record
+        // that was superseded had query activation, propagate its relevance
+        // to its authoritative replacement head.
+        let rev_entries = self.revision_entries();
+        for entry in &rev_entries {
+            if let Some(&prior_act) = final_support.get(&entry.record_id) {
+                if prior_act > 0.0 {
+                    let head = entry.new_record_id;
+                    if let Some(record) = self.store.get_record(head).ok().flatten() {
+                        let cur = final_support.get(&head).copied().unwrap_or(0.0);
+                        let boosted = cur.max(prior_act * 1.15).clamp(0.0, 1.0);
+                        final_support.insert(head, boosted);
+                        base_records.entry(head).or_insert((0.0, 0.0, boosted, record.created_at()));
+                        if !candidate_ids.contains(&head) {
+                            candidate_ids.push(head);
+                        }
+                    }
+                }
             }
         }
 
