@@ -1,0 +1,699 @@
+{
+  "binary": {
+    "path": "target/release/wm",
+    "sha256": "b41e644a7f85d920a8aa82ed1fbc2cbb14842eeece5086c177cbc2e1a380315b",
+    "version": "10.4.0"
+  },
+  "documented_failure_traces": [
+    {
+      "cause": "Decision logged as untyped 'note' with importance=0.40 (< 0.80 salience floor) was evicted by 25 later turns under the 280-token hybrid replay cap.",
+      "missing_decisions": [
+        "D4: Keep SQLite busy_timeout at 5000ms on crystal replay store."
+      ],
+      "remediation": "Log architectural constraints with turn_type='decision' or importance>=0.80, or query session.recall.",
+      "scenario": "C8_stress_untyped_low_importance_decision",
+      "system": "whitemagic_v10_4"
+    },
+    {
+      "cause": "Agent stored a terse update ('Changed x402 upstream wait limit to 45s.') via raw memory_remember instead of memory.update(id=old_id), so no Supersedes relation was recorded and the old record retained higher lexical BM25 overlap with the query.",
+      "remediation": "Always use memory.update(id=prior_id) or session.record(supersedes=...) when overriding prior policy.",
+      "scenario": "M8_stress_unlinked_contradiction_without_update",
+      "system": "whitemagic_v10_4"
+    },
+    {
+      "cause": "Bad memory was superseded and excluded from active results, and the repaired memory was retrieved at rank 2 (score=0.3365), but rank 1 (score=0.4796) was an adjacent legitimate neighbor because the repair rewrote query terms ('download proof authentication' -> 'serves GET ... keyless ... proofs') under exact-token lexical scoring.",
+      "remediation": "Preserve canonical query terms when repairing a record, or inspect top-3 active hits / enable morphological stemming or hybrid embedding reranking.",
+      "scenario": "R6_repair_bad_ots_anchor_route",
+      "system": "whitemagic_v10_4"
+    }
+  ],
+  "families": [
+    {
+      "family": "T_CONTINUITY",
+      "scenarios": [
+        {
+          "bm25_flat_files": {
+            "decision_recall": 0.0,
+            "latency_ms": 0.579,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "failure_trace": null,
+          "plain_files_tail": {
+            "decision_recall": 0.0,
+            "latency_ms": 1.878,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C1_payment_journal_invariants",
+          "stress_untyped": false,
+          "whitemagic_v10_4": {
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 12.401,
+            "open_arc_precision": 1.0,
+            "response_bytes": 12707,
+            "tokens_used": 267
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "decision_recall": 0.0,
+            "latency_ms": 0.43,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "failure_trace": null,
+          "plain_files_tail": {
+            "decision_recall": 0.0,
+            "latency_ms": 1.775,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C2_release_manifest_signing",
+          "stress_untyped": false,
+          "whitemagic_v10_4": {
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 11.694,
+            "open_arc_precision": 1.0,
+            "response_bytes": 12603,
+            "tokens_used": 263
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "decision_recall": 0.0,
+            "latency_ms": 0.432,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "failure_trace": null,
+          "plain_files_tail": {
+            "decision_recall": 0.0,
+            "latency_ms": 1.739,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C3_crystal_envelope_security",
+          "stress_untyped": false,
+          "whitemagic_v10_4": {
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 15.771,
+            "open_arc_precision": 1.0,
+            "response_bytes": 12642,
+            "tokens_used": 261
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "decision_recall": 0.0,
+            "latency_ms": 0.43,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "failure_trace": null,
+          "plain_files_tail": {
+            "decision_recall": 0.0,
+            "latency_ms": 1.889,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C4_backup_restore_contract",
+          "stress_untyped": false,
+          "whitemagic_v10_4": {
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 11.692,
+            "open_arc_precision": 1.0,
+            "response_bytes": 12117,
+            "tokens_used": 251
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "decision_recall": 0.5,
+            "latency_ms": 0.43,
+            "open_arc_precision": 0.0,
+            "tokens_used": 255
+          },
+          "failure_trace": null,
+          "plain_files_tail": {
+            "decision_recall": 0.0,
+            "latency_ms": 1.753,
+            "open_arc_precision": 0.0,
+            "tokens_used": 270
+          },
+          "scenario_id": "C5_diaml_sutra_binding",
+          "stress_untyped": false,
+          "whitemagic_v10_4": {
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 11.506,
+            "open_arc_precision": 1.0,
+            "response_bytes": 12394,
+            "tokens_used": 266
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "decision_recall": 0.0,
+            "latency_ms": 0.444,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "failure_trace": null,
+          "plain_files_tail": {
+            "decision_recall": 0.0,
+            "latency_ms": 1.824,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C6_stripe_webhook_guard",
+          "stress_untyped": false,
+          "whitemagic_v10_4": {
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 11.027,
+            "open_arc_precision": 1.0,
+            "response_bytes": 12433,
+            "tokens_used": 256
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "decision_recall": 0.0,
+            "latency_ms": 0.484,
+            "open_arc_precision": 0.0,
+            "tokens_used": 270
+          },
+          "failure_trace": null,
+          "plain_files_tail": {
+            "decision_recall": 0.0,
+            "latency_ms": 2.066,
+            "open_arc_precision": 0.0,
+            "tokens_used": 270
+          },
+          "scenario_id": "C7_ingest_postings_perf",
+          "stress_untyped": false,
+          "whitemagic_v10_4": {
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 11.555,
+            "open_arc_precision": 1.0,
+            "response_bytes": 12408,
+            "tokens_used": 261
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "decision_recall": 0.0,
+            "latency_ms": 0.418,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "failure_trace": {
+            "cause": "Decision logged as untyped 'note' with importance=0.40 (< 0.80 salience floor) was evicted by 25 later turns under the 280-token hybrid replay cap.",
+            "missing_decisions": [
+              "D4: Keep SQLite busy_timeout at 5000ms on crystal replay store."
+            ],
+            "remediation": "Log architectural constraints with turn_type='decision' or importance>=0.80, or query session.recall.",
+            "scenario": "C8_stress_untyped_low_importance_decision",
+            "system": "whitemagic_v10_4"
+          },
+          "plain_files_tail": {
+            "decision_recall": 0.0,
+            "latency_ms": 1.688,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C8_stress_untyped_low_importance_decision",
+          "stress_untyped": true,
+          "whitemagic_v10_4": {
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 0.75,
+            "latency_ms": 12.941,
+            "open_arc_precision": 1.0,
+            "response_bytes": 12361,
+            "tokens_used": 258
+          }
+        }
+      ]
+    },
+    {
+      "family": "T_CONFLICT",
+      "scenarios": [
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.333,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 0.667
+          },
+          "failure_trace": null,
+          "scenario_id": "M1_backup_cap_upgrade",
+          "use_governed_update": true,
+          "whitemagic_v10_4": {
+            "latency_ms": 11.401,
+            "lineage_verifiable": 1.0,
+            "response_bytes": 2158,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.333
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.393,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 1.0
+          },
+          "failure_trace": null,
+          "scenario_id": "M2_fleet_peering_price",
+          "use_governed_update": true,
+          "whitemagic_v10_4": {
+            "latency_ms": 11.334,
+            "lineage_verifiable": 1.0,
+            "response_bytes": 2109,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.667
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.332,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 0.667
+          },
+          "failure_trace": null,
+          "scenario_id": "M3_openapi_path_count",
+          "use_governed_update": true,
+          "whitemagic_v10_4": {
+            "latency_ms": 12.434,
+            "lineage_verifiable": 1.0,
+            "response_bytes": 2120,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.667
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.527,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.667
+          },
+          "failure_trace": null,
+          "scenario_id": "M4_linux_x86_64_manifest_hash",
+          "use_governed_update": true,
+          "whitemagic_v10_4": {
+            "latency_ms": 11.445,
+            "lineage_verifiable": 1.0,
+            "response_bytes": 2258,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.333
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.326,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.333
+          },
+          "failure_trace": null,
+          "scenario_id": "M5_multi_hop_restore_drill_count",
+          "use_governed_update": true,
+          "whitemagic_v10_4": {
+            "latency_ms": 12.128,
+            "lineage_verifiable": 1.0,
+            "response_bytes": 2117,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.327,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 0.333
+          },
+          "failure_trace": null,
+          "scenario_id": "M6_multi_hop_economy_suite_count",
+          "use_governed_update": true,
+          "whitemagic_v10_4": {
+            "latency_ms": 12.326,
+            "lineage_verifiable": 1.0,
+            "response_bytes": 2142,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.287,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 0.667
+          },
+          "failure_trace": null,
+          "scenario_id": "M7_npm_channel_dist_tags",
+          "use_governed_update": true,
+          "whitemagic_v10_4": {
+            "latency_ms": 12.546,
+            "lineage_verifiable": 1.0,
+            "response_bytes": 2109,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.333
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "latency_ms": 0.259,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 0.667
+          },
+          "failure_trace": {
+            "cause": "Agent stored a terse update ('Changed x402 upstream wait limit to 45s.') via raw memory_remember instead of memory.update(id=old_id), so no Supersedes relation was recorded and the old record retained higher lexical BM25 overlap with the query.",
+            "remediation": "Always use memory.update(id=prior_id) or session.record(supersedes=...) when overriding prior policy.",
+            "scenario": "M8_stress_unlinked_contradiction_without_update",
+            "system": "whitemagic_v10_4"
+          },
+          "scenario_id": "M8_stress_unlinked_contradiction_without_update",
+          "use_governed_update": false,
+          "whitemagic_v10_4": {
+            "latency_ms": 11.621,
+            "lineage_verifiable": 0.0,
+            "response_bytes": 2117,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 0.667
+          }
+        }
+      ]
+    },
+    {
+      "family": "T_REPAIR",
+      "scenarios": [
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.105,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.023,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "scenario_id": "R1_repair_hallucinated_facilitator_port",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 15.659,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5361
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 1.0,
+            "latency_ms": 0.109,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.032,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "scenario_id": "R2_repair_poisoned_crystal_cipher",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 15.677,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5342
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.127,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.027,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "scenario_id": "R3_repair_wrong_sqlite_replay_path",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 16.471,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5394
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.097,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.024,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "scenario_id": "R4_repair_bad_landlock_claim",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 18.696,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5316
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.106,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.026,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "scenario_id": "R5_repair_wrong_keyd_quota",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 19.183,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5316
+          }
+        },
+        {
+          "failure_trace": {
+            "cause": "Bad memory was superseded and excluded from active results, and the repaired memory was retrieved at rank 2 (score=0.3365), but rank 1 (score=0.4796) was an adjacent legitimate neighbor because the repair rewrote query terms ('download proof authentication' -> 'serves GET ... keyless ... proofs') under exact-token lexical scoring.",
+            "remediation": "Preserve canonical query terms when repairing a record, or inspect top-3 active hits / enable morphological stemming or hybrid embedding reranking.",
+            "scenario": "R6_repair_bad_ots_anchor_route",
+            "system": "whitemagic_v10_4"
+          },
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.198,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.046,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "scenario_id": "R6_repair_bad_ots_anchor_route",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 0.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 15.235,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 0.0,
+            "response_bytes": 5285
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.15,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.045,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "scenario_id": "R7_repair_wrong_erc8004_verdict",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 16.263,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5312
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.142,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.032,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "scenario_id": "R8_repair_bad_tenant_export_scope",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 15.666,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5341
+          }
+        }
+      ]
+    }
+  ],
+  "generated_at": "2026-10-16T22:10:03Z",
+  "schema": "wm.pinned-task-evaluation/1.0",
+  "summary_by_family": {
+    "T_CONFLICT_stale_and_conflicting_memory": {
+      "bm25_flat_files": {
+        "latency": {
+          "p50_ms": 0.33,
+          "p95_ms": 0.53
+        },
+        "lineage_verifiable_rate": 0.0,
+        "mean_unflagged_stale_in_top3": 0.6251,
+        "top1_current_truth_rate": 0.25
+      },
+      "scenario_count": 8,
+      "whitemagic_v10_4": {
+        "latency": {
+          "p50_ms": 11.87,
+          "p95_ms": 12.55
+        },
+        "lineage_verifiable_rate_governed_7": 1.0,
+        "mean_unflagged_stale_in_top3_governed_7": 0.3333,
+        "top1_current_truth_rate_all_8": 0.875,
+        "top1_current_truth_rate_governed_7": 1.0
+      }
+    },
+    "T_CONTINUITY_cross_session_decision_recovery": {
+      "bm25_flat_files": {
+        "latency": {
+          "p50_ms": 0.43,
+          "p95_ms": 0.58
+        },
+        "mean_decision_recall": 0.0625,
+        "mean_open_arc_precision": 0.0
+      },
+      "plain_files_tail": {
+        "latency": {
+          "p50_ms": 1.8,
+          "p95_ms": 2.07
+        },
+        "mean_decision_recall": 0.0,
+        "mean_open_arc_precision": 0.0
+      },
+      "scenario_count": 8,
+      "whitemagic_v10_4": {
+        "cross_session_crystal_rate": 1.0,
+        "latency": {
+          "p50_ms": 11.69,
+          "p95_ms": 15.77
+        },
+        "mean_decision_recall_all_8": 0.9688,
+        "mean_decision_recall_typed_7": 1.0,
+        "mean_open_arc_precision": 1.0,
+        "mean_tokens_used": 260.375
+      }
+    },
+    "T_REPAIR_surgical_bad_memory_repair": {
+      "plain_files_append_only": {
+        "joint_repair_and_preserve_rate": 0.125,
+        "legitimate_state_preserved_rate": 1.0,
+        "poison_free_top3_rate": 0.125
+      },
+      "plain_files_keyword_prune": {
+        "joint_repair_and_preserve_rate": 0.0,
+        "legitimate_state_preserved_rate": 0.0,
+        "poison_free_top3_rate": 1.0
+      },
+      "scenario_count": 8,
+      "whitemagic_v10_4": {
+        "audit_trail_verified_rate": 1.0,
+        "joint_repair_and_preserve_rank1_rate": 0.875,
+        "joint_repair_and_preserve_top3_rate": 1.0,
+        "latency": {
+          "p50_ms": 15.97,
+          "p95_ms": 19.18
+        },
+        "legitimate_state_preserved_rate": 1.0,
+        "poison_free_and_repaired_in_top3_rate": 1.0,
+        "repaired_at_rank1_rate": 0.875
+      }
+    }
+  },
+  "total_scenarios": 24
+}

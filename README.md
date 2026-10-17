@@ -125,8 +125,8 @@ cargo install whitemagic                     # crates.io
 docker run -i lbailey94/whitemagic:9 serve   # Docker Hub
 ```
 
-Adoption snapshot (2026-09-13): 759 npm downloads/30d · 1,846 Docker pulls ·
-67 crates.io downloads. Package installs are independent of the installer and
+Adoption snapshot (2026-10-16): 5,680 npm downloads · 6,173 Docker Hub pulls ·
+322 crates.io downloads. Package installs are independent of the installer and
 grew without any website CTA — the memory layer chooses its own doors.
 
 Verify the installation and see the product work end to end:
@@ -235,10 +235,23 @@ cargo test          # full test suite
 cargo clippy --all-targets
 ```
 
+## Reproducible Task Evaluation (24 Scenarios)
+
+[`benchmarks/pinned_task_eval.py`](benchmarks/pinned_task_eval.py) evaluates `wm` against plain-file (`tail`, append-only, keyword-prune) and Okapi BM25 (`k1=1.5, b=0.75`) baselines across 24 deterministic scenarios ([`benchmarks/pinned-task-eval-results.json`](benchmarks/pinned-task-eval-results.json)):
+
+- **Cross-session continuity (`T_CONTINUITY`, 8 scenarios, 280-token budget):** **96.9%** mean decision recall (**100%** on typed decisions; **87.5%** open-arc precision) vs. **0.0%** plain-files tail and **6.3%** flat-file BM25.
+- **Conflicting & superseded memory (`T_CONFLICT`, 8 scenarios):** **100%** top-1 current truth and **100%** verifiable `supersedes` lineage on governed updates (`87.5%` across all 8 including an unlinked negative control) vs. **0.0%** BM25.
+- **Surgical bad-memory repair (`T_REPAIR`, 8 scenarios):** **100%** poison-free active top-3 recall with **100%** legitimate neighbor preservation (`87.5%` rank-1 exact-token repair) vs. **0.0%** joint success for append-only or keyword-prune baselines.
+
+```bash
+WM_BINARY=./target/release/wm python3 benchmarks/pinned_task_eval.py
+```
+
 ## Documentation
 
 - [`docs/INDEX.md`](docs/INDEX.md) — map of the documentation tree
 - [`docs/SELFTEST_AND_HOST_HEALTH.md`](docs/SELFTEST_AND_HOST_HEALTH.md) — `wm selftest` checks, thresholds, and `--strict`/`--json` contracts
+- [`benchmarks/pinned_task_eval.py`](benchmarks/pinned_task_eval.py) — 24-scenario continuity, conflict resolution, and surgical repair evaluation harness
 - [`INSTALL.md`](INSTALL.md) — source build, store setup, optional model layer
 - [`skill.md`](skill.md) — five-minute agent onboarding
 - [`llms.txt`](llms.txt) — machine-readable index
@@ -285,8 +298,9 @@ security architecture** → `mandalaos-gate-lite`.
 
 - Support: open an issue at
   <https://github.com/lbailey94/whitemagic/issues>
-- Support the lab (voluntary, not a service payment): XRPL tip jar
-  `raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPyXRP` — see
+- Support the lab (voluntary, not a service payment): Base USDC tip jar
+  `0x213b6bB4fB073E86167c58DA6Cb6E9477557DaA8` · XRPL tip jar
+  `raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy` — see
   <https://www.whitemagic.dev/support>. Services are paid via x402 or
   evaluation keys; the tip jar unlocks nothing.
 - Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md)
