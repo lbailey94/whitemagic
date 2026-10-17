@@ -173,7 +173,7 @@ print(json.dumps({'packages':[{'id':ident,'name':name,'publish':None,'dependenci
         merge = step("Merge certifications into the record")
         gate = step("Gate — every surface live, artifact integrity verified, and every install certified")
         absent = object()
-        cases = (absent, None, "", "not-a-sha256", "a" * 63, "g" * 64, 123, ["a" * 64], "a" * 64)
+        cases = (absent, None, "", "not-a-sha256", "a" * 63, "g" * 64, "a" * 64 + "\n", 123, ["a" * 64], "a" * 64)
         for digest in cases:
             valid = digest == "a" * 64
             for run_merge in (False, True):

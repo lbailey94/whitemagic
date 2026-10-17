@@ -311,7 +311,7 @@ jobs:
             || { echo "registries still lagging:"; jq -c '.registries | to_entries[] | select(.value.status != "live") | {key, status: .value.status, manifest_error: .value.manifest_error}' release-health.json; exit 1; }
           jq -e '.registries["github-release"].manifest_signature_valid == true
                  and .registries["github-release"].artifact_integrity == "verified"
-                 and (.registries["github-release"].manifest_sha256 | if type == "string" then test("^[0-9a-fA-F]{64}$") else false end)' release-health.json >/dev/null \
+                 and (.registries["github-release"].manifest_sha256 | if type == "string" then (length == 64 and test("^[0-9a-fA-F]{64}$")) else false end)' release-health.json >/dev/null \
             || { echo "signed artifact integrity not verified:"; jq -c '.registries["github-release"]' release-health.json; exit 1; }
           jq -e '.install_certification.npm.status == "pass"
                  and .install_certification.docker.status == "pass"
