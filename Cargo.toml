@@ -25,3 +25,8 @@ wm-gen3-zeropointfive = { path = "crates/wm-gen3-zeropointfive", version = "10.4
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
+
+# Keep Candle 0.9 APIs while resolving its ZIP dependency to the patched release.
+# Provenance and the one-line manifest patch are documented in vendor/candle-core/PATCH.md.
+[patch.crates-io]
+candle-core = { path = "vendor/candle-core" }
