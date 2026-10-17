@@ -359,6 +359,9 @@ fn allowed_profile_keys(profile: McpProfile) -> &'static HashSet<&'static str> {
             // The cyberbrain `wm` schema documents these legacy action selectors.
             keys.insert("sweep");
             keys.insert("inspect");
+            keys.insert("sangha.status");
+            keys.insert("sangha.inbox");
+            keys.insert("sangha.post");
             keys
         }),
         McpProfile::Full => FULL.get_or_init(|| advertised_profile_keys(McpProfile::Full)),
