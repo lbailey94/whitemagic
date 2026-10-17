@@ -70,6 +70,43 @@ def compute_tenant_hash(tenant_id: str, salt: str = SALT) -> str:
     return f"sha256:{digest}"
 
 
+def _ed25519_did_key_bytes(value: str) -> bytes:
+    """Decode the did:key Ed25519 multicodec form used by receipt-api."""
+    alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+    if not value.startswith("did:key:z"):
+        raise ValueError("expected did:key base58btc identifier")
+    number = 0
+    for char in value[len("did:key:z"):]:
+        try:
+            digit = alphabet.index(char)
+        except ValueError as exc:
+            raise ValueError("invalid base58btc character") from exc
+        number = number * 58 + digit
+    decoded = number.to_bytes((number.bit_length() + 7) // 8, "big")
+    zeros = len(value[len("did:key:z"):]) - len(value[len("did:key:z"):].lstrip("1"))
+    decoded = b"\0" * zeros + decoded
+    if len(decoded) != 34 or decoded[:2] != b"\xed\x01":
+        raise ValueError("did:key is not an Ed25519 public key")
+    return decoded[2:]
+
+
+def _canonical_receipt_bytes(value: Any) -> bytes:
+    """Encode the continuity-receipt v0 canonical JSON subset used by service."""
+    def validate(item: Any) -> None:
+        if isinstance(item, float):
+            raise ValueError("floats are not allowed in continuity receipts")
+        if isinstance(item, dict):
+            if any(not isinstance(key, str) for key in item):
+                raise ValueError("receipt object keys must be strings")
+            for child in item.values():
+                validate(child)
+        elif isinstance(item, (list, tuple)):
+            for child in item:
+                validate(child)
+    validate(value)
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+
+
 def compute_crystal_id(
     ciphertext: bytes,
     nonce: bytes | None = None,
@@ -705,6 +742,7 @@ def verify_crystal_set_third_party(
 
     notarized_verified = False
     if notarization is not None:
+        wrapper = notarization if isinstance(notarization, dict) else {}
         stmt = notarization.get("receipt") or notarization.get("notarization") or notarization
         if not isinstance(stmt, dict) or stmt.get("kind") != "wm.context-notarization":
             raise CrystalRollbackError("invalid notarization receipt")
@@ -712,6 +750,15 @@ def verify_crystal_set_third_party(
             raise CrystalRollbackError(
                 f"notarization context_digest {stmt.get('context_digest')} != commitment {computed_comm_digest}"
             )
+        wrapper_digest = wrapper.get("notarization_digest", wrapper.get("digest"))
+        if wrapper_digest is not None:
+            receipt_digest = "sha256:" + hashlib.sha256(
+                _canonical_receipt_bytes({k: v for k, v in stmt.items() if k != "sig"})
+            ).hexdigest()
+            if wrapper_digest != receipt_digest:
+                raise CrystalVerificationError("notarization_digest does not match signed receipt")
+        if stmt.get("version") != 1:
+            raise CrystalVerificationError("unsupported notarization version")
         if notary_public_key is None or len(notary_public_key) != 32:
             raise CrystalVerificationError(
                 "notarization verification requires a trusted 32-byte Ed25519 notary_public_key (fail-closed)"
@@ -720,10 +767,32 @@ def verify_crystal_set_third_party(
         if not isinstance(notary_sig, dict) or notary_sig.get("alg") != "ed25519":
             raise CrystalVerificationError("notarization receipt is unsigned or uses unsupported signature algorithm")
         expected_notary_hex = notary_public_key.hex().lower()
-        if str(notary_sig.get("public_key") or "").lower() != expected_notary_hex:
-            raise CrystalVerificationError("notarization public_key does not match trusted notary_public_key")
+        if notary_sig.get("alg") != "ed25519":
+            raise CrystalVerificationError("notarization receipt uses unsupported signature algorithm")
+        # receipt-api emits sig.key as did:key; the local helper emits raw hex
+        # in sig.public_key. Both are accepted only when they resolve to the
+        # externally pinned key. Never treat the carried identity as authority.
+        carried_key = notary_sig.get("public_key")
+        carried_did = notary_sig.get("key")
+        if carried_key is not None:
+            if str(carried_key).lower() != expected_notary_hex:
+                raise CrystalVerificationError("notarization public_key does not match trusted notary_public_key")
+        elif carried_did is not None:
+            try:
+                did_raw = _ed25519_did_key_bytes(str(carried_did))
+            except Exception as exc:
+                raise CrystalVerificationError(f"invalid notarization did:key: {exc}") from exc
+            if did_raw != notary_public_key:
+                raise CrystalVerificationError("notarization did:key does not match trusted notary_public_key")
+            if stmt.get("issuer") != carried_did:
+                raise CrystalVerificationError("notarization issuer does not match signature did:key")
+        else:
+            raise CrystalVerificationError("notarization signature is missing key identity")
         unsigned_stmt = {k: v for k, v in stmt.items() if k != "sig"}
-        canon_stmt = json.dumps(unsigned_stmt, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        try:
+            canon_stmt = _canonical_receipt_bytes(unsigned_stmt)
+        except (TypeError, ValueError, UnicodeError, RecursionError) as exc:
+            raise CrystalVerificationError(f"invalid canonical notarization statement: {exc}") from exc
         try:
             notary_pub = Ed25519PublicKey.from_public_bytes(notary_public_key)
             notary_sig_str = str(notary_sig.get("value") or "")
@@ -753,6 +822,8 @@ def verify_crystal_set_third_party(
         env_alg = str(env_sig.get("alg") or "")
         if env_alg not in SUPPORTED_CLIENT_SIG_ALGS:
             raise CrystalVerificationError(f"unsupported client_sig alg at index {idx}: {env_alg!r}")
+        if expected_pq_public_key and env_alg != "ed25519+ml-dsa-65":
+            raise CrystalVerificationError(f"crystal at index {idx} does not meet required hybrid signature profile")
         if env_alg == "ed25519+ml-dsa-65":
             if pq_verifier is None or not expected_pq_public_key:
                 raise CrystalVerificationError(
@@ -865,6 +936,10 @@ def rotate_crystal_kek(
         pub_hex = priv.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw).hex().lower()
         if str(existing_sig.get("public_key") or "").lower() != pub_hex:
             raise ValueError("ed25519_private_key does not match existing envelope client_sig public_key")
+        if existing_sig.get("alg") == "ed25519+ml-dsa-65" and not all(
+            (pq_alg == "ml-dsa-65", pq_public_key_b64, pq_sig_b64, pq_verifier)
+        ):
+            raise ValueError("rotating hybrid envelope requires explicit pq_alg, pq_public_key_b64, pq_sig_b64, and pq_verifier")
 
     dek = unwrap_crystal_dek(wrapped, old_kek, crystal_envelope["crystal_id"], int(old_ver), cipher=cipher_norm)
     updated = dict(crystal_envelope)

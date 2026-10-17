@@ -341,11 +341,27 @@ class CrystalClientTest(unittest.TestCase):
         c2 = cc.seal_crystal(b"step 2", kek, "tenant-i6", parent_crystal_id=c1["crystal_id"], kek_version=1)
         c2 = cc.sign_crystal_envelope(c2, ed_seed, pq_alg="ml-dsa-65", pq_public_key_b64="cHFfcHVi", pq_sig_b64="cHFfc2ln")
 
+        # An external PQ pin is a required profile policy, even if an attacker
+        # rewrites the unsigned signature metadata to claim Ed25519 only.
+        downgraded = copy.deepcopy(c2)
+        downgraded["client_sig"] = {"alg": "ed25519", **{
+            k: v for k, v in downgraded["client_sig"].items() if k in ("public_key", "value")
+        }}
+        with self.assertRaisesRegex(cc.CrystalVerificationError, "required hybrid"):
+            cc.verify_crystal_set_third_party(
+                [downgraded], tenant_hash, expected_commitment=cc.compute_crystal_set_commitment([downgraded], tenant_hash, signing_key=anchor_seed),
+                signer_public_key=anchor_pub, expected_pq_public_key="cHFfcHVi",
+                pq_verifier=lambda pub, msg, sig: True,
+            )
+
         self.assertTrue(cc.verify_crystal_client_sig(c1))
         # Fail-closed check (C1): hybrid profile without pq_verifier must raise ValueError
         with self.assertRaisesRegex(ValueError, "requires an explicit pq_verifier"):
             cc.verify_crystal_client_sig(c2)
         self.assertTrue(cc.verify_crystal_client_sig(c2, pq_verifier=lambda pub, msg, sig: sig == "cHFfc2ln"))
+        with self.assertRaisesRegex(ValueError, "requires explicit pq_alg"):
+            cc.rotate_crystal_kek(c2, kek, bytes(reversed(kek)), 2, ed25519_private_key=ed_seed,
+                                  pq_verifier=lambda pub, msg, sig: sig == "cHFfc2ln")
 
         # Use standard Ed25519 on c2 for standard read-path unseal without custom pq_verifier
         c2_ed = cc.sign_crystal_envelope(
