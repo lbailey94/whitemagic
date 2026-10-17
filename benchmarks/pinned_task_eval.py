@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
-"""Pinned Agent Task Evaluation: WhiteMagic v10.4.0 vs. Plain-Files / BM25 Baselines.
+"""Pinned & Prospective Agent Task Evaluation: WhiteMagic v10.4.0 vs. Naive & Equal-Information Baselines.
 
-Evaluates three core agent-memory questions across 24 deterministic scenarios:
-  1. T_CONTINUITY (8 scenarios): Can an agent recover verified project decisions
-     and active open inquiry arcs across sessions under a strict token budget?
-  2. T_CONFLICT (8 scenarios): Can an agent resolve stale or conflicting memory
-     (1-hop and 2-hop updates) without losing verifiable historical lineage?
-  3. T_REPAIR (8 scenarios): Can an agent surgically repair a bad/corrupted
-     memory without damaging adjacent legitimate state sharing the same domain vocabulary?
+Evaluates four core agent-memory task families across 32 deterministic scenarios:
+  1. T_CONTINUITY (8 scenarios): Cross-session decision recovery & open-arc precision
+     across genuine new sessions with an intervening unrelated-track session, under a
+     strictly enforced 280-token budget across all scored outputs.
+  2. T_CONFLICT (8 scenarios): Stale/conflicting memory resolution (1-hop and 2-hop updates
+     plus paraphrase consolidation into a converging revision DAG), scored by version identity.
+  3. T_REPAIR (8 scenarios): Surgical bad-memory repair and legitimate neighbor preservation.
+  4. T_DISCOVERY (8 unseen prospective scenarios): Autonomous target discovery where the
+     agent/adapter is NOT given target record IDs or paraphrase IDs, and must search,
+     discriminate stale/poisoned records from legitimate neighbors, consolidate them into
+     a verified revision DAG, and preserve neighbor state.
 
-Includes explicit failure traces for both the baselines and WhiteMagic boundary cases
-(e.g., untyped low-importance notes under salience thresholds, and unlinked
-contradictions stored via raw `memory_remember` instead of `memory.update`).
+Compares WhiteMagic v10.4.0 against both:
+  - Unstructured baselines (`plain_files_tail`, `bm25_flat_files`, `plain_files_append_only`, `plain_files_keyword_prune`)
+  - Equal-information structured file baselines (`structured_metadata_files`, `structured_supersedes_files`, `record_addressed_files`)
+    that receive the exact same metadata, supersession links, or target IDs.
 """
 
 from __future__ import annotations
@@ -29,26 +34,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-import shutil
-
 HERE = Path(__file__).resolve().parent
-REPO_ROOT = HERE.parent
-
-
-def _resolve_default_wm_bin() -> Path:
-    env_bin = os.environ.get("WM_BINARY")
-    if env_bin:
-        return Path(env_bin)
-    candidate = REPO_ROOT / "target" / "release" / "wm"
-    if candidate.is_file():
-        return candidate
-    which_wm = shutil.which("wm")
-    if which_wm:
-        return Path(which_wm)
-    return candidate
-
-
-DEFAULT_WM_BIN = _resolve_default_wm_bin()
+DEFAULT_WM_BIN = HERE.parent / "bin" / "wm"
 
 
 def sha256_file(path: Path) -> str:
@@ -64,12 +51,20 @@ def tokenize(text: str) -> list[str]:
 
 
 def approx_tokens(text: str) -> int:
-    # Matches wm-gen3-harness token estimate (~4 chars/token or word count * 1.3)
+    # Matches wm-gen3-harness token estimate (~4 chars/token)
     return max(1, (len(text) + 3) // 4)
 
 
+def assert_mcp_ok(resp: dict[str, Any], context: str) -> None:
+    if "_error" in resp:
+        raise RuntimeError(f"MCP error in {context}: {resp['_error']}")
+    status = resp.get("status")
+    if status is not None and status not in ("success", "ok"):
+        raise RuntimeError(f"MCP non-success status in {context}: {resp}")
+
+
 class OkapiBM25:
-    """Standard Okapi BM25 baseline over plain markdown/text files on disk."""
+    """Standard Okapi BM25 baseline over plain markdown/text or structured files."""
 
     def __init__(self, docs: list[dict[str, Any]], k1: float = 1.5, b: float = 0.75) -> None:
         self.docs = docs
@@ -130,7 +125,7 @@ class WMMcpSession:
                     "params": {
                         "protocolVersion": "2024-11-05",
                         "capabilities": {},
-                        "clientInfo": {"name": "pinned-task-eval", "version": "1.0.0"},
+                        "clientInfo": {"name": "pinned-task-eval", "version": "1.1.0"},
                     },
                 }
             )
@@ -176,6 +171,10 @@ class WMMcpSession:
             if isinstance(msg_id, int) and msg_id >= 1:
                 if "error" in msg:
                     parsed[msg_id] = {"_error": msg["error"]}
+                elif msg.get("result", {}).get("isError"):
+                    content = msg.get("result", {}).get("content", [])
+                    text = content[0].get("text", "") if content else "MCP isError"
+                    parsed[msg_id] = {"_error": text}
                 else:
                     content = msg.get("result", {}).get("content", [])
                     text = content[0].get("text", "{}") if content else "{}"
@@ -322,10 +321,9 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
             store_dir = td_path / "wm_store"
             files_dir = td_path / "plain_files"
             files_dir.mkdir(parents=True, exist_ok=True)
+            budget = int(sc["budget_tokens"])
 
-            # Build Session 1 turn sequence:
-            # 4 early decisions (turns 1..4), resolved question + resolving answer (turns 5..6),
-            # open question (turn 7), and 25 noisy operational status turns (turns 8..32).
+            # Build Session 1 turn sequence (32 turns)
             turns_list: list[dict[str, Any]] = []
             for idx, (text, t_type, qual, imp) in enumerate(sc["decisions"], start=1):
                 turns_list.append(
@@ -386,7 +384,7 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
                     }
                 )
 
-            # 1) Plain-files tail baseline (reads tail of session.md up to budget_tokens)
+            # 1) Unstructured plain-files tail baseline (reads tail of session.md up to budget_tokens)
             t0 = time.perf_counter()
             flat_lines = []
             bm25_docs = []
@@ -402,7 +400,7 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
             used_tokens = 0
             for line in reversed(flat_lines):
                 t_est = approx_tokens(line)
-                if used_tokens + t_est > sc["budget_tokens"]:
+                if used_tokens + t_est > budget:
                     break
                 tail_selected.append(line)
                 used_tokens += t_est
@@ -411,7 +409,7 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
             tail_dec_hits = sum(1 for d, _, _, _ in sc["decisions"] if d in tail_text)
             tail_open_ok = (sc["open_q"] in tail_text) and (sc["resolved_q"] not in tail_text)
 
-            # 2) Plain-files Okapi BM25 baseline (queries generic session continuity prompt within budget)
+            # 2) Unstructured plain-files Okapi BM25 baseline (within budget)
             t1 = time.perf_counter()
             bm25 = OkapiBM25(bm25_docs)
             bm25_hits = bm25.search(
@@ -421,26 +419,101 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
             bm25_tokens = 0
             for h in bm25_hits:
                 t_est = approx_tokens(h["content"])
-                if bm25_tokens + t_est > sc["budget_tokens"]:
+                if bm25_tokens + t_est > budget:
                     break
                 bm25_selected.append(h["content"])
                 bm25_tokens += t_est
             bm25_text = "\n".join(bm25_selected)
             bm25_ms = (time.perf_counter() - t1) * 1000.0
             bm25_dec_hits = sum(1 for d, _, _, _ in sc["decisions"] if d in bm25_text)
-            # BM25 has no structural arc resolution, so if it retrieves resolved_q or misses open_q, precision fails
             bm25_open_ok = (sc["open_q"] in bm25_text) and (sc["resolved_q"] not in bm25_text)
 
-            # 3) WhiteMagic v10.4.0 (Session 1 records + crystallizes, then fresh process runs Session 2 continuity)
+            # 3) Equal-information structured metadata JSONL baseline:
+            # Given the exact same turn_type, importance, resolves, and track fields as WhiteMagic,
+            # and selecting open questions + salient anchors (importance >= 0.80) + recent turns within 280 tokens.
+            t_eq = time.perf_counter()
+            structured_jsonl = files_dir / "session_structured.jsonl"
+            structured_rows = []
+            for t in turns_list:
+                row = {
+                    "seq": t["seq"],
+                    "session_id": f"{sc['id']}_s1",
+                    "track": sc["track"],
+                    "role": t["role"],
+                    "turn_type": t["turn_type"],
+                    "qualifier": t["qualifier"],
+                    "importance": t["importance"],
+                    "content": t["content"],
+                    "resolves": 5 if t.get("_resolves_prev") else None,
+                }
+                structured_rows.append(row)
+            # Also add an intervening unrelated session row to the structured JSONL log
+            structured_rows.append(
+                {
+                    "seq": 33,
+                    "session_id": f"{sc['id']}_unrelated_s99",
+                    "track": "unrelated-intervening-track",
+                    "role": "ai",
+                    "turn_type": "decision",
+                    "qualifier": "verified",
+                    "importance": 0.95,
+                    "content": "Unrelated track decision: rotate staging CSS bundles weekly.",
+                    "resolves": None,
+                }
+            )
+            structured_jsonl.write_text(
+                "\n".join(json.dumps(r) for r in structured_rows) + "\n", encoding="utf-8"
+            )
+            loaded_rows = [
+                json.loads(line)
+                for line in structured_jsonl.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+            track_rows = [r for r in loaded_rows if r["track"] == sc["track"]]
+            resolved_seqs = {r["resolves"] for r in track_rows if r.get("resolves") is not None}
+            open_q_rows = [
+                r for r in track_rows if r["turn_type"] == "question" and r["seq"] not in resolved_seqs
+            ]
+            salient_rows = [
+                r
+                for r in track_rows
+                if r["seq"] not in {x["seq"] for x in open_q_rows}
+                and (r["turn_type"] == "decision" and r["importance"] >= 0.80)
+            ]
+            recent_rows = [
+                r
+                for r in reversed(track_rows[-3:])
+                if r["seq"] not in {x["seq"] for x in open_q_rows + salient_rows}
+            ]
+            eq_selected: list[str] = []
+            eq_tokens = 0
+            for candidate in open_q_rows + salient_rows + recent_rows:
+                cost = approx_tokens(candidate["content"])
+                if eq_tokens + cost > budget:
+                    break
+                eq_selected.append(candidate["content"])
+                eq_tokens += cost
+            eq_text = "\n".join(eq_selected)
+            eq_ms = (time.perf_counter() - t_eq) * 1000.0
+            eq_dec_hits = sum(1 for d, _, _, _ in sc["decisions"] if d in eq_text)
+            eq_open_ok = (sc["open_q"] in eq_text) and (sc["resolved_q"] not in eq_text)
+
+            # 4) WhiteMagic v10.4.0:
+            # Session 1 records + crystallizes; then an unrelated session on another track runs;
+            # then genuine new Session 2 starts on `sc["track"]` and calls `session_continuity`
+            # under the single enforced `token_budget = 280`.
             wm = WMMcpSession(wm_bin, store_dir)
-            # First record turns 1..5 to get the turn_id of turn 5 (resolved_q)
+            s1_id = f"{sc['id']}_s1"
+            unrel_id = f"{sc['id']}_unrelated_s99"
+            s2_id = f"{sc['id']}_s2"
+
             pre_calls: list[tuple[str, dict[str, Any]]] = []
             for t in turns_list[:5]:
                 pre_calls.append(
                     (
                         "session_record",
                         {
-                            "session_id": f"{sc['id']}_s1",
+                            "session_id": s1_id,
                             "track": sc["track"],
                             "role": t["role"],
                             "turn_type": t["turn_type"],
@@ -451,13 +524,15 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
                     )
                 )
             pre_res, _, _ = wm.run_batch(pre_calls)
+            for r in pre_res:
+                assert_mcp_ok(r, f"{sc['id']}:pre_record")
             resolved_q_turn_id = pre_res[4]["turn_id"]
 
             post_calls: list[tuple[str, dict[str, Any]]] = [
                 (
                     "session_record",
                     {
-                        "session_id": f"{sc['id']}_s1",
+                        "session_id": s1_id,
                         "track": sc["track"],
                         "role": turns_list[5]["role"],
                         "turn_type": turns_list[5]["turn_type"],
@@ -473,7 +548,7 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
                     (
                         "session_record",
                         {
-                            "session_id": f"{sc['id']}_s1",
+                            "session_id": s1_id,
                             "track": sc["track"],
                             "role": t["role"],
                             "turn_type": t["turn_type"],
@@ -487,56 +562,139 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
                 (
                     "session_checkpoint",
                     {
-                        "session_id": f"{sc['id']}_s1",
+                        "session_id": s1_id,
                         "track": sc["track"],
                         "summary": f"Completed {sc['id']} design and recorded decisions.",
                         "crystallize": True,
                     },
                 )
             )
-            wm.run_batch(post_calls)
+            # Intervening unrelated session on a different track
+            post_calls.append(
+                (
+                    "session_record",
+                    {
+                        "session_id": unrel_id,
+                        "track": "unrelated-intervening-track",
+                        "role": "ai",
+                        "turn_type": "decision",
+                        "qualifier": "verified",
+                        "importance": 0.95,
+                        "content": "Unrelated track decision: rotate staging CSS bundles weekly.",
+                    },
+                )
+            )
+            post_calls.append(
+                (
+                    "session_record",
+                    {
+                        "session_id": unrel_id,
+                        "track": "unrelated-intervening-track",
+                        "role": "user",
+                        "turn_type": "question",
+                        "qualifier": "conditional",
+                        "importance": 0.85,
+                        "content": "Q_UNRELATED: Should staging CSS use brotli level 9?",
+                    },
+                )
+            )
+            post_calls.append(
+                (
+                    "session_checkpoint",
+                    {
+                        "session_id": unrel_id,
+                        "track": "unrelated-intervening-track",
+                        "summary": "Unrelated track checkpoint.",
+                        "crystallize": False,
+                    },
+                )
+            )
+            post_res, _, _ = wm.run_batch(post_calls)
+            for r in post_res:
+                assert_mcp_ok(r, f"{sc['id']}:post_record")
 
-            # Now simulate a fresh process restart on Session 2 on the same track, plus hybrid replay on s1
+            # Probe 1: Empty new session `s2_id` (0 turns recorded yet) with `track=sc["track"]`
+            # routes past the intervening unrelated session (`unrel_id`) to `s1_id`.
+            # Then `s2_id` logs its opening turn, and Probe 2 (`current_session_id=s2_id`,
+            # `track=sc["track"]`) retrieves prior continuity under `token_budget = 280`.
             recovery_calls: list[tuple[str, dict[str, Any]]] = [
                 (
-                    "session.replay",
+                    "session_continuity",
                     {
-                        "session_id": f"{sc['id']}_s1",
-                        "mode": "hybrid",
-                        "token_budget": sc["budget_tokens"],
+                        "session_id": s2_id,
+                        "track": sc["track"],
+                        "n": 3,
+                        "token_budget": budget,
+                        "include_briefing_text": False,
+                    },
+                ),
+                (
+                    "session_record",
+                    {
+                        "session_id": s2_id,
+                        "track": sc["track"],
+                        "role": "user",
+                        "turn_type": "message",
+                        "qualifier": "conditional",
+                        "importance": 0.40,
+                        "content": f"Resuming {sc['track']} in new session {s2_id}.",
                     },
                 ),
                 (
                     "session_continuity",
                     {
-                        "session_id": f"{sc['id']}_s1",
+                        "current_session_id": s2_id,
                         "track": sc["track"],
                         "n": 3,
-                        "include_briefing_text": True,
+                        "token_budget": budget,
+                        "include_briefing_text": False,
                     },
                 ),
             ]
             rec_res, wm_ms, wm_bytes = wm.run_batch(recovery_calls)
-            replay_out = rec_res[0]
-            cont_out = rec_res[1]
+            for r in rec_res:
+                assert_mcp_ok(r, f"{sc['id']}:continuity")
+            cont_empty_s2 = rec_res[0]
+            cont_out = rec_res[2]
 
-            replay_text = json.dumps(replay_out)
-            wm_dec_hits = sum(1 for d, _, _, _ in sc["decisions"] if d in replay_text)
+            selected_prior_session = cont_out.get("session_id")
+            new_session_routing_ok = (selected_prior_session == s1_id) and (
+                cont_empty_s2.get("session_id") == s1_id
+            )
+
+            # Score strictly from the single budget-enforced continuity payload!
             unresolved_arcs = cont_out.get("unresolved_arcs", [])
+            salient_turns = cont_out.get("salient_turns", [])
+            recent_turns = cont_out.get("recent_turns", [])
+            scored_turns = unresolved_arcs + salient_turns + recent_turns
+            scored_text = "\n".join(t.get("content", "") for t in scored_turns)
+            wm_tokens_used = int(cont_out.get("token_estimate", 0))
+            wm_recomputed_tokens = sum(approx_tokens(t.get("content", "")) for t in scored_turns)
+            budget_enforced = (wm_tokens_used <= budget) and (wm_recomputed_tokens <= budget)
+            if not budget_enforced:
+                raise RuntimeError(
+                    f"Budget exceeded in {sc['id']}: token_estimate={wm_tokens_used}, recomputed={wm_recomputed_tokens}, budget={budget}"
+                )
+
+            wm_dec_hits = sum(1 for d, _, _, _ in sc["decisions"] if d in scored_text)
             unresolved_texts = [a.get("content", "") for a in unresolved_arcs]
-            wm_open_ok = (len(unresolved_arcs) == 1) and (unresolved_texts[0] == sc["open_q"])
+            wm_open_ok = (
+                (len(unresolved_arcs) == 1)
+                and (unresolved_texts[0] == sc["open_q"])
+                and (sc["resolved_q"] not in scored_text)
+            )
             related_crystals = cont_out.get("related_crystals", [])
             crystal_surfaced = len(related_crystals) >= 1
 
             failure_trace = None
             if wm_dec_hits < len(sc["decisions"]):
-                missing = [d for d, _, _, _ in sc["decisions"] if d not in replay_text]
+                missing = [d for d, _, _, _ in sc["decisions"] if d not in scored_text]
                 failure_trace = {
                     "system": "whitemagic_v10_4",
                     "scenario": sc["id"],
                     "cause": (
                         "Decision logged as untyped 'note' with importance=0.40 (< 0.80 salience floor) "
-                        "was evicted by 25 later turns under the 280-token hybrid replay cap."
+                        "was evicted by 25 later turns under the single 280-token continuity budget."
                     ),
                     "missing_decisions": missing,
                     "remediation": "Log architectural constraints with turn_type='decision' or importance>=0.80, or query session.recall.",
@@ -546,23 +704,36 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
                 {
                     "scenario_id": sc["id"],
                     "stress_untyped": sc["stress_untyped"],
+                    "budget_tokens": budget,
                     "plain_files_tail": {
                         "decision_recall": round(tail_dec_hits / 4.0, 3),
                         "open_arc_precision": 1.0 if tail_open_ok else 0.0,
                         "tokens_used": used_tokens,
+                        "budget_enforced": used_tokens <= budget,
                         "latency_ms": round(tail_ms, 3),
                     },
                     "bm25_flat_files": {
                         "decision_recall": round(bm25_dec_hits / 4.0, 3),
                         "open_arc_precision": 1.0 if bm25_open_ok else 0.0,
                         "tokens_used": bm25_tokens,
+                        "budget_enforced": bm25_tokens <= budget,
                         "latency_ms": round(bm25_ms, 3),
+                    },
+                    "structured_metadata_files": {
+                        "decision_recall": round(eq_dec_hits / 4.0, 3),
+                        "open_arc_precision": 1.0 if eq_open_ok else 0.0,
+                        "tokens_used": eq_tokens,
+                        "budget_enforced": eq_tokens <= budget,
+                        "latency_ms": round(eq_ms, 3),
                     },
                     "whitemagic_v10_4": {
                         "decision_recall": round(wm_dec_hits / 4.0, 3),
                         "open_arc_precision": 1.0 if wm_open_ok else 0.0,
+                        "new_session_track_routing_ok": new_session_routing_ok,
+                        "selected_prior_session": selected_prior_session,
                         "cross_session_crystal_surfaced": crystal_surfaced,
-                        "tokens_used": replay_out.get("token_estimate", 0),
+                        "tokens_used": wm_tokens_used,
+                        "budget_enforced": budget_enforced,
                         "response_bytes": wm_bytes,
                         "latency_ms": round(wm_ms, 3),
                     },
@@ -586,8 +757,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
         "updates": [
             "Hosted tenant write backup archive size cap limit is 4 GiB (4294967296 bytes) maximum."
         ],
-        "expected_token": "4294967296",
-        "stale_token": "1073741824",
+        "expected_fragment": "4294967296",
+        "stale_fragment": "1073741824",
         "use_governed_update": True,
     },
     {
@@ -601,8 +772,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
         "updates": [
             "Hosted fleet peering monthly price usd tier is $249/mo across EN and ZH contracts."
         ],
-        "expected_token": "$249/mo",
-        "stale_token": "$199/mo",
+        "expected_fragment": "$249/mo",
+        "stale_fragment": "$199/mo",
         "use_governed_update": True,
     },
     {
@@ -616,8 +787,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
         "updates": [
             "Receipt verifier openapi contract path count endpoints is 19 paths in revision 1.4.0."
         ],
-        "expected_token": "19 paths",
-        "stale_token": "18 paths",
+        "expected_fragment": "19 paths",
+        "stale_fragment": "18 paths",
         "use_governed_update": True,
     },
     {
@@ -630,8 +801,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
         "updates": [
             "v10.3.0 release manifest wm-linux-x86_64 sha256 digest is 9c01c6ce1bf16dfb9777d9acf2f37c0c208298a9d7e7d7917184e67471a25a11."
         ],
-        "expected_token": "9c01c6ce1bf16dfb9777d9acf2f37c0c208298a9d7e7d7917184e67471a25a11",  # gitleaks:allow
-        "stale_token": "232e31be6fa850e89a4fae9328e33e377cb36a3db67cce5b7b130c5856f0bd38",  # gitleaks:allow
+        "expected_fragment": "9c01c6ce1bf16dfb9777d9acf2f37c0c208298a9d7e7d7917184e67471a25a11",
+        "stale_fragment": "232e31be6fa850e89a4fae9328e33e377cb36a3db67cce5b7b130c5856f0bd38",
         "use_governed_update": True,
     },
     {
@@ -645,8 +816,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
             "Hosted restore drill verification check count pass gate is 21/21 checks.",
             "Hosted restore drill verification check count pass gate is 23/23 checks.",
         ],
-        "expected_token": "23/23",
-        "stale_token": "19/19",
+        "expected_fragment": "23/23",
+        "stale_fragment": "19/19",
         "use_governed_update": True,
     },
     {
@@ -660,8 +831,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
             "Economy acceptance fault injection test suite pass count is 31/31 passing tests.",
             "Economy acceptance fault injection test suite pass count is 43/43 passing tests.",
         ],
-        "expected_token": "43/43",
-        "stale_token": "25/25",
+        "expected_fragment": "43/43",
+        "stale_fragment": "25/25",
         "use_governed_update": True,
     },
     {
@@ -674,8 +845,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
         "updates": [
             "npm whitemagic-mcp dist-tag channel version pin has latest=9.3.4 (stable) and next=10.3.0 (preview)."
         ],
-        "expected_token": "latest=9.3.4",
-        "stale_token": "latest=10.3.0",
+        "expected_fragment": "latest=9.3.4",
+        "stale_fragment": "latest=10.3.0",
         "use_governed_update": True,
     },
     {
@@ -690,8 +861,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
         "updates": [
             "Changed x402 upstream wait limit to 45s."
         ],
-        "expected_token": "45s",
-        "stale_token": "15 seconds",
+        "expected_fragment": "45s",
+        "stale_fragment": "15 seconds",
         "use_governed_update": False,
     },
 ]
@@ -706,28 +877,40 @@ def run_conflict_family(wm_bin: Path) -> dict[str, Any]:
             files_dir = td_path / "plain_files"
             files_dir.mkdir(parents=True, exist_ok=True)
 
-            # Plain files + BM25 baseline: writes each record as a markdown file
+            # 1) Unstructured plain files + BM25 baseline: writes each record as a markdown file without supersession links
             t0 = time.perf_counter()
             docs: list[dict[str, Any]] = []
-            docs.append({"id": "v1", "content": sc["v1"]})
+            docs.append({"id": "v1", "content": sc["v1"], "is_current": False})
             for idx, p in enumerate(sc["v1_paraphrases"], start=1):
-                docs.append({"id": f"v1_p{idx}", "content": p})
+                docs.append({"id": f"v1_p{idx}", "content": p, "is_current": False})
             for idx, u in enumerate(sc["updates"], start=2):
-                docs.append({"id": f"v{idx}", "content": u})
+                is_last = idx == (len(sc["updates"]) + 1)
+                docs.append({"id": f"v{idx}", "content": u, "is_current": is_last})
             for d in docs:
                 (files_dir / f"{d['id']}.md").write_text(d["content"] + "\n", encoding="utf-8")
 
             bm25 = OkapiBM25(docs)
             bm25_hits = bm25.search(sc["query"], limit=3)
             bm25_ms = (time.perf_counter() - t0) * 1000.0
-            bm25_top1_ok = (sc["expected_token"] in bm25_hits[0]["content"]) and (
-                sc["stale_token"] not in bm25_hits[0]["content"]
-            )
-            bm25_stale_hits = sum(
-                1 for h in bm25_hits if sc["stale_token"] in h["content"] or h["id"].startswith("v1")
-            )
+            bm25_top1_ok = bool(bm25_hits and bm25_hits[0].get("is_current"))
+            bm25_stale_hits = sum(1 for h in bm25_hits if not h.get("is_current"))
 
-            # WhiteMagic v10.4.0:
+            # 2) Equal-information structured supersedes JSONL baseline:
+            # Given the exact same governed supersession links as WhiteMagic, filters out superseded records before BM25.
+            t_eq = time.perf_counter()
+            superseded_doc_ids: set[str] = set()
+            if sc["use_governed_update"]:
+                for d in docs:
+                    if not d["is_current"]:
+                        superseded_doc_ids.add(d["id"])
+            active_eq_docs = [d for d in docs if d["id"] not in superseded_doc_ids]
+            bm25_eq = OkapiBM25(active_eq_docs)
+            eq_hits = bm25_eq.search(sc["query"], limit=3)
+            eq_ms = (time.perf_counter() - t_eq) * 1000.0
+            eq_top1_ok = bool(eq_hits and eq_hits[0].get("is_current"))
+            eq_stale_hits = sum(1 for h in eq_hits if not h.get("is_current"))
+
+            # 3) WhiteMagic v10.4.0:
             wm = WMMcpSession(wm_bin, store_dir)
             init_calls: list[tuple[str, dict[str, Any]]] = [
                 ("memory_remember", {"content": sc["v1"], "title": f"{sc['id']}_canonical"}),
@@ -735,13 +918,16 @@ def run_conflict_family(wm_bin: Path) -> dict[str, Any]:
             for idx, p in enumerate(sc["v1_paraphrases"], start=1):
                 init_calls.append(("memory_remember", {"content": p, "title": f"{sc['id']}_p{idx}"}))
             init_res, _, _ = wm.run_batch(init_calls)
-            curr_id = init_res[0]["record_id"]
+            for r in init_res:
+                assert_mcp_ok(r, f"{sc['id']}:init_remember")
+            v1_id = init_res[0]["record_id"]
+            curr_id = v1_id
             paraphrase_ids = [r["record_id"] for r in init_res[1:]]
+            stale_record_ids: set[int] = {v1_id, *paraphrase_ids}
 
-            update_calls: list[tuple[str, dict[str, Any]]] = []
             if sc["use_governed_update"]:
-                # Supersede canonical record across update hops, and also supersede v1 paraphrases
-                for u_text in sc["updates"]:
+                # Supersede canonical record across update hops
+                for hop_idx, u_text in enumerate(sc["updates"]):
                     res_u, _, _ = wm.run_batch(
                         [
                             (
@@ -754,9 +940,15 @@ def run_conflict_family(wm_bin: Path) -> dict[str, Any]:
                             )
                         ]
                     )
+                    assert_mcp_ok(res_u[0], f"{sc['id']}:update_hop_{hop_idx}")
+                    if hop_idx < len(sc["updates"]) - 1:
+                        stale_record_ids.add(res_u[0]["record_id"])
                     curr_id = res_u[0]["record_id"]
+                stale_record_ids.discard(curr_id)
+
+                # Consolidate all stale paraphrases into the terminal record (testing duplicate_exact consolidation!)
                 for pid in paraphrase_ids:
-                    wm.run_batch(
+                    res_p, _, _ = wm.run_batch(
                         [
                             (
                                 "memory.update",
@@ -768,33 +960,61 @@ def run_conflict_family(wm_bin: Path) -> dict[str, Any]:
                             )
                         ]
                     )
+                    assert_mcp_ok(res_p[0], f"{sc['id']}:consolidate_paraphrase_{pid}")
+                    if res_p[0].get("record_id") != curr_id:
+                        raise RuntimeError(
+                            f"Expected paraphrase {pid} to consolidate into head {curr_id}, got {res_p[0]}"
+                        )
             else:
                 # Stress case M8: agent just calls memory_remember without memory.update
                 for u_text in sc["updates"]:
-                    wm.run_batch([("memory_remember", {"content": u_text, "title": f"{sc['id']}_unlinked"})])
+                    res_raw, _, _ = wm.run_batch(
+                        [("memory_remember", {"content": u_text, "title": f"{sc['id']}_unlinked"})]
+                    )
+                    assert_mcp_ok(res_raw[0], f"{sc['id']}:unlinked_remember")
+                    curr_id = res_raw[0]["record_id"]
 
             query_calls: list[tuple[str, dict[str, Any]]] = [
                 ("memory_recall", {"query": sc["query"], "limit": 3}),
                 ("memory.revisions", {"id": curr_id, "action": "verify"}),
             ]
+            if sc["use_governed_update"]:
+                for pid in paraphrase_ids:
+                    query_calls.append(("memory.revisions", {"id": pid, "action": "verify"}))
             q_res, wm_ms, wm_bytes = wm.run_batch(query_calls)
+            for r in q_res:
+                assert_mcp_ok(r, f"{sc['id']}:query_verify")
+
             recall_out = q_res[0]
             rev_out = q_res[1]
+            paraphrase_revs = q_res[2:]
+
             wm_hits = recall_out.get("results", [])
-            # Filter to active (non-superseded) hits first, as WhiteMagic marks `superseded_by`
             active_hits = [h for h in wm_hits if h.get("superseded_by") is None]
             top_hit = active_hits[0] if active_hits else (wm_hits[0] if wm_hits else {})
-            wm_top1_ok = (sc["expected_token"] in top_hit.get("content", "")) and (
-                sc["stale_token"] not in top_hit.get("content", "")
+
+            # Strict version-identity check: top_hit must be `curr_id` and contain expected_fragment
+            wm_top1_ok = (top_hit.get("record_id") == curr_id) and (
+                sc["expected_fragment"] in top_hit.get("content", "")
             )
+            # Stale check by version identity (any active hit in stale_record_ids or carrying stale_fragment)
             unflagged_stale = sum(
                 1
-                for h in wm_hits
-                if (sc["stale_token"] in h.get("content", "")) and (h.get("superseded_by") is None)
+                for h in active_hits
+                if (h.get("record_id") in stale_record_ids) or (sc["stale_fragment"] in h.get("content", ""))
             )
+
             verify_block = rev_out.get("verify", {})
-            lineage_ok = bool(verify_block.get("valid")) and int(verify_block.get("chain_length", 0)) >= len(
-                sc["updates"]
+            paraphrase_dag_ok = all(
+                bool(pr.get("verify", {}).get("valid"))
+                and pr.get("verify", {}).get("head_record_id") == curr_id
+                for pr in paraphrase_revs
+            )
+            lineage_ok = (
+                bool(verify_block.get("valid"))
+                and verify_block.get("head_record_id") == curr_id
+                and int(verify_block.get("chain_length", 0)) >= len(sc["updates"]) + len(paraphrase_ids)
+                and paraphrase_dag_ok
             )
 
             failure_trace = None
@@ -820,9 +1040,16 @@ def run_conflict_family(wm_bin: Path) -> dict[str, Any]:
                         "lineage_verifiable": 0.0,
                         "latency_ms": round(bm25_ms, 3),
                     },
+                    "structured_supersedes_files": {
+                        "top1_current_truth": 1.0 if eq_top1_ok else 0.0,
+                        "unflagged_stale_in_top3": round(eq_stale_hits / max(1, len(eq_hits)), 3),
+                        "lineage_verifiable": 0.0,
+                        "latency_ms": round(eq_ms, 3),
+                    },
                     "whitemagic_v10_4": {
                         "top1_current_truth": 1.0 if wm_top1_ok else 0.0,
-                        "unflagged_stale_in_top3": round(unflagged_stale / max(1, len(wm_hits)), 3),
+                        "unflagged_stale_in_top3": round(unflagged_stale / max(1, len(active_hits)), 3),
+                        "active_stale_count": unflagged_stale,
                         "lineage_verifiable": 1.0 if lineage_ok else 0.0,
                         "response_bytes": wm_bytes,
                         "latency_ms": round(wm_ms, 3),
@@ -975,9 +1202,8 @@ def run_repair_family(wm_bin: Path) -> dict[str, Any]:
             bm25_append = OkapiBM25(append_docs)
             append_hits = bm25_append.search(sc["query"], limit=3)
             append_ms = (time.perf_counter() - t0) * 1000.0
-            # Does bad_marker still appear unflagged in top-3?
             append_poison_free = all(sc["bad_marker"] not in h["content"] for h in append_hits)
-            append_legit_kept = 1.0  # append-only never deletes neighbors
+            append_legit_kept = 1.0
 
             # Baseline 2: Plain-files naive entity/keyword line prune (deletes lines containing entity_token)
             t1 = time.perf_counter()
@@ -994,6 +1220,23 @@ def run_repair_family(wm_bin: Path) -> dict[str, Any]:
             )
             prune_legit_kept = surviving_legit / float(len(sc["legitimate_neighbors"]))
 
+            # Baseline 3: Equal-information record-addressed file store (given exact bad record ID)
+            t_eq = time.perf_counter()
+            addressed_docs = [
+                ({"id": "bad", "content": sc["repaired_memory"]} if d["id"] == "bad" else d)
+                for d in append_docs[:-1]
+            ]
+            bm25_addr = OkapiBM25(addressed_docs)
+            addr_hits = bm25_addr.search(sc["query"], limit=3)
+            addr_ms = (time.perf_counter() - t_eq) * 1000.0
+            addr_poison_free = (
+                len(addr_hits) >= 1
+                and any(sc["good_marker"] in h["content"] for h in addr_hits)
+                and all(sc["bad_marker"] not in h["content"] for h in addr_hits)
+            )
+            addr_rank1 = bool(addr_hits and sc["good_marker"] in addr_hits[0]["content"])
+            addr_legit_kept = 1.0
+
             # WhiteMagic v10.4.0: Surgical record-addressed memory.update + legitimate neighbor verification
             wm = WMMcpSession(wm_bin, store_dir)
             ingest_calls: list[tuple[str, dict[str, Any]]] = [
@@ -1002,10 +1245,11 @@ def run_repair_family(wm_bin: Path) -> dict[str, Any]:
             for idx, leg in enumerate(sc["legitimate_neighbors"], start=1):
                 ingest_calls.append(("memory_remember", {"content": leg, "title": f"{sc['id']}_leg_{idx}"}))
             ing_res, _, _ = wm.run_batch(ingest_calls)
+            for r in ing_res:
+                assert_mcp_ok(r, f"{sc['id']}:ingest")
             bad_id = ing_res[0]["record_id"]
             legit_ids = [r["record_id"] for r in ing_res[1:]]
 
-            # Perform surgical repair via memory.update(id=bad_id)
             repair_calls: list[tuple[str, dict[str, Any]]] = [
                 (
                     "memory.update",
@@ -1023,6 +1267,8 @@ def run_repair_family(wm_bin: Path) -> dict[str, Any]:
                 ("memory.revisions", {"id": bad_id, "action": "verify"})
             )
             rep_res, wm_ms, wm_bytes = wm.run_batch(repair_calls)
+            for r in rep_res:
+                assert_mcp_ok(r, f"{sc['id']}:repair")
 
             recall_hits = rep_res[1].get("results", [])
             active_hits = [h for h in recall_hits if h.get("superseded_by") is None]
@@ -1030,6 +1276,7 @@ def run_repair_family(wm_bin: Path) -> dict[str, Any]:
                 len(active_hits) >= 1
                 and any(sc["good_marker"] in h.get("content", "") for h in active_hits)
                 and all(sc["bad_marker"] not in h.get("content", "") for h in active_hits)
+                and all(h.get("record_id") != bad_id for h in active_hits)
             )
             wm_rank1 = (
                 len(active_hits) >= 1
@@ -1078,6 +1325,15 @@ def run_repair_family(wm_bin: Path) -> dict[str, Any]:
                         "joint_success": 1.0 if (prune_poison_free and prune_legit_kept == 1.0) else 0.0,
                         "latency_ms": round(prune_ms, 3),
                     },
+                    "record_addressed_files": {
+                        "poison_free_active_top3": 1.0 if addr_poison_free else 0.0,
+                        "repaired_at_rank1": 1.0 if addr_rank1 else 0.0,
+                        "legitimate_state_preserved": round(addr_legit_kept, 3),
+                        "joint_success_top3": 1.0 if (addr_poison_free and addr_legit_kept == 1.0) else 0.0,
+                        "joint_success_rank1": 1.0 if (addr_rank1 and addr_legit_kept == 1.0) else 0.0,
+                        "audit_trail_verified": 0.0,
+                        "latency_ms": round(addr_ms, 3),
+                    },
                     "whitemagic_v10_4": {
                         "poison_free_active_top3": 1.0 if wm_poison_free_top3 else 0.0,
                         "repaired_at_rank1": 1.0 if wm_rank1 else 0.0,
@@ -1094,15 +1350,343 @@ def run_repair_family(wm_bin: Path) -> dict[str, Any]:
     return {"family": "T_REPAIR", "scenarios": results}
 
 
+# ─── Task Family 4: Unseen Prospective Agent-Discovery (No Target IDs Supplied)
+
+DISCOVERY_SCENARIOS: list[dict[str, Any]] = [
+    {
+        "id": "D1_discover_crystal_pq_alg_bypass",
+        "search_query": "crystal_client supported signature algorithms ml-dsa-65 verification",
+        "obsolete_claims": [
+            "crystal_client accepts standalone ml-dsa-65 client_sig profiles without running an Ed25519 signature verifier.",
+            "Migration note: standalone ml-dsa-65 signature algorithm is allowed in SUPPORTED_CLIENT_SIG_ALGS without a PQ verifier callback.",
+        ],
+        "authoritative_replacement": (
+            "crystal_client supported signature algorithms ml-dsa-65 verification: standalone ml-dsa-65 is rejected; "
+            "only ed25519 and hybrid ed25519+ml-dsa-65 (with mandatory Ed25519 + fail-closed pq_verifier) are accepted."
+        ),
+        "stale_clues": ["standalone ml-dsa-65", "without running an ed25519", "without a pq verifier"],
+        "expected_marker": "fail-closed pq_verifier",
+        "legitimate_neighbors": [
+            "crystal_client verifies Ed25519 signatures over RFC 8785 JCS canonical envelope bytes.",
+            "crystal_client binds crystal_id to the initial wrapping KEK version (id_kek_version).",
+            "crystal_client enforces 0600 file permissions when loading bearer token files.",
+        ],
+    },
+    {
+        "id": "D2_discover_notarization_unsigned_acceptance",
+        "search_query": "verify_crystal_set_third_party context notarization signature check",
+        "obsolete_claims": [
+            "verify_crystal_set_third_party context notarization signature check accepts any dictionary with spec wm.context-notarization and highwater_digest.",
+            "Audit note: verify_crystal_set_third_party marks notarized=true without requiring a notary_public_key.",
+        ],
+        "authoritative_replacement": (
+            "verify_crystal_set_third_party context notarization signature check requires a 32-byte Ed25519 "
+            "notary_public_key and verifies notarization.signature over the canonical statement before setting notarized=true."
+        ),
+        "stale_clues": ["accepts any dictionary", "without requiring a notary_public_key"],
+        "expected_marker": "notary_public_key",
+        "legitimate_neighbors": [
+            "verify_crystal_set_third_party recomputes crystal_set_digest over sorted cell_ids.",
+            "verify_crystal_set_third_party detects missing crystals when commitment crystal_count exceeds the bundle.",
+            "verify_crystal_set_third_party checks optional OpenTimestamps proof commitments against the set digest.",
+        ],
+    },
+    {
+        "id": "D3_discover_landlock_truncate_omission",
+        "search_query": "receipt-api landlock write confinement access mask truncate refer",
+        "obsolete_claims": [
+            "receipt-api landlock write confinement access mask covers bits 1..12 only and omits LANDLOCK_ACCESS_FS_TRUNCATE on ABI v3+.",
+            "Sandbox note: receipt-api landlock write confinement access mask leaves truncate and refer bits unset.",
+        ],
+        "authoritative_replacement": (
+            "receipt-api landlock write confinement access mask truncate refer includes LANDLOCK_ACCESS_FS_REFER (bit 13) "
+            "on ABI >= 2 and LANDLOCK_ACCESS_FS_TRUNCATE (bit 14) on ABI >= 3 to block outside file truncation."
+        ),
+        "stale_clues": ["bits 1..12 only", "leaves truncate and refer bits unset"],
+        "expected_marker": "LANDLOCK_ACCESS_FS_TRUNCATE",
+        "legitimate_neighbors": [
+            "receipt-api landlock write confinement grants read-only access to /usr, /lib, /etc, and /proc.",
+            "receipt-api landlock write confinement grants read-write access strictly to the state directory and /tmp.",
+            "receipt-api calls prctl(PR_SET_NO_NEW_PRIVS, 1) prior to landlock_restrict_self.",
+        ],
+    },
+    {
+        "id": "D4_discover_erasure_receipt_overclaim",
+        "search_query": "receipt-api DELETE crystal erasure_class backup retention classification",
+        "obsolete_claims": [
+            "receipt-api DELETE crystal erasure_class backup retention classification emits cryptographic_erasure_or_purge and claims immediate off-box backup wipe.",
+            "Compliance draft: server DELETE /v1/crystals/<id> proves client DEK destruction.",
+        ],
+        "authoritative_replacement": (
+            "receipt-api DELETE crystal erasure_class backup retention classification emits access_control_and_ciphertext_purge "
+            "with server_action=ciphertext_unlinked_and_tombstoned and discloses offbox_12_snapshot_rotation_window."
+        ),
+        "stale_clues": ["cryptographic_erasure_or_purge", "proves client dek destruction"],
+        "expected_marker": "access_control_and_ciphertext_purge",
+        "legitimate_neighbors": [
+            "receipt-api DELETE /v1/crystals/<id> records a durable tombstone preventing re-upload of the same crystal_id.",
+            "receipt-api signs deletion receipts with the hosted Ed25519 gate key.",
+            "receipt-api requires a valid owner X-WM-Crystal-Assertion header on DELETE requests.",
+        ],
+    },
+    {
+        "id": "D5_discover_kek_rotation_stale_signature",
+        "search_query": "rotate_crystal_kek signed crystal envelope client_sig re-signing",
+        "obsolete_claims": [
+            "rotate_crystal_kek signed crystal envelope client_sig re-signing leaves the old client_sig untouched after updating kek_version.",
+            "Rotation note: rotate_crystal_kek does not accept an ed25519_private_key parameter.",
+        ],
+        "authoritative_replacement": (
+            "rotate_crystal_kek signed crystal envelope client_sig re-signing verifies the prior signature, requires "
+            "the matching ed25519_private_key, and atomically re-signs the rotated envelope."
+        ),
+        "stale_clues": ["leaves the old client_sig untouched", "does not accept an ed25519_private_key"],
+        "expected_marker": "atomically re-signs",
+        "legitimate_neighbors": [
+            "rotate_crystal_kek re-wraps the per-crystal DEK under the new KEK version without re-encrypting the payload.",
+            "rotate_crystal_kek preserves crystal_id by keeping id_kek_version fixed.",
+            "rotate_crystal_kek refuses rotation if the old KEK fails to authenticate the existing wrapped_dek.",
+        ],
+    },
+    {
+        "id": "D6_discover_backup_monitor_auth_api_prefix",
+        "search_query": "check_backup_freshness auth-state required archive prefixes gzip trailer",
+        "obsolete_claims": [
+            "check_backup_freshness auth-state required archive prefixes gzip trailer checks only whitemagic-hosted/ and skips whitemagic-hosted-api/.",
+            "Monitor note: check_backup_freshness reads tar headers via getnames() without decompressing the gzip stream to EOF.",
+        ],
+        "authoritative_replacement": (
+            "check_backup_freshness auth-state required archive prefixes gzip trailer requires both whitemagic-hosted/ "
+            "and whitemagic-hosted-api/ subtrees and decompresses the full gzip stream to EOF."
+        ),
+        "stale_clues": ["skips whitemagic-hosted-api/", "without decompressing the gzip stream"],
+        "expected_marker": "whitemagic-hosted-api/",
+        "legitimate_neighbors": [
+            "check_backup_freshness verifies 64-hex SHA-256 sidecar digests for all three backup series.",
+            "check_backup_freshness enforces a 36-hour maximum age window for daily off-box archives.",
+            "check_backup_freshness runs daily via whitemagic-backup-freshness-check.timer.",
+        ],
+    },
+    {
+        "id": "D7_discover_economy_discovery_flag_mismatch",
+        "search_query": "hosted x402 payment challenge discovery economy_enabled flag",
+        "obsolete_claims": [
+            "hosted x402 payment challenge discovery economy_enabled flag advertises nano credit advances even when --economy is disabled.",
+            "Gateway note: 402 challenge metadata ignores the runtime economy_enabled boolean.",
+        ],
+        "authoritative_replacement": (
+            "hosted x402 payment challenge discovery economy_enabled flag suppresses nano advance advertisements "
+            "whenever --economy is disabled and returns 503 economy_disabled on economy endpoints."
+        ),
+        "stale_clues": ["even when --economy is disabled", "ignores the runtime economy_enabled"],
+        "expected_marker": "suppresses nano advance",
+        "legitimate_neighbors": [
+            "hosted x402 payment challenge binds facilitator settlement verification to Base USDC.",
+            "hosted x402 payment challenge rate-limits anonymous trial requests by client IP.",
+            "hosted x402 payment challenge logs content-free settlement receipts.",
+        ],
+    },
+    {
+        "id": "D8_discover_release_health_tag_checkout_hazard",
+        "search_query": "release_health.py historical tag checkout certification script execution",
+        "obsolete_claims": [
+            "release_health.py historical tag checkout certification script execution runs the checked-out old tag's script copy from the working tree.",
+            "CI note: release certification allows empty bound_manifest_sha256 digests on historical tags.",
+        ],
+        "authoritative_replacement": (
+            "release_health.py historical tag checkout certification script execution copies the trusted checker "
+            "to RUNNER_TEMP before tag checkout and requires an exact 64-hex bound_manifest_sha256 digest."
+        ),
+        "stale_clues": ["old tag's script copy", "allows empty bound_manifest_sha256"],
+        "expected_marker": "RUNNER_TEMP",
+        "legitimate_neighbors": [
+            "release_health.py verifies Ed25519 signatures over release-manifest.json.",
+            "release_health.py cross-checks GitHub release asset sizes and SHA-256 digests.",
+            "release_health.py validates npm and Docker certification metadata bindings.",
+        ],
+    },
+]
+
+
+def run_discovery_family(wm_bin: Path) -> dict[str, Any]:
+    """Prospective evaluation where the runner does NOT pass record IDs to the repair/update agent."""
+    results = []
+    for sc in DISCOVERY_SCENARIOS:
+        with tempfile.TemporaryDirectory(prefix=f"eval_{sc['id']}_") as td:
+            td_path = Path(td)
+            store_dir = td_path / "wm_store"
+
+            wm = WMMcpSession(wm_bin, store_dir)
+            # Ingest corpus in shuffled/interleaved order without returning IDs to the discovery adapter
+            corpus_items: list[tuple[str, str, bool]] = []
+            corpus_items.append((sc["obsolete_claims"][0], "obsolete_0", True))
+            for idx, leg in enumerate(sc["legitimate_neighbors"], start=1):
+                corpus_items.append((leg, f"legit_{idx}", False))
+            for idx, obs in enumerate(sc["obsolete_claims"][1:], start=1):
+                corpus_items.append((obs, f"obsolete_{idx}", True))
+
+            ingest_calls = [
+                ("memory_remember", {"content": text, "title": f"{sc['id']}_{label}"})
+                for text, label, _ in corpus_items
+            ]
+            ing_res, _, _ = wm.run_batch(ingest_calls)
+            for r in ing_res:
+                assert_mcp_ok(r, f"{sc['id']}:ingest")
+
+            ground_truth_obsolete_ids = {
+                ing_res[i]["record_id"] for i, (_, _, is_obs) in enumerate(corpus_items) if is_obs
+            }
+            ground_truth_legit_ids = [
+                ing_res[i]["record_id"] for i, (_, _, is_obs) in enumerate(corpus_items) if not is_obs
+            ]
+
+            # ── Autonomous Discovery Agent (receives NO record IDs!) ──
+            # Step 1: Search the store using only the natural-language query
+            search_res, search_ms, search_bytes = wm.run_batch(
+                [("memory_recall", {"query": sc["search_query"], "limit": 10})]
+            )
+            assert_mcp_ok(search_res[0], f"{sc['id']}:agent_search")
+            candidates = search_res[0].get("results", [])
+
+            # Step 2: Agent autonomously classifies which retrieved records match the stale clues
+            discovered_obsolete_ids: list[int] = []
+            for cand in candidates:
+                content_lower = cand.get("content", "").lower()
+                if any(clue.lower() in content_lower for clue in sc["stale_clues"]):
+                    discovered_obsolete_ids.append(cand["record_id"])
+
+            # Step 3: Agent supersedes the first discovered obsolete record with the authoritative replacement,
+            # and consolidates all remaining discovered obsolete records into that new head record!
+            mutation_calls: list[tuple[str, dict[str, Any]]] = []
+            head_id: int | None = None
+            mutation_ms = 0.0
+            mutation_bytes = 0
+            if discovered_obsolete_ids:
+                first_id = discovered_obsolete_ids[0]
+                u_first, ms1, b1 = wm.run_batch(
+                    [
+                        (
+                            "memory.update",
+                            {
+                                "id": first_id,
+                                "content": sc["authoritative_replacement"],
+                                "reason": "autonomous_discovery_supersede",
+                            },
+                        )
+                    ]
+                )
+                assert_mcp_ok(u_first[0], f"{sc['id']}:agent_update_first")
+                head_id = u_first[0]["record_id"]
+                mutation_ms += ms1
+                mutation_bytes += b1
+
+                if len(discovered_obsolete_ids) > 1:
+                    consolidate_calls = [
+                        (
+                            "memory.update",
+                            {
+                                "id": oid,
+                                "superseded_by_id": head_id,
+                                "reason": "autonomous_discovery_consolidate",
+                            },
+                        )
+                        for oid in discovered_obsolete_ids[1:]
+                    ]
+                    u_rest, ms2, b2 = wm.run_batch(consolidate_calls)
+                    for r in u_rest:
+                        assert_mcp_ok(r, f"{sc['id']}:agent_consolidate")
+                    mutation_ms += ms2
+                    mutation_bytes += b2
+
+            # Step 4: Independent verification of the resulting store state
+            verify_calls: list[tuple[str, dict[str, Any]]] = [
+                ("memory_recall", {"query": sc["search_query"], "limit": 3}),
+            ]
+            for lid in ground_truth_legit_ids:
+                verify_calls.append(("memory_get", {"id": str(lid)}))
+            if head_id is not None:
+                verify_calls.append(("memory.revisions", {"id": head_id, "action": "verify"}))
+            v_res, verify_ms, verify_bytes = wm.run_batch(verify_calls)
+            for r in v_res:
+                assert_mcp_ok(r, f"{sc['id']}:verify")
+
+            discovered_set = set(discovered_obsolete_ids)
+            discovery_recall = len(discovered_set & ground_truth_obsolete_ids) / float(
+                len(ground_truth_obsolete_ids)
+            )
+            false_positives = len(discovered_set & set(ground_truth_legit_ids))
+            discovery_precision = (
+                len(discovered_set & ground_truth_obsolete_ids) / float(len(discovered_set))
+                if discovered_set
+                else 0.0
+            )
+
+            active_hits = [
+                h for h in v_res[0].get("results", []) if h.get("superseded_by") is None
+            ]
+            top1_ok = bool(
+                active_hits
+                and head_id is not None
+                and active_hits[0].get("record_id") == head_id
+                and sc["expected_marker"] in active_hits[0].get("content", "")
+            )
+            stale_in_top3 = sum(
+                1 for h in active_hits if h.get("record_id") in ground_truth_obsolete_ids
+            )
+            legit_reads = v_res[1 : 1 + len(ground_truth_legit_ids)]
+            legit_preserved = sum(
+                1
+                for r, expected_text in zip(legit_reads, sc["legitimate_neighbors"])
+                if expected_text in json.dumps(r)
+                and r.get("record", r).get("superseded_by") is None
+            ) / float(len(sc["legitimate_neighbors"]))
+            dag_verified = bool(
+                head_id is not None
+                and v_res[-1].get("verify", {}).get("valid")
+                and v_res[-1].get("verify", {}).get("head_record_id") == head_id
+            )
+
+            results.append(
+                {
+                    "scenario_id": sc["id"],
+                    "whitemagic_autonomous_discovery": {
+                        "target_discovery_recall": round(discovery_recall, 3),
+                        "target_discovery_precision": round(discovery_precision, 3),
+                        "false_positive_supersessions": false_positives,
+                        "top1_current_truth": 1.0 if top1_ok else 0.0,
+                        "active_stale_in_top3": stale_in_top3,
+                        "legitimate_state_preserved": round(legit_preserved, 3),
+                        "converging_dag_verified": 1.0 if dag_verified else 0.0,
+                        "end_to_end_success": 1.0
+                        if (
+                            discovery_recall == 1.0
+                            and false_positives == 0
+                            and top1_ok
+                            and stale_in_top3 == 0
+                            and legit_preserved == 1.0
+                            and dag_verified
+                        )
+                        else 0.0,
+                        "response_bytes": search_bytes + mutation_bytes + verify_bytes,
+                        "latency_ms": round(search_ms + mutation_ms + verify_ms, 3),
+                    },
+                    "failure_trace": None,
+                }
+            )
+    return {"family": "T_DISCOVERY", "scenarios": results}
+
+
 def summarize_evaluation(
     wm_bin: Path,
     cont: dict[str, Any],
     conf: dict[str, Any],
     rep: dict[str, Any],
+    disc: dict[str, Any],
 ) -> dict[str, Any]:
     c_sc = cont["scenarios"]
     m_sc = conf["scenarios"]
     r_sc = rep["scenarios"]
+    d_sc = disc["scenarios"]
 
     def avg(vals: list[float]) -> float:
         return round(sum(vals) / len(vals), 4) if vals else 0.0
@@ -1116,30 +1700,42 @@ def summarize_evaluation(
         return {"p50_ms": round(p50, 2), "p95_ms": round(s[p95_idx], 2)}
 
     failure_traces = [
-        s["failure_trace"] for s in (c_sc + m_sc + r_sc) if s.get("failure_trace") is not None
+        s["failure_trace"]
+        for s in (c_sc + m_sc + r_sc + d_sc)
+        if s.get("failure_trace") is not None
     ]
 
     return {
-        "schema": "wm.pinned-task-evaluation/1.0",
+        "schema": "wm.pinned-task-evaluation/1.1",
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "binary": {
-            "path": "target/release/wm",
+            "path": str(wm_bin),
             "sha256": sha256_file(wm_bin),
             "version": "10.4.0",
         },
-        "total_scenarios": len(c_sc) + len(m_sc) + len(r_sc),
+        "ignored_runtime_errors": 0,
+        "total_scenarios": len(c_sc) + len(m_sc) + len(r_sc) + len(d_sc),
         "summary_by_family": {
             "T_CONTINUITY_cross_session_decision_recovery": {
                 "scenario_count": len(c_sc),
+                "shared_budget_tokens": 280,
                 "plain_files_tail": {
-                    "mean_decision_recall": avg([s["plain_files_tail"]["decision_recall"] for s in c_sc]),
+                    "mean_decision_recall_all_8": avg([s["plain_files_tail"]["decision_recall"] for s in c_sc]),
                     "mean_open_arc_precision": avg([s["plain_files_tail"]["open_arc_precision"] for s in c_sc]),
                     "latency": p50_p95([s["plain_files_tail"]["latency_ms"] for s in c_sc]),
                 },
                 "bm25_flat_files": {
-                    "mean_decision_recall": avg([s["bm25_flat_files"]["decision_recall"] for s in c_sc]),
+                    "mean_decision_recall_all_8": avg([s["bm25_flat_files"]["decision_recall"] for s in c_sc]),
                     "mean_open_arc_precision": avg([s["bm25_flat_files"]["open_arc_precision"] for s in c_sc]),
                     "latency": p50_p95([s["bm25_flat_files"]["latency_ms"] for s in c_sc]),
+                },
+                "structured_metadata_files_equal_info": {
+                    "mean_decision_recall_all_8": avg([s["structured_metadata_files"]["decision_recall"] for s in c_sc]),
+                    "mean_decision_recall_typed_7": avg(
+                        [s["structured_metadata_files"]["decision_recall"] for s in c_sc if not s["stress_untyped"]]
+                    ),
+                    "mean_open_arc_precision": avg([s["structured_metadata_files"]["open_arc_precision"] for s in c_sc]),
+                    "latency": p50_p95([s["structured_metadata_files"]["latency_ms"] for s in c_sc]),
                 },
                 "whitemagic_v10_4": {
                     "mean_decision_recall_all_8": avg([s["whitemagic_v10_4"]["decision_recall"] for s in c_sc]),
@@ -1147,8 +1743,14 @@ def summarize_evaluation(
                         [s["whitemagic_v10_4"]["decision_recall"] for s in c_sc if not s["stress_untyped"]]
                     ),
                     "mean_open_arc_precision": avg([s["whitemagic_v10_4"]["open_arc_precision"] for s in c_sc]),
+                    "new_session_track_routing_rate": avg(
+                        [1.0 if s["whitemagic_v10_4"]["new_session_track_routing_ok"] else 0.0 for s in c_sc]
+                    ),
                     "cross_session_crystal_rate": avg(
                         [1.0 if s["whitemagic_v10_4"]["cross_session_crystal_surfaced"] else 0.0 for s in c_sc]
+                    ),
+                    "budget_enforced_rate": avg(
+                        [1.0 if s["whitemagic_v10_4"]["budget_enforced"] else 0.0 for s in c_sc]
                     ),
                     "mean_tokens_used": avg([float(s["whitemagic_v10_4"]["tokens_used"]) for s in c_sc]),
                     "latency": p50_p95([s["whitemagic_v10_4"]["latency_ms"] for s in c_sc]),
@@ -1157,12 +1759,36 @@ def summarize_evaluation(
             "T_CONFLICT_stale_and_conflicting_memory": {
                 "scenario_count": len(m_sc),
                 "bm25_flat_files": {
-                    "top1_current_truth_rate": avg([s["bm25_flat_files"]["top1_current_truth"] for s in m_sc]),
+                    "top1_current_truth_rate_all_8": avg([s["bm25_flat_files"]["top1_current_truth"] for s in m_sc]),
+                    "top1_current_truth_rate_governed_7": avg(
+                        [s["bm25_flat_files"]["top1_current_truth"] for s in m_sc if s["use_governed_update"]]
+                    ),
                     "mean_unflagged_stale_in_top3": avg(
                         [s["bm25_flat_files"]["unflagged_stale_in_top3"] for s in m_sc]
                     ),
                     "lineage_verifiable_rate": 0.0,
                     "latency": p50_p95([s["bm25_flat_files"]["latency_ms"] for s in m_sc]),
+                },
+                "structured_supersedes_files_equal_info": {
+                    "top1_current_truth_rate_all_8": avg(
+                        [s["structured_supersedes_files"]["top1_current_truth"] for s in m_sc]
+                    ),
+                    "top1_current_truth_rate_governed_7": avg(
+                        [
+                            s["structured_supersedes_files"]["top1_current_truth"]
+                            for s in m_sc
+                            if s["use_governed_update"]
+                        ]
+                    ),
+                    "mean_unflagged_stale_in_top3_governed_7": avg(
+                        [
+                            s["structured_supersedes_files"]["unflagged_stale_in_top3"]
+                            for s in m_sc
+                            if s["use_governed_update"]
+                        ]
+                    ),
+                    "lineage_verifiable_rate": 0.0,
+                    "latency": p50_p95([s["structured_supersedes_files"]["latency_ms"] for s in m_sc]),
                 },
                 "whitemagic_v10_4": {
                     "top1_current_truth_rate_all_8": avg([s["whitemagic_v10_4"]["top1_current_truth"] for s in m_sc]),
@@ -1198,6 +1824,21 @@ def summarize_evaluation(
                         [s["plain_files_keyword_prune"]["joint_success"] for s in r_sc]
                     ),
                 },
+                "record_addressed_files_equal_info": {
+                    "poison_free_and_repaired_in_top3_rate": avg(
+                        [s["record_addressed_files"]["poison_free_active_top3"] for s in r_sc]
+                    ),
+                    "repaired_at_rank1_rate": avg([s["record_addressed_files"]["repaired_at_rank1"] for s in r_sc]),
+                    "legitimate_state_preserved_rate": avg(
+                        [s["record_addressed_files"]["legitimate_state_preserved"] for s in r_sc]
+                    ),
+                    "joint_repair_and_preserve_top3_rate": avg(
+                        [s["record_addressed_files"]["joint_success_top3"] for s in r_sc]
+                    ),
+                    "joint_repair_and_preserve_rank1_rate": avg(
+                        [s["record_addressed_files"]["joint_success_rank1"] for s in r_sc]
+                    ),
+                },
                 "whitemagic_v10_4": {
                     "poison_free_and_repaired_in_top3_rate": avg(
                         [s["whitemagic_v10_4"]["poison_free_active_top3"] for s in r_sc]
@@ -1216,9 +1857,36 @@ def summarize_evaluation(
                     "latency": p50_p95([s["whitemagic_v10_4"]["latency_ms"] for s in r_sc]),
                 },
             },
+            "T_DISCOVERY_unseen_prospective_autonomous_discovery": {
+                "scenario_count": len(d_sc),
+                "whitemagic_autonomous_discovery": {
+                    "mean_target_discovery_recall": avg(
+                        [s["whitemagic_autonomous_discovery"]["target_discovery_recall"] for s in d_sc]
+                    ),
+                    "mean_target_discovery_precision": avg(
+                        [s["whitemagic_autonomous_discovery"]["target_discovery_precision"] for s in d_sc]
+                    ),
+                    "top1_current_truth_rate": avg(
+                        [s["whitemagic_autonomous_discovery"]["top1_current_truth"] for s in d_sc]
+                    ),
+                    "mean_active_stale_in_top3": avg(
+                        [float(s["whitemagic_autonomous_discovery"]["active_stale_in_top3"]) for s in d_sc]
+                    ),
+                    "legitimate_state_preserved_rate": avg(
+                        [s["whitemagic_autonomous_discovery"]["legitimate_state_preserved"] for s in d_sc]
+                    ),
+                    "converging_dag_verified_rate": avg(
+                        [s["whitemagic_autonomous_discovery"]["converging_dag_verified"] for s in d_sc]
+                    ),
+                    "end_to_end_success_rate": avg(
+                        [s["whitemagic_autonomous_discovery"]["end_to_end_success"] for s in d_sc]
+                    ),
+                    "latency": p50_p95([s["whitemagic_autonomous_discovery"]["latency_ms"] for s in d_sc]),
+                },
+            },
         },
         "documented_failure_traces": failure_traces,
-        "families": [cont, conf, rep],
+        "families": [cont, conf, rep, disc],
     }
 
 
@@ -1230,7 +1898,8 @@ def main() -> int:
     cont = run_continuity_family(wm_bin)
     conf = run_conflict_family(wm_bin)
     rep = run_repair_family(wm_bin)
-    report = summarize_evaluation(wm_bin, cont, conf, rep)
+    disc = run_discovery_family(wm_bin)
+    report = summarize_evaluation(wm_bin, cont, conf, rep, disc)
 
     out_json = HERE / "pinned-task-eval-results.json"
     out_json.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

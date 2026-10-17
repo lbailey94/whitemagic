@@ -1,12 +1,12 @@
 {
   "binary": {
-    "path": "target/release/wm",
-    "sha256": "b41e644a7f85d920a8aa82ed1fbc2cbb14842eeece5086c177cbc2e1a380315b",
+    "path": "/home/lucas/Desktop/front burner/WHITEMAGIC/planning/private/track2-and-eval-20261016/bin/wm",
+    "sha256": "363b18e3ff21014c344760d24ad78ac14fbfdf89df9478dbc2b75700068007a3",
     "version": "10.4.0"
   },
   "documented_failure_traces": [
     {
-      "cause": "Decision logged as untyped 'note' with importance=0.40 (< 0.80 salience floor) was evicted by 25 later turns under the 280-token hybrid replay cap.",
+      "cause": "Decision logged as untyped 'note' with importance=0.40 (< 0.80 salience floor) was evicted by 25 later turns under the single 280-token continuity budget.",
       "missing_decisions": [
         "D4: Keep SQLite busy_timeout at 5000ms on crystal replay store."
       ],
@@ -33,188 +33,281 @@
       "scenarios": [
         {
           "bm25_flat_files": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 0.579,
+            "latency_ms": 0.591,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
+          "budget_tokens": 280,
           "failure_trace": null,
           "plain_files_tail": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 1.878,
+            "latency_ms": 1.8,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
           "scenario_id": "C1_payment_journal_invariants",
           "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.496,
+            "open_arc_precision": 1.0,
+            "tokens_used": 175
+          },
           "whitemagic_v10_4": {
+            "budget_enforced": true,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 12.401,
+            "latency_ms": 12.162,
+            "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 12707,
-            "tokens_used": 267
+            "response_bytes": 13291,
+            "selected_prior_session": "C1_payment_journal_invariants_s1",
+            "tokens_used": 230
           }
         },
         {
           "bm25_flat_files": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 0.43,
+            "latency_ms": 0.417,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
+          "budget_tokens": 280,
           "failure_trace": null,
           "plain_files_tail": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 1.775,
+            "latency_ms": 1.779,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
           "scenario_id": "C2_release_manifest_signing",
           "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.431,
+            "open_arc_precision": 1.0,
+            "tokens_used": 169
+          },
           "whitemagic_v10_4": {
+            "budget_enforced": true,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 11.694,
+            "latency_ms": 11.404,
+            "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 12603,
-            "tokens_used": 263
+            "response_bytes": 13193,
+            "selected_prior_session": "C2_release_manifest_signing_s1",
+            "tokens_used": 224
           }
         },
         {
           "bm25_flat_files": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 0.432,
+            "latency_ms": 0.416,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
+          "budget_tokens": 280,
           "failure_trace": null,
           "plain_files_tail": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 1.739,
+            "latency_ms": 1.698,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
           "scenario_id": "C3_crystal_envelope_security",
           "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.421,
+            "open_arc_precision": 1.0,
+            "tokens_used": 170
+          },
           "whitemagic_v10_4": {
+            "budget_enforced": true,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 15.771,
+            "latency_ms": 11.563,
+            "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 12642,
-            "tokens_used": 261
+            "response_bytes": 13249,
+            "selected_prior_session": "C3_crystal_envelope_security_s1",
+            "tokens_used": 224
           }
         },
         {
           "bm25_flat_files": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 0.43,
+            "latency_ms": 0.432,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
+          "budget_tokens": 280,
           "failure_trace": null,
           "plain_files_tail": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 1.889,
+            "latency_ms": 1.649,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
           "scenario_id": "C4_backup_restore_contract",
           "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.406,
+            "open_arc_precision": 1.0,
+            "tokens_used": 177
+          },
           "whitemagic_v10_4": {
+            "budget_enforced": true,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 11.692,
+            "latency_ms": 11.566,
+            "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 12117,
-            "tokens_used": 251
+            "response_bytes": 13245,
+            "selected_prior_session": "C4_backup_restore_contract_s1",
+            "tokens_used": 231
           }
         },
         {
           "bm25_flat_files": {
+            "budget_enforced": true,
             "decision_recall": 0.5,
-            "latency_ms": 0.43,
+            "latency_ms": 0.497,
             "open_arc_precision": 0.0,
             "tokens_used": 255
           },
+          "budget_tokens": 280,
           "failure_trace": null,
           "plain_files_tail": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 1.753,
+            "latency_ms": 1.653,
             "open_arc_precision": 0.0,
             "tokens_used": 270
           },
           "scenario_id": "C5_diaml_sutra_binding",
           "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.422,
+            "open_arc_precision": 1.0,
+            "tokens_used": 174
+          },
           "whitemagic_v10_4": {
+            "budget_enforced": true,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 11.506,
+            "latency_ms": 11.386,
+            "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 12394,
-            "tokens_used": 266
+            "response_bytes": 13030,
+            "selected_prior_session": "C5_diaml_sutra_binding_s1",
+            "tokens_used": 232
           }
         },
         {
           "bm25_flat_files": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 0.444,
+            "latency_ms": 0.477,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
+          "budget_tokens": 280,
           "failure_trace": null,
           "plain_files_tail": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 1.824,
+            "latency_ms": 1.647,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
           "scenario_id": "C6_stripe_webhook_guard",
           "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.407,
+            "open_arc_precision": 1.0,
+            "tokens_used": 168
+          },
           "whitemagic_v10_4": {
+            "budget_enforced": true,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 11.027,
+            "latency_ms": 13.545,
+            "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 12433,
-            "tokens_used": 256
+            "response_bytes": 13037,
+            "selected_prior_session": "C6_stripe_webhook_guard_s1",
+            "tokens_used": 220
           }
         },
         {
           "bm25_flat_files": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 0.484,
+            "latency_ms": 0.425,
             "open_arc_precision": 0.0,
             "tokens_used": 270
           },
+          "budget_tokens": 280,
           "failure_trace": null,
           "plain_files_tail": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 2.066,
+            "latency_ms": 1.769,
             "open_arc_precision": 0.0,
             "tokens_used": 270
           },
           "scenario_id": "C7_ingest_postings_perf",
           "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.423,
+            "open_arc_precision": 1.0,
+            "tokens_used": 172
+          },
           "whitemagic_v10_4": {
+            "budget_enforced": true,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 11.555,
+            "latency_ms": 11.329,
+            "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 12408,
-            "tokens_used": 261
+            "response_bytes": 13050,
+            "selected_prior_session": "C7_ingest_postings_perf_s1",
+            "tokens_used": 232
           }
         },
         {
           "bm25_flat_files": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 0.418,
+            "latency_ms": 0.439,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
+          "budget_tokens": 280,
           "failure_trace": {
-            "cause": "Decision logged as untyped 'note' with importance=0.40 (< 0.80 salience floor) was evicted by 25 later turns under the 280-token hybrid replay cap.",
+            "cause": "Decision logged as untyped 'note' with importance=0.40 (< 0.80 salience floor) was evicted by 25 later turns under the single 280-token continuity budget.",
             "missing_decisions": [
               "D4: Keep SQLite busy_timeout at 5000ms on crystal replay store."
             ],
@@ -223,20 +316,31 @@
             "system": "whitemagic_v10_4"
           },
           "plain_files_tail": {
+            "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 1.688,
+            "latency_ms": 1.624,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
           "scenario_id": "C8_stress_untyped_low_importance_decision",
           "stress_untyped": true,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.75,
+            "latency_ms": 0.419,
+            "open_arc_precision": 1.0,
+            "tokens_used": 150
+          },
           "whitemagic_v10_4": {
+            "budget_enforced": true,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 0.75,
-            "latency_ms": 12.941,
+            "latency_ms": 13.145,
+            "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 12361,
-            "tokens_used": 258
+            "response_bytes": 12654,
+            "selected_prior_session": "C8_stress_untyped_low_importance_decision_s1",
+            "tokens_used": 196
           }
         }
       ]
@@ -246,133 +350,182 @@
       "scenarios": [
         {
           "bm25_flat_files": {
-            "latency_ms": 0.333,
+            "latency_ms": 0.33,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 0.0,
             "unflagged_stale_in_top3": 0.667
           },
           "failure_trace": null,
           "scenario_id": "M1_backup_cap_upgrade",
+          "structured_supersedes_files": {
+            "latency_ms": 0.03,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          },
           "use_governed_update": true,
           "whitemagic_v10_4": {
-            "latency_ms": 11.401,
+            "active_stale_count": 0,
+            "latency_ms": 10.371,
             "lineage_verifiable": 1.0,
-            "response_bytes": 2158,
+            "response_bytes": 2818,
             "top1_current_truth": 1.0,
-            "unflagged_stale_in_top3": 0.333
+            "unflagged_stale_in_top3": 0.0
           }
         },
         {
           "bm25_flat_files": {
-            "latency_ms": 0.393,
+            "latency_ms": 0.344,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 0.0,
             "unflagged_stale_in_top3": 1.0
           },
           "failure_trace": null,
           "scenario_id": "M2_fleet_peering_price",
+          "structured_supersedes_files": {
+            "latency_ms": 0.031,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          },
           "use_governed_update": true,
           "whitemagic_v10_4": {
-            "latency_ms": 11.334,
+            "active_stale_count": 0,
+            "latency_ms": 10.879,
             "lineage_verifiable": 1.0,
-            "response_bytes": 2109,
+            "response_bytes": 2793,
             "top1_current_truth": 1.0,
-            "unflagged_stale_in_top3": 0.667
+            "unflagged_stale_in_top3": 0.0
           }
         },
         {
           "bm25_flat_files": {
-            "latency_ms": 0.332,
+            "latency_ms": 0.424,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 0.0,
             "unflagged_stale_in_top3": 0.667
           },
           "failure_trace": null,
           "scenario_id": "M3_openapi_path_count",
+          "structured_supersedes_files": {
+            "latency_ms": 0.036,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          },
           "use_governed_update": true,
           "whitemagic_v10_4": {
-            "latency_ms": 12.434,
+            "active_stale_count": 0,
+            "latency_ms": 10.223,
             "lineage_verifiable": 1.0,
-            "response_bytes": 2120,
+            "response_bytes": 2804,
             "top1_current_truth": 1.0,
-            "unflagged_stale_in_top3": 0.667
+            "unflagged_stale_in_top3": 0.0
           }
         },
         {
           "bm25_flat_files": {
-            "latency_ms": 0.527,
+            "latency_ms": 0.27,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 1.0,
             "unflagged_stale_in_top3": 0.667
           },
           "failure_trace": null,
           "scenario_id": "M4_linux_x86_64_manifest_hash",
+          "structured_supersedes_files": {
+            "latency_ms": 0.03,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          },
           "use_governed_update": true,
           "whitemagic_v10_4": {
-            "latency_ms": 11.445,
+            "active_stale_count": 0,
+            "latency_ms": 10.097,
             "lineage_verifiable": 1.0,
-            "response_bytes": 2258,
+            "response_bytes": 2600,
             "top1_current_truth": 1.0,
-            "unflagged_stale_in_top3": 0.333
+            "unflagged_stale_in_top3": 0.0
           }
         },
         {
           "bm25_flat_files": {
-            "latency_ms": 0.326,
+            "latency_ms": 0.319,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 1.0,
-            "unflagged_stale_in_top3": 0.333
+            "unflagged_stale_in_top3": 0.667
           },
           "failure_trace": null,
           "scenario_id": "M5_multi_hop_restore_drill_count",
+          "structured_supersedes_files": {
+            "latency_ms": 0.028,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          },
           "use_governed_update": true,
           "whitemagic_v10_4": {
-            "latency_ms": 12.128,
+            "active_stale_count": 0,
+            "latency_ms": 10.042,
             "lineage_verifiable": 1.0,
-            "response_bytes": 2117,
+            "response_bytes": 2471,
             "top1_current_truth": 1.0,
             "unflagged_stale_in_top3": 0.0
           }
         },
         {
           "bm25_flat_files": {
-            "latency_ms": 0.327,
+            "latency_ms": 0.322,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 0.0,
-            "unflagged_stale_in_top3": 0.333
+            "unflagged_stale_in_top3": 0.667
           },
           "failure_trace": null,
           "scenario_id": "M6_multi_hop_economy_suite_count",
+          "structured_supersedes_files": {
+            "latency_ms": 0.029,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          },
           "use_governed_update": true,
           "whitemagic_v10_4": {
-            "latency_ms": 12.326,
+            "active_stale_count": 0,
+            "latency_ms": 11.549,
             "lineage_verifiable": 1.0,
-            "response_bytes": 2142,
+            "response_bytes": 2477,
             "top1_current_truth": 1.0,
             "unflagged_stale_in_top3": 0.0
           }
         },
         {
           "bm25_flat_files": {
-            "latency_ms": 0.287,
+            "latency_ms": 0.268,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 0.0,
             "unflagged_stale_in_top3": 0.667
           },
           "failure_trace": null,
           "scenario_id": "M7_npm_channel_dist_tags",
+          "structured_supersedes_files": {
+            "latency_ms": 0.033,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 1.0,
+            "unflagged_stale_in_top3": 0.0
+          },
           "use_governed_update": true,
           "whitemagic_v10_4": {
-            "latency_ms": 12.546,
+            "active_stale_count": 0,
+            "latency_ms": 10.584,
             "lineage_verifiable": 1.0,
-            "response_bytes": 2109,
+            "response_bytes": 2451,
             "top1_current_truth": 1.0,
-            "unflagged_stale_in_top3": 0.333
+            "unflagged_stale_in_top3": 0.0
           }
         },
         {
           "bm25_flat_files": {
-            "latency_ms": 0.259,
+            "latency_ms": 0.249,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 0.0,
             "unflagged_stale_in_top3": 0.667
@@ -384,9 +537,16 @@
             "system": "whitemagic_v10_4"
           },
           "scenario_id": "M8_stress_unlinked_contradiction_without_update",
+          "structured_supersedes_files": {
+            "latency_ms": 0.046,
+            "lineage_verifiable": 0.0,
+            "top1_current_truth": 0.0,
+            "unflagged_stale_in_top3": 0.667
+          },
           "use_governed_update": false,
           "whitemagic_v10_4": {
-            "latency_ms": 11.621,
+            "active_stale_count": 2,
+            "latency_ms": 10.03,
             "lineage_verifiable": 0.0,
             "response_bytes": 2117,
             "top1_current_truth": 0.0,
@@ -402,85 +562,7 @@
           "failure_trace": null,
           "plain_files_append_only": {
             "joint_success": 0.0,
-            "latency_ms": 0.105,
-            "legitimate_state_preserved": 1.0,
-            "poison_free_active_top3": 0.0
-          },
-          "plain_files_keyword_prune": {
-            "joint_success": 0.0,
-            "latency_ms": 0.023,
-            "legitimate_state_preserved": 0.0,
-            "poison_free_active_top3": 1.0
-          },
-          "scenario_id": "R1_repair_hallucinated_facilitator_port",
-          "whitemagic_v10_4": {
-            "audit_trail_verified": 1.0,
-            "joint_success_rank1": 1.0,
-            "joint_success_top3": 1.0,
-            "latency_ms": 15.659,
-            "legitimate_state_preserved": 1.0,
-            "poison_free_active_top3": 1.0,
-            "repaired_at_rank1": 1.0,
-            "response_bytes": 5361
-          }
-        },
-        {
-          "failure_trace": null,
-          "plain_files_append_only": {
-            "joint_success": 1.0,
-            "latency_ms": 0.109,
-            "legitimate_state_preserved": 1.0,
-            "poison_free_active_top3": 1.0
-          },
-          "plain_files_keyword_prune": {
-            "joint_success": 0.0,
-            "latency_ms": 0.032,
-            "legitimate_state_preserved": 0.0,
-            "poison_free_active_top3": 1.0
-          },
-          "scenario_id": "R2_repair_poisoned_crystal_cipher",
-          "whitemagic_v10_4": {
-            "audit_trail_verified": 1.0,
-            "joint_success_rank1": 1.0,
-            "joint_success_top3": 1.0,
-            "latency_ms": 15.677,
-            "legitimate_state_preserved": 1.0,
-            "poison_free_active_top3": 1.0,
-            "repaired_at_rank1": 1.0,
-            "response_bytes": 5342
-          }
-        },
-        {
-          "failure_trace": null,
-          "plain_files_append_only": {
-            "joint_success": 0.0,
-            "latency_ms": 0.127,
-            "legitimate_state_preserved": 1.0,
-            "poison_free_active_top3": 0.0
-          },
-          "plain_files_keyword_prune": {
-            "joint_success": 0.0,
-            "latency_ms": 0.027,
-            "legitimate_state_preserved": 0.0,
-            "poison_free_active_top3": 1.0
-          },
-          "scenario_id": "R3_repair_wrong_sqlite_replay_path",
-          "whitemagic_v10_4": {
-            "audit_trail_verified": 1.0,
-            "joint_success_rank1": 1.0,
-            "joint_success_top3": 1.0,
-            "latency_ms": 16.471,
-            "legitimate_state_preserved": 1.0,
-            "poison_free_active_top3": 1.0,
-            "repaired_at_rank1": 1.0,
-            "response_bytes": 5394
-          }
-        },
-        {
-          "failure_trace": null,
-          "plain_files_append_only": {
-            "joint_success": 0.0,
-            "latency_ms": 0.097,
+            "latency_ms": 0.1,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 0.0
           },
@@ -490,16 +572,60 @@
             "legitimate_state_preserved": 0.0,
             "poison_free_active_top3": 1.0
           },
-          "scenario_id": "R4_repair_bad_landlock_claim",
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 0.0,
+            "joint_success_top3": 0.0,
+            "latency_ms": 0.059,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0,
+            "repaired_at_rank1": 0.0
+          },
+          "scenario_id": "R1_repair_hallucinated_facilitator_port",
           "whitemagic_v10_4": {
             "audit_trail_verified": 1.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 18.696,
+            "latency_ms": 14.7,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0,
-            "response_bytes": 5316
+            "response_bytes": 5401
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 1.0,
+            "latency_ms": 0.1,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.026,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 0.0,
+            "joint_success_top3": 0.0,
+            "latency_ms": 0.061,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0,
+            "repaired_at_rank1": 0.0
+          },
+          "scenario_id": "R2_repair_poisoned_crystal_cipher",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 13.089,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5382
           }
         },
         {
@@ -512,20 +638,99 @@
           },
           "plain_files_keyword_prune": {
             "joint_success": 0.0,
-            "latency_ms": 0.026,
+            "latency_ms": 0.025,
             "legitimate_state_preserved": 0.0,
             "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 0.066,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0
+          },
+          "scenario_id": "R3_repair_wrong_sqlite_replay_path",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 14.631,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5434
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.101,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.023,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 0.0,
+            "joint_success_top3": 0.0,
+            "latency_ms": 0.059,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0,
+            "repaired_at_rank1": 0.0
+          },
+          "scenario_id": "R4_repair_bad_landlock_claim",
+          "whitemagic_v10_4": {
+            "audit_trail_verified": 1.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 14.533,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0,
+            "response_bytes": 5356
+          }
+        },
+        {
+          "failure_trace": null,
+          "plain_files_append_only": {
+            "joint_success": 0.0,
+            "latency_ms": 0.106,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 0.0
+          },
+          "plain_files_keyword_prune": {
+            "joint_success": 0.0,
+            "latency_ms": 0.025,
+            "legitimate_state_preserved": 0.0,
+            "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 0.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 0.067,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 0.0
           },
           "scenario_id": "R5_repair_wrong_keyd_quota",
           "whitemagic_v10_4": {
             "audit_trail_verified": 1.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 19.183,
+            "latency_ms": 14.416,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0,
-            "response_bytes": 5316
+            "response_bytes": 5356
           }
         },
         {
@@ -537,104 +742,276 @@
           },
           "plain_files_append_only": {
             "joint_success": 0.0,
-            "latency_ms": 0.198,
+            "latency_ms": 0.11,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 0.0
           },
           "plain_files_keyword_prune": {
             "joint_success": 0.0,
-            "latency_ms": 0.046,
+            "latency_ms": 0.025,
             "legitimate_state_preserved": 0.0,
             "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 0.066,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0
           },
           "scenario_id": "R6_repair_bad_ots_anchor_route",
           "whitemagic_v10_4": {
             "audit_trail_verified": 1.0,
             "joint_success_rank1": 0.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 15.235,
+            "latency_ms": 14.919,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 0.0,
-            "response_bytes": 5285
+            "response_bytes": 5325
           }
         },
         {
           "failure_trace": null,
           "plain_files_append_only": {
             "joint_success": 0.0,
-            "latency_ms": 0.15,
+            "latency_ms": 0.16,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 0.0
           },
           "plain_files_keyword_prune": {
             "joint_success": 0.0,
-            "latency_ms": 0.045,
+            "latency_ms": 0.044,
             "legitimate_state_preserved": 0.0,
             "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 0.091,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0
           },
           "scenario_id": "R7_repair_wrong_erc8004_verdict",
           "whitemagic_v10_4": {
             "audit_trail_verified": 1.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 16.263,
+            "latency_ms": 14.147,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0,
-            "response_bytes": 5312
+            "response_bytes": 5352
           }
         },
         {
           "failure_trace": null,
           "plain_files_append_only": {
             "joint_success": 0.0,
-            "latency_ms": 0.142,
+            "latency_ms": 0.114,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 0.0
           },
           "plain_files_keyword_prune": {
             "joint_success": 0.0,
-            "latency_ms": 0.032,
+            "latency_ms": 0.033,
             "legitimate_state_preserved": 0.0,
             "poison_free_active_top3": 1.0
+          },
+          "record_addressed_files": {
+            "audit_trail_verified": 0.0,
+            "joint_success_rank1": 1.0,
+            "joint_success_top3": 1.0,
+            "latency_ms": 0.146,
+            "legitimate_state_preserved": 1.0,
+            "poison_free_active_top3": 1.0,
+            "repaired_at_rank1": 1.0
           },
           "scenario_id": "R8_repair_bad_tenant_export_scope",
           "whitemagic_v10_4": {
             "audit_trail_verified": 1.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 15.666,
+            "latency_ms": 15.832,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0,
-            "response_bytes": 5341
+            "response_bytes": 5381
+          }
+        }
+      ]
+    },
+    {
+      "family": "T_DISCOVERY",
+      "scenarios": [
+        {
+          "failure_trace": null,
+          "scenario_id": "D1_discover_crystal_pq_alg_bypass",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 46.928,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 8934,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        },
+        {
+          "failure_trace": null,
+          "scenario_id": "D2_discover_notarization_unsigned_acceptance",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 48.302,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 8987,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        },
+        {
+          "failure_trace": null,
+          "scenario_id": "D3_discover_landlock_truncate_omission",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 48.258,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 8921,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        },
+        {
+          "failure_trace": null,
+          "scenario_id": "D4_discover_erasure_receipt_overclaim",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 47.342,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 8942,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        },
+        {
+          "failure_trace": null,
+          "scenario_id": "D5_discover_kek_rotation_stale_signature",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 48.097,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 8904,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        },
+        {
+          "failure_trace": null,
+          "scenario_id": "D6_discover_backup_monitor_auth_api_prefix",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 51.997,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 8902,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        },
+        {
+          "failure_trace": null,
+          "scenario_id": "D7_discover_economy_discovery_flag_mismatch",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 49.151,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 8731,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          }
+        },
+        {
+          "failure_trace": null,
+          "scenario_id": "D8_discover_release_health_tag_checkout_hazard",
+          "whitemagic_autonomous_discovery": {
+            "active_stale_in_top3": 0,
+            "converging_dag_verified": 1.0,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "latency_ms": 48.703,
+            "legitimate_state_preserved": 1.0,
+            "response_bytes": 8821,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
           }
         }
       ]
     }
   ],
-  "generated_at": "2026-10-16T22:10:03Z",
-  "schema": "wm.pinned-task-evaluation/1.0",
+  "generated_at": "2026-10-17T02:47:59Z",
+  "ignored_runtime_errors": 0,
+  "schema": "wm.pinned-task-evaluation/1.1",
   "summary_by_family": {
     "T_CONFLICT_stale_and_conflicting_memory": {
       "bm25_flat_files": {
         "latency": {
-          "p50_ms": 0.33,
-          "p95_ms": 0.53
+          "p50_ms": 0.32,
+          "p95_ms": 0.42
         },
         "lineage_verifiable_rate": 0.0,
-        "mean_unflagged_stale_in_top3": 0.6251,
-        "top1_current_truth_rate": 0.25
+        "mean_unflagged_stale_in_top3": 0.7086,
+        "top1_current_truth_rate_all_8": 0.25,
+        "top1_current_truth_rate_governed_7": 0.2857
       },
       "scenario_count": 8,
+      "structured_supersedes_files_equal_info": {
+        "latency": {
+          "p50_ms": 0.03,
+          "p95_ms": 0.05
+        },
+        "lineage_verifiable_rate": 0.0,
+        "mean_unflagged_stale_in_top3_governed_7": 0.0,
+        "top1_current_truth_rate_all_8": 0.875,
+        "top1_current_truth_rate_governed_7": 1.0
+      },
       "whitemagic_v10_4": {
         "latency": {
-          "p50_ms": 11.87,
-          "p95_ms": 12.55
+          "p50_ms": 10.3,
+          "p95_ms": 11.55
         },
         "lineage_verifiable_rate_governed_7": 1.0,
-        "mean_unflagged_stale_in_top3_governed_7": 0.3333,
+        "mean_unflagged_stale_in_top3_governed_7": 0.0,
         "top1_current_truth_rate_all_8": 0.875,
         "top1_current_truth_rate_governed_7": 1.0
       }
@@ -642,31 +1019,59 @@
     "T_CONTINUITY_cross_session_decision_recovery": {
       "bm25_flat_files": {
         "latency": {
-          "p50_ms": 0.43,
-          "p95_ms": 0.58
+          "p50_ms": 0.44,
+          "p95_ms": 0.59
         },
-        "mean_decision_recall": 0.0625,
+        "mean_decision_recall_all_8": 0.0625,
         "mean_open_arc_precision": 0.0
       },
       "plain_files_tail": {
         "latency": {
-          "p50_ms": 1.8,
-          "p95_ms": 2.07
+          "p50_ms": 1.68,
+          "p95_ms": 1.8
         },
-        "mean_decision_recall": 0.0,
+        "mean_decision_recall_all_8": 0.0,
         "mean_open_arc_precision": 0.0
       },
       "scenario_count": 8,
+      "shared_budget_tokens": 280,
+      "structured_metadata_files_equal_info": {
+        "latency": {
+          "p50_ms": 0.42,
+          "p95_ms": 0.5
+        },
+        "mean_decision_recall_all_8": 0.9688,
+        "mean_decision_recall_typed_7": 1.0,
+        "mean_open_arc_precision": 1.0
+      },
       "whitemagic_v10_4": {
+        "budget_enforced_rate": 1.0,
         "cross_session_crystal_rate": 1.0,
         "latency": {
-          "p50_ms": 11.69,
-          "p95_ms": 15.77
+          "p50_ms": 11.56,
+          "p95_ms": 13.54
         },
         "mean_decision_recall_all_8": 0.9688,
         "mean_decision_recall_typed_7": 1.0,
         "mean_open_arc_precision": 1.0,
-        "mean_tokens_used": 260.375
+        "mean_tokens_used": 223.625,
+        "new_session_track_routing_rate": 1.0
+      }
+    },
+    "T_DISCOVERY_unseen_prospective_autonomous_discovery": {
+      "scenario_count": 8,
+      "whitemagic_autonomous_discovery": {
+        "converging_dag_verified_rate": 1.0,
+        "end_to_end_success_rate": 1.0,
+        "latency": {
+          "p50_ms": 48.28,
+          "p95_ms": 52.0
+        },
+        "legitimate_state_preserved_rate": 1.0,
+        "mean_active_stale_in_top3": 0.0,
+        "mean_target_discovery_precision": 1.0,
+        "mean_target_discovery_recall": 1.0,
+        "top1_current_truth_rate": 1.0
       }
     },
     "T_REPAIR_surgical_bad_memory_repair": {
@@ -680,14 +1085,21 @@
         "legitimate_state_preserved_rate": 0.0,
         "poison_free_top3_rate": 1.0
       },
+      "record_addressed_files_equal_info": {
+        "joint_repair_and_preserve_rank1_rate": 0.5,
+        "joint_repair_and_preserve_top3_rate": 0.625,
+        "legitimate_state_preserved_rate": 1.0,
+        "poison_free_and_repaired_in_top3_rate": 0.625,
+        "repaired_at_rank1_rate": 0.5
+      },
       "scenario_count": 8,
       "whitemagic_v10_4": {
         "audit_trail_verified_rate": 1.0,
         "joint_repair_and_preserve_rank1_rate": 0.875,
         "joint_repair_and_preserve_top3_rate": 1.0,
         "latency": {
-          "p50_ms": 15.97,
-          "p95_ms": 19.18
+          "p50_ms": 14.58,
+          "p95_ms": 15.83
         },
         "legitimate_state_preserved_rate": 1.0,
         "poison_free_and_repaired_in_top3_rate": 1.0,
@@ -695,5 +1107,5 @@
       }
     }
   },
-  "total_scenarios": 24
+  "total_scenarios": 32
 }

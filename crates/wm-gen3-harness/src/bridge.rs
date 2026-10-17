@@ -388,6 +388,7 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
         &[
             "id",
             "content",
+            "superseded_by_id",
             "reason",
             "tags",
             "importance",
@@ -443,6 +444,7 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
             "until",
             "max_content_bytes",
             "max_response_bytes",
+            "token_budget",
             "include_briefing_text",
         ],
     ),
@@ -475,6 +477,8 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
         "session.replay",
         &[
             "session_id",
+            "current_session_id",
+            "track",
             "since",
             "until",
             "n",
@@ -785,7 +789,9 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
                 "type": "object",
                 "properties": {
                     "session_id": { "type": "string", "description": "Optional session identifier filter; if omitted, returns the latest checkpoint across all sessions" },
-                    "track": { "type": "string", "description": "Optional track slug to surface prior crystallized codex memories for this track" }
+                    "current_session_id": { "type": "string", "description": "Optional active session identifier to exclude when selecting a prior session" },
+                    "track": { "type": "string", "description": "Optional track slug to surface prior crystallized codex memories and select the latest prior session on this track" },
+                    "token_budget": { "type": "integer", "description": "Optional token budget cap across returned continuity items and briefing" }
                 }
             }
         },
@@ -1045,11 +1051,12 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
                     "n": { "type": "integer", "description": "Number of recent turns to recall (default: 5)" },
                     "session_id": { "type": "string", "description": "Target session (default: most recent)" },
                     "current_session_id": { "type": "string", "description": "Session to exclude (optional)" },
-                    "track": { "type": "string", "description": "Optional track slug to surface prior crystallized codex memories for this track" },
+                    "track": { "type": "string", "description": "Optional track slug to surface prior crystallized codex memories and select the latest prior session on this track" },
                     "since": { "type": "string", "description": "Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD" },
                     "until": { "type": "string", "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD" },
                     "max_content_bytes": { "type": "integer", "description": "Per-turn content cap in bytes (default 8192)" },
                     "max_response_bytes": { "type": "integer", "description": "Turns budget in bytes (default 49152)" },
+                    "token_budget": { "type": "integer", "description": "Optional token budget cap across returned continuity items and briefing" },
                     "include_briefing_text": { "type": "boolean", "description": "Include the ready-to-inject briefing.text block" }
                 }
             }
@@ -1069,15 +1076,16 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
         {
             "name": "memory.update",
             "title": "Update Memory",
-            "description": format!("Update an existing memory by writing a superseding record and a durable revision entry (prior/new content hashes, timestamp, reason).{mode_hint}"),
+            "description": format!("Update an existing memory by writing a superseding record (or consolidating into an existing record) and a durable revision entry (prior/new content hashes, timestamp, reason).{mode_hint}"),
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "id": { "description": "Memory UUID or numeric record_id to update" },
-                    "content": { "type": "string", "description": "New content for the superseding record" },
+                    "content": { "type": "string", "description": "New content for the superseding record (or existing target content when consolidating)" },
+                    "superseded_by_id": { "description": "Optional existing memory UUID or numeric record_id that supersedes this record" },
                     "reason": { "type": "string", "description": "Optional reason recorded in the revision entry" }
                 },
-                "required": ["id", "content"]
+                "required": ["id"]
             }
         },
         {
@@ -1335,6 +1343,8 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
                 "type": "object",
                 "properties": {
                     "session_id": { "type": "string", "description": "Session ID" },
+                    "current_session_id": { "type": "string", "description": "Optional active session ID to exclude when selecting a prior session automatically" },
+                    "track": { "type": "string", "description": "Optional track slug to select the most recent prior session on this track" },
                     "since": { "type": "string", "description": "Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD" },
                     "until": { "type": "string", "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD" },
                     "n": { "type": "integer", "minimum": 1, "description": "Maximum turns (default 50)" },
@@ -2252,13 +2262,6 @@ fn handle_memory_update(
     let old_id = resolve_id_to_u64(id_val, substrate)
         .ok_or_else(|| format!("Record not found: {id_val}"))?;
 
-    let content = args
-        .get("content")
-        .and_then(Value::as_str)
-        .ok_or_else(|| "Missing required parameter 'content'".to_string())?;
-    if content.trim().is_empty() {
-        return Err("Parameter 'content' cannot be empty".to_string());
-    }
     let reason = args
         .get("reason")
         .and_then(Value::as_str)
@@ -2294,31 +2297,61 @@ fn handle_memory_update(
         );
     }
 
-    let prior_source = substrate
-        .store()
-        .get_record(old_id)
-        .map_err(|e| format!("Store read error: {e}"))?
-        .ok_or_else(|| format!("Record {old_id} does not exist in store"))?
-        .source()
-        .to_string();
-    let source = if prior_source.starts_with("corpus:") {
-        format!("{prior_source}:revision")
+    let (new_id, consolidated_to_existing) = if let Some(target_val) =
+        args.get("superseded_by_id").filter(|v| !v.is_null())
+    {
+        let existing_id = resolve_id_to_u64(target_val, substrate)
+            .ok_or_else(|| format!("Target superseding record not found: {target_val}"))?;
+        if existing_id == old_id {
+            return Err("memory.update cannot supersede a record with itself".to_string());
+        }
+        (existing_id, true)
     } else {
-        "agent:update".to_string()
-    };
+        let content = args
+            .get("content")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "Missing required parameter 'content'".to_string())?;
+        if content.trim().is_empty() {
+            return Err("Parameter 'content' cannot be empty".to_string());
+        }
 
-    let item = RememberItem {
-        content: content.to_string(),
-        source,
-        kind: ImportKind::Reported,
-    };
+        let prior_source = substrate
+            .store()
+            .get_record(old_id)
+            .map_err(|e| format!("Store read error: {e}"))?
+            .ok_or_else(|| format!("Record {old_id} does not exist in store"))?
+            .source()
+            .to_string();
+        let source = if prior_source.starts_with("corpus:") {
+            format!("{prior_source}:revision")
+        } else {
+            "agent:update".to_string()
+        };
 
-    substrate.set_intake_authority(RatifiedChannel::mint("wm-hybrid-update"));
-    let results = substrate.remember_batch(&[item]);
-    let new_id = match results.into_iter().next() {
-        Some(Ok(id)) => id,
-        Some(Err(e)) => return Err(format!("Update failed: {e}")),
-        None => return Err("Update produced no output".to_string()),
+        if let Some(existing_id) =
+            substrate.find_existing_record_for_consolidation(content, &source, ImportKind::Reported)?
+        {
+            if existing_id == old_id {
+                return Err(
+                    "memory.update: new content is identical to the target record".to_string(),
+                );
+            }
+            (existing_id, true)
+        } else {
+            let item = RememberItem {
+                content: content.to_string(),
+                source: source.clone(),
+                kind: ImportKind::Reported,
+            };
+
+            substrate.set_intake_authority(RatifiedChannel::mint("wm-hybrid-update"));
+            let results = substrate.remember_batch(&[item]);
+            match results.into_iter().next() {
+                Some(Ok(id)) => (id, false),
+                Some(Err(e)) => return Err(format!("Update failed: {e}")),
+                None => return Err("Update produced no output".to_string()),
+            }
+        }
     };
 
     let revision = substrate.record_revision_with_tags(old_id, new_id, reason, &legacy_tags)?;
@@ -2338,8 +2371,13 @@ fn handle_memory_update(
         "record_id": new_id,
         "uuid": new_uuid.to_string(),
         "superseded_record_id": old_id,
+        "consolidated_to_existing": consolidated_to_existing,
         "revision": revision,
-        "message": "Memory updated; prior record superseded by a durable revision entry"
+        "message": if consolidated_to_existing {
+            "Memory consolidated; prior record superseded by existing target record"
+        } else {
+            "Memory updated; prior record superseded by a durable revision entry"
+        }
     });
     if !deprecated_args.is_empty() {
         response["deprecated_args"] = json!(deprecated_args);
@@ -3538,6 +3576,96 @@ fn handle_session_record(
     }))
 }
 
+fn resolve_continuity_session_lane(
+    explicit_session: Option<&str>,
+    current_session: Option<&str>,
+    explicit_track: Option<&str>,
+    all_turns: &[SessionTurn],
+    substrate: Option<&Substrate>,
+) -> Option<String> {
+    let inferred_track = explicit_track
+        .filter(|t| !t.trim().is_empty())
+        .map(str::to_string)
+        .or_else(|| {
+            current_session.and_then(|cur| {
+                all_turns
+                    .iter()
+                    .rev()
+                    .find(|t| {
+                        t.session_id == cur
+                            && t.track.as_deref().is_some_and(|trk| !trk.is_empty())
+                    })
+                    .and_then(|t| t.track.clone())
+            })
+        })
+        .or_else(|| {
+            explicit_session.and_then(|req| {
+                all_turns
+                    .iter()
+                    .rev()
+                    .find(|t| {
+                        t.session_id == req
+                            && t.track.as_deref().is_some_and(|trk| !trk.is_empty())
+                    })
+                    .and_then(|t| t.track.clone())
+            })
+        });
+
+    if let Some(req_sid) = explicit_session.filter(|s| Some(*s) != current_session) {
+        let has_turns = all_turns
+            .iter()
+            .any(|t| !t.is_start_marker() && t.session_id == req_sid);
+        let has_checkpoint = substrate
+            .and_then(|s| s.session_continuity(Some(req_sid)).ok().flatten())
+            .is_some();
+        if has_turns || has_checkpoint {
+            return Some(req_sid.to_string());
+        }
+        if let Some(ref trk) = inferred_track {
+            if let Some(prior_sid) = all_turns
+                .iter()
+                .rev()
+                .filter(|t| {
+                    !t.is_start_marker()
+                        && !t.session_id.is_empty()
+                        && t.session_id != req_sid
+                        && Some(t.session_id.as_str()) != current_session
+                        && t.track.as_deref() == Some(trk.as_str())
+                })
+                .map(|t| t.session_id.clone())
+                .next()
+            {
+                return Some(prior_sid);
+            }
+        }
+        return Some(req_sid.to_string());
+    }
+
+    if let Some(ref trk) = inferred_track {
+        if let Some(prior_sid) = all_turns
+            .iter()
+            .rev()
+            .filter(|t| {
+                !t.is_start_marker()
+                    && !t.session_id.is_empty()
+                    && Some(t.session_id.as_str()) != current_session
+                    && t.track.as_deref() == Some(trk.as_str())
+            })
+            .map(|t| t.session_id.clone())
+            .next()
+        {
+            return Some(prior_sid);
+        }
+    }
+
+    all_turns
+        .iter()
+        .rev()
+        .map(|turn| turn.session_id.as_str())
+        .find(|lane| !lane.is_empty() && Some(*lane) != current_session)
+        .map(str::to_string)
+}
+
 fn handle_session_continuity(
     args: &Value,
     substrate: &Substrate,
@@ -3571,20 +3699,20 @@ fn handle_session_continuity(
         .get("max_response_bytes")
         .and_then(Value::as_u64)
         .unwrap_or(49152) as usize;
+    let token_budget = args.get("token_budget").and_then(Value::as_u64);
     let include_briefing = args
         .get("include_briefing_text")
         .and_then(Value::as_bool)
         .unwrap_or(false);
 
     let all_turns = read_session_turns(store_path);
-    let effective_session = explicit_session.map(str::to_string).or_else(|| {
-        all_turns
-            .iter()
-            .rev()
-            .map(|turn| turn.session_id.as_str())
-            .find(|lane| !lane.is_empty() && Some(*lane) != current_session)
-            .map(str::to_string)
-    });
+    let effective_session = resolve_continuity_session_lane(
+        explicit_session,
+        current_session,
+        explicit_track,
+        &all_turns,
+        Some(substrate),
+    );
 
     let mut turns: Vec<SessionTurn> = all_turns
         .into_iter()
@@ -3625,19 +3753,67 @@ fn handle_session_continuity(
         recent.push(turn.clone());
     }
     recent.reverse();
-    let turns_omitted = total_turns.saturating_sub(recent.len());
 
     let recent_ids: HashSet<String> = recent.iter().map(|t| t.turn_id.clone()).collect();
-    let salient_turns: Vec<SessionTurn> = session_active_turns
+    let mut salient_turns: Vec<SessionTurn> = session_active_turns
         .iter()
         .filter(|t| !recent_ids.contains(&t.turn_id) && t.is_salient_anchor(0.8))
         .cloned()
         .collect();
-    let unresolved_arcs: Vec<SessionTurn> = session_active_turns
+    let mut unresolved_arcs: Vec<SessionTurn> = session_active_turns
         .iter()
         .filter(|t| t.is_open_arc())
         .cloned()
         .collect();
+
+    if let Some(budget) = token_budget {
+        let mut used_tokens = 0u64;
+        let mut budgeted_arcs = Vec::new();
+        for arc in unresolved_arcs {
+            let cost = arc.estimated_tokens();
+            if used_tokens + cost <= budget || (budgeted_arcs.is_empty() && cost <= budget) {
+                used_tokens += cost;
+                budgeted_arcs.push(arc);
+            }
+        }
+        unresolved_arcs = budgeted_arcs;
+
+        let mut budgeted_salient = Vec::new();
+        for anchor in salient_turns {
+            let cost = anchor.estimated_tokens();
+            if used_tokens + cost <= budget
+                || (unresolved_arcs.is_empty() && budgeted_salient.is_empty() && cost <= budget)
+            {
+                used_tokens += cost;
+                budgeted_salient.push(anchor);
+            }
+        }
+        salient_turns = budgeted_salient;
+
+        let mut budgeted_recent = Vec::new();
+        for turn in recent.into_iter().rev() {
+            let cost = turn.estimated_tokens();
+            if used_tokens + cost <= budget
+                || (unresolved_arcs.is_empty()
+                    && salient_turns.is_empty()
+                    && budgeted_recent.is_empty()
+                    && cost <= budget)
+            {
+                used_tokens += cost;
+                budgeted_recent.push(turn);
+            }
+        }
+        budgeted_recent.reverse();
+        recent = budgeted_recent;
+    }
+
+    let turns_omitted = total_turns.saturating_sub(recent.len());
+    let token_estimate: u64 = unresolved_arcs
+        .iter()
+        .chain(salient_turns.iter())
+        .chain(recent.iter())
+        .map(SessionTurn::estimated_tokens)
+        .sum();
 
     let session_label = effective_session
         .clone()
@@ -3686,15 +3862,22 @@ fn handle_session_continuity(
         checkpoint.as_ref().map(|cp| cp.record_id),
     );
     let briefing = include_briefing.then(|| {
+        let mut text = compose_briefing(
+            &session_label,
+            checkpoint.as_ref(),
+            &recent,
+            &salient_turns,
+            &unresolved_arcs,
+            &related_crystals,
+        );
+        if let Some(budget) = token_budget {
+            let max_briefing_bytes = (budget as usize).saturating_mul(4);
+            if max_briefing_bytes > 0 && text.len() > max_briefing_bytes {
+                text = truncate_utf8(&text, max_briefing_bytes);
+            }
+        }
         json!({
-            "text": compose_briefing(
-                &session_label,
-                checkpoint.as_ref(),
-                &recent,
-                &salient_turns,
-                &unresolved_arcs,
-                &related_crystals,
-            ),
+            "text": text,
         })
     });
 
@@ -3709,6 +3892,7 @@ fn handle_session_continuity(
         "related_crystals": related_crystals,
         "turns_omitted": turns_omitted,
         "content_truncated": content_truncated,
+        "token_estimate": token_estimate,
         "next_queue": next_queue,
         "open_flags": open_flags,
         "checkpoint": checkpoint,
@@ -4054,7 +4238,9 @@ fn handle_session_recall(args: &Value, store_path: &Path) -> Result<Value, Strin
 
 fn handle_session_replay(args: &Value, store_path: &Path) -> Result<Value, String> {
     reject_unknown_args("session.replay", args)?;
-    let session_id = args.get("session_id").and_then(Value::as_str);
+    let explicit_session = args.get("session_id").and_then(Value::as_str);
+    let current_session = args.get("current_session_id").and_then(Value::as_str);
+    let explicit_track = args.get("track").and_then(Value::as_str);
     let mut deprecated_args: Vec<String> = Vec::new();
     let requested_mode = args.get("mode").and_then(Value::as_str).unwrap_or("full");
     let mode = if requested_mode == "lossless" {
@@ -4106,10 +4292,30 @@ fn handle_session_replay(args: &Value, store_path: &Path) -> Result<Value, Strin
                 .collect()
         });
 
-    let mut turns: Vec<SessionTurn> = read_session_turns(store_path)
+    let all_turns = read_session_turns(store_path);
+    let effective_session = if explicit_session.is_none()
+        && current_session.is_none()
+        && explicit_track.is_none()
+    {
+        None
+    } else {
+        resolve_continuity_session_lane(
+            explicit_session,
+            current_session,
+            explicit_track,
+            &all_turns,
+            None,
+        )
+    };
+
+    let mut turns: Vec<SessionTurn> = all_turns
         .into_iter()
         .filter(|turn| !turn.is_start_marker())
-        .filter(|turn| session_id.is_none_or(|target| turn.session_id == target))
+        .filter(|turn| {
+            effective_session
+                .as_deref()
+                .is_none_or(|target| turn.session_id == target)
+        })
         .filter(|turn| since.is_none_or(|floor| turn.timestamp >= floor))
         .filter(|turn| until.is_none_or(|ceiling| turn.timestamp <= ceiling))
         .filter(|turn| include_superseded || turn.superseded_by.is_none())
@@ -4208,7 +4414,7 @@ fn handle_session_replay(args: &Value, store_path: &Path) -> Result<Value, Strin
 
     let mut response = json!({
         "status": "success",
-        "session_id": session_id.unwrap_or("all"),
+        "session_id": effective_session.as_deref().unwrap_or("all"),
         "mode": mode,
         "total_turns": total_turns,
         "turns_after_filter": after_filter,
@@ -8973,6 +9179,198 @@ mod diaml_and_salience_refinement_tests {
             "Sutra execution must resolve the open DiAML question arc"
         );
         assert_eq!(post_cont["turns_count"], 2);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn memory_update_consolidates_into_existing_record_and_verifies_converging_dag() {
+        let dir = std::env::temp_dir().join(format!("wm-consolidate-test-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("open substrate");
+
+        let r1 = handle_memory_create(
+            &json!({"content": "Retry policy v1: 12 retries with 250ms fixed sleep.", "tags": ["retry"]}),
+            &mut substrate,
+            false,
+        )
+        .expect("r1");
+        let r2 = handle_memory_create(
+            &json!({"content": "Retry policy paraphrase: use 12 fixed-interval retries.", "tags": ["retry"]}),
+            &mut substrate,
+            false,
+        )
+        .expect("r2");
+        let r3_text = "Retry policy v2 (current): maximum 4 retries with exponential backoff.";
+        let r3 = handle_memory_create(
+            &json!({"content": r3_text, "tags": ["retry", "current"]}),
+            &mut substrate,
+            false,
+        )
+        .expect("r3");
+
+        let r1_id = r1["record_id"].as_u64().unwrap();
+        let r2_id = r2["record_id"].as_u64().unwrap();
+        let r3_id = r3["record_id"].as_u64().unwrap();
+
+        // Consolidate r1 into existing r3 by passing r3's exact content (previously failed with duplicate_exact)
+        let u1 = handle_memory_update(
+            &json!({"id": r1_id, "content": r3_text, "reason": "consolidate-v1-to-v2"}),
+            &mut substrate,
+            false,
+        )
+        .expect("consolidate r1 via duplicate content");
+        assert_eq!(u1["status"], "success");
+        assert_eq!(u1["record_id"], r3_id);
+        assert_eq!(u1["consolidated_to_existing"], true);
+
+        // Consolidate r2 into existing r3 via explicit superseded_by_id
+        let u2 = handle_memory_update(
+            &json!({"id": r2_id, "superseded_by_id": r3_id, "reason": "consolidate-paraphrase-to-v2"}),
+            &mut substrate,
+            false,
+        )
+        .expect("consolidate r2 via superseded_by_id");
+        assert_eq!(u2["status"], "success");
+        assert_eq!(u2["record_id"], r3_id);
+        assert_eq!(u2["consolidated_to_existing"], true);
+
+        // Verify revision chain (converging DAG) from r1, r2, and r3
+        for check_id in [r1_id, r2_id, r3_id] {
+            let rev = handle_memory_revisions(
+                &json!({"id": check_id, "action": "verify"}),
+                &substrate,
+            )
+            .expect("verify revisions");
+            assert_eq!(
+                rev["verify"]["valid"], true,
+                "DAG verify failed for {check_id}: {rev}"
+            );
+            assert_eq!(rev["verify"]["head_record_id"], r3_id);
+        }
+
+        // Verify active search ranks r3 first and marks both r1 and r2 as superseded by r3
+        let search =
+            handle_memory_search(&json!({"query": "Retry policy", "limit": 5}), &mut substrate)
+                .expect("search");
+        let results = search["results"].as_array().unwrap();
+        assert!(!results.is_empty());
+        assert_eq!(results[0]["record_id"], r3_id);
+        assert!(results[0]["superseded_by"].is_null());
+        for hit in &results[1..] {
+            assert!(hit["superseded_by"].as_u64().is_some());
+        }
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn track_aware_continuity_selects_same_track_session_across_intervening_tracks() {
+        let dir = std::env::temp_dir().join(format!("wm-track-cont-test-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("open substrate");
+
+        // Session 1 on track 'arch'
+        handle_session_record(
+            &json!({
+                "session_id": "c1_arch_s1",
+                "role": "assistant",
+                "turn_type": "decision",
+                "track": "arch",
+                "importance": 0.95,
+                "content": "Decision: use content-addressed BLAKE3 digests for all crystal envelopes."
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("record s1");
+        handle_session_checkpoint(
+            &json!({
+                "session_id": "c1_arch_s1",
+                "track": "arch",
+                "summary": "Locked BLAKE3 digest decision."
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("checkpoint s1");
+
+        // Intervening unrelated session on track 'unrelated-review-track'
+        handle_session_record(
+            &json!({
+                "session_id": "unrel_s99",
+                "role": "assistant",
+                "turn_type": "decision",
+                "track": "unrelated-review-track",
+                "importance": 0.95,
+                "content": "Unrelated decision: rotate staging CSS assets on Tuesday."
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("record unrel");
+
+        // Pattern A: Brand-new session 'c1_arch_s2' with no turns yet, passing session_id + track
+        let cont_a = handle_session_continuity(
+            &json!({
+                "session_id": "c1_arch_s2",
+                "track": "arch",
+                "n": 3,
+                "token_budget": 120,
+                "include_briefing_text": true
+            }),
+            &substrate,
+            &dir,
+        )
+        .expect("continuity pattern A");
+        assert_eq!(cont_a["session_id"], "c1_arch_s1");
+        assert!(cont_a["token_estimate"].as_u64().unwrap() <= 120);
+        assert!(cont_a["briefing"]["text"].as_str().unwrap().contains("BLAKE3"));
+
+        // Pattern B: New session 'c1_arch_s2' records an opening turn on 'arch' and queries via current_session_id
+        handle_session_record(
+            &json!({
+                "session_id": "c1_arch_s2",
+                "role": "user",
+                "turn_type": "message",
+                "track": "arch",
+                "importance": 0.4,
+                "content": "Resuming architecture work; what digest did we lock?"
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("record s2 turn");
+        let cont_b = handle_session_continuity(
+            &json!({
+                "current_session_id": "c1_arch_s2",
+                "n": 3,
+                "token_budget": 120,
+                "include_briefing_text": true
+            }),
+            &substrate,
+            &dir,
+        )
+        .expect("continuity pattern B");
+        assert_eq!(cont_b["session_id"], "c1_arch_s1");
+
+        let replay_b = handle_session_replay(
+            &json!({
+                "current_session_id": "c1_arch_s2",
+                "mode": "hybrid",
+                "token_budget": 120
+            }),
+            &dir,
+        )
+        .expect("replay pattern B");
+        assert_eq!(replay_b["session_id"], "c1_arch_s1");
+        assert_eq!(replay_b["returned"], 1);
 
         let _ = std::fs::remove_dir_all(&dir);
     }

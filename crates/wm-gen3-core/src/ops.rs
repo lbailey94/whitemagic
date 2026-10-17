@@ -2812,6 +2812,36 @@ impl Substrate {
     }
 
     /// `record_revision` plus legacy tags recorded on the revision entry.
+    /// Locate an existing record with identical content for durable consolidation when
+    /// `remember_batch` rejects a duplicate insert with `duplicate_exact`.
+    pub fn find_existing_record_for_consolidation(
+        &self,
+        content: &str,
+        source: &str,
+        kind: ImportKind,
+    ) -> Result<Option<u64>, String> {
+        if let Some(id) = self.exact_duplicate_id(content, source, kind)? {
+            return Ok(Some(id));
+        }
+        let target_domain = kind_tag(kind);
+        let superseded: HashSet<u64> = self
+            .revision_entries()
+            .into_iter()
+            .map(|e| e.record_id)
+            .collect();
+        let mut fallback = None;
+        for record in self.store.iter_records().map_err(|e| e.to_string())? {
+            if record.content() == content && domain_tag(record.domain()) == target_domain {
+                let rid = record.id();
+                if !superseded.contains(&rid) {
+                    return Ok(Some(rid));
+                }
+                fallback = Some(rid);
+            }
+        }
+        Ok(fallback)
+    }
+
     pub fn record_revision_with_tags(
         &mut self,
         prior_id: u64,
@@ -2823,6 +2853,26 @@ impl Substrate {
         if prior_id == new_id {
             return Err("revision prior and new record ids must differ".to_string());
         }
+        let existing_entries = self.revision_entries();
+        let mut out_edges: HashMap<u64, u64> = HashMap::new();
+        for existing in &existing_entries {
+            if existing.record_id == prior_id && existing.new_record_id != new_id {
+                return Err(format!(
+                    "record {prior_id} is already superseded by record {}",
+                    existing.new_record_id
+                ));
+            }
+            out_edges.insert(existing.record_id, existing.new_record_id);
+        }
+        let mut cursor = new_id;
+        let mut visited: HashSet<u64> = HashSet::from([prior_id]);
+        while let Some(&next) = out_edges.get(&cursor) {
+            if !visited.insert(next) {
+                return Err("revision link would create a supersession cycle".to_string());
+            }
+            cursor = next;
+        }
+
         let prior = self
             .store
             .get_record(prior_id)
@@ -2919,13 +2969,21 @@ impl Substrate {
     /// Recompute and report revision-chain integrity for `record_id`.
     ///
     /// Every entry's recorded prior/new content hashes are recomputed from the
-    /// store and the chain links are checked for gaps. A missing prior record,
-    /// a hash mismatch, or a broken link makes the chain invalid.
+    /// store and the revision graph (linear chain or converging consolidation DAG)
+    /// is checked for missing records, hash mismatches, diverging forks, cycles,
+    /// or disconnected terminal sinks.
     pub fn verify_revision_chain(&self, record_id: u64) -> Result<serde_json::Value, String> {
         let chain = self.revision_chain(record_id);
         let mut failures: Vec<serde_json::Value> = Vec::new();
-        let mut previous_new: Option<u64> = None;
+        let mut out_edge: HashMap<u64, u64> = HashMap::new();
+        let mut nodes: Vec<u64> = Vec::new();
         for entry in &chain {
+            if !nodes.contains(&entry.record_id) {
+                nodes.push(entry.record_id);
+            }
+            if !nodes.contains(&entry.new_record_id) {
+                nodes.push(entry.new_record_id);
+            }
             match self.store.get_record(entry.record_id) {
                 Ok(Some(prior)) => {
                     let actual = sha256_hex(prior.content().as_bytes());
@@ -2976,23 +3034,57 @@ impl Substrate {
                     "error": e.to_string(),
                 })),
             }
-            if let Some(previous) = previous_new {
-                if previous != entry.record_id {
+            if let Some(&prev_target) = out_edge.get(&entry.record_id) {
+                if prev_target != entry.new_record_id {
                     failures.push(serde_json::json!({
                         "revision": entry.revision,
-                        "kind": "chain_link_gap",
-                        "expected_prior": previous,
-                        "recorded_prior": entry.record_id,
+                        "kind": "diverging_supersession",
+                        "record_id": entry.record_id,
+                        "first_target": prev_target,
+                        "conflicting_target": entry.new_record_id,
                     }));
                 }
+            } else {
+                out_edge.insert(entry.record_id, entry.new_record_id);
             }
-            previous_new = Some(entry.new_record_id);
         }
+
+        let mut terminal_sinks: Vec<u64> = Vec::new();
+        for &start in &nodes {
+            let mut curr = start;
+            let mut seen: HashSet<u64> = HashSet::from([curr]);
+            let mut cycle = false;
+            while let Some(&next) = out_edge.get(&curr) {
+                if !seen.insert(next) {
+                    failures.push(serde_json::json!({
+                        "kind": "revision_cycle",
+                        "record_id": start,
+                    }));
+                    cycle = true;
+                    break;
+                }
+                curr = next;
+            }
+            if !cycle && !terminal_sinks.contains(&curr) {
+                terminal_sinks.push(curr);
+            }
+        }
+        if terminal_sinks.len() > 1 {
+            failures.push(serde_json::json!({
+                "kind": "chain_link_gap",
+                "terminal_heads": terminal_sinks,
+            }));
+        }
+        let head_id = terminal_sinks
+            .first()
+            .copied()
+            .or_else(|| chain.last().map(|entry| entry.new_record_id))
+            .unwrap_or(record_id);
 
         Ok(serde_json::json!({
             "valid": failures.is_empty(),
             "chain_length": chain.len(),
-            "head_record_id": chain.last().map(|entry| entry.new_record_id).unwrap_or(record_id),
+            "head_record_id": head_id,
             "entries_checked": chain.len(),
             "failures": failures,
         }))
