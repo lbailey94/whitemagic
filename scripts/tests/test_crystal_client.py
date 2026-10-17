@@ -359,9 +359,18 @@ class CrystalClientTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "requires an explicit pq_verifier"):
             cc.verify_crystal_client_sig(c2)
         self.assertTrue(cc.verify_crystal_client_sig(c2, pq_verifier=lambda pub, msg, sig: sig == "cHFfc2ln"))
-        with self.assertRaisesRegex(ValueError, "requires explicit pq_alg"):
+        verifier_calls = []
+        def original_only_verifier(public_key, message, signature):
+            verifier_calls.append(signature)
+            return signature == "cHFfc2ln"
+        with self.assertRaisesRegex(ValueError, "hybrid KEK rotation is unsupported"):
             cc.rotate_crystal_kek(c2, kek, bytes(reversed(kek)), 2, ed25519_private_key=ed_seed,
-                                  pq_verifier=lambda pub, msg, sig: sig == "cHFfc2ln")
+                                  pq_alg="ml-dsa-65", pq_public_key_b64="cHFfcHVi",
+                                  pq_sig_b64="invalid-new-signature",
+                                  pq_verifier=original_only_verifier)
+        # The supplied new signature is never emitted or accepted. Rotation is
+        # refused before a hybrid result can silently downgrade or go unverified.
+        self.assertEqual(verifier_calls, ["cHFfc2ln"])
 
         # Use standard Ed25519 on c2 for standard read-path unseal without custom pq_verifier
         c2_ed = cc.sign_crystal_envelope(
@@ -430,6 +439,33 @@ class CrystalClientTest(unittest.TestCase):
         self.assertEqual(res["level"], "L5-third-party-zero-knowledge")
         self.assertEqual(res["count"], 3)
         self.assertTrue(res["notarized"])
+
+        bool_version_notary = copy.deepcopy(notary)
+        bool_version_notary["receipt"]["version"] = True
+        with self.assertRaisesRegex(cc.CrystalVerificationError, "unsupported notarization version"):
+            cc.verify_crystal_set_third_party(
+                crystals, tenant_hash, expected_commitment=comm_v3, signer_public_key=ed_pub,
+                notarization=bool_version_notary, notary_public_key=notary_pub,
+            )
+
+        conflicting_descriptors = copy.deepcopy(notary)
+        other_seed = b"other-l5-notary-seed-32-bytes!!!"
+        other_pub = Ed25519PrivateKey.from_private_bytes(other_seed).public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+        alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+        encoded = b"\xed\x01" + other_pub
+        number = int.from_bytes(encoded, "big")
+        did_suffix = ""
+        while number:
+            number, rem = divmod(number, 58)
+            did_suffix = alphabet[rem] + did_suffix
+        leading_zeros = len(encoded) - len(encoded.lstrip(b"\0"))
+        other_did = "did:key:z" + "1" * leading_zeros + did_suffix
+        conflicting_descriptors["receipt"]["sig"]["key"] = other_did
+        with self.assertRaisesRegex(cc.CrystalVerificationError, "does not match trusted"):
+            cc.verify_crystal_set_third_party(
+                crystals, tenant_hash, expected_commitment=comm_v3, signer_public_key=ed_pub,
+                notarization=conflicting_descriptors, notary_public_key=notary_pub,
+            )
 
         # C1 negative probe: replacing Ed25519 client_sig with alg="ml-dsa-65" + garbage pq_sig + tampered metadata MUST fail
         c1_bypass = copy.deepcopy(crystals)

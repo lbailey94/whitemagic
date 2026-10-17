@@ -757,7 +757,7 @@ def verify_crystal_set_third_party(
             ).hexdigest()
             if wrapper_digest != receipt_digest:
                 raise CrystalVerificationError("notarization_digest does not match signed receipt")
-        if stmt.get("version") != 1:
+        if type(stmt.get("version")) is not int or stmt.get("version") != 1:
             raise CrystalVerificationError("unsupported notarization version")
         if notary_public_key is None or len(notary_public_key) != 32:
             raise CrystalVerificationError(
@@ -777,6 +777,13 @@ def verify_crystal_set_third_party(
         if carried_key is not None:
             if str(carried_key).lower() != expected_notary_hex:
                 raise CrystalVerificationError("notarization public_key does not match trusted notary_public_key")
+            if carried_did is not None:
+                try:
+                    did_raw = _ed25519_did_key_bytes(str(carried_did))
+                except Exception as exc:
+                    raise CrystalVerificationError(f"invalid notarization did:key: {exc}") from exc
+                if did_raw != notary_public_key:
+                    raise CrystalVerificationError("notarization did:key does not match trusted notary_public_key")
         elif carried_did is not None:
             try:
                 did_raw = _ed25519_did_key_bytes(str(carried_did))
@@ -905,9 +912,8 @@ def rotate_crystal_kek(
 ) -> dict[str, Any]:
     """Re-wrap a crystal's per-crystal DEK under a new KEK version without changing crystal_id (I2).
 
-    If ``crystal_envelope`` carries a ``client_sig``, ``ed25519_private_key`` matching the
-    original signer is required so that the rotated envelope's updated ``kek_version`` and
-    ``wrapped_dek`` are atomically re-signed.
+    Signed Ed25519 envelopes can be rotated with the matching signer seed. Hybrid
+    envelopes are refused until a callback API can sign the post-wrap canonical bytes.
     """
     if isinstance(new_kek_version, bool) or not isinstance(new_kek_version, int) or new_kek_version < 1:
         raise ValueError("new_kek_version must be a positive integer")
@@ -926,6 +932,8 @@ def rotate_crystal_kek(
     existing_sig = crystal_envelope.get("client_sig")
     if existing_sig is not None:
         verify_crystal_client_sig(crystal_envelope, pq_verifier=pq_verifier)
+        if existing_sig.get("alg") == "ed25519+ml-dsa-65":
+            raise ValueError("hybrid KEK rotation is unsupported until a PQ signer callback can sign the updated envelope")
         if ed25519_private_key is None:
             raise ValueError(
                 "rotating KEK on a signed crystal envelope requires ed25519_private_key to re-sign updated wrapped_dek"
@@ -936,10 +944,6 @@ def rotate_crystal_kek(
         pub_hex = priv.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw).hex().lower()
         if str(existing_sig.get("public_key") or "").lower() != pub_hex:
             raise ValueError("ed25519_private_key does not match existing envelope client_sig public_key")
-        if existing_sig.get("alg") == "ed25519+ml-dsa-65" and not all(
-            (pq_alg == "ml-dsa-65", pq_public_key_b64, pq_sig_b64, pq_verifier)
-        ):
-            raise ValueError("rotating hybrid envelope requires explicit pq_alg, pq_public_key_b64, pq_sig_b64, and pq_verifier")
 
     dek = unwrap_crystal_dek(wrapped, old_kek, crystal_envelope["crystal_id"], int(old_ver), cipher=cipher_norm)
     updated = dict(crystal_envelope)
