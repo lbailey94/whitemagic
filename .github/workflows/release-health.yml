@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   reconcile:
-    name: Probe, retry laggards, certify installs
+    name: Probe distribution health, verify artifacts, certify installs
     runs-on: ubuntu-latest
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     steps:
@@ -90,7 +90,7 @@ jobs:
       - name: Show laggards
         run: |
           if jq -e '.status == "healthy"' release-health.json >/dev/null; then
-            echo "all surfaces live after fan-out"
+            echo "all checked distribution surfaces are live after fan-out"
           else
             echo "laggards:"; jq -c '.registries | to_entries[] | select(.value.status != "live")' release-health.json
           fi
@@ -318,4 +318,4 @@ jobs:
                  and .install_certification.npm.bound_manifest_sha256 == .registries["github-release"].manifest_sha256
                  and .install_certification.docker.bound_manifest_sha256 == .registries["github-release"].manifest_sha256' release-health.json >/dev/null \
             || { echo "install certification not passing:"; jq -c '.install_certification | map_values({status, runtime_selftest, artifact_integrity})' release-health.json; exit 1; }
-          echo "release v${{ steps.version.outputs.version }} is healthy and certified"
+          echo "release v${{ steps.version.outputs.version }} distribution health is healthy; CI/source qualification and performance qualification are not measured by this record"

@@ -3044,22 +3044,38 @@ fn main() {
 }
 
 fn run_sangha_cli(args: &[String]) {
-    let mut cmd = std::process::Command::new("sangha");
-    cmd.args(args);
-    let status = match cmd.status() {
-        Ok(s) => s,
-        Err(_) => {
-            let mut py_cmd = std::process::Command::new("python3");
-            py_cmd
-                .arg("/home/lucas/SharedWorkspace/sangha.py")
-                .args(args);
-            match py_cmd.status() {
-                Ok(s) => s,
-                Err(e) => {
-                    eprintln!("Failed to invoke sangha: {e}");
-                    std::process::exit(1);
-                }
-            }
+    use std::path::PathBuf;
+
+    // Do not redispatch through a `sangha` command on PATH: the installer
+    // creates that command as a wrapper back to `wm sangha`, which recurses.
+    // A source checkout can be selected explicitly or installed beside wm.
+    let mut candidates = Vec::new();
+    if let Some(path) = std::env::var_os("WHITEMAGIC_SANGHA_SCRIPT") {
+        candidates.push(PathBuf::from(path));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            candidates.push(parent.join("sangha.py"));
+            candidates.push(parent.join("share/whitemagic/sangha.py"));
+        }
+    }
+    let script = candidates.into_iter().find(|path| path.is_file());
+    let Some(script) = script else {
+        eprintln!(
+            "Sangha is not installed with this binary. Install the Sangha Python source and its companion modules, or set WHITEMAGIC_SANGHA_SCRIPT to scripts/sangha.py."
+        );
+        std::process::exit(2);
+    };
+
+    let status = match std::process::Command::new("python3")
+        .arg(script)
+        .args(args)
+        .status()
+    {
+        Ok(status) => status,
+        Err(error) => {
+            eprintln!("Cannot start Sangha: Python 3 is unavailable ({error}).");
+            std::process::exit(2);
         }
     };
     if let Some(code) = status.code() {
@@ -3102,32 +3118,68 @@ fn run_cpr_cli(args: &[String]) {
             args
         };
 
-    let mut cmd = std::process::Command::new("python3");
-    cmd.arg("-m").arg(module).args(pass_args);
-    let status = match cmd.status() {
-        Ok(s) => s,
-        Err(_) => {
-            let fallback_script = format!(
-                "/home/lucas/Desktop/front burner/WHITEMAGIC/worktrees/continuity-receipt/continuity_receipt/{}.py",
-                if subcmd == "verify"
-                    || subcmd == "consumer"
-                    || subcmd == "anchor"
-                    || subcmd == "disclose"
-                {
-                    subcmd
-                } else {
-                    "verify"
-                }
-            );
-            let mut py_cmd = std::process::Command::new("python3");
-            py_cmd.arg(fallback_script).args(pass_args);
-            match py_cmd.status() {
-                Ok(s) => s,
-                Err(e) => {
-                    eprintln!("Failed to invoke CPR: {e}");
-                    std::process::exit(1);
-                }
-            }
+    let module_probe = r#"
+import importlib.util, sys
+try:
+    available = importlib.util.find_spec(sys.argv[1]) is not None
+except (ModuleNotFoundError, ValueError):
+    available = False
+sys.exit(0 if available else 1)
+"#;
+    let module_available = std::process::Command::new("python3")
+        .args(["-c", module_probe, module])
+        .status();
+    let module_available = matches!(module_available, Ok(status) if status.success());
+
+    let mut path_candidates = Vec::new();
+    if let Some(root) = std::env::var_os("WHITEMAGIC_CPR_ROOT") {
+        path_candidates.push(std::path::PathBuf::from(root));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            path_candidates.push(parent.join("continuity-receipt"));
+            path_candidates.push(parent.join("share/continuity-receipt"));
+        }
+    }
+    let script_name = if ["verify", "consumer", "anchor", "disclose"].contains(&subcmd.as_str()) {
+        subcmd.as_str()
+    } else {
+        "verify"
+    };
+    let path_root = path_candidates.into_iter().find(|root| {
+        root.join("continuity_receipt")
+            .join(format!("{script_name}.py"))
+            .is_file()
+    });
+
+    let status = if module_available {
+        std::process::Command::new("python3")
+            .arg("-m")
+            .arg(module)
+            .args(pass_args)
+            .status()
+    } else if let Some(project_root) = path_root {
+        let mut command = std::process::Command::new("python3");
+        command.arg("-m").arg(module).args(pass_args);
+        let mut python_paths = vec![project_root];
+        if let Some(existing) = std::env::var_os("PYTHONPATH") {
+            python_paths.extend(std::env::split_paths(&existing));
+        }
+        if let Ok(joined) = std::env::join_paths(python_paths) {
+            command.env("PYTHONPATH", joined);
+        }
+        command.status()
+    } else {
+        eprintln!(
+            "CPR is not installed. Install the continuity_receipt Python package or set WHITEMAGIC_CPR_ROOT to its source checkout."
+        );
+        std::process::exit(2);
+    };
+    let status = match status {
+        Ok(status) => status,
+        Err(error) => {
+            eprintln!("Cannot start CPR: Python 3 is unavailable ({error}).");
+            std::process::exit(2);
         }
     };
     if let Some(code) = status.code() {

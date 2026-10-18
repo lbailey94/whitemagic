@@ -277,8 +277,8 @@ impl SessionTurn {
             || self.is_architectural_directive()
     }
 
-    /// True when this turn contains explicit decision identifiers or invariant directives,
-    /// preventing premature eviction of architectural constraints even if logged casually as a note.
+    /// Heuristic marker for likely architectural directives when logged as notes.
+    /// It does not establish authority or truth: quoted, negated, or stale text can match.
     #[must_use]
     pub fn is_architectural_directive(&self) -> bool {
         let s = self.content.trim();
@@ -1855,14 +1855,22 @@ impl Substrate {
         // Inherit query activation across revision chains: if a prior record
         // that was superseded had query activation, propagate its relevance
         // to its authoritative replacement head.
-        let rev_entries = self.revision_entries();
-        for entry in &rev_entries {
-            if let Some(&prior_act) = final_support.get(&entry.record_id) {
-                if prior_act > 0.0 {
-                    let head = entry.new_record_id;
+        if let Ok(authoritative) = self.authoritative_revision_entries() {
+            if let Ok(out_edges) = Self::validated_revision_edges(&authoritative) {
+                let terminal_heads = Self::revision_terminal_heads(&out_edges);
+                let activated: Vec<(u64, f32)> = final_support
+                    .iter()
+                    .filter_map(|(&id, &activation)| (activation > 0.0).then_some((id, activation)))
+                    .collect();
+                for (id, activation) in activated {
+                    let head = terminal_heads.get(&id).copied().unwrap_or(id);
+                    // Only a validated terminal revision receives inherited relevance.
+                    if head == id || out_edges.contains_key(&head) {
+                        continue;
+                    }
                     if let Some(record) = self.store.get_record(head).ok().flatten() {
                         let cur = final_support.get(&head).copied().unwrap_or(0.0);
-                        let boosted = cur.max(prior_act * 1.15).clamp(0.0, 1.0);
+                        let boosted = cur.max(activation * 1.15).clamp(0.0, 1.0);
                         final_support.insert(head, boosted);
                         base_records.entry(head).or_insert((
                             0.0,
@@ -2785,6 +2793,116 @@ impl Substrate {
             .collect()
     }
 
+    fn compensation_events(&self) -> Result<Vec<serde_json::Value>, String> {
+        let path = self.store.path().join("compensations.jsonl");
+        let content = match std::fs::read_to_string(&path) {
+            Ok(text) => text,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(error) => {
+                return Err(format!(
+                    "compensation log read failed ({}): {error}",
+                    path.display()
+                ));
+            }
+        };
+        content
+            .lines()
+            .enumerate()
+            .map(|(index, line)| {
+                serde_json::from_str::<serde_json::Value>(line).map_err(|error| {
+                    format!("compensation log corrupt at line {}: {error}", index + 1)
+                })
+            })
+            .collect()
+    }
+
+    fn authoritative_revision_entries(&self) -> Result<Vec<RevisionEntry>, String> {
+        let path = self.store.path().join("revisions.jsonl");
+        let content = match std::fs::read_to_string(&path) {
+            Ok(text) => text,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(error) => {
+                return Err(format!(
+                    "revision log read failed ({}): {error}",
+                    path.display()
+                ));
+            }
+        };
+        content
+            .lines()
+            .enumerate()
+            .map(|(index, line)| {
+                serde_json::from_str::<RevisionEntry>(line)
+                    .map_err(|error| format!("revision log corrupt at line {}: {error}", index + 1))
+            })
+            .collect()
+    }
+
+    fn validated_revision_edges(entries: &[RevisionEntry]) -> Result<HashMap<u64, u64>, String> {
+        let mut edges = HashMap::new();
+        let mut revisions = HashSet::new();
+        for entry in entries {
+            if entry.record_id == entry.new_record_id {
+                return Err(format!("revision {} is a self-link", entry.revision));
+            }
+            if !revisions.insert(entry.revision) {
+                return Err(format!("duplicate revision sequence {}", entry.revision));
+            }
+            if edges.insert(entry.record_id, entry.new_record_id).is_some() {
+                return Err(format!(
+                    "revision graph has multiple successors for record {}",
+                    entry.record_id
+                ));
+            }
+        }
+        let mut completed = HashSet::new();
+        for &start in edges.keys() {
+            if completed.contains(&start) {
+                continue;
+            }
+            let mut path = Vec::new();
+            let mut visiting = HashSet::new();
+            let mut cursor = start;
+            while let Some(&next) = edges.get(&cursor) {
+                if completed.contains(&cursor) {
+                    break;
+                }
+                if !visiting.insert(cursor) {
+                    return Err(format!(
+                        "revision graph contains a cycle through record {cursor}"
+                    ));
+                }
+                path.push(cursor);
+                cursor = next;
+            }
+            completed.extend(path);
+        }
+        Ok(edges)
+    }
+
+    fn revision_terminal_heads(edges: &HashMap<u64, u64>) -> HashMap<u64, u64> {
+        let mut heads = HashMap::new();
+        for &start in edges.keys() {
+            if heads.contains_key(&start) {
+                continue;
+            }
+            let mut path = Vec::new();
+            let mut cursor = start;
+            while let Some(&next) = edges.get(&cursor) {
+                if heads.contains_key(&cursor) {
+                    break;
+                }
+                path.push(cursor);
+                cursor = next;
+            }
+            let head = heads.get(&cursor).copied().unwrap_or(cursor);
+            for node in path {
+                heads.insert(node, head);
+            }
+        }
+        heads
+    }
+
     fn append_revision_intent_resolution(
         &self,
         operation: &str,
@@ -2831,26 +2949,139 @@ impl Substrate {
         let events = self.revision_intent_events()?;
         let mut intents: HashMap<String, serde_json::Value> = HashMap::new();
         let mut resolved = HashSet::new();
+        let mut resolution_outcomes = HashMap::new();
         for event in events {
             let operation = event
                 .get("operation")
                 .and_then(serde_json::Value::as_str)
+                .filter(|value| !value.is_empty())
                 .ok_or_else(|| "revision intent event missing operation".to_string())?
                 .to_string();
             match event.get("kind").and_then(serde_json::Value::as_str) {
                 Some("intent") => {
+                    let source = event
+                        .get("candidate_source")
+                        .and_then(serde_json::Value::as_str);
+                    let content_hash = event
+                        .get("content_sha256")
+                        .and_then(serde_json::Value::as_str);
+                    if event
+                        .get("prior_id")
+                        .and_then(serde_json::Value::as_u64)
+                        .is_none()
+                        || source.is_none_or(|value| value.is_empty())
+                        || !content_hash.is_some_and(|hash| {
+                            hash.len() == 64 && hash.bytes().all(|byte| byte.is_ascii_hexdigit())
+                        })
+                    {
+                        return Err(format!("revision intent {operation} has incomplete fields"));
+                    }
                     if intents.insert(operation.clone(), event).is_some() {
                         return Err(format!("duplicate revision intent operation {operation}"));
                     }
                 }
                 Some("resolution") => {
-                    resolved.insert(operation);
+                    if !intents.contains_key(&operation) {
+                        return Err(format!(
+                            "revision resolution {operation} has no preceding intent"
+                        ));
+                    }
+                    if !resolved.insert(operation.clone()) {
+                        return Err(format!(
+                            "duplicate revision resolution for operation {operation}"
+                        ));
+                    }
+                    let outcome = event
+                        .get("outcome")
+                        .and_then(serde_json::Value::as_str)
+                        .ok_or_else(|| {
+                            format!("revision resolution {operation} is missing outcome")
+                        })?;
+                    if !matches!(
+                        outcome,
+                        "committed"
+                            | "committed_relation_repair_required"
+                            | "rolled_back"
+                            | "recovered_removed"
+                            | "committed_existing_target"
+                            | "no_candidate"
+                    ) {
+                        return Err(format!(
+                            "revision resolution {operation} has unknown outcome {outcome}"
+                        ));
+                    }
+                    if event.get("record_id").is_none_or(|record_id| {
+                        !record_id.is_null() && record_id.as_u64().is_none()
+                    }) {
+                        return Err(format!(
+                            "revision resolution {operation} has invalid record_id"
+                        ));
+                    }
+                    resolution_outcomes.insert(operation, outcome.to_string());
                 }
                 _ => {
                     return Err(format!(
                         "revision intent operation {operation} has unknown event kind"
                     ));
                 }
+            }
+        }
+        let compensations = self.compensation_events()?;
+        let mut removal_started = HashSet::new();
+        let mut removal_finished = HashSet::new();
+        for event in compensations {
+            let operation = event
+                .get("operation")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| "compensation event missing operation".to_string())?
+                .to_string();
+            match event.get("kind").and_then(serde_json::Value::as_str) {
+                Some("unrevised_candidate_remove_started") => {
+                    if !intents.contains_key(&operation)
+                        || !removal_started.insert(operation.clone())
+                    {
+                        return Err(format!(
+                            "invalid/duplicate compensation start for operation {operation}"
+                        ));
+                    }
+                }
+                Some("unrevised_candidate_removed") => {
+                    if !intents.contains_key(&operation)
+                        || !removal_started.contains(&operation)
+                        || !removal_finished.insert(operation.clone())
+                    {
+                        return Err(format!(
+                            "invalid/duplicate compensation completion for operation {operation}"
+                        ));
+                    }
+                }
+                _ => {
+                    return Err(format!(
+                        "compensation operation {operation} has unknown event kind"
+                    ));
+                }
+            }
+        }
+        for operation in &removal_started {
+            if resolved.contains(operation)
+                && (!removal_finished.contains(operation)
+                    || !matches!(
+                        resolution_outcomes.get(operation).map(String::as_str),
+                        Some("rolled_back" | "recovered_removed")
+                    ))
+            {
+                return Err(format!(
+                    "resolved compensation {operation} has inconsistent completion state"
+                ));
+            }
+        }
+        for (operation, outcome) in &resolution_outcomes {
+            if matches!(outcome.as_str(), "rolled_back" | "recovered_removed")
+                && (!removal_started.contains(operation) || !removal_finished.contains(operation))
+            {
+                return Err(format!(
+                    "revision resolution {operation} claims removal without a complete compensation"
+                ));
             }
         }
         for (operation, intent) in intents {
@@ -2885,31 +3116,61 @@ impl Substrate {
                 ));
             }
             let candidate = matches.first().map(|record| record.id());
-            let removal_started =
-                self.read_store_sidecar("compensations.jsonl")
+            let has_removal_started = removal_started.contains(&operation);
+            let authoritative = self.authoritative_revision_entries().map_err(|error| {
+                format!("revision intent {operation} cannot safely recover: {error}")
+            })?;
+            let authoritative_edges =
+                Self::validated_revision_edges(&authoritative).map_err(|error| {
+                    format!("revision intent {operation} cannot safely recover: {error}")
+                })?;
+            let committed_target = authoritative_edges.get(&prior_id).copied();
+            if let Some(target_id) = committed_target {
+                let edge = authoritative
                     .iter()
-                    .any(|event| {
-                        event["kind"] == "unrevised_candidate_remove_started"
-                            && event["operation"] == operation
-                    });
-            let revision_path = self.store.path().join("revisions.jsonl");
-            let revision_content = match std::fs::read_to_string(&revision_path) {
-                Ok(text) => text,
-                Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
-                Err(error) => {
+                    .find(|entry| entry.record_id == prior_id)
+                    .ok_or_else(|| {
+                        format!(
+                            "revision intent {operation} selected edge has no authoritative entry"
+                        )
+                    })?;
+                let prior_record = self
+                    .store
+                    .get_record(prior_id)
+                    .map_err(|error| {
+                        format!("revision intent {operation} cannot read prior {prior_id}: {error}")
+                    })?
+                    .ok_or_else(|| {
+                        format!("revision intent {operation} points from missing prior {prior_id}")
+                    })?;
+                let target_record = self
+                    .store
+                    .get_record(target_id)
+                    .map_err(|error| {
+                        format!(
+                            "revision intent {operation} cannot read target {target_id}: {error}"
+                        )
+                    })?
+                    .ok_or_else(|| {
+                        format!("revision intent {operation} points to missing target {target_id}")
+                    })?;
+                if sha256_hex(prior_record.content().as_bytes()) != edge.prior_content_hash
+                    || sha256_hex(target_record.content().as_bytes()) != edge.new_content_hash
+                {
                     return Err(format!(
-                        "revision intent {operation} cannot inspect authoritative revision log: {error}"
+                        "revision intent {operation} selected edge {prior_id}->{target_id} has content hash mismatch"
                     ));
                 }
-            };
-            let authoritative: Vec<RevisionEntry> = revision_content.lines().enumerate().map(|(index, line)| {
-                serde_json::from_str(line).map_err(|error| format!("revision intent {operation} cannot safely recover: revisions.jsonl line {} is invalid: {error}", index + 1))
-            }).collect::<Result<_, _>>()?;
-            let committed_entry = authoritative
-                .iter()
-                .find(|entry| entry.record_id == prior_id);
+            }
             if let Some(id) = candidate {
-                let committed = committed_entry.is_some_and(|entry| entry.new_record_id == id);
+                if authoritative.iter().any(|entry| entry.new_record_id == id)
+                    && committed_target != Some(id)
+                {
+                    return Err(format!(
+                        "revision intent {operation} candidate {id} is referenced by an unrelated authoritative edge"
+                    ));
+                }
+                let committed = committed_target == Some(id);
                 if committed {
                     if !self.store.is_readonly() {
                         self.append_revision_intent_resolution(&operation, "committed", Some(id))?;
@@ -2923,51 +3184,57 @@ impl Substrate {
                         "unresolved revision intent {operation} has candidate {id}; writable recovery required"
                     ));
                 } else {
-                    self.append_store_sidecar(
-                        "compensations.jsonl",
-                        &serde_json::json!({
-                            "kind":"unrevised_candidate_remove_started", "operation":operation,
-                            "record_id":id, "prior_id":prior_id, "content_sha256":content_hash
-                        }),
-                    )?;
+                    if !has_removal_started {
+                        self.append_store_sidecar(
+                            "compensations.jsonl",
+                            &serde_json::json!({
+                                "kind":"unrevised_candidate_remove_started", "operation":operation,
+                                "record_id":id, "prior_id":prior_id, "content_sha256":content_hash
+                            }),
+                        )?;
+                    }
                     self.store.remove_record_and_indexes(id).map_err(|error| {
                         format!("revision intent {operation} candidate cleanup failed: {error}")
                     })?;
-                    self.append_store_sidecar(
-                        "compensations.jsonl",
-                        &serde_json::json!({
-                            "kind":"unrevised_candidate_removed", "operation":operation,
-                            "record_id":id, "prior_id":prior_id, "content_sha256":content_hash
-                        }),
-                    )?;
+                    if !removal_finished.contains(&operation) {
+                        self.append_store_sidecar(
+                            "compensations.jsonl",
+                            &serde_json::json!({
+                                "kind":"unrevised_candidate_removed", "operation":operation,
+                                "record_id":id, "prior_id":prior_id, "content_sha256":content_hash
+                            }),
+                        )?;
+                    }
                     self.append_revision_intent_resolution(
                         &operation,
                         "recovered_removed",
                         Some(id),
                     )?;
                 }
-            } else if removal_started {
+            } else if has_removal_started {
                 if !self.store.is_readonly() {
-                    self.append_store_sidecar(
-                        "compensations.jsonl",
-                        &serde_json::json!({
-                            "kind":"unrevised_candidate_removed", "operation":operation,
-                            "record_id":null, "prior_id":prior_id, "content_sha256":content_hash,
-                            "recovered_after_restart":true
-                        }),
-                    )?;
+                    if !removal_finished.contains(&operation) {
+                        self.append_store_sidecar(
+                            "compensations.jsonl",
+                            &serde_json::json!({
+                                "kind":"unrevised_candidate_removed", "operation":operation,
+                                "record_id":null, "prior_id":prior_id, "content_sha256":content_hash,
+                                "recovered_after_restart":true
+                            }),
+                        )?;
+                    }
                     self.append_revision_intent_resolution(&operation, "recovered_removed", None)?;
                 } else {
                     return Err(format!(
                         "unresolved compensation {operation}; writable recovery required"
                     ));
                 }
-            } else if let Some(entry) = committed_entry {
+            } else if let Some(target_id) = committed_target {
                 if !self.store.is_readonly() {
                     self.append_revision_intent_resolution(
                         &operation,
                         "committed_existing_target",
-                        Some(entry.new_record_id),
+                        Some(target_id),
                     )?;
                 } else {
                     return Err(format!(
@@ -5494,8 +5761,19 @@ mod cache_boundary_tests {
                 .remember_batch(&[item("candidate to compensate")])
                 .remove(0)
                 .unwrap();
-            s.rollback_unrevised_candidate(orphan, "test-rollback-operation")
+            let orphan_record = s.store.get_record(orphan).unwrap().unwrap();
+            let operation = "test-rollback-operation";
+            s.begin_revision_intent(
+                next,
+                operation,
+                orphan_record.source(),
+                orphan_record.content(),
+            )
+            .unwrap();
+            s.rollback_unrevised_candidate(orphan, operation)
                 .expect("rollback candidate");
+            s.finish_revision_intent(operation, "rolled_back", Some(orphan))
+                .unwrap();
             assert!(
                 !s.store()
                     .iter_records()
@@ -5634,6 +5912,266 @@ mod cache_boundary_tests {
         let recovered = Substrate::open(&path, None, default_view()).unwrap();
         assert!(recovered.store().get_record(target).unwrap().is_some());
         assert!(recovered.is_superseded(0));
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn ambiguous_revision_successors_fail_closed_without_deleting_intent_candidate() {
+        let path = temp_store("revision-intent-forked-authority");
+        let operation = "ambiguous-operation";
+        let source = format!("agent:update:{operation}");
+        let (prior, candidate, other) = {
+            let mut s = Substrate::open(&path, None, default_view()).expect("open");
+            s.set_noise_enabled(false);
+            let ids = s.remember_batch(&[
+                item("ambiguous prior"),
+                RememberItem {
+                    content: "candidate must survive ambiguous recovery".into(),
+                    source: source.clone(),
+                    kind: ImportKind::Reported,
+                },
+                item("other authoritative target"),
+            ]);
+            let prior = ids[0].as_ref().unwrap().to_owned();
+            let candidate = ids[1].as_ref().unwrap().to_owned();
+            let other = ids[2].as_ref().unwrap().to_owned();
+            s.begin_revision_intent(
+                prior,
+                operation,
+                &source,
+                "candidate must survive ambiguous recovery",
+            )
+            .unwrap();
+            (prior, candidate, other)
+        };
+        let entry = |revision, target| {
+            serde_json::json!({
+                "revision": revision,
+                "record_id": prior,
+                "new_record_id": target,
+                "prior_content_hash": "prior-hash",
+                "new_content_hash": "target-hash",
+                "timestamp": revision,
+                "reason": "fixture",
+                "tags": []
+            })
+        };
+        let authoritative = format!("{}\n{}\n", entry(1, other), entry(2, candidate));
+        std::fs::write(path.join("revisions.jsonl"), authoritative).unwrap();
+
+        assert!(Substrate::open_readonly(&path, None, default_view()).is_err());
+        assert!(Substrate::open(&path, None, default_view()).is_err());
+        let records = Store::open_readonly(&path).unwrap().iter_records().unwrap();
+        assert!(records.iter().any(|record| record.id() == candidate));
+        assert!(records.iter().any(|record| record.id() == other));
+        let intents = std::fs::read_to_string(path.join("revision_intents.jsonl")).unwrap();
+        assert!(!intents.contains("\"kind\":\"resolution\""));
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn corrupt_compensation_journal_fails_closed_before_candidate_cleanup() {
+        let path = temp_store("revision-intent-corrupt-compensation");
+        let operation = "corrupt-compensation-operation";
+        let source = format!("agent:update:{operation}");
+        let candidate = {
+            let mut s = Substrate::open(&path, None, default_view()).expect("open");
+            s.set_noise_enabled(false);
+            let ids = s.remember_batch(&[
+                item("corrupt-log prior"),
+                RememberItem {
+                    content: "candidate remains until journal is repaired".into(),
+                    source: source.clone(),
+                    kind: ImportKind::Reported,
+                },
+            ]);
+            let prior = *ids[0].as_ref().unwrap();
+            let candidate = *ids[1].as_ref().unwrap();
+            s.begin_revision_intent(
+                prior,
+                operation,
+                &source,
+                "candidate remains until journal is repaired",
+            )
+            .unwrap();
+            candidate
+        };
+        std::fs::write(path.join("compensations.jsonl"), "{not-json}\n").unwrap();
+
+        assert!(Substrate::open_readonly(&path, None, default_view()).is_err());
+        assert!(Substrate::open(&path, None, default_view()).is_err());
+        let records = Store::open_readonly(&path).unwrap().iter_records().unwrap();
+        assert!(records.iter().any(|record| record.id() == candidate));
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn recovery_does_not_delete_candidate_referenced_by_another_prior() {
+        let path = temp_store("revision-intent-unrelated-incoming-edge");
+        let operation = "unrelated-incoming-operation";
+        let source = format!("agent:update:{operation}");
+        let (candidate, other_prior) = {
+            let mut s = Substrate::open(&path, None, default_view()).expect("open");
+            s.set_noise_enabled(false);
+            let ids = s.remember_batch(&[
+                item("intent prior remains active"),
+                RememberItem {
+                    content: "candidate already referenced by another prior".into(),
+                    source: source.clone(),
+                    kind: ImportKind::Reported,
+                },
+                item("unrelated authoritative prior"),
+            ]);
+            let prior = *ids[0].as_ref().unwrap();
+            let candidate = *ids[1].as_ref().unwrap();
+            let other_prior = *ids[2].as_ref().unwrap();
+            s.begin_revision_intent(
+                prior,
+                operation,
+                &source,
+                "candidate already referenced by another prior",
+            )
+            .unwrap();
+            (candidate, other_prior)
+        };
+        let entry = serde_json::json!({
+            "revision": 1,
+            "record_id": other_prior,
+            "new_record_id": candidate,
+            "prior_content_hash": "prior-hash",
+            "new_content_hash": "candidate-hash",
+            "timestamp": 1,
+            "reason": "unexpected incoming edge",
+            "tags": []
+        });
+        std::fs::write(path.join("revisions.jsonl"), format!("{entry}\n")).unwrap();
+
+        assert!(Substrate::open(&path, None, default_view()).is_err());
+        let records = Store::open_readonly(&path).unwrap().iter_records().unwrap();
+        assert!(records.iter().any(|record| record.id() == candidate));
+        let intents = std::fs::read_to_string(path.join("revision_intents.jsonl")).unwrap();
+        assert!(!intents.contains("\"kind\":\"resolution\""));
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn revision_graph_validation_rejects_forks_cycles_and_duplicate_sequences() {
+        let edge = |revision, from, to| RevisionEntry {
+            revision,
+            record_id: from,
+            new_record_id: to,
+            prior_content_hash: "prior".into(),
+            new_content_hash: "next".into(),
+            timestamp: revision,
+            reason: "fixture".into(),
+            tags: Vec::new(),
+        };
+        assert!(Substrate::validated_revision_edges(&[edge(1, 1, 2), edge(2, 1, 3)]).is_err());
+        assert!(Substrate::validated_revision_edges(&[edge(1, 1, 2), edge(2, 2, 1)]).is_err());
+        assert!(Substrate::validated_revision_edges(&[edge(1, 1, 2), edge(1, 2, 3)]).is_err());
+        let edges = Substrate::validated_revision_edges(&[edge(1, 1, 2), edge(2, 2, 3)]).unwrap();
+        assert_eq!(edges.get(&1), Some(&2));
+        let heads = Substrate::revision_terminal_heads(&edges);
+        assert_eq!(heads.get(&1), Some(&3));
+        assert_eq!(heads.get(&2), Some(&3));
+        assert_eq!(heads.get(&3), None);
+    }
+
+    #[test]
+    fn revision_intent_log_rejects_resolution_before_intent() {
+        let path = temp_store("revision-intent-invalid-order");
+        std::fs::create_dir_all(&path).unwrap();
+        let events = [
+            serde_json::json!({"kind":"resolution","operation":"ordered-op","outcome":"no_candidate","record_id":null}),
+            serde_json::json!({"kind":"intent","operation":"ordered-op","prior_id":1,"candidate_source":"source","content_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}),
+        ];
+        let text = events
+            .iter()
+            .map(serde_json::Value::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        std::fs::write(path.join("revision_intents.jsonl"), text).unwrap();
+        assert!(Substrate::open(&path, None, default_view()).is_err());
+        assert!(Substrate::open_readonly(&path, None, default_view()).is_err());
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn unresolved_intent_refuses_selected_edge_with_missing_target_and_no_candidate() {
+        let path = temp_store("revision-intent-missing-selected-target");
+        let operation = "missing-selected-target-operation";
+        let source = format!("agent:update:{operation}");
+        let (prior, prior_hash) = {
+            let mut s = Substrate::open(&path, None, default_view()).expect("open");
+            s.set_noise_enabled(false);
+            let prior = s
+                .remember_batch(&[item("prior remains present")])
+                .remove(0)
+                .unwrap();
+            let prior_record = s.store.get_record(prior).unwrap().unwrap();
+            let prior_hash = sha256_hex(prior_record.content().as_bytes());
+            s.begin_revision_intent(prior, operation, &source, "candidate was never inserted")
+                .unwrap();
+            (prior, prior_hash)
+        };
+        let target = u64::MAX;
+        let edge = serde_json::json!({
+            "revision": 1,
+            "record_id": prior,
+            "new_record_id": target,
+            "prior_content_hash": prior_hash,
+            "new_content_hash": sha256_hex(b"missing target content"),
+            "timestamp": 1,
+            "reason": "missing target fixture",
+            "tags": []
+        });
+        std::fs::write(path.join("revisions.jsonl"), format!("{edge}\n")).unwrap();
+
+        assert!(Substrate::open_readonly(&path, None, default_view()).is_err());
+        assert!(Substrate::open(&path, None, default_view()).is_err());
+        let intents = std::fs::read_to_string(path.join("revision_intents.jsonl")).unwrap();
+        assert!(!intents.contains("\"kind\":\"resolution\""));
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn unresolved_intent_refuses_selected_edge_with_mismatched_hash_and_no_candidate() {
+        let path = temp_store("revision-intent-mismatched-selected-hash");
+        let operation = "mismatched-selected-hash-operation";
+        let source = format!("agent:update:{operation}");
+        let (prior, target, prior_hash) = {
+            let mut s = Substrate::open(&path, None, default_view()).expect("open");
+            s.set_noise_enabled(false);
+            let ids = s.remember_batch(&[item("real prior bytes"), item("real target bytes")]);
+            let prior = ids[0].as_ref().unwrap().to_owned();
+            let target = ids[1].as_ref().unwrap().to_owned();
+            let prior_record = s.store.get_record(prior).unwrap().unwrap();
+            let prior_hash = sha256_hex(prior_record.content().as_bytes());
+            s.begin_revision_intent(
+                prior,
+                operation,
+                &source,
+                "operation candidate was not inserted",
+            )
+            .unwrap();
+            (prior, target, prior_hash)
+        };
+        let edge = serde_json::json!({
+            "revision": 1,
+            "record_id": prior,
+            "new_record_id": target,
+            "prior_content_hash": prior_hash,
+            "new_content_hash": sha256_hex(b"not the stored target bytes"),
+            "timestamp": 1,
+            "reason": "mismatched hash fixture",
+            "tags": []
+        });
+        std::fs::write(path.join("revisions.jsonl"), format!("{edge}\n")).unwrap();
+
+        assert!(Substrate::open_readonly(&path, None, default_view()).is_err());
+        assert!(Substrate::open(&path, None, default_view()).is_err());
+        let intents = std::fs::read_to_string(path.join("revision_intents.jsonl")).unwrap();
+        assert!(!intents.contains("\"kind\":\"resolution\""));
         let _ = std::fs::remove_dir_all(&path);
     }
 

@@ -1,17 +1,21 @@
 {
   "binary": {
-    "path": "/home/lucas/Desktop/front burner/WHITEMAGIC/WMv10/bin/wm",
-    "sha256": "d2b147147e44be8a3caa68d2220e75e9bd8643ff840a070cb6ad007d35584288",
+    "path": "/home/lucas/Documents/ChatGPT/Whitemagic Website!/work/track2-closure-20261017/final-bin/wm-766edb2-verified",
+    "sha256": "47da191513cdfcf3734c7453b59f9cc2565d122bae9f33d00316a7b1f62481f6",
     "version": "10.4.0"
   },
   "documented_failure_traces": [
     {
-      "cause": "Agent stored a terse update ('Changed x402 upstream wait limit to 45s.') via raw memory_remember instead of memory.update(id=old_id), so no Supersedes relation was recorded and the old record retained higher lexical BM25 overlap with the query.",
-      "remediation": "Always use memory.update(id=prior_id) or session.record(supersedes=...) when overriding prior policy.",
+      "active_stale_count": 2,
+      "cause": "Negative control: an unlinked raw contradiction supplies no supersession edge",
+      "expected_record_id": 2,
+      "lineage_ok": false,
       "scenario": "M8_stress_unlinked_contradiction_without_update",
-      "system": "whitemagic_v10_4"
+      "system": "whitemagic_v10_4",
+      "top1_record_id": 1
     }
   ],
+  "execution_status": "measurement completed; exit zero is not a task-score qualification",
   "families": [
     {
       "family": "T_CONTINUITY",
@@ -20,92 +24,102 @@
           "bm25_flat_files": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 0.541,
+            "latency_ms": 0.695,
             "open_arc_precision": 0.0,
-            "tokens_used": 279
+            "tokens_used": 277
           },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
           "budget_tokens": 280,
+          "context_byte_cap": 1120,
           "failure_trace": null,
           "plain_files_tail": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 1.747,
+            "latency_ms": 2.148,
             "open_arc_precision": 0.0,
-            "tokens_used": 279
+            "tokens_used": 277
           },
           "scenario_id": "C1_payment_journal_invariants",
           "stress_untyped": false,
           "structured_metadata_files": {
             "budget_enforced": true,
             "decision_recall": 1.0,
-            "latency_ms": 0.63,
+            "latency_ms": 0.955,
             "open_arc_precision": 1.0,
-            "tokens_used": 175
+            "tokens_used": 258
           },
           "whitemagic_v10_4": {
             "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-10-18T03:27:45.729572336+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C1_payment_journal_invariants design and recorded decisions.\",\"track\":\"track-economy\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C1_payment_journal_invariants_s1]\\nTrack: track-economy\\nSummary: Completed C1_payment_journal_invariants design and recorded decisions.\\nConverge\",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: What alert threshold should trigger on held unknown settlements in pilot?\"},{\"kind\":\"decision\",\"text\":\"D1: Persist pending settlement journal with fsync before facilitator /settle.\"},{\"kind\":\"decision\",\"text\":\"D2: Hold account on unknown facilitator HTTP 200 empty response.\"},{\"kind\":\"decision\",\"text\":\"D3: Bind recovery matching to full 64-hex nonce, account, amount, and tx.\"},{\"kind\":\"decision\",\"text\":\"D4: Keep production --economy flag disabled until qualification closes.\"},{\"kind\":\"decision\",\"text\":\"D_RES: No, truncated nonces must remain held unless full identity matches.\"}]}",
+            "context_bytes": 1078,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 13.397,
+            "latency_ms": 17.614,
             "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 17105,
+            "response_bytes": 17747,
             "selected_prior_session": "C1_payment_journal_invariants_s1",
-            "tokens_used": 230
+            "tokens_used": 270
           }
         },
         {
           "bm25_flat_files": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 0.666,
+            "latency_ms": 0.589,
             "open_arc_precision": 0.0,
-            "tokens_used": 279
+            "tokens_used": 277
           },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
           "budget_tokens": 280,
+          "context_byte_cap": 1120,
           "failure_trace": null,
           "plain_files_tail": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 2.005,
+            "latency_ms": 2.354,
             "open_arc_precision": 0.0,
-            "tokens_used": 279
+            "tokens_used": 277
           },
           "scenario_id": "C2_release_manifest_signing",
           "stress_untyped": false,
           "structured_metadata_files": {
             "budget_enforced": true,
             "decision_recall": 1.0,
-            "latency_ms": 0.789,
+            "latency_ms": 0.826,
             "open_arc_precision": 1.0,
-            "tokens_used": 169
+            "tokens_used": 254
           },
           "whitemagic_v10_4": {
             "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-10-18T03:27:45.978358161+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C2_release_manifest_signing design and recorded decisions.\",\"track\":\"track-release\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C2_release_manifest_signing_s1]\\nTrack: track-release\\nSummary: Completed C2_release_manifest_signing design and recorded decisions.\\nConverged De\",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: When should Windows ONNX runtime targets re-enter the alpha matrix?\"},{\"kind\":\"decision\",\"text\":\"D1: Sign release-manifest.json with Ed25519 key aade884b035d...\"},{\"kind\":\"decision\",\"text\":\"D2: Verify raw binary SHA-256 and size against GitHub asset digests.\"},{\"kind\":\"decision\",\"text\":\"D3: Bind npm and docker install_certification to bound_manifest_sha256.\"},{\"kind\":\"decision\",\"text\":\"D4: Run trusted release_health.py from RUNNER_TEMP across tag checkouts.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Exempted explicit stable channel fallback pin in version_truth.py.\"}]}",
+            "context_bytes": 1058,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 12.839,
+            "latency_ms": 19.286,
             "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 16971,
+            "response_bytes": 17609,
             "selected_prior_session": "C2_release_manifest_signing_s1",
-            "tokens_used": 224
+            "tokens_used": 265
           }
         },
         {
           "bm25_flat_files": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 0.631,
+            "latency_ms": 0.544,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
           "budget_tokens": 280,
+          "context_byte_cap": 1120,
           "failure_trace": null,
           "plain_files_tail": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 1.895,
+            "latency_ms": 2.108,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
@@ -114,36 +128,40 @@
           "structured_metadata_files": {
             "budget_enforced": true,
             "decision_recall": 1.0,
-            "latency_ms": 0.591,
+            "latency_ms": 0.72,
             "open_arc_precision": 1.0,
-            "tokens_used": 170
+            "tokens_used": 253
           },
           "whitemagic_v10_4": {
             "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-10-18T03:27:46.338353291+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C3_crystal_envelope_security design and recorded decisions.\",\"track\":\"track-crystals\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C3_crystal_envelope_security_s1]\\nTrack: track-crystals\\nSummary: Completed C3_crystal_envelope_security design and recorded decisions.\\nConverged\",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should external OpenTimestamps anchors batch crystal-set commitments hourly?\"},{\"kind\":\"decision\",\"text\":\"D1: Bind cell_id to sha256(id_kek_version || nonce || ciphertext).\"},{\"kind\":\"decision\",\"text\":\"D2: Wrap per-crystal DEK under tenant KEK with versioned rotation.\"},{\"kind\":\"decision\",\"text\":\"D3: Require Ed25519 client_sig over canonical envelope for L5 audit.\"},{\"kind\":\"decision\",\"text\":\"D4: Enforce X-WM-Crystal-Assertion HMAC replay refusal in SQLite.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Yes, id_kek_version stays pinned while kek_version increments.\"}]}",
+            "context_bytes": 1056,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 14.148,
+            "latency_ms": 20.176,
             "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 17025,
+            "response_bytes": 17661,
             "selected_prior_session": "C3_crystal_envelope_security_s1",
-            "tokens_used": 224
+            "tokens_used": 264
           }
         },
         {
           "bm25_flat_files": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 1.744,
+            "latency_ms": 1.177,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
           "budget_tokens": 280,
+          "context_byte_cap": 1120,
           "failure_trace": null,
           "plain_files_tail": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 3.224,
+            "latency_ms": 2.792,
             "open_arc_precision": 0.0,
             "tokens_used": 279
           },
@@ -152,112 +170,124 @@
           "structured_metadata_files": {
             "budget_enforced": true,
             "decision_recall": 1.0,
-            "latency_ms": 1.83,
+            "latency_ms": 1.217,
             "open_arc_precision": 1.0,
-            "tokens_used": 177
+            "tokens_used": 261
           },
           "whitemagic_v10_4": {
             "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-10-18T03:27:46.470231260+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C4_backup_restore_contract design and recorded decisions.\",\"track\":\"track-recovery\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C4_backup_restore_contract_s1]\\nTrack: track-recovery\\nSummary: Completed C4_backup_restore_contract design and recorded decisions.\\nConverged Dec\",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should off-box backup freshness alert at 30h or 36h age?\"},{\"kind\":\"decision\",\"text\":\"D1: Raise aggregate tenant-write archive cap to 4 GiB (4294967296 bytes).\"},{\"kind\":\"decision\",\"text\":\"D2: Require correlated timestamps across hosted-store, auth-state, hosted-writes.\"},{\"kind\":\"decision\",\"text\":\"D3: Deploy replacement host with deploy.sh --no-restart before state extraction.\"},{\"kind\":\"decision\",\"text\":\"D4: Verify next-lane readiness on 18798/18799 before re-enabling key issuance.\"},{\"kind\":\"decision\",\"text\":\"D_RES: No, deploy.sh --no-restart installs the 52 manifest files first.\"}]}",
+            "context_bytes": 1083,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 14.598,
+            "latency_ms": 19.803,
             "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 17079,
+            "response_bytes": 17711,
             "selected_prior_session": "C4_backup_restore_contract_s1",
-            "tokens_used": 231
+            "tokens_used": 271
           }
         },
         {
           "bm25_flat_files": {
             "budget_enforced": true,
             "decision_recall": 0.5,
-            "latency_ms": 0.519,
+            "latency_ms": 1.378,
             "open_arc_precision": 0.0,
-            "tokens_used": 255
+            "tokens_used": 257
           },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
           "budget_tokens": 280,
+          "context_byte_cap": 1120,
           "failure_trace": null,
           "plain_files_tail": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 1.73,
+            "latency_ms": 4.559,
             "open_arc_precision": 0.0,
-            "tokens_used": 270
+            "tokens_used": 272
           },
           "scenario_id": "C5_diaml_sutra_binding",
           "stress_untyped": false,
           "structured_metadata_files": {
             "budget_enforced": true,
             "decision_recall": 1.0,
-            "latency_ms": 0.56,
+            "latency_ms": 1.592,
             "open_arc_precision": 1.0,
-            "tokens_used": 174
+            "tokens_used": 260
           },
           "whitemagic_v10_4": {
             "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-10-18T03:27:46.614048948+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C5_diaml_sutra_binding design and recorded decisions.\",\"track\":\"track-sutra\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C5_diaml_sutra_binding_s1]\\nTrack: track-sutra\\nSummary: Completed C5_diaml_sutra_binding design and recorded decisions.\\nConverged Decisions & Mi\",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should multi-track inheritance support parent track namespaces?\"},{\"kind\":\"decision\",\"text\":\"D1: Map Sutra codons with Verification+Synthesis to verified decision turns.\"},{\"kind\":\"decision\",\"text\":\"D2: Auto-resolve latest open question arc when executing synthesis Sutra.\"},{\"kind\":\"decision\",\"text\":\"D3: Surface track-scoped codex crystals automatically in session_continuity.\"},{\"kind\":\"decision\",\"text\":\"D4: Penalize high-degree noisy hubs during 2-hop association traversal.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Pure tail replay evicts early turns; hybrid replay pins salient anchors first.\"}]}",
+            "context_bytes": 1081,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 13.499,
+            "latency_ms": 23.444,
             "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 16856,
+            "response_bytes": 17492,
             "selected_prior_session": "C5_diaml_sutra_binding_s1",
-            "tokens_used": 232
+            "tokens_used": 271
           }
         },
         {
           "bm25_flat_files": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 0.438,
+            "latency_ms": 0.708,
             "open_arc_precision": 0.0,
-            "tokens_used": 279
+            "tokens_used": 277
           },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
           "budget_tokens": 280,
+          "context_byte_cap": 1120,
           "failure_trace": null,
           "plain_files_tail": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 1.729,
+            "latency_ms": 2.449,
             "open_arc_precision": 0.0,
-            "tokens_used": 279
+            "tokens_used": 277
           },
           "scenario_id": "C6_stripe_webhook_guard",
           "stress_untyped": false,
           "structured_metadata_files": {
             "budget_enforced": true,
             "decision_recall": 1.0,
-            "latency_ms": 0.435,
+            "latency_ms": 1.357,
             "open_arc_precision": 1.0,
-            "tokens_used": 168
+            "tokens_used": 250
           },
           "whitemagic_v10_4": {
             "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-10-18T03:27:46.763339434+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C6_stripe_webhook_guard design and recorded decisions.\",\"track\":\"track-billing\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C6_stripe_webhook_guard_s1]\\nTrack: track-billing\\nSummary: Completed C6_stripe_webhook_guard design and recorded decisions.\\nConverged Decisions \",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: When should automated tenant key provisioning replace manual 24h pilot setup?\"},{\"kind\":\"decision\",\"text\":\"D1: Refuse production Stripe webhook execution when secret is unset.\"},{\"kind\":\"decision\",\"text\":\"D2: Enforce constant-time HMAC-SHA256 signature verification with 300s window.\"},{\"kind\":\"decision\",\"text\":\"D3: Deduplicate webhook event IDs in KV with 30-day TTL.\"},{\"kind\":\"decision\",\"text\":\"D4: Align EN and ZH fleet peering disclosure to $249/mo.\"},{\"kind\":\"decision\",\"text\":\"D_RES: No, it was copy drift; updated ZH disclosure to $249/mo.\"}]}",
+            "context_bytes": 1038,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 13.428,
+            "latency_ms": 25.57,
             "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 16783,
+            "response_bytes": 17413,
             "selected_prior_session": "C6_stripe_webhook_guard_s1",
-            "tokens_used": 220
+            "tokens_used": 260
           }
         },
         {
           "bm25_flat_files": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 0.506,
+            "latency_ms": 1.012,
             "open_arc_precision": 0.0,
             "tokens_used": 270
           },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
           "budget_tokens": 280,
+          "context_byte_cap": 1120,
           "failure_trace": null,
           "plain_files_tail": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 1.906,
+            "latency_ms": 6.975,
             "open_arc_precision": 0.0,
             "tokens_used": 270
           },
@@ -266,58 +296,64 @@
           "structured_metadata_files": {
             "budget_enforced": true,
             "decision_recall": 1.0,
-            "latency_ms": 0.444,
+            "latency_ms": 0.948,
             "open_arc_precision": 1.0,
-            "tokens_used": 172
+            "tokens_used": 261
           },
           "whitemagic_v10_4": {
             "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-10-18T03:27:46.935343709+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C7_ingest_postings_perf design and recorded decisions.\",\"track\":\"track-perf\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C7_ingest_postings_perf_s1]\\nTrack: track-perf\\nSummary: Completed C7_ingest_postings_perf design and recorded decisions.\\nConverged Decisions & M\",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should commit_intake also batch LMDB write transactions above 500 items?\"},{\"kind\":\"decision\",\"text\":\"D1: Preload content-hash identity cache once per commit_intake batch.\"},{\"kind\":\"decision\",\"text\":\"D2: Decode only the shortest token postings slice during dedup lookup.\"},{\"kind\":\"decision\",\"text\":\"D3: Separate PEB-10 wall-clock speedup gate from debug unit test runs.\"},{\"kind\":\"decision\",\"text\":\"D4: Require median >= 1.40x across >= 5 release-mode samples in benchmark gate.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Shared runner CPU jitter affected single debug sample; moved to release median harness.\"}]}",
+            "context_bytes": 1091,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 13.874,
+            "latency_ms": 28.42,
             "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 16890,
+            "response_bytes": 17532,
             "selected_prior_session": "C7_ingest_postings_perf_s1",
-            "tokens_used": 232
+            "tokens_used": 273
           }
         },
         {
           "bm25_flat_files": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 0.435,
+            "latency_ms": 1.567,
             "open_arc_precision": 0.0,
-            "tokens_used": 279
+            "tokens_used": 275
           },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
           "budget_tokens": 280,
+          "context_byte_cap": 1120,
           "failure_trace": null,
           "plain_files_tail": {
             "budget_enforced": true,
             "decision_recall": 0.0,
-            "latency_ms": 1.703,
+            "latency_ms": 4.453,
             "open_arc_precision": 0.0,
-            "tokens_used": 279
+            "tokens_used": 275
           },
           "scenario_id": "C8_stress_untyped_low_importance_decision",
           "stress_untyped": true,
           "structured_metadata_files": {
             "budget_enforced": true,
-            "decision_recall": 0.75,
-            "latency_ms": 0.442,
+            "decision_recall": 1.0,
+            "latency_ms": 1.54,
             "open_arc_precision": 1.0,
-            "tokens_used": 150
+            "tokens_used": 244
           },
           "whitemagic_v10_4": {
             "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-10-18T03:27:47.111551425+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C8_stress_untyped_low_importance_decision design and recorded decisions.\",\"track\":\"track-stress\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C8_stress_untyped_low_importance_decision_s1]\\nTrack: track-stress\\nSummary: Completed C8_stress_untyped_low_importance_decision design and recor\",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should we add a lint warning when a constraint turn is logged with importance < 0.8?\"},{\"kind\":\"decision\",\"text\":\"D1: Pin canonical API OpenAPI contract to 19 paths.\"},{\"kind\":\"decision\",\"text\":\"D2: Enforce Landlock ABI v3 filesystem sandbox in receipt-api.\"},{\"kind\":\"decision\",\"text\":\"D3: Require RFC 8785 JCS canonicalization for continuity receipts.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Yes, supportedSpecRange covers 0.4 through 0.5.\"},{\"kind\":\"salient\",\"text\":\"D4: Keep SQLite busy_timeout at 5000ms on crystal replay store.\"}]}",
+            "context_bytes": 1035,
             "cross_session_crystal_surfaced": true,
             "decision_recall": 1.0,
-            "latency_ms": 12.844,
+            "latency_ms": 26.731,
             "new_session_track_routing_ok": true,
             "open_arc_precision": 1.0,
-            "response_bytes": 17220,
+            "response_bytes": 17882,
             "selected_prior_session": "C8_stress_untyped_low_importance_decision_s1",
-            "tokens_used": 216
+            "tokens_used": 259
           }
         }
       ]
@@ -327,7 +363,7 @@
       "scenarios": [
         {
           "bm25_flat_files": {
-            "latency_ms": 0.469,
+            "latency_ms": 0.82,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 0.0,
             "unflagged_stale_in_top3": 0.667
@@ -335,7 +371,7 @@
           "failure_trace": null,
           "scenario_id": "M1_backup_cap_upgrade",
           "structured_supersedes_files": {
-            "latency_ms": 0.031,
+            "latency_ms": 0.081,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 1.0,
             "unflagged_stale_in_top3": 0.0
@@ -343,7 +379,7 @@
           "use_governed_update": true,
           "whitemagic_v10_4": {
             "active_stale_count": 0,
-            "latency_ms": 11.813,
+            "latency_ms": 23.855,
             "lineage_verifiable": 1.0,
             "response_bytes": 2855,
             "top1_current_truth": 1.0,
@@ -352,7 +388,7 @@
         },
         {
           "bm25_flat_files": {
-            "latency_ms": 0.348,
+            "latency_ms": 0.964,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 0.0,
             "unflagged_stale_in_top3": 1.0
@@ -360,7 +396,7 @@
           "failure_trace": null,
           "scenario_id": "M2_fleet_peering_price",
           "structured_supersedes_files": {
-            "latency_ms": 0.032,
+            "latency_ms": 0.122,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 1.0,
             "unflagged_stale_in_top3": 0.0
@@ -368,7 +404,7 @@
           "use_governed_update": true,
           "whitemagic_v10_4": {
             "active_stale_count": 0,
-            "latency_ms": 12.621,
+            "latency_ms": 27.137,
             "lineage_verifiable": 1.0,
             "response_bytes": 2830,
             "top1_current_truth": 1.0,
@@ -377,7 +413,7 @@
         },
         {
           "bm25_flat_files": {
-            "latency_ms": 0.396,
+            "latency_ms": 0.76,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 0.0,
             "unflagged_stale_in_top3": 0.667
@@ -385,7 +421,7 @@
           "failure_trace": null,
           "scenario_id": "M3_openapi_path_count",
           "structured_supersedes_files": {
-            "latency_ms": 0.054,
+            "latency_ms": 0.052,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 1.0,
             "unflagged_stale_in_top3": 0.0
@@ -393,7 +429,7 @@
           "use_governed_update": true,
           "whitemagic_v10_4": {
             "active_stale_count": 0,
-            "latency_ms": 13.102,
+            "latency_ms": 21.297,
             "lineage_verifiable": 1.0,
             "response_bytes": 2841,
             "top1_current_truth": 1.0,
@@ -402,7 +438,7 @@
         },
         {
           "bm25_flat_files": {
-            "latency_ms": 0.359,
+            "latency_ms": 0.795,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 1.0,
             "unflagged_stale_in_top3": 0.667
@@ -410,7 +446,7 @@
           "failure_trace": null,
           "scenario_id": "M4_linux_x86_64_manifest_hash",
           "structured_supersedes_files": {
-            "latency_ms": 0.083,
+            "latency_ms": 0.129,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 1.0,
             "unflagged_stale_in_top3": 0.0
@@ -418,7 +454,7 @@
           "use_governed_update": true,
           "whitemagic_v10_4": {
             "active_stale_count": 0,
-            "latency_ms": 16.613,
+            "latency_ms": 21.183,
             "lineage_verifiable": 1.0,
             "response_bytes": 2637,
             "top1_current_truth": 1.0,
@@ -427,7 +463,7 @@
         },
         {
           "bm25_flat_files": {
-            "latency_ms": 0.435,
+            "latency_ms": 0.763,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 1.0,
             "unflagged_stale_in_top3": 0.667
@@ -435,7 +471,7 @@
           "failure_trace": null,
           "scenario_id": "M5_multi_hop_restore_drill_count",
           "structured_supersedes_files": {
-            "latency_ms": 0.051,
+            "latency_ms": 0.095,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 1.0,
             "unflagged_stale_in_top3": 0.0
@@ -443,7 +479,7 @@
           "use_governed_update": true,
           "whitemagic_v10_4": {
             "active_stale_count": 0,
-            "latency_ms": 12.893,
+            "latency_ms": 30.719,
             "lineage_verifiable": 1.0,
             "response_bytes": 2582,
             "top1_current_truth": 1.0,
@@ -452,7 +488,7 @@
         },
         {
           "bm25_flat_files": {
-            "latency_ms": 0.37,
+            "latency_ms": 1.257,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 0.0,
             "unflagged_stale_in_top3": 0.667
@@ -460,7 +496,7 @@
           "failure_trace": null,
           "scenario_id": "M6_multi_hop_economy_suite_count",
           "structured_supersedes_files": {
-            "latency_ms": 0.032,
+            "latency_ms": 0.175,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 1.0,
             "unflagged_stale_in_top3": 0.0
@@ -468,7 +504,7 @@
           "use_governed_update": true,
           "whitemagic_v10_4": {
             "active_stale_count": 0,
-            "latency_ms": 14.867,
+            "latency_ms": 28.382,
             "lineage_verifiable": 1.0,
             "response_bytes": 2588,
             "top1_current_truth": 1.0,
@@ -477,7 +513,7 @@
         },
         {
           "bm25_flat_files": {
-            "latency_ms": 0.307,
+            "latency_ms": 0.75,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 0.0,
             "unflagged_stale_in_top3": 0.667
@@ -485,7 +521,7 @@
           "failure_trace": null,
           "scenario_id": "M7_npm_channel_dist_tags",
           "structured_supersedes_files": {
-            "latency_ms": 0.038,
+            "latency_ms": 0.109,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 1.0,
             "unflagged_stale_in_top3": 0.0
@@ -493,7 +529,7 @@
           "use_governed_update": true,
           "whitemagic_v10_4": {
             "active_stale_count": 0,
-            "latency_ms": 14.49,
+            "latency_ms": 31.569,
             "lineage_verifiable": 1.0,
             "response_bytes": 2488,
             "top1_current_truth": 1.0,
@@ -502,20 +538,23 @@
         },
         {
           "bm25_flat_files": {
-            "latency_ms": 0.334,
+            "latency_ms": 1.127,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 0.0,
             "unflagged_stale_in_top3": 0.667
           },
           "failure_trace": {
-            "cause": "Agent stored a terse update ('Changed x402 upstream wait limit to 45s.') via raw memory_remember instead of memory.update(id=old_id), so no Supersedes relation was recorded and the old record retained higher lexical BM25 overlap with the query.",
-            "remediation": "Always use memory.update(id=prior_id) or session.record(supersedes=...) when overriding prior policy.",
+            "active_stale_count": 2,
+            "cause": "Negative control: an unlinked raw contradiction supplies no supersession edge",
+            "expected_record_id": 2,
+            "lineage_ok": false,
             "scenario": "M8_stress_unlinked_contradiction_without_update",
-            "system": "whitemagic_v10_4"
+            "system": "whitemagic_v10_4",
+            "top1_record_id": 1
           },
           "scenario_id": "M8_stress_unlinked_contradiction_without_update",
           "structured_supersedes_files": {
-            "latency_ms": 0.055,
+            "latency_ms": 0.271,
             "lineage_verifiable": 0.0,
             "top1_current_truth": 0.0,
             "unflagged_stale_in_top3": 0.667
@@ -523,7 +562,7 @@
           "use_governed_update": false,
           "whitemagic_v10_4": {
             "active_stale_count": 2,
-            "latency_ms": 13.375,
+            "latency_ms": 23.269,
             "lineage_verifiable": 0.0,
             "response_bytes": 2117,
             "top1_current_truth": 0.0,
@@ -539,13 +578,13 @@
           "failure_trace": null,
           "plain_files_append_only": {
             "joint_success": 0.0,
-            "latency_ms": 0.181,
+            "latency_ms": 0.429,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 0.0
           },
           "plain_files_keyword_prune": {
             "joint_success": 0.0,
-            "latency_ms": 0.045,
+            "latency_ms": 0.145,
             "legitimate_state_preserved": 0.0,
             "poison_free_active_top3": 1.0
           },
@@ -553,7 +592,7 @@
             "audit_trail_verified": 0.0,
             "joint_success_rank1": 0.0,
             "joint_success_top3": 0.0,
-            "latency_ms": 0.132,
+            "latency_ms": 0.359,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 0.0,
             "repaired_at_rank1": 0.0
@@ -563,24 +602,24 @@
             "audit_trail_verified": 1.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 18.674,
+            "latency_ms": 39.723,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0,
-            "response_bytes": 5699
+            "response_bytes": 6355
           }
         },
         {
           "failure_trace": null,
           "plain_files_append_only": {
-            "joint_success": 1.0,
-            "latency_ms": 0.12,
+            "joint_success": 0.0,
+            "latency_ms": 0.333,
             "legitimate_state_preserved": 1.0,
-            "poison_free_active_top3": 1.0
+            "poison_free_active_top3": 0.0
           },
           "plain_files_keyword_prune": {
             "joint_success": 0.0,
-            "latency_ms": 0.032,
+            "latency_ms": 0.095,
             "legitimate_state_preserved": 0.0,
             "poison_free_active_top3": 1.0
           },
@@ -588,7 +627,7 @@
             "audit_trail_verified": 0.0,
             "joint_success_rank1": 0.0,
             "joint_success_top3": 0.0,
-            "latency_ms": 0.134,
+            "latency_ms": 0.252,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 0.0,
             "repaired_at_rank1": 0.0
@@ -598,24 +637,24 @@
             "audit_trail_verified": 1.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 19.753,
+            "latency_ms": 42.059,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0,
-            "response_bytes": 5679
+            "response_bytes": 6339
           }
         },
         {
           "failure_trace": null,
           "plain_files_append_only": {
             "joint_success": 0.0,
-            "latency_ms": 0.118,
+            "latency_ms": 0.351,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 0.0
           },
           "plain_files_keyword_prune": {
             "joint_success": 0.0,
-            "latency_ms": 0.029,
+            "latency_ms": 0.098,
             "legitimate_state_preserved": 0.0,
             "poison_free_active_top3": 1.0
           },
@@ -623,7 +662,7 @@
             "audit_trail_verified": 0.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 0.077,
+            "latency_ms": 0.241,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0
@@ -633,24 +672,24 @@
             "audit_trail_verified": 1.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 18.747,
+            "latency_ms": 34.938,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0,
-            "response_bytes": 5731
+            "response_bytes": 6392
           }
         },
         {
           "failure_trace": null,
           "plain_files_append_only": {
             "joint_success": 0.0,
-            "latency_ms": 0.136,
+            "latency_ms": 0.336,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 0.0
           },
           "plain_files_keyword_prune": {
             "joint_success": 0.0,
-            "latency_ms": 0.028,
+            "latency_ms": 0.091,
             "legitimate_state_preserved": 0.0,
             "poison_free_active_top3": 1.0
           },
@@ -658,7 +697,7 @@
             "audit_trail_verified": 0.0,
             "joint_success_rank1": 0.0,
             "joint_success_top3": 0.0,
-            "latency_ms": 0.129,
+            "latency_ms": 0.196,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 0.0,
             "repaired_at_rank1": 0.0
@@ -668,24 +707,24 @@
             "audit_trail_verified": 1.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 17.518,
+            "latency_ms": 34.722,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0,
-            "response_bytes": 5653
+            "response_bytes": 6318
           }
         },
         {
           "failure_trace": null,
           "plain_files_append_only": {
             "joint_success": 0.0,
-            "latency_ms": 0.126,
+            "latency_ms": 0.234,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 0.0
           },
           "plain_files_keyword_prune": {
             "joint_success": 0.0,
-            "latency_ms": 0.029,
+            "latency_ms": 0.049,
             "legitimate_state_preserved": 0.0,
             "poison_free_active_top3": 1.0
           },
@@ -693,7 +732,7 @@
             "audit_trail_verified": 0.0,
             "joint_success_rank1": 0.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 0.079,
+            "latency_ms": 0.199,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 0.0
@@ -703,24 +742,24 @@
             "audit_trail_verified": 1.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 20.077,
+            "latency_ms": 32.591,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0,
-            "response_bytes": 5654
+            "response_bytes": 6310
           }
         },
         {
           "failure_trace": null,
           "plain_files_append_only": {
             "joint_success": 0.0,
-            "latency_ms": 0.14,
+            "latency_ms": 0.362,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 0.0
           },
           "plain_files_keyword_prune": {
             "joint_success": 0.0,
-            "latency_ms": 0.031,
+            "latency_ms": 0.096,
             "legitimate_state_preserved": 0.0,
             "poison_free_active_top3": 1.0
           },
@@ -728,7 +767,7 @@
             "audit_trail_verified": 0.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 0.079,
+            "latency_ms": 0.365,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0
@@ -738,24 +777,24 @@
             "audit_trail_verified": 1.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 18.68,
+            "latency_ms": 35.835,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0,
-            "response_bytes": 5622
+            "response_bytes": 6292
           }
         },
         {
           "failure_trace": null,
           "plain_files_append_only": {
             "joint_success": 0.0,
-            "latency_ms": 0.122,
+            "latency_ms": 0.253,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 0.0
           },
           "plain_files_keyword_prune": {
             "joint_success": 0.0,
-            "latency_ms": 0.031,
+            "latency_ms": 0.06,
             "legitimate_state_preserved": 0.0,
             "poison_free_active_top3": 1.0
           },
@@ -763,7 +802,7 @@
             "audit_trail_verified": 0.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 0.074,
+            "latency_ms": 0.141,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0
@@ -773,24 +812,24 @@
             "audit_trail_verified": 1.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 18.994,
+            "latency_ms": 32.979,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0,
-            "response_bytes": 5648
+            "response_bytes": 6305
           }
         },
         {
           "failure_trace": null,
           "plain_files_append_only": {
             "joint_success": 0.0,
-            "latency_ms": 0.143,
+            "latency_ms": 0.197,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 0.0
           },
           "plain_files_keyword_prune": {
             "joint_success": 0.0,
-            "latency_ms": 0.034,
+            "latency_ms": 0.052,
             "legitimate_state_preserved": 0.0,
             "poison_free_active_top3": 1.0
           },
@@ -798,7 +837,7 @@
             "audit_trail_verified": 0.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 0.083,
+            "latency_ms": 0.135,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0
@@ -808,11 +847,11 @@
             "audit_trail_verified": 1.0,
             "joint_success_rank1": 1.0,
             "joint_success_top3": 1.0,
-            "latency_ms": 18.556,
+            "latency_ms": 44.063,
             "legitimate_state_preserved": 1.0,
             "poison_free_active_top3": 1.0,
             "repaired_at_rank1": 1.0,
-            "response_bytes": 5678
+            "response_bytes": 6341
           }
         }
       ]
@@ -821,128 +860,272 @@
       "family": "T_DISCOVERY",
       "scenarios": [
         {
+          "adapter_inputs": [
+            "search_query",
+            "exact_stale_clues",
+            "authoritative_replacement_text"
+          ],
+          "corpus_records": 5,
+          "equal_information_files": {
+            "active_stale_in_top3": 0,
+            "cryptographic_revision_dag": false,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "legitimate_state_preserved": 1.0,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          },
           "failure_trace": null,
+          "legitimate_neighbors": 3,
           "scenario_id": "D1_discover_crystal_pq_alg_bypass",
-          "whitemagic_autonomous_discovery": {
+          "whitemagic_cue_guided_migration": {
             "active_stale_in_top3": 0,
+            "all_obsolete_retired_to_head": true,
             "converging_dag_verified": 1.0,
             "end_to_end_success": 1.0,
             "false_positive_supersessions": 0,
-            "latency_ms": 59.883,
+            "latency_ms": 117.272,
             "legitimate_state_preserved": 1.0,
-            "response_bytes": 9166,
+            "response_bytes": 10566,
             "target_discovery_precision": 1.0,
             "target_discovery_recall": 1.0,
             "top1_current_truth": 1.0
           }
         },
         {
+          "adapter_inputs": [
+            "search_query",
+            "exact_stale_clues",
+            "authoritative_replacement_text"
+          ],
+          "corpus_records": 5,
+          "equal_information_files": {
+            "active_stale_in_top3": 0,
+            "cryptographic_revision_dag": false,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "legitimate_state_preserved": 1.0,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          },
           "failure_trace": null,
+          "legitimate_neighbors": 3,
           "scenario_id": "D2_discover_notarization_unsigned_acceptance",
-          "whitemagic_autonomous_discovery": {
+          "whitemagic_cue_guided_migration": {
             "active_stale_in_top3": 0,
+            "all_obsolete_retired_to_head": true,
             "converging_dag_verified": 1.0,
             "end_to_end_success": 1.0,
             "false_positive_supersessions": 0,
-            "latency_ms": 65.972,
+            "latency_ms": 106.063,
             "legitimate_state_preserved": 1.0,
-            "response_bytes": 9219,
+            "response_bytes": 10629,
             "target_discovery_precision": 1.0,
             "target_discovery_recall": 1.0,
             "top1_current_truth": 1.0
           }
         },
         {
+          "adapter_inputs": [
+            "search_query",
+            "exact_stale_clues",
+            "authoritative_replacement_text"
+          ],
+          "corpus_records": 5,
+          "equal_information_files": {
+            "active_stale_in_top3": 0,
+            "cryptographic_revision_dag": false,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "legitimate_state_preserved": 1.0,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          },
           "failure_trace": null,
+          "legitimate_neighbors": 3,
           "scenario_id": "D3_discover_landlock_truncate_omission",
-          "whitemagic_autonomous_discovery": {
+          "whitemagic_cue_guided_migration": {
             "active_stale_in_top3": 0,
+            "all_obsolete_retired_to_head": true,
             "converging_dag_verified": 1.0,
             "end_to_end_success": 1.0,
             "false_positive_supersessions": 0,
-            "latency_ms": 67.678,
+            "latency_ms": 109.86,
             "legitimate_state_preserved": 1.0,
-            "response_bytes": 9153,
+            "response_bytes": 10540,
             "target_discovery_precision": 1.0,
             "target_discovery_recall": 1.0,
             "top1_current_truth": 1.0
           }
         },
         {
+          "adapter_inputs": [
+            "search_query",
+            "exact_stale_clues",
+            "authoritative_replacement_text"
+          ],
+          "corpus_records": 5,
+          "equal_information_files": {
+            "active_stale_in_top3": 0,
+            "cryptographic_revision_dag": false,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "legitimate_state_preserved": 1.0,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          },
           "failure_trace": null,
+          "legitimate_neighbors": 3,
           "scenario_id": "D4_discover_erasure_receipt_overclaim",
-          "whitemagic_autonomous_discovery": {
+          "whitemagic_cue_guided_migration": {
             "active_stale_in_top3": 0,
+            "all_obsolete_retired_to_head": true,
             "converging_dag_verified": 1.0,
             "end_to_end_success": 1.0,
             "false_positive_supersessions": 0,
-            "latency_ms": 63.344,
+            "latency_ms": 102.466,
             "legitimate_state_preserved": 1.0,
-            "response_bytes": 9174,
+            "response_bytes": 10567,
             "target_discovery_precision": 1.0,
             "target_discovery_recall": 1.0,
             "top1_current_truth": 1.0
           }
         },
         {
+          "adapter_inputs": [
+            "search_query",
+            "exact_stale_clues",
+            "authoritative_replacement_text"
+          ],
+          "corpus_records": 5,
+          "equal_information_files": {
+            "active_stale_in_top3": 0,
+            "cryptographic_revision_dag": false,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "legitimate_state_preserved": 1.0,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          },
           "failure_trace": null,
+          "legitimate_neighbors": 3,
           "scenario_id": "D5_discover_kek_rotation_stale_signature",
-          "whitemagic_autonomous_discovery": {
+          "whitemagic_cue_guided_migration": {
             "active_stale_in_top3": 0,
+            "all_obsolete_retired_to_head": true,
             "converging_dag_verified": 1.0,
             "end_to_end_success": 1.0,
             "false_positive_supersessions": 0,
-            "latency_ms": 69.263,
+            "latency_ms": 96.22,
             "legitimate_state_preserved": 1.0,
-            "response_bytes": 9136,
+            "response_bytes": 10509,
             "target_discovery_precision": 1.0,
             "target_discovery_recall": 1.0,
             "top1_current_truth": 1.0
           }
         },
         {
+          "adapter_inputs": [
+            "search_query",
+            "exact_stale_clues",
+            "authoritative_replacement_text"
+          ],
+          "corpus_records": 5,
+          "equal_information_files": {
+            "active_stale_in_top3": 0,
+            "cryptographic_revision_dag": false,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "legitimate_state_preserved": 1.0,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          },
           "failure_trace": null,
+          "legitimate_neighbors": 3,
           "scenario_id": "D6_discover_backup_monitor_auth_api_prefix",
-          "whitemagic_autonomous_discovery": {
+          "whitemagic_cue_guided_migration": {
             "active_stale_in_top3": 0,
+            "all_obsolete_retired_to_head": true,
             "converging_dag_verified": 1.0,
             "end_to_end_success": 1.0,
             "false_positive_supersessions": 0,
-            "latency_ms": 62.711,
+            "latency_ms": 97.653,
             "legitimate_state_preserved": 1.0,
-            "response_bytes": 9134,
+            "response_bytes": 10548,
             "target_discovery_precision": 1.0,
             "target_discovery_recall": 1.0,
             "top1_current_truth": 1.0
           }
         },
         {
+          "adapter_inputs": [
+            "search_query",
+            "exact_stale_clues",
+            "authoritative_replacement_text"
+          ],
+          "corpus_records": 5,
+          "equal_information_files": {
+            "active_stale_in_top3": 0,
+            "cryptographic_revision_dag": false,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "legitimate_state_preserved": 1.0,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          },
           "failure_trace": null,
+          "legitimate_neighbors": 3,
           "scenario_id": "D7_discover_economy_discovery_flag_mismatch",
-          "whitemagic_autonomous_discovery": {
+          "whitemagic_cue_guided_migration": {
             "active_stale_in_top3": 0,
+            "all_obsolete_retired_to_head": true,
             "converging_dag_verified": 1.0,
             "end_to_end_success": 1.0,
             "false_positive_supersessions": 0,
-            "latency_ms": 61.843,
+            "latency_ms": 92.503,
             "legitimate_state_preserved": 1.0,
-            "response_bytes": 8963,
+            "response_bytes": 10331,
             "target_discovery_precision": 1.0,
             "target_discovery_recall": 1.0,
             "top1_current_truth": 1.0
           }
         },
         {
-          "failure_trace": null,
-          "scenario_id": "D8_discover_release_health_tag_checkout_hazard",
-          "whitemagic_autonomous_discovery": {
+          "adapter_inputs": [
+            "search_query",
+            "exact_stale_clues",
+            "authoritative_replacement_text"
+          ],
+          "corpus_records": 5,
+          "equal_information_files": {
             "active_stale_in_top3": 0,
+            "cryptographic_revision_dag": false,
+            "end_to_end_success": 1.0,
+            "false_positive_supersessions": 0,
+            "legitimate_state_preserved": 1.0,
+            "target_discovery_precision": 1.0,
+            "target_discovery_recall": 1.0,
+            "top1_current_truth": 1.0
+          },
+          "failure_trace": null,
+          "legitimate_neighbors": 3,
+          "scenario_id": "D8_discover_release_health_tag_checkout_hazard",
+          "whitemagic_cue_guided_migration": {
+            "active_stale_in_top3": 0,
+            "all_obsolete_retired_to_head": true,
             "converging_dag_verified": 1.0,
             "end_to_end_success": 1.0,
             "false_positive_supersessions": 0,
-            "latency_ms": 71.53,
+            "latency_ms": 110.639,
             "legitimate_state_preserved": 1.0,
-            "response_bytes": 9053,
+            "response_bytes": 10446,
             "target_discovery_precision": 1.0,
             "target_discovery_recall": 1.0,
             "top1_current_truth": 1.0
@@ -951,15 +1134,43 @@
       ]
     }
   ],
-  "generated_at": "2026-10-17T18:27:44Z",
+  "generated_at": "2026-10-18T03:27:50Z",
+  "harness_sha256": "fecc179b9aa6624e20b1732c3366c2aedc1e197c0db2e9a7eff7e27c308bc53b",
   "ignored_runtime_errors": 0,
-  "schema": "wm.pinned-task-evaluation/1.1",
+  "limits": [
+    "Authored deterministic regressions, no connected model or unseen holdout",
+    "Structured continuity files receive the same typed, importance and content-prefix salience heuristic; this heuristic is not an authority or semantic truth check",
+    "The structured continuity baseline serializes turns only; WM's capped representation may also contain derived checkpoint, queue, flags and crystals. Their wire overheads are not equal",
+    "Discovery receives exact stale clues and replacement text",
+    "Continuity compact context has a UTF-8 byte cap; tokens are bytes/4 estimates",
+    "Transport/debug metadata is excluded from consumed/scored context",
+    "Latency includes fresh process startup and unequal tool batches; no cost or tail-latency advantage established"
+  ],
+  "runtime_call_accounting": {
+    "attempted": 601,
+    "explicit_success": 601,
+    "failed_or_unverified": 0,
+    "ignored": 0,
+    "policy": "abort on protocol, tool, shape, lifecycle or budget failure; no ignored errors"
+  },
+  "runtime_call_audit_sha256": "b73f27e0626734af251d0f2b6a0a01194284fbbd940b7a0fc21fc5713cba7eb0",
+  "schema": "wm.pinned-task-evaluation/1.2",
+  "source_provenance": {
+    "binary_version_stdout": "wm 10.4.0",
+    "git_head": "766edb2de10d73b6d7204b916473816329eb5efb",
+    "runtime_source_sha256": {
+      "crates/wm-gen3-core/src/ops.rs": "b66d0230ca649a5ec5230494c52bcc5ed0543f3dd4c6d95716a2f979ab4f17e8",
+      "crates/wm-gen3-core/src/store.rs": "4f5412596618999addc8f09107a51e18a665397b9daa0618aea03fd7050b6191",
+      "crates/wm-gen3-harness/src/bridge.rs": "c85fcead3d022a90774431fc262023d54186c0479f3d50c2e0dc448ac20a35da"
+    },
+    "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
   "summary_by_family": {
     "T_CONFLICT_stale_and_conflicting_memory": {
       "bm25_flat_files": {
         "latency": {
-          "p50_ms": 0.36,
-          "p95_ms": 0.47
+          "p50_ms": 0.81,
+          "p95_ms": 1.26
         },
         "lineage_verifiable_rate": 0.0,
         "mean_unflagged_stale_in_top3": 0.7086,
@@ -969,8 +1180,8 @@
       "scenario_count": 8,
       "structured_supersedes_files_equal_info": {
         "latency": {
-          "p50_ms": 0.04,
-          "p95_ms": 0.08
+          "p50_ms": 0.12,
+          "p95_ms": 0.27
         },
         "lineage_verifiable_rate": 0.0,
         "mean_unflagged_stale_in_top3_governed_7": 0.0,
@@ -979,8 +1190,8 @@
       },
       "whitemagic_v10_4": {
         "latency": {
-          "p50_ms": 13.24,
-          "p95_ms": 16.61
+          "p50_ms": 25.5,
+          "p95_ms": 31.57
         },
         "lineage_verifiable_rate_governed_7": 1.0,
         "mean_unflagged_stale_in_top3_governed_7": 0.0,
@@ -991,53 +1202,73 @@
     "T_CONTINUITY_cross_session_decision_recovery": {
       "bm25_flat_files": {
         "latency": {
-          "p50_ms": 0.53,
-          "p95_ms": 1.74
+          "p50_ms": 0.86,
+          "p95_ms": 1.57
         },
         "mean_decision_recall_all_8": 0.0625,
         "mean_open_arc_precision": 0.0
       },
+      "compact_context_byte_cap": 1120,
+      "estimated_tokens_at_bytes_div4": 280,
       "plain_files_tail": {
         "latency": {
-          "p50_ms": 1.82,
-          "p95_ms": 3.22
+          "p50_ms": 2.62,
+          "p95_ms": 6.97
         },
         "mean_decision_recall_all_8": 0.0,
         "mean_open_arc_precision": 0.0
       },
       "scenario_count": 8,
-      "shared_budget_tokens": 280,
       "structured_metadata_files_equal_info": {
         "latency": {
-          "p50_ms": 0.58,
-          "p95_ms": 1.83
+          "p50_ms": 1.09,
+          "p95_ms": 1.59
         },
-        "mean_decision_recall_all_8": 0.9688,
+        "mean_decision_recall_all_8": 1.0,
         "mean_decision_recall_typed_7": 1.0,
-        "mean_open_arc_precision": 1.0
+        "mean_open_arc_precision": 1.0,
+        "mean_tokens_used": 255.125
       },
       "whitemagic_v10_4": {
         "budget_enforced_rate": 1.0,
         "cross_session_crystal_rate": 1.0,
         "latency": {
-          "p50_ms": 13.46,
-          "p95_ms": 14.6
+          "p50_ms": 21.81,
+          "p95_ms": 28.42
         },
         "mean_decision_recall_all_8": 1.0,
         "mean_decision_recall_typed_7": 1.0,
         "mean_open_arc_precision": 1.0,
-        "mean_tokens_used": 226.125,
+        "mean_tokens_used": 266.625,
         "new_session_track_routing_rate": 1.0
       }
     },
-    "T_DISCOVERY_unseen_prospective_autonomous_discovery": {
+    "T_DISCOVERY_authored_cue_guided_migration": {
+      "corpus_records_per_case": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "equal_information_files": {
+        "end_to_end_success_rate": 1.0,
+        "legitimate_state_preserved_rate": 1.0,
+        "mean_target_discovery_precision": 1.0,
+        "mean_target_discovery_recall": 1.0,
+        "top1_current_truth_rate": 1.0
+      },
+      "legitimate_neighbors_total": 24,
       "scenario_count": 8,
-      "whitemagic_autonomous_discovery": {
+      "whitemagic_cue_guided_migration": {
         "converging_dag_verified_rate": 1.0,
         "end_to_end_success_rate": 1.0,
         "latency": {
-          "p50_ms": 64.66,
-          "p95_ms": 71.53
+          "p50_ms": 104.26,
+          "p95_ms": 117.27
         },
         "legitimate_state_preserved_rate": 1.0,
         "mean_active_stale_in_top3": 0.0,
@@ -1048,9 +1279,9 @@
     },
     "T_REPAIR_surgical_bad_memory_repair": {
       "plain_files_append_only": {
-        "joint_repair_and_preserve_rate": 0.125,
+        "joint_repair_and_preserve_rate": 0.0,
         "legitimate_state_preserved_rate": 1.0,
-        "poison_free_top3_rate": 0.125
+        "poison_free_top3_rate": 0.0
       },
       "plain_files_keyword_prune": {
         "joint_repair_and_preserve_rate": 0.0,
@@ -1070,8 +1301,8 @@
         "joint_repair_and_preserve_rank1_rate": 1.0,
         "joint_repair_and_preserve_top3_rate": 1.0,
         "latency": {
-          "p50_ms": 18.71,
-          "p95_ms": 20.08
+          "p50_ms": 35.39,
+          "p95_ms": 44.06
         },
         "legitimate_state_preserved_rate": 1.0,
         "poison_free_and_repaired_in_top3_rate": 1.0,

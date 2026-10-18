@@ -73,3 +73,10 @@ regexTarget = "line"
 regexes = [
     '''Node Public Key:\s+8b65be789cd7e24466f4d146076fe4c3e447ed32cf4a8b49b058e657e6e0a118''',
 ]
+
+[[allowlists]]
+description = "Authored M4 regression: two public release artifact SHA-256 identifiers are expected/stale tokens, never access credentials; exact assignments only"
+regexTarget = "line"
+regexes = [
+    '''["\'](?:expected_token|stale_token)["\']:\s*["\'](?:232e31be6fa850e89a4fae9328e33e377cb36a3db67cce5b7b130c5856f0bd38|9c01c6ce1bf16dfb9777d9acf2f37c0c208298a9d7e7d7917184e67471a25a11)["\']''',
+]

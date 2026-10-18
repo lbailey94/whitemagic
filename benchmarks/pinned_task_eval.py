@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""Pinned & Prospective Agent Task Evaluation: WhiteMagic v10.4.0 vs. Naive & Equal-Information Baselines.
+"""Pinned deterministic memory regression evaluation with equal-information baselines.
 
 Evaluates four core agent-memory task families across 32 deterministic scenarios:
   1. T_CONTINUITY (8 scenarios): Cross-session decision recovery & open-arc precision
      across genuine new sessions with an intervening unrelated-track session, under a
-     strictly enforced 280-token budget across all scored outputs.
+     a 1120-byte compact agent-context cap (280 estimated tokens at bytes/4).
   2. T_CONFLICT (8 scenarios): Stale/conflicting memory resolution (1-hop and 2-hop updates
      plus paraphrase consolidation into a converging revision DAG), scored by version identity.
   3. T_REPAIR (8 scenarios): Surgical bad-memory repair and legitimate neighbor preservation.
-  4. T_DISCOVERY (8 unseen prospective scenarios): Autonomous target discovery where the
-     agent/adapter is NOT given target record IDs or paraphrase IDs, and must search,
-     discriminate stale/poisoned records from legitimate neighbors, consolidate them into
-     a verified revision DAG, and preserve neighbor state.
+  4. T_DISCOVERY (8 authored cases): Cue-guided deterministic migration. Both adapters
+     receive exact stale phrases and authoritative replacement text, without target IDs.
+     These are regression cases, not an unseen autonomous-agent holdout.
 
 Compares WhiteMagic v10.4.0 against both:
   - Unstructured baselines (`plain_files_tail`, `bm25_flat_files`, `plain_files_append_only`, `plain_files_keyword_prune`)
@@ -51,16 +50,176 @@ def tokenize(text: str) -> list[str]:
 
 
 def approx_tokens(text: str) -> int:
-    # Matches wm-gen3-harness token estimate (~4 chars/token)
-    return max(1, (len(text) + 3) // 4)
+    # Explicit heuristic; this is not a model tokenizer or a transport-size cap.
+    return (len(text.encode("utf-8")) + 3) // 4
+
+
+def architectural_directive(text: str) -> bool:
+    """The same authored content heuristic as TurnRecord, not an authority check."""
+    text = text.strip()
+    lower = text.lower()
+    prefix = len(text) >= 3 and text[0] in "Dd" and text[1] in "0123456789" and text[2] in ":. "
+    return (prefix or lower.startswith(("invariant:", "policy:", "rule:"))
+            or any(cue in lower for cue in ("busy_timeout", "must remain", "never allow"))
+            or ("keep " in lower and (" at " in lower or " to " in lower)))
+
+
+def structured_salient(row: dict[str, Any]) -> bool:
+    return (row.get("qualifier") not in ("speculative", "hypothesis")
+            and (row["importance"] >= .80
+                 or row["turn_type"] in ("decision", "milestone", "constraint", "confirm")
+                 or architectural_directive(row["content"])))
+
+
+CALL_AUDIT: list[dict[str, Any]] = []
+BATCH_AUDIT: list[dict[str, Any]] = []
+
+
+def strict_json_loads(text: str) -> Any:
+    def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise RuntimeError(f"Duplicate JSON object member {key!r}")
+            result[key] = value
+        return result
+
+    def reject_constant(value: str) -> None:
+        raise RuntimeError(f"Non-finite JSON constant {value}")
+
+    return json.loads(text, object_pairs_hook=unique_object, parse_constant=reject_constant)
 
 
 def assert_mcp_ok(resp: dict[str, Any], context: str) -> None:
-    if "_error" in resp:
-        raise RuntimeError(f"MCP error in {context}: {resp['_error']}")
-    status = resp.get("status")
-    if status is not None and status not in ("success", "ok"):
-        raise RuntimeError(f"MCP non-success status in {context}: {resp}")
+    if not isinstance(resp, dict) or "_error" in resp or "_raw" in resp:
+        raise RuntimeError(f"Malformed or failed MCP reply in {context}: {resp!r}")
+    if resp.get("status") not in ("success", "ok"):
+        raise RuntimeError(f"MCP reply lacks explicit success in {context}: {resp!r}")
+
+
+def valid_lifecycle(record: dict[str, Any]) -> bool:
+    return "superseded_by" in record and (record["superseded_by"] is None or
+        (type(record["superseded_by"]) is int and record["superseded_by"] >= 0))
+
+
+def assert_tool_shape(name: str, resp: dict[str, Any], args: dict[str, Any] | None = None) -> None:
+    assert_mcp_ok(resp, name)
+    if name in ("memory_remember", "memory.update"):
+        if type(resp.get("record_id")) is not int or resp["record_id"] < 0:
+            raise RuntimeError(f"Missing integer record identity for {name}")
+    elif name == "memory_recall":
+        if not isinstance(resp.get("results"), list):
+            raise RuntimeError("Recall lacks results array")
+        for hit in resp["results"]:
+            if not isinstance(hit, dict) or type(hit.get("record_id")) is not int or hit["record_id"] < 0 or not isinstance(hit.get("content"), str) or not valid_lifecycle(hit):
+                raise RuntimeError("Recall lacks authoritative identity/content/lifecycle metadata")
+    elif name == "memory_get":
+        record = resp.get("record")
+        if not isinstance(record, dict) or type(record.get("record_id")) is not int or record["record_id"] < 0 or not isinstance(record.get("content"), str) or not valid_lifecycle(record):
+            raise RuntimeError("Read lacks explicit authoritative lifecycle metadata")
+        if args is not None and str(record["record_id"]) != str(args.get("id")):
+            raise RuntimeError("Read returned a different record from the requested identity")
+    elif name == "memory.revisions":
+        check = resp.get("verify")
+        if not isinstance(check, dict) or type(check.get("valid")) is not bool or type(check.get("head_record_id")) is not int:
+            raise RuntimeError("Revision verification lacks explicit validity/head")
+    elif name == "session_record":
+        if not isinstance(resp.get("turn_id"), str):
+            raise RuntimeError("Session record lacks turn identity")
+    elif name == "session_checkpoint":
+        if type(resp.get("checkpoint_record_id")) is not int:
+            raise RuntimeError("Checkpoint lacks record identity")
+    elif name == "session_continuity":
+        validate_agent_context(resp)
+
+
+def validate_agent_context(resp: dict[str, Any]) -> tuple[dict[str, Any], str]:
+    context = resp.get("agent_context")
+    if not isinstance(context, dict) or not isinstance(context.get("text"), str):
+        raise RuntimeError("Continuity lacks the compact agent_context contract")
+    text = context["text"]
+    size = len(text.encode("utf-8"))
+    cap = context.get("byte_cap")
+    if type(cap) is not int or cap < 0 or size > cap or context.get("bytes_used") != size or context.get("estimated_tokens") != approx_tokens(text):
+        raise RuntimeError("Compact context byte accounting or cap is invalid")
+    if context.get("estimate_method") != "utf8_bytes_div_4_heuristic":
+        raise RuntimeError("Compact context estimator is not explicitly disclosed")
+    value = strict_json_loads(text) if text else {}
+    if not isinstance(value, dict):
+        raise RuntimeError("Compact context must contain a JSON object")
+    if set(value) - {"turns", "checkpoint", "queue", "flags", "crystals", "briefing"}:
+        raise RuntimeError("Compact context contains unsupported fields")
+    turns = value.get("turns", [])
+    if not isinstance(turns, list):
+        raise RuntimeError("Compact turns must be an array")
+    for turn in turns:
+        if not isinstance(turn, dict) or set(turn) != {"kind", "text"} or turn["kind"] not in ("arc", "decision", "salient", "recent") or not isinstance(turn["text"], str):
+            raise RuntimeError("Unsupported compact turn kind or shape")
+    for key in ("queue", "flags"):
+        if key in value and (not isinstance(value[key], list) or any(not isinstance(item, str) for item in value[key])):
+            raise RuntimeError(f"Compact {key} must contain strings")
+    if value.get("checkpoint") is not None and not isinstance(value["checkpoint"], dict):
+        raise RuntimeError("Compact checkpoint must be an object or null")
+    if "crystals" in value and (not isinstance(value["crystals"], list) or any(not isinstance(item, dict) for item in value["crystals"])):
+        raise RuntimeError("Compact crystals must contain objects")
+    if value.get("briefing") is not None and not isinstance(value["briefing"], str):
+        raise RuntimeError("Compact briefing must be text or null")
+    return value, text
+
+
+def context_strings(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [text for item in value for text in context_strings(item)]
+    if isinstance(value, dict):
+        return [text for item in value.values() for text in context_strings(item)]
+    return []
+
+
+def legitimate_record_preserved(reply: dict[str, Any], expected_text: str) -> bool:
+    record = reply.get("record")
+    if not isinstance(record, dict) or "superseded_by" not in record:
+        raise RuntimeError("Cannot score preservation without explicit lifecycle state")
+    return record.get("content") == expected_text and record["superseded_by"] is None
+
+
+def parse_mcp_output(stdout: str, calls: list[tuple[str, dict[str, Any]]]) -> list[dict[str, Any]]:
+    messages: dict[int, dict[str, Any]] = {}
+    for line in stdout.splitlines():
+        if not line.strip():
+            continue
+        msg = strict_json_loads(line)
+        if not isinstance(msg, dict) or msg.get("jsonrpc") != "2.0":
+            raise RuntimeError("Malformed JSON-RPC envelope")
+        if "id" not in msg:
+            if isinstance(msg.get("method"), str):
+                continue
+            raise RuntimeError("Reply lacks response ID")
+        ident = msg["id"]
+        if "method" in msg or "params" in msg:
+            raise RuntimeError("Response mixes request and response fields")
+        if type(ident) is not int or ident < 0 or ident > len(calls) or ident in messages:
+            raise RuntimeError("Duplicate, unexpected or invalid response ID")
+        messages[ident] = msg
+    if set(messages) != set(range(len(calls) + 1)):
+        raise RuntimeError("Missing initialize/tool response")
+    initial = messages[0].get("result")
+    if "error" in messages[0] or not isinstance(initial, dict) or not isinstance(initial.get("protocolVersion"), str):
+        raise RuntimeError("Initialize did not explicitly succeed")
+    ordered = []
+    for ident, (name, args) in enumerate(calls, 1):
+        msg = messages[ident]
+        result = msg.get("result")
+        if "error" in msg or not isinstance(result, dict) or result.get("isError"):
+            raise RuntimeError(f"Failed MCP call {name}: {msg!r}")
+        content = result.get("content")
+        if not isinstance(content, list) or len(content) != 1 or content[0].get("type") != "text" or not isinstance(content[0].get("text"), str):
+            raise RuntimeError(f"Unexpected MCP content shape for {name}")
+        response = strict_json_loads(content[0]["text"])
+        assert_tool_shape(name, response, args)
+        ordered.append(response)
+    return ordered
 
 
 class OkapiBM25:
@@ -143,7 +302,12 @@ class WMMcpSession:
             )
         payload = "\n".join(reqs) + "\n"
         t0 = time.perf_counter()
-        proc = subprocess.run(
+        batch = {"calls": calls, "store": str(self.store_dir), "outcome": "attempted"}
+        BATCH_AUDIT.append(batch)
+        call_rows = [{"tool": name, "arguments": args, "outcome": "attempted"} for name, args in calls]
+        CALL_AUDIT.extend(call_rows)
+        try:
+            proc = subprocess.run(
             [
                 str(self.binary),
                 "serve",
@@ -160,29 +324,16 @@ class WMMcpSession:
             env=env,
             check=True,
         )
+            ordered = parse_mcp_output(proc.stdout, calls)
+        except Exception as exc:
+            batch.update(outcome="failed", error=str(exc))
+            for row in call_rows:
+                row.update(outcome="batch_failed", error=str(exc))
+            raise
         elapsed_ms = (time.perf_counter() - t0) * 1000.0
-        parsed: dict[int, dict[str, Any]] = {}
-        for line in proc.stdout.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            msg = json.loads(line)
-            msg_id = msg.get("id")
-            if isinstance(msg_id, int) and msg_id >= 1:
-                if "error" in msg:
-                    parsed[msg_id] = {"_error": msg["error"]}
-                elif msg.get("result", {}).get("isError"):
-                    content = msg.get("result", {}).get("content", [])
-                    text = content[0].get("text", "") if content else "MCP isError"
-                    parsed[msg_id] = {"_error": text}
-                else:
-                    content = msg.get("result", {}).get("content", [])
-                    text = content[0].get("text", "{}") if content else "{}"
-                    try:
-                        parsed[msg_id] = json.loads(text)
-                    except json.JSONDecodeError:
-                        parsed[msg_id] = {"_raw": text}
-        ordered = [parsed.get(i, {}) for i in range(1, len(calls) + 1)]
+        batch.update(outcome="success", elapsed_ms=elapsed_ms, raw_stdout=proc.stdout)
+        for row, response in zip(call_rows, ordered):
+            row.update(outcome="success", response=response)
         return ordered, elapsed_ms, len(proc.stdout.encode("utf-8"))
 
 
@@ -405,6 +556,10 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
                 tail_selected.append(line)
                 used_tokens += t_est
             tail_text = "\n".join(reversed(tail_selected))
+            while len(tail_text.encode("utf-8")) > budget * 4:
+                tail_selected.pop()
+                tail_text = "\n".join(reversed(tail_selected))
+            used_tokens = approx_tokens(tail_text)
             tail_ms = (time.perf_counter() - t0) * 1000.0
             tail_dec_hits = sum(1 for d, _, _, _ in sc["decisions"] if d in tail_text)
             tail_open_ok = (sc["open_q"] in tail_text) and (sc["resolved_q"] not in tail_text)
@@ -424,13 +579,18 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
                 bm25_selected.append(h["content"])
                 bm25_tokens += t_est
             bm25_text = "\n".join(bm25_selected)
+            while len(bm25_text.encode("utf-8")) > budget * 4:
+                bm25_selected.pop()
+                bm25_text = "\n".join(bm25_selected)
+            bm25_tokens = approx_tokens(bm25_text)
             bm25_ms = (time.perf_counter() - t1) * 1000.0
             bm25_dec_hits = sum(1 for d, _, _, _ in sc["decisions"] if d in bm25_text)
             bm25_open_ok = (sc["open_q"] in bm25_text) and (sc["resolved_q"] not in bm25_text)
 
             # 3) Equal-information structured metadata JSONL baseline:
             # Given the exact same turn_type, importance, resolves, and track fields as WhiteMagic,
-            # and selecting open questions + salient anchors (importance >= 0.80) + recent turns within 280 tokens.
+            # and the same typed/importance/content salience rule, plus open questions
+            # and recent turns, within the same 1,120-byte serialized context cap.
             t_eq = time.perf_counter()
             structured_jsonl = files_dir / "session_structured.jsonl"
             structured_rows = []
@@ -478,25 +638,26 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
                 r
                 for r in track_rows
                 if r["seq"] not in {x["seq"] for x in open_q_rows}
-                and (r["turn_type"] == "decision" and r["importance"] >= 0.80)
+                and structured_salient(r)
             ]
             recent_rows = [
                 r
                 for r in reversed(track_rows[-3:])
                 if r["seq"] not in {x["seq"] for x in open_q_rows + salient_rows}
             ]
-            eq_selected: list[str] = []
-            eq_tokens = 0
+            eq_context: dict[str, Any] = {"turns": []}
             for candidate in open_q_rows + salient_rows + recent_rows:
-                cost = approx_tokens(candidate["content"])
-                if eq_tokens + cost > budget:
-                    break
-                eq_selected.append(candidate["content"])
-                eq_tokens += cost
-            eq_text = "\n".join(eq_selected)
+                kind = "arc" if candidate in open_q_rows else "decision" if candidate["turn_type"] == "decision" else "recent"
+                compact = {"kind": kind, "text": candidate["content"]}
+                prospective = {"turns": eq_context["turns"] + [compact]}
+                if len(json.dumps(prospective, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) <= budget * 4:
+                    eq_context = prospective
+            eq_text = json.dumps(eq_context, ensure_ascii=False, separators=(",", ":")) if budget else ""
+            eq_tokens = approx_tokens(eq_text)
             eq_ms = (time.perf_counter() - t_eq) * 1000.0
-            eq_dec_hits = sum(1 for d, _, _, _ in sc["decisions"] if d in eq_text)
-            eq_open_ok = (sc["open_q"] in eq_text) and (sc["resolved_q"] not in eq_text)
+            eq_semantics = "\n".join(context_strings(eq_context))
+            eq_dec_hits = sum(1 for d, _, _, _ in sc["decisions"] if d in eq_semantics)
+            eq_open_ok = (sc["open_q"] in eq_semantics) and (sc["resolved_q"] not in eq_semantics)
 
             # 4) WhiteMagic v10.4.0:
             # Session 1 records + crystallizes; then an unrelated session on another track runs;
@@ -662,42 +823,48 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
                 cont_empty_s2.get("session_id") == s1_id
             )
 
-            # Score strictly from the single budget-enforced continuity payload!
-            unresolved_arcs = cont_out.get("unresolved_arcs", [])
-            salient_turns = cont_out.get("salient_turns", [])
-            recent_turns = cont_out.get("recent_turns", [])
-            scored_turns = unresolved_arcs + salient_turns + recent_turns
-            scored_text = "\n".join(t.get("content", "") for t in scored_turns)
-            wm_tokens_used = int(cont_out.get("token_estimate", 0))
-            wm_recomputed_tokens = sum(approx_tokens(t.get("content", "")) for t in scored_turns)
-            budget_enforced = (wm_tokens_used <= budget) and (wm_recomputed_tokens <= budget)
+            # The compact string is the sole consumed/scored agent context.
+            projection, wire_text = validate_agent_context(cont_out)
+            scored_text = "\n".join(context_strings(projection))
+            context_turns = projection.get("turns", [])
+            unresolved_arcs = [turn for turn in context_turns if turn.get("kind") == "arc"]
+            wm_tokens_used = approx_tokens(wire_text)
+            wm_recomputed_tokens = wm_tokens_used
+            budget_enforced = len(wire_text.encode("utf-8")) <= budget * 4
             if not budget_enforced:
                 raise RuntimeError(
                     f"Budget exceeded in {sc['id']}: token_estimate={wm_tokens_used}, recomputed={wm_recomputed_tokens}, budget={budget}"
                 )
 
             wm_dec_hits = sum(1 for d, _, _, _ in sc["decisions"] if d in scored_text)
-            unresolved_texts = [a.get("content", "") for a in unresolved_arcs]
+            unresolved_texts = [a.get("text", "") for a in unresolved_arcs]
             wm_open_ok = (
                 (len(unresolved_arcs) == 1)
                 and (unresolved_texts[0] == sc["open_q"])
                 and (sc["resolved_q"] not in scored_text)
             )
-            related_crystals = cont_out.get("related_crystals", [])
+            related_crystals = projection.get("crystals", [])
             crystal_surfaced = len(related_crystals) >= 1
 
             failure_trace = None
-            if wm_dec_hits < len(sc["decisions"]):
+            if not (wm_dec_hits == len(sc["decisions"]) and wm_open_ok and new_session_routing_ok and budget_enforced and crystal_surfaced):
                 missing = [d for d, _, _, _ in sc["decisions"] if d not in scored_text]
                 failure_trace = {
                     "system": "whitemagic_v10_4",
                     "scenario": sc["id"],
-                    "cause": (
-                        "Decision logged as untyped 'note' with importance=0.40 (< 0.80 salience floor) "
-                        "was evicted by 25 later turns under the single 280-token continuity budget."
+                    "cause": "Consumed compact-context checks failed: " + ", ".join(
+                        name for name, passed in {
+                            "decision_recall": wm_dec_hits == len(sc["decisions"]),
+                            "open_arc_precision": wm_open_ok,
+                            "track_routing": new_session_routing_ok,
+                            "context_byte_budget": budget_enforced,
+                            "track_crystal_surfacing": crystal_surfaced,
+                        }.items() if not passed
                     ),
                     "missing_decisions": missing,
-                    "remediation": "Log architectural constraints with turn_type='decision' or importance>=0.80, or query session.recall.",
+                    "open_arc_ok": wm_open_ok, "track_routing_ok": new_session_routing_ok,
+                    "crystal_surfaced": crystal_surfaced, "budget_enforced": budget_enforced,
+                    "observed_context_bytes": len(wire_text.encode("utf-8")),
                 }
 
             results.append(
@@ -705,6 +872,8 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
                     "scenario_id": sc["id"],
                     "stress_untyped": sc["stress_untyped"],
                     "budget_tokens": budget,
+                    "context_byte_cap": budget * 4,
+                    "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
                     "plain_files_tail": {
                         "decision_recall": round(tail_dec_hits / 4.0, 3),
                         "open_arc_precision": 1.0 if tail_open_ok else 0.0,
@@ -733,6 +902,8 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
                         "selected_prior_session": selected_prior_session,
                         "cross_session_crystal_surfaced": crystal_surfaced,
                         "tokens_used": wm_tokens_used,
+                        "context_bytes": len(wire_text.encode("utf-8")),
+                        "consumed_context": wire_text,
                         "budget_enforced": budget_enforced,
                         "response_bytes": wm_bytes,
                         "latency_ms": round(wm_ms, 3),
@@ -757,8 +928,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
         "updates": [
             "Hosted tenant write backup archive size cap limit is 4 GiB (4294967296 bytes) maximum."
         ],
-        "expected_fragment": "4294967296",
-        "stale_fragment": "1073741824",
+        "expected_token": "4294967296",
+        "stale_token": "1073741824",
         "use_governed_update": True,
     },
     {
@@ -772,8 +943,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
         "updates": [
             "Hosted fleet peering monthly price usd tier is $249/mo across EN and ZH contracts."
         ],
-        "expected_fragment": "$249/mo",
-        "stale_fragment": "$199/mo",
+        "expected_token": "$249/mo",
+        "stale_token": "$199/mo",
         "use_governed_update": True,
     },
     {
@@ -787,8 +958,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
         "updates": [
             "Receipt verifier openapi contract path count endpoints is 19 paths in revision 1.4.0."
         ],
-        "expected_fragment": "19 paths",
-        "stale_fragment": "18 paths",
+        "expected_token": "19 paths",
+        "stale_token": "18 paths",
         "use_governed_update": True,
     },
     {
@@ -801,8 +972,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
         "updates": [
             "v10.3.0 release manifest wm-linux-x86_64 sha256 digest is 9c01c6ce1bf16dfb9777d9acf2f37c0c208298a9d7e7d7917184e67471a25a11."
         ],
-        "expected_fragment": "9c01c6ce1bf16dfb9777d9acf2f37c0c208298a9d7e7d7917184e67471a25a11",
-        "stale_fragment": "232e31be6fa850e89a4fae9328e33e377cb36a3db67cce5b7b130c5856f0bd38",
+        "expected_token": "9c01c6ce1bf16dfb9777d9acf2f37c0c208298a9d7e7d7917184e67471a25a11",
+        "stale_token": "232e31be6fa850e89a4fae9328e33e377cb36a3db67cce5b7b130c5856f0bd38",
         "use_governed_update": True,
     },
     {
@@ -816,8 +987,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
             "Hosted restore drill verification check count pass gate is 21/21 checks.",
             "Hosted restore drill verification check count pass gate is 23/23 checks.",
         ],
-        "expected_fragment": "23/23",
-        "stale_fragment": "19/19",
+        "expected_token": "23/23",
+        "stale_token": "19/19",
         "use_governed_update": True,
     },
     {
@@ -831,8 +1002,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
             "Economy acceptance fault injection test suite pass count is 31/31 passing tests.",
             "Economy acceptance fault injection test suite pass count is 43/43 passing tests.",
         ],
-        "expected_fragment": "43/43",
-        "stale_fragment": "25/25",
+        "expected_token": "43/43",
+        "stale_token": "25/25",
         "use_governed_update": True,
     },
     {
@@ -845,8 +1016,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
         "updates": [
             "npm whitemagic-mcp dist-tag channel version pin has latest=9.3.4 (stable) and next=10.3.0 (preview)."
         ],
-        "expected_fragment": "latest=9.3.4",
-        "stale_fragment": "latest=10.3.0",
+        "expected_token": "latest=9.3.4",
+        "stale_token": "latest=10.3.0",
         "use_governed_update": True,
     },
     {
@@ -861,8 +1032,8 @@ CONFLICT_SCENARIOS: list[dict[str, Any]] = [
         "updates": [
             "Changed x402 upstream wait limit to 45s."
         ],
-        "expected_fragment": "45s",
-        "stale_fragment": "15 seconds",
+        "expected_token": "45s",
+        "stale_token": "15 seconds",
         "use_governed_update": False,
     },
 ]
@@ -991,17 +1162,17 @@ def run_conflict_family(wm_bin: Path) -> dict[str, Any]:
 
             wm_hits = recall_out.get("results", [])
             active_hits = [h for h in wm_hits if h.get("superseded_by") is None]
-            top_hit = active_hits[0] if active_hits else (wm_hits[0] if wm_hits else {})
+            top_hit = active_hits[0] if active_hits else {}
 
-            # Strict version-identity check: top_hit must be `curr_id` and contain expected_fragment
+            # Strict version-identity check: top_hit must be `curr_id` and contain expected_token
             wm_top1_ok = (top_hit.get("record_id") == curr_id) and (
-                sc["expected_fragment"] in top_hit.get("content", "")
+                sc["expected_token"] in top_hit.get("content", "")
             )
-            # Stale check by version identity (any active hit in stale_record_ids or carrying stale_fragment)
+            # Stale check by version identity (any active hit in stale_record_ids or carrying stale_token)
             unflagged_stale = sum(
                 1
                 for h in active_hits
-                if (h.get("record_id") in stale_record_ids) or (sc["stale_fragment"] in h.get("content", ""))
+                if (h.get("record_id") in stale_record_ids) or (sc["stale_token"] in h.get("content", ""))
             )
 
             verify_block = rev_out.get("verify", {})
@@ -1018,16 +1189,13 @@ def run_conflict_family(wm_bin: Path) -> dict[str, Any]:
             )
 
             failure_trace = None
-            if not wm_top1_ok:
+            if not wm_top1_ok or (sc["use_governed_update"] and (unflagged_stale != 0 or not lineage_ok)):
                 failure_trace = {
                     "system": "whitemagic_v10_4",
                     "scenario": sc["id"],
-                    "cause": (
-                        "Agent stored a terse update ('Changed x402 upstream wait limit to 45s.') via raw "
-                        "memory_remember instead of memory.update(id=old_id), so no Supersedes relation "
-                        "was recorded and the old record retained higher lexical BM25 overlap with the query."
-                    ),
-                    "remediation": "Always use memory.update(id=prior_id) or session.record(supersedes=...) when overriding prior policy.",
+                    "cause": "Governed current-truth, stale-exclusion or lineage check failed" if sc["use_governed_update"] else "Negative control: an unlinked raw contradiction supplies no supersession edge",
+                    "top1_record_id": top_hit.get("record_id"), "expected_record_id": curr_id,
+                    "active_stale_count": unflagged_stale, "lineage_ok": lineage_ok,
                 }
 
             results.append(
@@ -1202,7 +1370,7 @@ def run_repair_family(wm_bin: Path) -> dict[str, Any]:
             bm25_append = OkapiBM25(append_docs)
             append_hits = bm25_append.search(sc["query"], limit=3)
             append_ms = (time.perf_counter() - t0) * 1000.0
-            append_poison_free = all(sc["bad_marker"] not in h["content"] for h in append_hits)
+            append_poison_free = any(h["id"] == "correction" for h in append_hits) and all(sc["bad_marker"] not in h["content"] for h in append_hits)
             append_legit_kept = 1.0
 
             # Baseline 2: Plain-files naive entity/keyword line prune (deletes lines containing entity_token)
@@ -1214,7 +1382,7 @@ def run_repair_family(wm_bin: Path) -> dict[str, Any]:
             bm25_prune = OkapiBM25(pruned_docs)
             prune_hits = bm25_prune.search(sc["query"], limit=3)
             prune_ms = (time.perf_counter() - t1) * 1000.0
-            prune_poison_free = all(sc["bad_marker"] not in h["content"] for h in prune_hits)
+            prune_poison_free = any(h["id"] == "correction" for h in prune_hits) and all(sc["bad_marker"] not in h["content"] for h in prune_hits)
             surviving_legit = sum(
                 1 for leg in sc["legitimate_neighbors"] if any(d["content"] == leg for d in pruned_docs)
             )
@@ -1231,10 +1399,10 @@ def run_repair_family(wm_bin: Path) -> dict[str, Any]:
             addr_ms = (time.perf_counter() - t_eq) * 1000.0
             addr_poison_free = (
                 len(addr_hits) >= 1
-                and any(sc["good_marker"] in h["content"] for h in addr_hits)
+                and any(h["id"] == "bad" and h["content"] == sc["repaired_memory"] for h in addr_hits)
                 and all(sc["bad_marker"] not in h["content"] for h in addr_hits)
             )
-            addr_rank1 = bool(addr_hits and sc["good_marker"] in addr_hits[0]["content"])
+            addr_rank1 = bool(addr_hits and addr_hits[0]["id"] == "bad" and addr_hits[0]["content"] == sc["repaired_memory"])
             addr_legit_kept = 1.0
 
             # WhiteMagic v10.4.0: Surgical record-addressed memory.update + legitimate neighbor verification
@@ -1263,6 +1431,7 @@ def run_repair_family(wm_bin: Path) -> dict[str, Any]:
             ]
             for lid in legit_ids:
                 repair_calls.append(("memory_get", {"id": str(lid)}))
+            repair_calls.append(("memory_get", {"id": str(bad_id)}))
             repair_calls.append(
                 ("memory.revisions", {"id": bad_id, "action": "verify"})
             )
@@ -1271,43 +1440,41 @@ def run_repair_family(wm_bin: Path) -> dict[str, Any]:
                 assert_mcp_ok(r, f"{sc['id']}:repair")
 
             recall_hits = rep_res[1].get("results", [])
+            repaired_id = rep_res[0]["record_id"]
             active_hits = [h for h in recall_hits if h.get("superseded_by") is None]
             wm_poison_free_top3 = (
                 len(active_hits) >= 1
-                and any(sc["good_marker"] in h.get("content", "") for h in active_hits)
+                and any(h["record_id"] == repaired_id and h["content"] == sc["repaired_memory"] for h in active_hits)
                 and all(sc["bad_marker"] not in h.get("content", "") for h in active_hits)
                 and all(h.get("record_id") != bad_id for h in active_hits)
             )
             wm_rank1 = (
                 len(active_hits) >= 1
-                and (sc["good_marker"] in active_hits[0].get("content", ""))
+                and active_hits[0]["record_id"] == repaired_id
+                and active_hits[0]["content"] == sc["repaired_memory"]
                 and all(sc["bad_marker"] not in h.get("content", "") for h in active_hits)
             )
             legit_reads = rep_res[2 : 2 + len(legit_ids)]
             wm_legit_intact = sum(
                 1
                 for r, expected_text in zip(legit_reads, sc["legitimate_neighbors"])
-                if expected_text in json.dumps(r)
+                if legitimate_record_preserved(r, expected_text)
             )
             wm_legit_rate = wm_legit_intact / float(len(sc["legitimate_neighbors"]))
             rev_verify = rep_res[-1].get("verify", {})
-            audit_ok = bool(rev_verify.get("valid")) and int(rev_verify.get("chain_length", 0)) == 1
+            audit_ok = (bool(rev_verify.get("valid")) and rev_verify["head_record_id"] == repaired_id
+                        and int(rev_verify.get("chain_length", 0)) == 1
+                        and rep_res[-2]["record"]["superseded_by"] == repaired_id)
 
             failure_trace = None
-            if not wm_rank1:
+            if not (wm_rank1 and wm_poison_free_top3 and wm_legit_rate == 1.0 and audit_ok):
                 failure_trace = {
                     "system": "whitemagic_v10_4",
                     "scenario": sc["id"],
-                    "cause": (
-                        "Bad memory was superseded and excluded from active results, and the repaired "
-                        "memory was retrieved at rank 2 (score=0.3365), but rank 1 (score=0.4796) was an "
-                        "adjacent legitimate neighbor because the repair rewrote query terms ('download proof "
-                        "authentication' -> 'serves GET ... keyless ... proofs') under exact-token lexical scoring."
-                    ),
-                    "remediation": (
-                        "Preserve canonical query terms when repairing a record, or inspect top-3 active hits / "
-                        "enable morphological stemming or hybrid embedding reranking."
-                    ),
+                    "cause": "One or more repaired-identity retrieval, poison exclusion, neighbor preservation or lineage checks failed",
+                    "repaired_record_id": repaired_id, "active_top3_record_ids": [h["record_id"] for h in active_hits],
+                    "rank1_ok": wm_rank1, "poison_free_top3": wm_poison_free_top3,
+                    "legitimate_preserved_rate": wm_legit_rate, "lineage_ok": audit_ok,
                 }
 
             results.append(
@@ -1350,7 +1517,7 @@ def run_repair_family(wm_bin: Path) -> dict[str, Any]:
     return {"family": "T_REPAIR", "scenarios": results}
 
 
-# ─── Task Family 4: Unseen Prospective Agent-Discovery (No Target IDs Supplied)
+# ─── Task Family 4: Authored Cue-Guided Migration (No Target IDs Supplied)
 
 DISCOVERY_SCENARIOS: list[dict[str, Any]] = [
     {
@@ -1508,13 +1675,63 @@ DISCOVERY_SCENARIOS: list[dict[str, Any]] = [
 ]
 
 
+def cue_selects_record(text: str, scenario: dict[str, Any]) -> bool:
+    """Conservative authored-cue adapter; no general semantic-discovery claim.
+
+    Exclude the supplied current text and explicitly negated matching clauses.
+    Unanticipated paraphrases can still be missed and must be reported as limits.
+    """
+    lowered = text.lower().replace("’", "'")
+    if text == scenario["authoritative_replacement"]:
+        return False
+    for clue in scenario["stale_clues"]:
+        for match in re.finditer(re.escape(clue.lower()), lowered):
+            prefix = lowered[max(0, match.start() - 48):match.start()]
+            suffix = lowered[match.end():match.end() + 48]
+            prefix_negative = re.search(r"\b(?:never|not|cannot|can't|do not|must not|reject|forbid|prohibit)\b[^.;!?]*$", prefix)
+            suffix_negative = re.match(r"\s+(?:is|are|was|were)\s+(?:not\s+(?:allowed|permitted|supported)|prohibited|forbidden|rejected|disallowed)\b", suffix)
+            if not prefix_negative and not suffix_negative:
+                return True
+    return False
+
+
+def same_information_discovery_files(scenario: dict[str, Any], folder: Path) -> dict[str, Any]:
+    folder.mkdir()
+    texts = scenario["obsolete_claims"] + scenario["legitimate_neighbors"]
+    docs = [{"id": f"record_{i:04d}", "content": text} for i, text in enumerate(texts)]
+    # Ground truth stays outside the adapter: filenames/IDs disclose no role labels.
+    obsolete = {doc["id"] for doc in docs[:len(scenario["obsolete_claims"])]}
+    legitimate = {doc["id"] for doc in docs[len(scenario["obsolete_claims"]):]}
+    for doc in docs:
+        (folder / (doc["id"] + ".json")).write_text(json.dumps(doc), encoding="utf-8")
+    loaded = [json.loads(path.read_text()) for path in sorted(folder.glob("*.json"))]
+    hits = OkapiBM25(loaded).search(scenario["search_query"], limit=10)
+    selected = {hit["id"] for hit in hits if cue_selects_record(hit["content"], scenario)}
+    active = [doc for doc in loaded if doc["id"] not in selected]
+    if selected:
+        active.append({"id": "replacement", "content": scenario["authoritative_replacement"]})
+    ranked = OkapiBM25(active).search(scenario["search_query"], limit=3)
+    recall = len(selected & obsolete) / len(obsolete)
+    precision = len(selected & obsolete) / len(selected) if selected else 0.0
+    false_positives = len(selected & legitimate)
+    preserved = (len(legitimate) - false_positives) / len(legitimate)
+    top1 = bool(ranked and ranked[0]["id"] == "replacement")
+    stale = sum(hit["id"] in obsolete for hit in ranked)
+    return {"target_discovery_recall": recall, "target_discovery_precision": precision,
+            "false_positive_supersessions": false_positives, "legitimate_state_preserved": preserved,
+            "top1_current_truth": float(top1), "active_stale_in_top3": stale,
+            "end_to_end_success": float(recall == 1 and false_positives == 0 and preserved == 1 and top1 and stale == 0),
+            "cryptographic_revision_dag": False}
+
+
 def run_discovery_family(wm_bin: Path) -> dict[str, Any]:
-    """Prospective evaluation where the runner does NOT pass record IDs to the repair/update agent."""
+    """Authored deterministic workflow: exact stale cues and replacement are supplied."""
     results = []
     for sc in DISCOVERY_SCENARIOS:
         with tempfile.TemporaryDirectory(prefix=f"eval_{sc['id']}_") as td:
             td_path = Path(td)
             store_dir = td_path / "wm_store"
+            file_baseline = same_information_discovery_files(sc, td_path / "equal_information_files")
 
             wm = WMMcpSession(wm_bin, store_dir)
             # Ingest corpus in shuffled/interleaved order without returning IDs to the discovery adapter
@@ -1540,7 +1757,7 @@ def run_discovery_family(wm_bin: Path) -> dict[str, Any]:
                 ing_res[i]["record_id"] for i, (_, _, is_obs) in enumerate(corpus_items) if not is_obs
             ]
 
-            # ── Autonomous Discovery Agent (receives NO record IDs!) ──
+            # Cue-guided adapter receives no target IDs; it DOES receive answer phrases.
             # Step 1: Search the store using only the natural-language query
             search_res, search_ms, search_bytes = wm.run_batch(
                 [("memory_recall", {"query": sc["search_query"], "limit": 10})]
@@ -1548,11 +1765,10 @@ def run_discovery_family(wm_bin: Path) -> dict[str, Any]:
             assert_mcp_ok(search_res[0], f"{sc['id']}:agent_search")
             candidates = search_res[0].get("results", [])
 
-            # Step 2: Agent autonomously classifies which retrieved records match the stale clues
+            # Step 2: Deterministic adapter applies supplied stale cues with bounded exclusions.
             discovered_obsolete_ids: list[int] = []
             for cand in candidates:
-                content_lower = cand.get("content", "").lower()
-                if any(clue.lower() in content_lower for clue in sc["stale_clues"]):
+                if cand["superseded_by"] is None and cue_selects_record(cand["content"], sc):
                     discovered_obsolete_ids.append(cand["record_id"])
 
             # Step 3: Agent supersedes the first discovered obsolete record with the authoritative replacement,
@@ -1570,7 +1786,7 @@ def run_discovery_family(wm_bin: Path) -> dict[str, Any]:
                             {
                                 "id": first_id,
                                 "content": sc["authoritative_replacement"],
-                                "reason": "autonomous_discovery_supersede",
+                                "reason": "cue_guided_migration_supersede",
                             },
                         )
                     ]
@@ -1587,7 +1803,7 @@ def run_discovery_family(wm_bin: Path) -> dict[str, Any]:
                             {
                                 "id": oid,
                                 "superseded_by_id": head_id,
-                                "reason": "autonomous_discovery_consolidate",
+                                "reason": "cue_guided_migration_consolidate",
                             },
                         )
                         for oid in discovered_obsolete_ids[1:]
@@ -1604,6 +1820,8 @@ def run_discovery_family(wm_bin: Path) -> dict[str, Any]:
             ]
             for lid in ground_truth_legit_ids:
                 verify_calls.append(("memory_get", {"id": str(lid)}))
+            for oid in sorted(ground_truth_obsolete_ids):
+                verify_calls.append(("memory_get", {"id": str(oid)}))
             if head_id is not None:
                 verify_calls.append(("memory.revisions", {"id": head_id, "action": "verify"}))
             v_res, verify_ms, verify_bytes = wm.run_batch(verify_calls)
@@ -1637,19 +1855,35 @@ def run_discovery_family(wm_bin: Path) -> dict[str, Any]:
             legit_preserved = sum(
                 1
                 for r, expected_text in zip(legit_reads, sc["legitimate_neighbors"])
-                if expected_text in json.dumps(r)
-                and r.get("record", r).get("superseded_by") is None
+                if legitimate_record_preserved(r, expected_text)
             ) / float(len(sc["legitimate_neighbors"]))
             dag_verified = bool(
                 head_id is not None
                 and v_res[-1].get("verify", {}).get("valid")
                 and v_res[-1].get("verify", {}).get("head_record_id") == head_id
             )
+            obsolete_reads = v_res[1 + len(ground_truth_legit_ids):1 + len(ground_truth_legit_ids) + len(ground_truth_obsolete_ids)]
+            all_obsolete_retired_to_head = head_id is not None and all(
+                reply["record"]["superseded_by"] == head_id for reply in obsolete_reads)
+            joint_success = discovery_recall == 1.0 and false_positives == 0 and top1_ok and stale_in_top3 == 0 and legit_preserved == 1.0 and dag_verified and all_obsolete_retired_to_head
+            failure_trace = None if joint_success else {
+                "system": "whitemagic_cue_guided_migration", "scenario": sc["id"],
+                "cause": "Authored cue-guided adapter failed one or more independent discovery, current-truth, lifecycle-preservation or DAG checks",
+                "discovery_recall": discovery_recall, "false_positive_supersessions": false_positives,
+                "top1_current_truth": top1_ok, "active_stale_in_top3": stale_in_top3,
+                "legitimate_state_preserved": legit_preserved, "dag_verified": dag_verified,
+                "all_obsolete_retired_to_head": all_obsolete_retired_to_head,
+                "limit": "This adapter receives exact stale clues and replacement text; unanticipated paraphrases are not semantically inferred",
+            }
 
             results.append(
                 {
                     "scenario_id": sc["id"],
-                    "whitemagic_autonomous_discovery": {
+                    "corpus_records": len(corpus_items),
+                    "legitimate_neighbors": len(ground_truth_legit_ids),
+                    "adapter_inputs": ["search_query", "exact_stale_clues", "authoritative_replacement_text"],
+                    "equal_information_files": file_baseline,
+                    "whitemagic_cue_guided_migration": {
                         "target_discovery_recall": round(discovery_recall, 3),
                         "target_discovery_precision": round(discovery_precision, 3),
                         "false_positive_supersessions": false_positives,
@@ -1657,20 +1891,12 @@ def run_discovery_family(wm_bin: Path) -> dict[str, Any]:
                         "active_stale_in_top3": stale_in_top3,
                         "legitimate_state_preserved": round(legit_preserved, 3),
                         "converging_dag_verified": 1.0 if dag_verified else 0.0,
-                        "end_to_end_success": 1.0
-                        if (
-                            discovery_recall == 1.0
-                            and false_positives == 0
-                            and top1_ok
-                            and stale_in_top3 == 0
-                            and legit_preserved == 1.0
-                            and dag_verified
-                        )
-                        else 0.0,
+                        "all_obsolete_retired_to_head": all_obsolete_retired_to_head,
+                        "end_to_end_success": float(joint_success),
                         "response_bytes": search_bytes + mutation_bytes + verify_bytes,
                         "latency_ms": round(search_ms + mutation_ms + verify_ms, 3),
                     },
-                    "failure_trace": None,
+                    "failure_trace": failure_trace,
                 }
             )
     return {"family": "T_DISCOVERY", "scenarios": results}
@@ -1706,19 +1932,45 @@ def summarize_evaluation(
     ]
 
     return {
-        "schema": "wm.pinned-task-evaluation/1.1",
+        "schema": "wm.pinned-task-evaluation/1.2",
+        "execution_status": "measurement completed; exit zero is not a task-score qualification",
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "binary": {
             "path": str(wm_bin),
             "sha256": sha256_file(wm_bin),
             "version": "10.4.0",
         },
-        "ignored_runtime_errors": 0,
+        "harness_sha256": sha256_file(Path(__file__)),
+        "source_provenance": {
+            "git_head": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=HERE.parent, text=True).strip(),
+            "tracked_diff_sha256": hashlib.sha256(subprocess.check_output(["git", "diff", "HEAD", "--", "crates", "Cargo.toml", "Cargo.lock"], cwd=HERE.parent)).hexdigest(),
+            "runtime_source_sha256": {str(path.relative_to(HERE.parent)): sha256_file(path) for path in (
+                HERE.parent / "crates/wm-gen3-core/src/ops.rs",
+                HERE.parent / "crates/wm-gen3-core/src/store.rs",
+                HERE.parent / "crates/wm-gen3-harness/src/bridge.rs")},
+            "binary_version_stdout": subprocess.check_output([str(wm_bin), "--version"], text=True).strip(),
+        },
+        "runtime_call_accounting": {
+            "attempted": len(CALL_AUDIT),
+            "explicit_success": sum(row["outcome"] == "success" for row in CALL_AUDIT),
+            "failed_or_unverified": sum(row["outcome"] not in ("success", "ignored") for row in CALL_AUDIT),
+            "ignored": sum(row["outcome"] == "ignored" for row in CALL_AUDIT),
+            "policy": "abort on protocol, tool, shape, lifecycle or budget failure; no ignored errors",
+        },
+        "ignored_runtime_errors": sum(row["outcome"] == "ignored" for row in CALL_AUDIT),
+        "limits": ["Authored deterministic regressions, no connected model or unseen holdout",
+                   "Structured continuity files receive the same typed, importance and content-prefix salience heuristic; this heuristic is not an authority or semantic truth check",
+                   "The structured continuity baseline serializes turns only; WM's capped representation may also contain derived checkpoint, queue, flags and crystals. Their wire overheads are not equal",
+                   "Discovery receives exact stale clues and replacement text",
+                   "Continuity compact context has a UTF-8 byte cap; tokens are bytes/4 estimates",
+                   "Transport/debug metadata is excluded from consumed/scored context",
+                   "Latency includes fresh process startup and unequal tool batches; no cost or tail-latency advantage established"],
         "total_scenarios": len(c_sc) + len(m_sc) + len(r_sc) + len(d_sc),
         "summary_by_family": {
             "T_CONTINUITY_cross_session_decision_recovery": {
                 "scenario_count": len(c_sc),
-                "shared_budget_tokens": 280,
+                "compact_context_byte_cap": 1120,
+                "estimated_tokens_at_bytes_div4": 280,
                 "plain_files_tail": {
                     "mean_decision_recall_all_8": avg([s["plain_files_tail"]["decision_recall"] for s in c_sc]),
                     "mean_open_arc_precision": avg([s["plain_files_tail"]["open_arc_precision"] for s in c_sc]),
@@ -1730,6 +1982,7 @@ def summarize_evaluation(
                     "latency": p50_p95([s["bm25_flat_files"]["latency_ms"] for s in c_sc]),
                 },
                 "structured_metadata_files_equal_info": {
+                    "mean_tokens_used": avg([s["structured_metadata_files"]["tokens_used"] for s in c_sc]),
                     "mean_decision_recall_all_8": avg([s["structured_metadata_files"]["decision_recall"] for s in c_sc]),
                     "mean_decision_recall_typed_7": avg(
                         [s["structured_metadata_files"]["decision_recall"] for s in c_sc if not s["stress_untyped"]]
@@ -1857,31 +2110,40 @@ def summarize_evaluation(
                     "latency": p50_p95([s["whitemagic_v10_4"]["latency_ms"] for s in r_sc]),
                 },
             },
-            "T_DISCOVERY_unseen_prospective_autonomous_discovery": {
+            "T_DISCOVERY_authored_cue_guided_migration": {
                 "scenario_count": len(d_sc),
-                "whitemagic_autonomous_discovery": {
+                "corpus_records_per_case": [s["corpus_records"] for s in d_sc],
+                "legitimate_neighbors_total": sum(s["legitimate_neighbors"] for s in d_sc),
+                "equal_information_files": {
+                    "mean_target_discovery_recall": avg([s["equal_information_files"]["target_discovery_recall"] for s in d_sc]),
+                    "mean_target_discovery_precision": avg([s["equal_information_files"]["target_discovery_precision"] for s in d_sc]),
+                    "legitimate_state_preserved_rate": avg([s["equal_information_files"]["legitimate_state_preserved"] for s in d_sc]),
+                    "top1_current_truth_rate": avg([s["equal_information_files"]["top1_current_truth"] for s in d_sc]),
+                    "end_to_end_success_rate": avg([s["equal_information_files"]["end_to_end_success"] for s in d_sc]),
+                },
+                "whitemagic_cue_guided_migration": {
                     "mean_target_discovery_recall": avg(
-                        [s["whitemagic_autonomous_discovery"]["target_discovery_recall"] for s in d_sc]
+                        [s["whitemagic_cue_guided_migration"]["target_discovery_recall"] for s in d_sc]
                     ),
                     "mean_target_discovery_precision": avg(
-                        [s["whitemagic_autonomous_discovery"]["target_discovery_precision"] for s in d_sc]
+                        [s["whitemagic_cue_guided_migration"]["target_discovery_precision"] for s in d_sc]
                     ),
                     "top1_current_truth_rate": avg(
-                        [s["whitemagic_autonomous_discovery"]["top1_current_truth"] for s in d_sc]
+                        [s["whitemagic_cue_guided_migration"]["top1_current_truth"] for s in d_sc]
                     ),
                     "mean_active_stale_in_top3": avg(
-                        [float(s["whitemagic_autonomous_discovery"]["active_stale_in_top3"]) for s in d_sc]
+                        [float(s["whitemagic_cue_guided_migration"]["active_stale_in_top3"]) for s in d_sc]
                     ),
                     "legitimate_state_preserved_rate": avg(
-                        [s["whitemagic_autonomous_discovery"]["legitimate_state_preserved"] for s in d_sc]
+                        [s["whitemagic_cue_guided_migration"]["legitimate_state_preserved"] for s in d_sc]
                     ),
                     "converging_dag_verified_rate": avg(
-                        [s["whitemagic_autonomous_discovery"]["converging_dag_verified"] for s in d_sc]
+                        [s["whitemagic_cue_guided_migration"]["converging_dag_verified"] for s in d_sc]
                     ),
                     "end_to_end_success_rate": avg(
-                        [s["whitemagic_autonomous_discovery"]["end_to_end_success"] for s in d_sc]
+                        [s["whitemagic_cue_guided_migration"]["end_to_end_success"] for s in d_sc]
                     ),
-                    "latency": p50_p95([s["whitemagic_autonomous_discovery"]["latency_ms"] for s in d_sc]),
+                    "latency": p50_p95([s["whitemagic_cue_guided_migration"]["latency_ms"] for s in d_sc]),
                 },
             },
         },
@@ -1894,13 +2156,24 @@ def main() -> int:
     wm_bin = Path(os.environ.get("WM_BINARY", str(DEFAULT_WM_BIN)))
     if not wm_bin.is_file():
         raise SystemExit(f"Pinned wm binary not found at {wm_bin}")
+    for family in (CONTINUITY_SCENARIOS, CONFLICT_SCENARIOS, REPAIR_SCENARIOS, DISCOVERY_SCENARIOS):
+        if len(family) != 8 or len({scenario["id"] for scenario in family}) != 8:
+            raise RuntimeError("Pinned family must retain eight unique scenarios")
+    if any(len(sc["obsolete_claims"]) != 2 or len(sc["legitimate_neighbors"]) != 3 for sc in DISCOVERY_SCENARIOS):
+        raise RuntimeError("Pinned discovery corpus requires two obsolete and three legitimate records per case")
 
-    cont = run_continuity_family(wm_bin)
-    conf = run_conflict_family(wm_bin)
-    rep = run_repair_family(wm_bin)
-    disc = run_discovery_family(wm_bin)
-    report = summarize_evaluation(wm_bin, cont, conf, rep, disc)
+    CALL_AUDIT.clear()
+    BATCH_AUDIT.clear()
+    try:
+        cont = run_continuity_family(wm_bin)
+        conf = run_conflict_family(wm_bin)
+        rep = run_repair_family(wm_bin)
+        disc = run_discovery_family(wm_bin)
+        report = summarize_evaluation(wm_bin, cont, conf, rep, disc)
+    finally:
+        (HERE / "runtime-call-audit.json").write_text(json.dumps({"calls": CALL_AUDIT, "batches": BATCH_AUDIT}, indent=2) + "\n", encoding="utf-8")
 
+    report["runtime_call_audit_sha256"] = sha256_file(HERE / "runtime-call-audit.json")
     out_json = HERE / "pinned-task-eval-results.json"
     out_json.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(report["summary_by_family"], indent=2, sort_keys=True))
