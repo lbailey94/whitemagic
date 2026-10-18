@@ -235,16 +235,22 @@ cargo test          # full test suite
 cargo clippy --all-targets
 ```
 
-## Reproducible Task Evaluation (24 Scenarios)
+## Authored Memory-Task Evaluation (32 Scenarios)
 
-[`benchmarks/pinned_task_eval.py`](benchmarks/pinned_task_eval.py) evaluates `wm` against plain-file (`tail`, append-only, keyword-prune) and Okapi BM25 (`k1=1.5, b=0.75`) baselines across 24 deterministic scenarios ([`benchmarks/pinned-task-eval-results.json`](benchmarks/pinned-task-eval-results.json)):
+[`benchmarks/pinned_task_eval.py`](benchmarks/pinned_task_eval.py) runs 32 authored scenarios, eight each for continuity, conflict, record-addressed repair, and cue-guided deterministic migration. The final frozen run is tied to public source commit [`766edb2`](https://github.com/lbailey94/whitemagic/tree/766edb2de10d73b6d7204b916473816329eb5efb), a local source-derived `wm 10.4.0` candidate. It is not the separately signed/published v10.4 binary; public main is now v10.5, which this run does not qualify. The [final task report](benchmarks/TASK_EVAL_REPORT.md) and [machine-readable results](benchmarks/pinned-task-eval-results.json) are archived with the evaluation. The historical [19169fa result JSON](https://github.com/lbailey94/whitemagic/blob/19169fa8c2fccfb51fc1b11b6e0c762257288a65/benchmarks/pinned-task-eval-results.json) remains available separately.
 
-- **Cross-session continuity (`T_CONTINUITY`, 8 scenarios, 280-token budget):** **96.9%** mean decision recall (**100%** on typed decisions; **87.5%** open-arc precision) vs. **0.0%** plain-files tail and **6.3%** flat-file BM25.
-- **Conflicting & superseded memory (`T_CONFLICT`, 8 scenarios):** **100%** top-1 current truth and **100%** verifiable `supersedes` lineage on governed updates (`87.5%` across all 8 including an unlinked negative control) vs. **0.0%** BM25.
-- **Surgical bad-memory repair (`T_REPAIR`, 8 scenarios):** **100%** poison-free active top-3 recall with **100%** legitimate neighbor preservation (`87.5%` rank-1 exact-token repair) vs. **0.0%** joint success for append-only or keyword-prune baselines.
+- **Continuity:** WhiteMagic scored 8/8 on decision recall, open-arc precision, cross-session crystal surfacing, and new-session track routing. The structured-metadata file baseline also scored 8/8 on decisions and arcs under the same salience rules. `agent_context.text` stayed within a 1,120 UTF-8-byte cap (largest 1,091; mean of per-context ceil(bytes/4) estimates 266.625). This is a byte-based estimate, not a tokenizer guarantee; transport/debug metadata is excluded.
+- **Conflict:** governed current truth and verifiable revision lineage scored 7/7. All-case current truth was 7/8 because M8 is an intentional unlinked-contradiction negative control; unlinked contradictory text is not a supersession operation. Structured files matched on governed conflict.
+- **Repair:** WhiteMagic scored 8/8 for rank-one repaired identity, poison-free top-three recall, audit-trail verification, and legitimate-neighbor preservation. Equal-information record-addressed files scored 4/8 at rank one and 5/8 for joint repair-and-preserve in the top three.
+- **Cue-guided migration:** 8/8 end-to-end success, target precision/recall, and converging-DAG verification; all 24 legitimate neighbors were preserved. These cases supply exact stale clues, query, and authoritative replacement.
+
+These are scripted authored cases, not an open-ended model study: there is no connected model, unseen holdout, or autonomous-agent evaluation. Structured files tie WhiteMagic on continuity, governed conflict, and discovery; baseline wire overheads differ. Salience and discovery use bounded text patterns that can misread quoted, negated, stale, speculative, or unfamiliar phrasing; they do not independently prove authority or truth. Latency includes fresh process startup and unequal tool batches, so the run establishes no latency or cost advantage.
+
+Reproduce with the reviewed candidate binary and the archived harness:
 
 ```bash
-WM_BINARY=./target/release/wm python3 benchmarks/pinned_task_eval.py
+WM_BINARY=/absolute/path/to/reviewed/wm python3 benchmarks/pinned_task_eval.py
+python3 -m unittest discover -s benchmarks -p test_pinned_task_eval.py
 ```
 
 ## Documentation

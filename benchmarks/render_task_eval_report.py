@@ -38,7 +38,7 @@ def render(record):
         f"| Cue-guided migration: end-to-end workflow | {pct(wm_d['end_to_end_success_rate'])} | {pct(discovery['equal_information_files']['end_to_end_success_rate'])} |",
         "",
         f"Continuity scores only the exact compact `agent_context.text` string under the {cont['compact_context_byte_cap']:,}-byte UTF-8 cap. "
-        f"Mean bytes/4 token estimate is {wm_c['mean_tokens_used']}; largest observed context is {max(context_bytes)} bytes. "
+        f"Mean of per-context ceil(bytes/4) token estimates is {wm_c['mean_tokens_used']}; largest observed context is {max(context_bytes)} bytes. "
         "This estimate is not a model-tokenizer guarantee. Every consumed turn, checkpoint, queue, flag, crystal and briefing is inside the string; transport/debug metadata is excluded.",
         "",
         "The structured continuity files receive the same turn metadata, resolution links and typed/importance/content salience rules. "
