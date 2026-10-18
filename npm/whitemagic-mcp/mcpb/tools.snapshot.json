@@ -21,7 +21,8 @@
           "type": "string",
           "description": "Alternative action name"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "WhiteMagic Meta-Tool"
   },
@@ -69,7 +70,8 @@
       },
       "required": [
         "content"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Store Memory"
   },
@@ -134,7 +136,8 @@
       },
       "required": [
         "query"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Search Memories"
   },
@@ -154,7 +157,8 @@
       },
       "required": [
         "id"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Read Memory"
   },
@@ -183,7 +187,8 @@
           },
           "description": "Drop memories carrying any of these tags"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "List Memories"
   },
@@ -244,7 +249,8 @@
       },
       "required": [
         "query"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Hybrid Recall"
   },
@@ -253,7 +259,8 @@
     "description": "List all active sovereign memory galaxies, their record counts, sample tags, and starter guide status.",
     "inputSchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": false
     },
     "title": "List Galaxies"
   },
@@ -275,7 +282,8 @@
       "required": [
         "source",
         "target"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Fork Galaxy"
   },
@@ -296,7 +304,8 @@
       },
       "required": [
         "name"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Create Galaxy"
   },
@@ -341,7 +350,8 @@
       },
       "required": [
         "content"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Record Session Turn"
   },
@@ -383,7 +393,8 @@
           "type": "boolean",
           "description": "Include the ready-to-inject briefing.text block"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Session Continuity"
   },
@@ -401,7 +412,8 @@
           "type": "string",
           "description": "User identifier (default: 'default')"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Start Session"
   },
@@ -444,7 +456,8 @@
       },
       "required": [
         "id"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Update Memory"
   },
@@ -472,7 +485,8 @@
       },
       "required": [
         "id"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Memory Revisions"
   },
@@ -536,7 +550,8 @@
           "type": "string",
           "description": "Manual branch name"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Session Checkpoint"
   },
@@ -580,7 +595,8 @@
       },
       "required": [
         "source"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Ingest Memories"
   },
@@ -612,7 +628,8 @@
           "minimum": 1,
           "description": "Maximum turns covered (session kind; default 200)"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Emit Continuity Receipt"
   },
@@ -644,7 +661,8 @@
           "type": "string",
           "description": "Galaxy to count, or 'all' (default)"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Count Memories"
   },
@@ -658,7 +676,8 @@
           "type": "string",
           "description": "Galaxy to summarize (optional; default codex)"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Memory Substrate Statistics"
   },
@@ -676,7 +695,8 @@
           "type": "string",
           "description": "Galaxy whose tags to list (optional; default codex)"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Memory Tags Vocabulary"
   },
@@ -714,7 +734,8 @@
           "minimum": 1,
           "description": "Maximum candidates considered (default 50; must be >= 1)"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Aggregate Memories"
   },
@@ -738,7 +759,8 @@
       },
       "required": [
         "id"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Associative Graph Neighbours"
   },
@@ -759,7 +781,8 @@
       },
       "required": [
         "ids"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Batch Read Memories"
   },
@@ -804,7 +827,8 @@
           "type": "string",
           "description": "Filter: only memories created at or before this RFC 3339 timestamp"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Query Memories"
   },
@@ -860,7 +884,8 @@
           "type": "string",
           "description": "Filter: only memories created at or before this RFC 3339 timestamp"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Filter Memories"
   },
@@ -884,7 +909,8 @@
       },
       "required": [
         "id"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Pin Memory"
   },
@@ -908,7 +934,8 @@
       },
       "required": [
         "queries"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Batch Search Memories"
   },
@@ -934,7 +961,8 @@
           "type": "string",
           "description": "Filter by session type"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "List Sessions"
   },
@@ -956,7 +984,8 @@
           "type": "integer",
           "description": "Maximum turns to return (default 50)"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Recall Session Content"
   },
@@ -1017,7 +1046,8 @@
           "type": "integer",
           "description": "Lossless mode serialized JSON ceiling"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Replay Session"
   },
@@ -1026,7 +1056,8 @@
     "description": "Status of the Mandala microsecond Landlock sandbox, ABI level, POSIX rlimit bounds, and capability ledger.",
     "inputSchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": false
     },
     "title": "Mandala Kekkai Sandbox Status"
   },
@@ -1056,7 +1087,8 @@
           "type": "number",
           "description": "Compute / token cost [0.0, 1.0]"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Mandala JEV Triage Gate"
   },
@@ -1086,7 +1118,8 @@
       },
       "required": [
         "candidate_id"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Mandala Confinement Evaluation"
   },
@@ -1107,7 +1140,8 @@
       },
       "required": [
         "peer"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Mandala P2P Mesh Sync"
   },
@@ -1116,7 +1150,8 @@
     "description": "System epistemics, self-model calibration, and invariant health status.",
     "inputSchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": false
     },
     "title": "Gnosis Self-Model Status"
   },
@@ -1154,7 +1189,8 @@
           "type": "boolean",
           "description": "Claim: the invocation carries a purpose"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Gnosis Explain"
   },
@@ -1163,7 +1199,8 @@
     "description": "Query live fleet status, unread mentions, and board post sequence from the local Sangha agora.",
     "inputSchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": false
     },
     "title": "Sangha Whiteboard Status"
   },
@@ -1177,7 +1214,8 @@
           "type": "string",
           "description": "Agent handle to query (e.g. 'antigravity', 'opencode', 'all')"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "title": "Sangha Agent Inbox"
   },
@@ -1211,7 +1249,8 @@
       "required": [
         "title",
         "body"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Sangha Dispatch Post"
   },
@@ -1267,7 +1306,8 @@
       },
       "required": [
         "state"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "System 0.5 Route Shortlist (Static Embeddings)"
   },
@@ -1296,7 +1336,8 @@
       "required": [
         "intent",
         "candidates"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "System 1.5 Local Deliberator (Grammar-Constrained SLM)"
   },
@@ -1338,7 +1379,8 @@
       "required": [
         "receipt_path",
         "outcome"
-      ]
+      ],
+      "additionalProperties": false
     },
     "title": "Record Decision Outcome"
   }
