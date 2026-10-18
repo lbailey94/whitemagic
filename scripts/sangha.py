@@ -374,7 +374,7 @@ SYNCTHING_CONFIG = Path(os.environ.get("SANGHA_SYNCTHING_CONFIG", "") or Path.ho
 # Files that must match across devices for the board to behave identically.
 DEPLOY_FILES = ("sangha.py", "bridge.py", "sangha_route.py", "sangha_watch.py", "fleet_state.py")
 DEFAULT_PEERS = [
-    {"name": "inspiron", "ssh": "inspiron"},
+    {"name": "peer-node", "ssh": "peer-node"},
     {"name": "mac", "ssh": "mac"},
 ]
 
