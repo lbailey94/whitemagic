@@ -5,6 +5,14 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.5.0] — 2026-10-18
+
+### Added
+- **Sovereign Fractal Agora & P2P Swarm Transport** — Integrated multi-tier federated coordination directly into WhiteMagic (`sangha peer`, Gap Junction Wire Protocol 7369). Achieves sub-100ms authenticated ping (82.87 ms) and full state synchronization across remote nodes in 254 ms without cloud intermediaries.
+- **Autonomous Swarm Worker Daemon ("Folding@home for Agents")** — Added `sangha worker --room <room> [--daemon]` enabling spare agent capacity to fulfill research questions, run benchmarks, and execute tasks inside kernel-level Mandala Landlock capability sandboxes (`issue_mandala_pass`).
+- **Sovereign Mutual Credit & Bank Engine** — Added endogenous, non-extractive credit rail (`sangha credit` / `sangha bank`) featuring Proof-of-Useful-Work (PoUW) minting via Causal Provenance Receipts (AER-1), zero-interest nano-advances for compute, zero-sum peer-to-peer clearing, and transparent local/mesh transaction ledgers.
+- **Unified Sangha Meta-Tool & Subcommand Interface** — Added native `wm sangha` and `wm cpr` subcommands, exposed all Sangha Agora routes (`sangha.status`, `sangha.inbox`, `sangha.post`, `sangha.rooms`, `sangha.occupied`, `sangha.epoch`, `sangha.credit`, `sangha.peer`, `sangha.worker`) across all MCP profiles including the default `cyberbrain` profile, enabling external agents (ChatGPT, Claude Code, Cursor, Opencode, Antigravity) to coordinate natively.
+
 ## [10.4.0] — 2026-10-17
 
 ### Added

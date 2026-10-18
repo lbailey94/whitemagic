@@ -570,6 +570,16 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Manage the Sangha Whiteboard Agora, claims, inboxes, and vcs
+    Sangha {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Causal Provenance Receipt (CPR) commands and integrity verification
+    Cpr {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -3024,6 +3034,156 @@ fn main() {
         } => {
             run_sutra_chohan(&payload, proof.as_deref(), bid, json);
         }
+        Commands::Sangha { args } => {
+            run_sangha_cli(&args);
+        }
+        Commands::Cpr { args } => {
+            run_cpr_cli(&args);
+        }
+    }
+}
+
+fn run_sangha_cli(args: &[String]) {
+    use std::path::PathBuf;
+
+    // Do not redispatch through a `sangha` command on PATH: the installer
+    // creates that command as a wrapper back to `wm sangha`, which recurses.
+    // A source checkout can be selected explicitly or installed beside wm.
+    let mut candidates = Vec::new();
+    if let Some(path) = std::env::var_os("WHITEMAGIC_SANGHA_SCRIPT") {
+        candidates.push(PathBuf::from(path));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            candidates.push(parent.join("sangha.py"));
+            candidates.push(parent.join("share/whitemagic/sangha.py"));
+        }
+    }
+    let script = candidates.into_iter().find(|path| path.is_file());
+    let Some(script) = script else {
+        eprintln!(
+            "Sangha is not installed with this binary. Install the Sangha Python source and its companion modules, or set WHITEMAGIC_SANGHA_SCRIPT to scripts/sangha.py."
+        );
+        std::process::exit(2);
+    };
+
+    let status = match std::process::Command::new("python3")
+        .arg(script)
+        .args(args)
+        .status()
+    {
+        Ok(status) => status,
+        Err(error) => {
+            eprintln!("Cannot start Sangha: Python 3 is unavailable ({error}).");
+            std::process::exit(2);
+        }
+    };
+    if let Some(code) = status.code() {
+        std::process::exit(code);
+    }
+}
+
+fn run_cpr_cli(args: &[String]) {
+    if args.is_empty() || args.iter().any(|a| a == "--help" || a == "-h") {
+        println!("==================================================");
+        println!("  Causal Provenance Receipts (CPR) / AER-1 Engine ");
+        println!("==================================================");
+        println!("Usage: wm cpr <subcommand> [options]");
+        println!("\nSubcommands:");
+        println!("  verify      Verify receipt envelope against schema & signature");
+        println!("  consumer    Verify receipt against expected consumer policy");
+        println!("  anchor      Anchor receipt digest or generate merkle proofs");
+        println!("  disclose    Generate selective disclosure receipt variant");
+        println!("\nExamples:");
+        println!("  wm cpr verify receipt.json");
+        println!("  wm cpr consumer --policy strict receipt.json");
+        return;
+    }
+
+    let subcmd = &args[0];
+    let rest = &args[1..];
+    let module = match subcmd.as_str() {
+        "verify" => "continuity_receipt.verify",
+        "consumer" => "continuity_receipt.consumer",
+        "anchor" => "continuity_receipt.anchor",
+        "disclose" => "continuity_receipt.disclose",
+        _ => "continuity_receipt.verify",
+    };
+
+    let pass_args =
+        if subcmd == "verify" || subcmd == "consumer" || subcmd == "anchor" || subcmd == "disclose"
+        {
+            rest
+        } else {
+            args
+        };
+
+    let module_probe = r#"
+import importlib.util, sys
+try:
+    available = importlib.util.find_spec(sys.argv[1]) is not None
+except (ModuleNotFoundError, ValueError):
+    available = False
+sys.exit(0 if available else 1)
+"#;
+    let module_available = std::process::Command::new("python3")
+        .args(["-c", module_probe, module])
+        .status();
+    let module_available = matches!(module_available, Ok(status) if status.success());
+
+    let mut path_candidates = Vec::new();
+    if let Some(root) = std::env::var_os("WHITEMAGIC_CPR_ROOT") {
+        path_candidates.push(std::path::PathBuf::from(root));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            path_candidates.push(parent.join("continuity-receipt"));
+            path_candidates.push(parent.join("share/continuity-receipt"));
+        }
+    }
+    let script_name = if ["verify", "consumer", "anchor", "disclose"].contains(&subcmd.as_str()) {
+        subcmd.as_str()
+    } else {
+        "verify"
+    };
+    let path_root = path_candidates.into_iter().find(|root| {
+        root.join("continuity_receipt")
+            .join(format!("{script_name}.py"))
+            .is_file()
+    });
+
+    let status = if module_available {
+        std::process::Command::new("python3")
+            .arg("-m")
+            .arg(module)
+            .args(pass_args)
+            .status()
+    } else if let Some(project_root) = path_root {
+        let mut command = std::process::Command::new("python3");
+        command.arg("-m").arg(module).args(pass_args);
+        let mut python_paths = vec![project_root];
+        if let Some(existing) = std::env::var_os("PYTHONPATH") {
+            python_paths.extend(std::env::split_paths(&existing));
+        }
+        if let Ok(joined) = std::env::join_paths(python_paths) {
+            command.env("PYTHONPATH", joined);
+        }
+        command.status()
+    } else {
+        eprintln!(
+            "CPR is not installed. Install the continuity_receipt Python package or set WHITEMAGIC_CPR_ROOT to its source checkout."
+        );
+        std::process::exit(2);
+    };
+    let status = match status {
+        Ok(status) => status,
+        Err(error) => {
+            eprintln!("Cannot start CPR: Python 3 is unavailable ({error}).");
+            std::process::exit(2);
+        }
+    };
+    if let Some(code) = status.code() {
+        std::process::exit(code);
     }
 }
 

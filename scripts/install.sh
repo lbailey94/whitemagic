@@ -3,7 +3,7 @@
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
-#   curl -fsSL ... | sh -s -- --version v10.4.0
+#   curl -fsSL ... | sh -s -- --version v10.5.0
 #   curl -fsSL ... | sh -s -- --ref hero      # install attribution (local marker)
 #
 # --ref (or WM_INSTALL_REF) is recorded locally in
@@ -104,7 +104,7 @@ if [ -z "$VERSION" ]; then
         | grep '"tag_name"' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
     if [ -z "$VERSION" ]; then
         echo "Could not determine latest release version." >&2
-        echo "Specify --version explicitly, e.g.: $0 --version v10.4.0" >&2
+        echo "Specify --version explicitly, e.g.: $0 --version v10.5.0" >&2
         exit 1
     fi
 fi
@@ -244,11 +244,27 @@ mkdir -p "$INSTALL_DIR"
 mv "${BINARY_PATH}" "${INSTALL_DIR}/wm"
 chmod +x "${INSTALL_DIR}/wm"
 
+# Install command shims. The WM launcher resolves Sangha from an explicit
+# script path instead of dispatching back through this `sangha` shim.
+cat << 'EOF' > "${INSTALL_DIR}/sangha"
+#!/bin/sh
+exec "$(dirname "$0")/wm" sangha "$@"
+EOF
+chmod +x "${INSTALL_DIR}/sangha"
+
+cat << 'EOF' > "${INSTALL_DIR}/cpr"
+#!/bin/sh
+exec "$(dirname "$0")/wm" cpr "$@"
+EOF
+chmod +x "${INSTALL_DIR}/cpr"
+
 # Local arrival marker (best effort; never fails the install).
 write_install_marker
 
 echo ""
 echo "WhiteMagic ${VERSION} installed to ${INSTALL_DIR}/wm"
+echo "Command shims: ${INSTALL_DIR}/sangha, ${INSTALL_DIR}/cpr"
+echo "Sangha and CPR Python components must be installed separately; the shims report this when unavailable."
 if [ "$STATIC_BUILD" = "1" ]; then
     echo "Build: fully static (musl) — no glibc requirement."
 elif [ -n "$PLATFORM_LABEL" ]; then
@@ -263,6 +279,13 @@ echo ""
 echo "Get started (in this order):"
 echo "  1. wm grimoire                        # guided first-run check"
 echo "  2. wm connect                         # dry run; add --write to apply"
+echo ""
+echo "Fleet Agora & Coordination:"
+echo "  sangha brief                          # one-shot Agora session start"
+echo "  sangha rooms                          # list active Fractal Agora rooms"
+echo "  wm sangha vcs status                  # Loom/Scion trunk reservation & VCS"
+echo "  wm cpr verify <receipt.json>          # Causal Provenance Receipt verifier"
+echo "  wm mandala verify-pass                # Mandala capability pass verifier"
 echo ""
 echo "Optional:"
 echo "  wm quickstart                         # 30-second continuity demo (throwaway store)"
