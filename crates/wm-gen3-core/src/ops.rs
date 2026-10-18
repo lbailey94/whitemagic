@@ -285,7 +285,9 @@ impl SessionTurn {
         let lower = s.to_ascii_lowercase();
         let has_directive_prefix = (s.starts_with('D') || s.starts_with('d'))
             && s.chars().nth(1).is_some_and(|c| c.is_ascii_digit())
-            && s.chars().nth(2).is_some_and(|c| c == ':' || c == '.' || c == ' ');
+            && s.chars()
+                .nth(2)
+                .is_some_and(|c| c == ':' || c == '.' || c == ' ');
         has_directive_prefix
             || lower.starts_with("invariant:")
             || lower.starts_with("policy:")
@@ -1862,7 +1864,12 @@ impl Substrate {
                         let cur = final_support.get(&head).copied().unwrap_or(0.0);
                         let boosted = cur.max(prior_act * 1.15).clamp(0.0, 1.0);
                         final_support.insert(head, boosted);
-                        base_records.entry(head).or_insert((0.0, 0.0, boosted, record.created_at()));
+                        base_records.entry(head).or_insert((
+                            0.0,
+                            0.0,
+                            boosted,
+                            record.created_at(),
+                        ));
                         if !candidate_ids.contains(&head) {
                             candidate_ids.push(head);
                         }

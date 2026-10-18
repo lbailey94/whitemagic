@@ -1,0 +1,82 @@
+Clippy	UNKNOWN STEP	2026-10-17T18:31:43.3808917Z ^[[1m^[[92m    Checking^[[0m wm-gen3-systemone v10.4.0 (/home/runner/work/whitemagic/whitemagic/crates/wm-gen3-systemone)
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3257661Z ^[[1m^[[91merror^[[0m^[[1m: this function has too many arguments (9/8)^[[0m
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3258654Z     ^[[1m^[[94m--> ^[[0mcrates/wm-gen3-harness/src/bridge.rs:4007:1
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3259286Z      ^[[1m^[[94m|^[[0m
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3259914Z ^[[1m^[[94m4007^[[0m ^[[1m^[[94m|^[[0m ^[[1m^[[91m/^[[0m fn compact_agent_context(
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3260808Z ^[[1m^[[94m4008^[[0m ^[[1m^[[94m|^[[0m ^[[1m^[[91m|^[[0m     byte_cap: usize,
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3261673Z ^[[1m^[[94m4009^[[0m ^[[1m^[[94m|^[[0m ^[[1m^[[91m|^[[0m     recent: &[SessionTurn],
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3262547Z ^[[1m^[[94m4010^[[0m ^[[1m^[[94m|^[[0m ^[[1m^[[91m|^[[0m     salient: &[SessionTurn],
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3263197Z ^[[1m^[[94m...^[[0m    ^[[1m^[[91m|^[[0m
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3263862Z ^[[1m^[[94m4016^[[0m ^[[1m^[[94m|^[[0m ^[[1m^[[91m|^[[0m     briefing: Option<&str>,
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3264659Z ^[[1m^[[94m4017^[[0m ^[[1m^[[94m|^[[0m ^[[1m^[[91m|^[[0m ) -> Value {
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3265310Z      ^[[1m^[[94m|^[[0m ^[[1m^[[91m|__________^^[[0m
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3265847Z      ^[[1m^[[94m|^[[0m
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3267271Z      ^[[1m^[[94m= ^[[0m^[[1mhelp^[[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#too_many_arguments
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3274740Z      ^[[1m^[[94m= ^[[0m^[[1mnote^[[0m: `-D clippy::too-many-arguments` implied by `-D warnings`
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3276063Z      ^[[1m^[[94m= ^[[0m^[[1mhelp^[[0m: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.3276704Z 
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.5126051Z ^[[1m^[[91merror^[[0m: could not compile `wm-gen3-harness` (lib) due to 1 previous error
+Clippy	UNKNOWN STEP	2026-10-17T18:31:44.5126971Z ^[[1m^[[33mwarning^[[0m: build failed, waiting for other jobs to finish...
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.0018113Z ^[[1m^[[91merror^[[0m^[[1m: unnecessary use of `clone` to create a slice from a reference^[[0m
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.0019281Z     ^[[1m^[[94m--> ^[[0mcrates/wm-gen3-harness/src/bridge.rs:7835:17
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.0019966Z      ^[[1m^[[94m|^[[0m
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.0021315Z ^[[1m^[[94m7835^[[0m ^[[1m^[[94m|^[[0m                 &[a.clone()],
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.0022716Z      ^[[1m^[[94m|^[[0m                 ^[[1m^[[91m^^^^^^^^^^^^^[[0m ^[[1m^[[91mhelp: try: `std::slice::from_ref(&a)`^[[0m
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.0023550Z      ^[[1m^[[94m|^[[0m
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.0024825Z      ^[[1m^[[94m= ^[[0m^[[1mhelp^[[0m: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#cloned_ref_to_slice_refs
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.0026582Z      ^[[1m^[[94m= ^[[0m^[[1mnote^[[0m: `-D clippy::cloned-ref-to-slice-refs` implied by `-D warnings`
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.0028484Z      ^[[1m^[[94m= ^[[0m^[[1mhelp^[[0m: to override `-D warnings` add `#[allow(clippy::cloned_ref_to_slice_refs)]`
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.0029231Z 
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.2230349Z ^[[1m^[[91merror^[[0m: could not compile `wm-gen3-harness` (lib test) due to 2 previous errors
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.2608270Z ##[error]Process completed with exit code 101.
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.2788919Z Post job cleanup.
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.3654264Z [command]/usr/bin/git version
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.3703447Z git version 2.55.0
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.3749245Z Temporarily overriding HOME='/home/runner/work/_temp/fac88598-f632-4fc9-8700-cbb694efd8d2' before making global git config changes
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.3750585Z Adding repository directory to the temporary git global config as a safe directory
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.3755102Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/whitemagic/whitemagic
+Clippy	UNKNOWN STEP	2026-10-17T18:31:45.3799151Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.5915073Z info: you may opt out with `RUSTUP_AUTO_INSTALL=0` or `rustup set auto-install disable`
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9170176Z Diff in /home/runner/work/whitemagic/whitemagic/crates/wm-gen3-core/src/ops.rs:285:
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9171118Z          let lower = s.to_ascii_lowercase();
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9171632Z          let has_directive_prefix = (s.starts_with('D') || s.starts_with('d'))
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9172155Z              && s.chars().nth(1).is_some_and(|c| c.is_ascii_digit())
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9172669Z -            && s.chars().nth(2).is_some_and(|c| c == ':' || c == '.' || c == ' ');
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9173140Z +            && s.chars()
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9173428Z +                .nth(2)
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9173806Z +                .is_some_and(|c| c == ':' || c == '.' || c == ' ');
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9174214Z          has_directive_prefix
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9174534Z              || lower.starts_with("invariant:")
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9174881Z              || lower.starts_with("policy:")
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9175400Z Diff in /home/runner/work/whitemagic/whitemagic/crates/wm-gen3-core/src/ops.rs:1862:
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9176036Z                          let cur = final_support.get(&head).copied().unwrap_or(0.0);
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9176547Z                          let boosted = cur.max(prior_act * 1.15).clamp(0.0, 1.0);
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9177006Z                          final_support.insert(head, boosted);
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9177527Z -                        base_records.entry(head).or_insert((0.0, 0.0, boosted, record.created_at()));
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9178041Z +                        base_records.entry(head).or_insert((
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9178407Z +                            0.0,
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9178702Z +                            0.0,
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9178980Z +                            boosted,
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9179290Z +                            record.created_at(),
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9179611Z +                        ));
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9179912Z                          if !candidate_ids.contains(&head) {
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9180432Z                              candidate_ids.push(head);
+Format Check	UNKNOWN STEP	2026-10-17T18:31:19.9180758Z                          }
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2060448Z Diff in /home/runner/work/whitemagic/whitemagic/crates/wm-gen3-harness/src/bridge.rs:9671:
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2061177Z          let reopened_main =
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2066616Z              Substrate::open_readonly(&dir, None, wm_gen3_core::constitution::default_view())
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2067160Z                  .unwrap();
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2067848Z -        assert!(!reopened_main.store().iter_records().unwrap().iter().any(|r| r.content() == "poison should never persist"));
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2068710Z -        assert_eq!(reopened_main.revision_chain(old).last().unwrap().new_record_id, head);
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2069219Z +        assert!(
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2069483Z +            !reopened_main
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2069746Z +                .store()
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2070002Z +                .iter_records()
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2070964Z +                .unwrap()
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2071216Z +                .iter()
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2071542Z +                .any(|r| r.content() == "poison should never persist")
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2071946Z +        );
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2072337Z +        assert_eq!(
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2072573Z +            reopened_main
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2072868Z +                .revision_chain(old)
+Format Check	UNKNOWN STEP	2026-10-17T18:31:20.2073202Z +                .last()

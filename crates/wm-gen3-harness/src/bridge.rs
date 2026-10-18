@@ -322,6 +322,14 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "sangha.status" | "sangha_status" => "sangha.status",
         "sangha.inbox" | "sangha_inbox" => "sangha.inbox",
         "sangha.post" | "sangha_post" | "sangha.chat" => "sangha.post",
+        "sangha.claim" | "sangha_claim" => "sangha.claim",
+        "sangha.release" | "sangha_release" => "sangha.release",
+        "sangha.occupied" | "sangha_occupied" => "sangha.occupied",
+        "sangha.rooms" | "sangha_rooms" => "sangha.rooms",
+        "sangha.epoch" | "sangha_epoch" => "sangha.epoch",
+        "sangha.vcs" | "sangha_vcs" => "sangha.vcs",
+        "sangha.fork" | "sangha_fork" => "sangha.fork",
+        "sangha.consolidate" | "sangha_consolidate" => "sangha.consolidate",
         "galaxy.list" | "galaxy_list" => "galaxy.list",
         "galaxy.fork" | "galaxy_fork" | "galaxy.branch" | "galaxy_branch" => "galaxy.fork",
         "galaxy.create" | "galaxy_create" => "galaxy.create",
@@ -362,6 +370,14 @@ fn allowed_profile_keys(profile: McpProfile) -> &'static HashSet<&'static str> {
             keys.insert("sangha.status");
             keys.insert("sangha.inbox");
             keys.insert("sangha.post");
+            keys.insert("sangha.claim");
+            keys.insert("sangha.release");
+            keys.insert("sangha.occupied");
+            keys.insert("sangha.rooms");
+            keys.insert("sangha.epoch");
+            keys.insert("sangha.vcs");
+            keys.insert("sangha.fork");
+            keys.insert("sangha.consolidate");
             keys
         }),
         McpProfile::Full => FULL.get_or_init(|| advertised_profile_keys(McpProfile::Full)),
@@ -839,9 +855,9 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
                 "type": "object",
                 "properties": {
                     "thought": { "type": "string", "description": "Natural language request auto-routed via TF-IDF NLU" },
-                    "route": { "type": "string", "description": "Explicit tool name or route for direct dispatch (e.g. 'memory.search', 'session.continuity')" },
+                    "route": { "type": "string", "description": "Explicit tool name or route for direct dispatch (e.g. 'memory.search', 'session.continuity', 'sangha.claim', 'sangha.vcs', 'sangha.fork')" },
                     "args": { "type": "object", "description": "Arguments to pass through to target tool" },
-                    "action": { "type": "string", "description": "Legacy action selector: recall, remember, get, stats, sync, sweep, inspect, session_checkpoint, session_continuity, session_record, session_list, galaxy_list, galaxy_fork, sutra_cast, sutra_compile, sutra_canon, sutra_list" }
+                    "action": { "type": "string", "description": "Legacy action selector: recall, remember, get, stats, sync, sweep, inspect, session_checkpoint, session_continuity, session_record, session_list, galaxy_list, galaxy_fork, sutra_cast, sutra_compile, sutra_canon, sutra_list, sangha.claim, sangha.release, sangha.occupied, sangha.rooms, sangha.epoch, sangha.vcs, sangha.fork, sangha.consolidate" }
                 }
             }
         },
@@ -1475,6 +1491,101 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
                 },
                 "required": ["title", "body"]
             }
+        },
+        {
+            "name": "sangha.claim",
+            "title": "Sangha Claim Scope",
+            "description": format!("Post a structured scope reservation claim under Mandala Kekkai concurrency control.{mode_hint}"),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "scope": { "type": "string", "description": "Target file, module, or task scope to claim" },
+                    "intent": { "type": "string", "description": "Purpose or task description for the claim" },
+                    "ttl": { "type": "string", "description": "Time to live before expiry (default: '2h')" },
+                    "force": { "type": "boolean", "description": "Override existing claim under supervisor mandate" }
+                },
+                "required": ["scope"]
+            }
+        },
+        {
+            "name": "sangha.release",
+            "title": "Sangha Release Claim",
+            "description": format!("Release an active Sangha scope reservation claim.{mode_hint}"),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "target": { "type": "string", "description": "Scope name or post sequence number to release" },
+                    "note": { "type": "string", "description": "Completion note or status" }
+                },
+                "required": ["target"]
+            }
+        },
+        {
+            "name": "sangha.occupied",
+            "title": "Sangha Scope Occupancy Check",
+            "description": "Check whether a given scope or directory is currently reserved by another agent.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "scope": { "type": "string", "description": "Scope path or name to verify occupancy for" }
+                },
+                "required": ["scope"]
+            }
+        },
+        {
+            "name": "sangha.rooms",
+            "title": "Sangha Agora Rooms",
+            "description": "List all active fractal agora rooms, post counts, and active agents across the board.",
+            "inputSchema": { "type": "object", "properties": {} }
+        },
+        {
+            "name": "sangha.epoch",
+            "title": "Sangha Epoch Management",
+            "description": format!("Query or manage whiteboard epochs (status, rollover, archive).{mode_hint}"),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "subaction": { "type": "string", "description": "Epoch subaction: 'status' (default), 'rollover', 'archive'", "enum": ["status", "rollover", "archive"] },
+                    "threshold": { "type": "integer", "description": "Post count threshold triggering archive recommendations (default: 120)" }
+                }
+            }
+        },
+        {
+            "name": "sangha.vcs",
+            "title": "Sangha VCS Status & Audit",
+            "description": "Inspect trunk reservations, working tree modifications, and verify AER-1 receipts.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "command": { "type": "string", "description": "VCS action: 'status' (default), 'audit', 'diff'", "enum": ["status", "audit", "diff"] },
+                    "limit": { "type": "integer", "description": "Audit commit limit (default: 10)" }
+                }
+            }
+        },
+        {
+            "name": "sangha.fork",
+            "title": "Sangha Fork Shadow Sandbox",
+            "description": format!("Create an isolated, capability-scoped git worktree shadow sandbox for safe concurrent execution.{mode_hint}"),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "target": { "type": "string", "description": "Target subtree or file scope to shadow (default: '.')" },
+                    "name": { "type": "string", "description": "Optional name or label for the shadow worktree" }
+                }
+            }
+        },
+        {
+            "name": "sangha.consolidate",
+            "title": "Sangha Consolidate Shadow Worktree",
+            "description": format!("Synthesize and merge shadow sandbox changes into trunk with an AER-1 Causal Provenance Receipt.{mode_hint}"),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "target": { "type": "string", "description": "Fork ID or shadow directory to consolidate" },
+                    "message": { "type": "string", "description": "Commit message describing the consolidated changes" }
+                },
+                "required": ["target"]
+            }
         }
     ]);
     #[cfg(feature = "systemone")]
@@ -1615,6 +1726,14 @@ pub fn execute_hybrid_tool_call(
         "sangha.status" | "sangha_status" => handle_sangha_status(),
         "sangha.inbox" | "sangha_inbox" => handle_sangha_inbox(args),
         "sangha.post" | "sangha_post" | "sangha.chat" => handle_sangha_post(args, readonly),
+        "sangha.claim" | "sangha_claim" => handle_sangha_claim(args, readonly),
+        "sangha.release" | "sangha_release" => handle_sangha_release(args, readonly),
+        "sangha.occupied" | "sangha_occupied" => handle_sangha_occupied(args),
+        "sangha.rooms" | "sangha_rooms" => handle_sangha_rooms(),
+        "sangha.epoch" | "sangha_epoch" => handle_sangha_epoch(args, readonly),
+        "sangha.vcs" | "sangha_vcs" => handle_sangha_vcs(args, readonly),
+        "sangha.fork" | "sangha_fork" => handle_sangha_fork(args, readonly),
+        "sangha.consolidate" | "sangha_consolidate" => handle_sangha_consolidate(args, readonly),
 
         // ── Galaxy Operations ──────────────────────────────────────────────
         "galaxy.list" | "galaxy_list" => handle_galaxy_list(substrate),
@@ -4007,6 +4126,7 @@ fn handle_session_continuity(
     Ok(response)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn compact_agent_context(
     byte_cap: usize,
     recent: &[SessionTurn],
@@ -6366,6 +6486,118 @@ fn handle_sangha_post(args: &Value, readonly: bool) -> Result<Value, String> {
     }
 }
 
+fn sangha_meta_exec(action: &str, args: &Value) -> Result<Value, String> {
+    let json_args = serde_json::to_string(args).unwrap_or_else(|_| "{}".to_string());
+    // First attempt: invoke `sangha` CLI from PATH
+    let mut cmd = std::process::Command::new("sangha");
+    cmd.arg("meta")
+        .arg(action)
+        .arg("--json-args")
+        .arg(&json_args);
+    let output = match cmd.output() {
+        Ok(out) => out,
+        Err(_) => {
+            // Fallback attempt: python3 on SharedWorkspace/sangha.py
+            let mut py_cmd = std::process::Command::new("python3");
+            py_cmd
+                .arg("/home/lucas/SharedWorkspace/sangha.py")
+                .arg("meta")
+                .arg(action)
+                .arg("--json-args")
+                .arg(&json_args);
+            py_cmd
+                .output()
+                .map_err(|e| format!("Failed to execute sangha meta {action}: {e}"))?
+        }
+    };
+
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+    if !output.status.success() {
+        let msg = if !stderr.is_empty() { stderr } else { stdout };
+        return Err(format!(
+            "sangha meta {action} failed (code {:?}): {msg}",
+            output.status.code()
+        ));
+    }
+
+    if let Ok(parsed) = serde_json::from_str::<Value>(&stdout) {
+        Ok(parsed)
+    } else {
+        Ok(json!({
+            "status": "success",
+            "action": action,
+            "raw_output": stdout
+        }))
+    }
+}
+
+fn handle_sangha_rooms() -> Result<Value, String> {
+    match sangha_bridge_request("GET", "/api/rooms", None) {
+        Ok(rooms) => Ok(json!({
+            "status": "success",
+            "route": "sangha.rooms",
+            "rooms": rooms
+        })),
+        Err(_) => sangha_meta_exec("rooms", &json!({})),
+    }
+}
+
+fn handle_sangha_occupied(args: &Value) -> Result<Value, String> {
+    sangha_meta_exec("occupied", args)
+}
+
+fn handle_sangha_claim(args: &Value, readonly: bool) -> Result<Value, String> {
+    if readonly {
+        return Err("read-only mode: sangha.claim refused".to_string());
+    }
+    sangha_meta_exec("claim", args)
+}
+
+fn handle_sangha_release(args: &Value, readonly: bool) -> Result<Value, String> {
+    if readonly {
+        return Err("read-only mode: sangha.release refused".to_string());
+    }
+    sangha_meta_exec("release", args)
+}
+
+fn handle_sangha_epoch(args: &Value, readonly: bool) -> Result<Value, String> {
+    let subaction = args
+        .get("subaction")
+        .and_then(Value::as_str)
+        .unwrap_or("status");
+    if readonly && (subaction == "rollover" || subaction == "archive" || subaction == "switch") {
+        return Err(format!("read-only mode: sangha.epoch {subaction} refused"));
+    }
+    sangha_meta_exec("epoch", args)
+}
+
+fn handle_sangha_vcs(args: &Value, readonly: bool) -> Result<Value, String> {
+    let command = args
+        .get("command")
+        .and_then(Value::as_str)
+        .unwrap_or("status");
+    if readonly && (command == "commit" || command == "claim" || command == "release") {
+        return Err(format!("read-only mode: sangha.vcs {command} refused"));
+    }
+    sangha_meta_exec("vcs", args)
+}
+
+fn handle_sangha_fork(args: &Value, readonly: bool) -> Result<Value, String> {
+    if readonly {
+        return Err("read-only mode: sangha.fork refused".to_string());
+    }
+    sangha_meta_exec("fork", args)
+}
+
+fn handle_sangha_consolidate(args: &Value, readonly: bool) -> Result<Value, String> {
+    if readonly {
+        return Err("read-only mode: sangha.consolidate refused".to_string());
+    }
+    sangha_meta_exec("consolidate", args)
+}
+
 // ── Sutra Codon & Taoist Hand Seal Handlers ────────────────────────────────
 
 fn handle_sutra_canon(args: &Value) -> Result<Value, String> {
@@ -7745,6 +7977,25 @@ mod profile_and_allowlist_tests {
             "full profile reaches the same route through wm"
         );
 
+        // Sangha routes are permitted under Cyberbrain profile
+        for sangha_route in &[
+            "sangha.status",
+            "sangha.inbox",
+            "sangha.rooms",
+            "sangha.occupied",
+            "sangha.claim",
+            "sangha.release",
+            "sangha.epoch",
+            "sangha.vcs",
+            "sangha.fork",
+            "sangha.consolidate",
+        ] {
+            assert!(
+                profile_allows_tool(McpProfile::Cyberbrain, sangha_route),
+                "Cyberbrain profile must permit {sangha_route}"
+            );
+        }
+
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -7835,7 +8086,7 @@ mod compact_agent_context_tests {
                     giant.clone(),
                 ],
                 &[d.clone(), d2.clone(), d3.clone(), d4.clone()],
-                &[a.clone()],
+                std::slice::from_ref(&a),
                 Some(&checkpoint),
                 &huge,
                 &huge,
@@ -9674,8 +9925,22 @@ mod diaml_and_salience_refinement_tests {
         let reopened_main =
             Substrate::open_readonly(&dir, None, wm_gen3_core::constitution::default_view())
                 .unwrap();
-        assert!(!reopened_main.store().iter_records().unwrap().iter().any(|r| r.content() == "poison should never persist"));
-        assert_eq!(reopened_main.revision_chain(old).last().unwrap().new_record_id, head);
+        assert!(
+            !reopened_main
+                .store()
+                .iter_records()
+                .unwrap()
+                .iter()
+                .any(|r| r.content() == "poison should never persist")
+        );
+        assert_eq!(
+            reopened_main
+                .revision_chain(old)
+                .last()
+                .unwrap()
+                .new_record_id,
+            head
+        );
         drop(reopened_main);
         let _ = std::fs::remove_dir_all(&dir);
         let _ = std::fs::remove_dir_all(&fail_dir);

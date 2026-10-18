@@ -244,11 +244,25 @@ mkdir -p "$INSTALL_DIR"
 mv "${BINARY_PATH}" "${INSTALL_DIR}/wm"
 chmod +x "${INSTALL_DIR}/wm"
 
+# Wire sangha and cpr wrappers
+cat << 'EOF' > "${INSTALL_DIR}/sangha"
+#!/bin/sh
+exec "$(dirname "$0")/wm" sangha "$@"
+EOF
+chmod +x "${INSTALL_DIR}/sangha"
+
+cat << 'EOF' > "${INSTALL_DIR}/cpr"
+#!/bin/sh
+exec "$(dirname "$0")/wm" cpr "$@"
+EOF
+chmod +x "${INSTALL_DIR}/cpr"
+
 # Local arrival marker (best effort; never fails the install).
 write_install_marker
 
 echo ""
 echo "WhiteMagic ${VERSION} installed to ${INSTALL_DIR}/wm"
+echo "Bundled companions: ${INSTALL_DIR}/sangha, ${INSTALL_DIR}/cpr"
 if [ "$STATIC_BUILD" = "1" ]; then
     echo "Build: fully static (musl) — no glibc requirement."
 elif [ -n "$PLATFORM_LABEL" ]; then
@@ -263,6 +277,13 @@ echo ""
 echo "Get started (in this order):"
 echo "  1. wm grimoire                        # guided first-run check"
 echo "  2. wm connect                         # dry run; add --write to apply"
+echo ""
+echo "Fleet Agora & Coordination:"
+echo "  sangha brief                          # one-shot Agora session start"
+echo "  sangha rooms                          # list active Fractal Agora rooms"
+echo "  wm sangha vcs status                  # Loom/Scion trunk reservation & VCS"
+echo "  wm cpr verify <receipt.json>          # Causal Provenance Receipt verifier"
+echo "  wm mandala verify-pass                # Mandala capability pass verifier"
 echo ""
 echo "Optional:"
 echo "  wm quickstart                         # 30-second continuity demo (throwaway store)"

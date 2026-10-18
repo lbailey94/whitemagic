@@ -570,6 +570,16 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Manage the Sangha Whiteboard Agora, claims, inboxes, and vcs
+    Sangha {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Causal Provenance Receipt (CPR) commands and integrity verification
+    Cpr {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -3024,6 +3034,104 @@ fn main() {
         } => {
             run_sutra_chohan(&payload, proof.as_deref(), bid, json);
         }
+        Commands::Sangha { args } => {
+            run_sangha_cli(&args);
+        }
+        Commands::Cpr { args } => {
+            run_cpr_cli(&args);
+        }
+    }
+}
+
+fn run_sangha_cli(args: &[String]) {
+    let mut cmd = std::process::Command::new("sangha");
+    cmd.args(args);
+    let status = match cmd.status() {
+        Ok(s) => s,
+        Err(_) => {
+            let mut py_cmd = std::process::Command::new("python3");
+            py_cmd
+                .arg("/home/lucas/SharedWorkspace/sangha.py")
+                .args(args);
+            match py_cmd.status() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("Failed to invoke sangha: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+    };
+    if let Some(code) = status.code() {
+        std::process::exit(code);
+    }
+}
+
+fn run_cpr_cli(args: &[String]) {
+    if args.is_empty() || args.iter().any(|a| a == "--help" || a == "-h") {
+        println!("==================================================");
+        println!("  Causal Provenance Receipts (CPR) / AER-1 Engine ");
+        println!("==================================================");
+        println!("Usage: wm cpr <subcommand> [options]");
+        println!("\nSubcommands:");
+        println!("  verify      Verify receipt envelope against schema & signature");
+        println!("  consumer    Verify receipt against expected consumer policy");
+        println!("  anchor      Anchor receipt digest or generate merkle proofs");
+        println!("  disclose    Generate selective disclosure receipt variant");
+        println!("\nExamples:");
+        println!("  wm cpr verify receipt.json");
+        println!("  wm cpr consumer --policy strict receipt.json");
+        return;
+    }
+
+    let subcmd = &args[0];
+    let rest = &args[1..];
+    let module = match subcmd.as_str() {
+        "verify" => "continuity_receipt.verify",
+        "consumer" => "continuity_receipt.consumer",
+        "anchor" => "continuity_receipt.anchor",
+        "disclose" => "continuity_receipt.disclose",
+        _ => "continuity_receipt.verify",
+    };
+
+    let pass_args =
+        if subcmd == "verify" || subcmd == "consumer" || subcmd == "anchor" || subcmd == "disclose"
+        {
+            rest
+        } else {
+            args
+        };
+
+    let mut cmd = std::process::Command::new("python3");
+    cmd.arg("-m").arg(module).args(pass_args);
+    let status = match cmd.status() {
+        Ok(s) => s,
+        Err(_) => {
+            let fallback_script = format!(
+                "/home/lucas/Desktop/front burner/WHITEMAGIC/worktrees/continuity-receipt/continuity_receipt/{}.py",
+                if subcmd == "verify"
+                    || subcmd == "consumer"
+                    || subcmd == "anchor"
+                    || subcmd == "disclose"
+                {
+                    subcmd
+                } else {
+                    "verify"
+                }
+            );
+            let mut py_cmd = std::process::Command::new("python3");
+            py_cmd.arg(fallback_script).args(pass_args);
+            match py_cmd.status() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("Failed to invoke CPR: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+    };
+    if let Some(code) = status.code() {
+        std::process::exit(code);
     }
 }
 
