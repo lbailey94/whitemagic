@@ -244,7 +244,8 @@ mkdir -p "$INSTALL_DIR"
 mv "${BINARY_PATH}" "${INSTALL_DIR}/wm"
 chmod +x "${INSTALL_DIR}/wm"
 
-# Wire sangha and cpr wrappers
+# Install command shims. The WM launcher resolves Sangha from an explicit
+# script path instead of dispatching back through this `sangha` shim.
 cat << 'EOF' > "${INSTALL_DIR}/sangha"
 #!/bin/sh
 exec "$(dirname "$0")/wm" sangha "$@"
@@ -262,7 +263,8 @@ write_install_marker
 
 echo ""
 echo "WhiteMagic ${VERSION} installed to ${INSTALL_DIR}/wm"
-echo "Bundled companions: ${INSTALL_DIR}/sangha, ${INSTALL_DIR}/cpr"
+echo "Command shims: ${INSTALL_DIR}/sangha, ${INSTALL_DIR}/cpr"
+echo "Sangha and CPR Python components must be installed separately; the shims report this when unavailable."
 if [ "$STATIC_BUILD" = "1" ]; then
     echo "Build: fully static (musl) — no glibc requirement."
 elif [ -n "$PLATFORM_LABEL" ]; then

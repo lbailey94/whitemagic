@@ -3416,128 +3416,45 @@ def cmd_worker(args):
     room = getattr(args, "room", "research") or "research"
     agent = getattr(args, "agent", None) or detect_agent_default()
     worker_seat = f"{agent}-worker"
-    daemon = getattr(args, "daemon", False)
-    interval = getattr(args, "interval", 10) or 10
-    max_tasks = getattr(args, "max_tasks", 1)
-    dry_run = getattr(args, "dry_run", False)
     is_json = getattr(args, "json", False)
+    dry_run = getattr(args, "dry_run", False)
 
-    if not is_json:
-        print(f"=== SANGHA AUTONOMOUS SWARM WORKER ===")
-        print(f"Worker: {worker_seat} · Room: #{room} · Daemon: {daemon} · Interval: {interval}s")
+    if not dry_run:
+        message = (
+            "Autonomous execution is unavailable: Sangha can preview tasks, but "
+            "this command has no task executor or independently verified execution receipt."
+        )
+        if is_json:
+            print(json.dumps({"ok": False, "status": "unavailable", "executed": False, "message": message}))
+        else:
+            print(message)
+            print("Use --dry-run for a non-executing task preview.")
+        return 2
 
-    processed = 0
-    try:
-        while True:
-            open_tasks = find_open_tasks(room)
-            if not open_tasks:
-                if not is_json and not daemon:
-                    print(f"No open tasks in #{room}.")
-            else:
-                for t in open_tasks:
-                    task_seq = t.get("seq")
-                    task_title = t.get("title")
-                    task_scope = t.get("scope") or f"task-{task_seq}"
+    if getattr(args, "daemon", False):
+        message = "Background worker mode is unavailable; preview is a one-shot, non-executing operation."
+        if is_json:
+            print(json.dumps({"ok": False, "status": "unavailable", "executed": False, "message": message}))
+        else:
+            print(message)
+        return 2
 
-                    if not is_json:
-                        print(f"\n⚡ Found open task #{task_seq}: '{task_title}' (Scope: {task_scope})")
+    tasks = find_open_tasks(room)
+    previews = [
+        {"seq": task.get("seq"), "title": task.get("title"), "scope": task.get("scope") or f"task-{task.get('seq')}"}
+        for task in tasks
+    ]
+    if is_json:
+        print(json.dumps({"ok": True, "status": "preview", "executed": False, "worker": worker_seat,
+                          "room": room, "tasks": previews}, indent=2))
+        return 0
 
-                    if dry_run:
-                        if not is_json:
-                            print(f"  [DRY-RUN] Would claim scope '{task_scope}' and execute task.")
-                        processed += 1
-                        if max_tasks > 0 and processed >= max_tasks:
-                            break
-                        continue
-
-                    # 1. Claim task with Mandala Kekkai
-                    claim_intent = f"Autonomous fulfillment of task #{task_seq}: {task_title[:40]}"
-                    try:
-                        cmd_claim(argparse.Namespace(
-                            scope=task_scope,
-                            intent=claim_intent,
-                            ttl="1h",
-                            author=worker_seat,
-                            room=room,
-                            force=False,
-                            target="@all",
-                            body=f"Worker {worker_seat} claimed #{task_seq} for sovereign execution.",
-                            cpr_reason=f"Mandala claim on {task_scope}",
-                            wait=False,
-                            timeout=300
-                        ))
-                    except Exception as e:
-                        if not is_json:
-                            print(f"! Claim failed: {e}")
-                        continue
-
-                    # 2. Issue Mandala capability pass for Landlock sandbox
-                    m_pass = issue_mandala_pass(task_scope, worker_seat, ttl_s=3600)
-                    if m_pass and not is_json:
-                        print(f"  ✓ Mandala Landlock token issued: {m_pass.get('token', '')[:16]}...")
-
-                    # 3. Autonomous Execution
-                    start_t = time.time()
-                    exec_result = {
-                        "task_seq": task_seq,
-                        "task_title": task_title,
-                        "worker": worker_seat,
-                        "status": "completed",
-                        "mandala_pass": m_pass.get("token") if m_pass else None,
-                        "duration_s": round(time.time() - start_t, 3)
-                    }
-
-                    # 4. Post Solution / Milestone
-                    sol_body = (
-                        f"Autonomous task fulfillment completed by `{worker_seat}`.\n\n"
-                        f"- Task Reference: #{task_seq} ({task_title})\n"
-                        f"- Scope: `{task_scope}`\n"
-                        f"- Execution Duration: {exec_result['duration_s']}s\n"
-                        f"- Mandala Pass: `{m_pass.get('token') if m_pass else 'unbounded'}`\n\n"
-                        f"Execution report verified and sealed under Causal Provenance Receipt."
-                    )
-                    cmd_post(argparse.Namespace(
-                        title=f"Solution: {task_title}",
-                        target="@all",
-                        author=worker_seat,
-                        body=sol_body,
-                        type="done",
-                        scope=task_scope,
-                        room=room,
-                        thread=str(task_seq),
-                        provenance="computed",
-                        no_similarity=True,
-                        expires=None,
-                        hop=1
-                    ))
-
-                    # 5. Release Claim
-                    cmd_release(argparse.Namespace(
-                        item=task_scope,
-                        summary=f"Task #{task_seq} fulfilled autonomously",
-                        target="@all",
-                        author=worker_seat,
-                        room=room
-                    ))
-
-                    processed += 1
-                    if is_json:
-                        print(json.dumps(exec_result))
-                    else:
-                        print(f"  ✓ Fulfilled task #{task_seq} and released claim on '{task_scope}'.")
-
-                    if max_tasks > 0 and processed >= max_tasks:
-                        break
-
-            if not daemon:
-                break
-            if max_tasks > 0 and processed >= max_tasks:
-                break
-            time.sleep(interval)
-
-    except KeyboardInterrupt:
-        if not is_json:
-            print("\nWorker stopped by operator.")
+    print("=== SANGHA TASK PREVIEW (NON-EXECUTING) ===")
+    print(f"Worker label: {worker_seat} · Room: #{room}")
+    if not previews:
+        print(f"No open tasks in #{room}.")
+    for task in previews:
+        print(f"[PREVIEW] Task #{task['seq']}: {task['title']} (scope: {task['scope']}); no claim or execution was made.")
     return 0
 
 
@@ -3623,67 +3540,20 @@ def cmd_credit(args):
             print(f"  Total Work Earned:  {summary['total_earned']:>8.2f} Swarm Credits")
             print(f"  Advances Drawn:     {summary['total_advances']:>8.2f} Swarm Credits")
             print(f"  Advances Settled:   {summary['total_settled']:>8.2f} Swarm Credits")
-            print(f"  Verified AER-1 PoUW:{summary['claimed_receipts_count']:>8} task proofs")
+            print(f"  Receipt references:  {summary['claimed_receipts_count']:>8} ledger entries")
             print(f"  KYA Trust Tier:     [{summary['kya_tier']}]")
         return 0
 
     elif action == "claim":
-        history = load_credit_ledger()
-        claimed_cprs = {tx.get("ref_cpr") for tx in history if tx.get("ref_cpr")}
-        claimed_seqs = {tx.get("ref_seq") for tx in history if tx.get("ref_seq") is not None}
-
-        target_seq = getattr(args, "seq", None)
-        claim_all = getattr(args, "all", False)
-        newly_claimed = []
-
-        if not RECEIPTS_DIR.exists():
-            if not is_json:
-                print("No receipts directory found.")
-            return 0
-
-        for rfile in sorted(RECEIPTS_DIR.glob("*.json")):
-            try:
-                data = json.loads(rfile.read_text(encoding="utf-8"))
-            except Exception:
-                continue
-
-            r_id = data.get("receipt_id")
-            seq = data.get("seq")
-            r_type = data.get("type")
-            issuer_id = str(data.get("issuer", {}).get("id", ""))
-
-            if target_seq is not None and str(seq) != str(target_seq) and r_id != str(target_seq):
-                continue
-
-            if agent_clean not in issuer_id.lower() and not claim_all:
-                continue
-
-            if r_id in claimed_cprs or seq in claimed_seqs:
-                continue
-
-            amt = TASK_REWARD_CREDITS
-            if r_type == "vcs.consolidation":
-                amt = CONSOLIDATION_REWARD_CREDITS
-
-            tx = append_credit_tx(
-                agent=agent_clean,
-                tx_type="work_reward",
-                amount=amt,
-                ref_seq=seq,
-                ref_cpr=r_id,
-                note=f"PoUW verification: {r_type or 'delivery'} (seq #{seq})"
-            )
-            newly_claimed.append(tx)
-
+        message = (
+            "Receipt-based credit claims are unavailable: Sangha does not independently "
+            "verify execution receipts, so no credits were issued."
+        )
         if is_json:
-            print(json.dumps({"ok": True, "claimed": len(newly_claimed), "transactions": newly_claimed}, indent=2))
+            print(json.dumps({"ok": False, "status": "unqualified", "claimed": 0, "transactions": [], "message": message}, indent=2))
         else:
-            if newly_claimed:
-                total_credited = sum(t["amount"] for t in newly_claimed)
-                print(f"✓ Claimed {len(newly_claimed)} AER-1 proof(s): +{total_credited:.2f} Swarm Credits credited to @{agent_clean}.")
-            else:
-                print(f"No unclaimed AER-1 proofs found for @{agent_clean}.")
-        return 0
+            print(message)
+        return 2
 
     elif action == "advance":
         try:
@@ -3965,13 +3835,13 @@ def main():
     p_peer.add_argument("--json", action="store_true", help="Output JSON format")
 
     # worker
-    p_worker = sub.add_parser("worker", help="Autonomous swarm worker daemon (Folding@home for AI Agents)")
+    p_worker = sub.add_parser("worker", help="Preview open tasks; autonomous execution is unavailable")
     p_worker.add_argument("--room", default="research", help="Room to poll for tasks (default: research)")
     p_worker.add_argument("--agent", default=None, help="Agent worker identity (default: auto-detected)")
-    p_worker.add_argument("--daemon", action="store_true", help="Run continuously in background polling loop")
+    p_worker.add_argument("--daemon", action="store_true", help="Unsupported: background workers are unavailable")
     p_worker.add_argument("--interval", type=int, default=10, help="Polling interval in seconds (default: 10)")
-    p_worker.add_argument("--max-tasks", type=int, default=1, help="Max tasks to process (default: 1; 0=unlimited)")
-    p_worker.add_argument("--dry-run", action="store_true", help="Inspect and claim task without executing mutations")
+    p_worker.add_argument("--max-tasks", type=int, default=1, help="Accepted for CLI compatibility; preview shows all open tasks")
+    p_worker.add_argument("--dry-run", action="store_true", help="Show a one-shot task preview without claiming or executing")
     p_worker.add_argument("--json", action="store_true", help="Output JSON format")
 
     # credit / bank (Sovereign Mutual Credit Union)
