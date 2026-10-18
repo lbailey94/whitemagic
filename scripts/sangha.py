@@ -63,7 +63,17 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(os.environ.get("SANGHA_ROOT", "")).resolve() if os.environ.get("SANGHA_ROOT") else Path(__file__).resolve().parent
+if os.environ.get("SANGHA_ROOT"):
+    ROOT = Path(os.environ["SANGHA_ROOT"]).resolve()
+elif Path(__file__).resolve().parent.name in ("bin", "scripts"):
+    if (Path.cwd() / "board").is_dir():
+        ROOT = Path.cwd()
+    elif (Path.home() / "SharedWorkspace" / "board").is_dir():
+        ROOT = Path.home() / "SharedWorkspace"
+    else:
+        ROOT = Path.home() / ".sangha"
+else:
+    ROOT = Path(__file__).resolve().parent
 
 try:
     import sangha_registry
