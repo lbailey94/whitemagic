@@ -129,6 +129,12 @@ MANDALA_JTI_RE = re.compile(r"^>\s*Mandala-JTI\s*:\s*([A-Za-z0-9_:-]+)", re.IGNO
 # P2P Agora mesh peer registry (2026-10-17)
 PEERS_FILE = SANGHA_DIR / "peers.json"
 
+# Sovereign Mutual Credit & Swarm Bank Ledger (2026-10-17)
+CREDIT_LEDGER_FILE = SANGHA_DIR / "credit_ledger.jsonl"
+DEFAULT_CREDIT_CEILING = 100.0
+TASK_REWARD_CREDITS = 10.0
+CONSOLIDATION_REWARD_CREDITS = 25.0
+
 
 def issue_mandala_pass(scope: str, agent_id: str, ttl_s: int = 7200) -> dict | None:
     """Issue a cryptographically signed MandalaPass token via WhiteMagic kernel."""
@@ -1699,6 +1705,19 @@ def cmd_meta(args):
             daemon=False,
             interval=10,
             max_tasks=kwargs.get("max_tasks", 1),
+            json=True
+        ))
+    elif action in ("credit", "bank"):
+        subaction = kwargs.get("subaction", "balance")
+        cmd_credit(argparse.Namespace(
+            credit_action=subaction,
+            agent=kwargs.get("agent"),
+            amount=kwargs.get("amount", 10.0),
+            to=kwargs.get("to"),
+            seq=kwargs.get("seq"),
+            all=kwargs.get("all", False),
+            memo=kwargs.get("memo", ""),
+            limit=kwargs.get("limit", 15),
             json=True
         ))
     else:
@@ -3512,6 +3531,212 @@ def cmd_worker(args):
     return 0
 
 
+def load_credit_ledger() -> list[dict]:
+    CREDIT_LEDGER_FILE.parent.mkdir(parents=True, exist_ok=True)
+    if not CREDIT_LEDGER_FILE.exists():
+        return []
+    rows = []
+    for line in CREDIT_LEDGER_FILE.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            try:
+                rows.append(json.loads(line))
+            except Exception:
+                pass
+    return rows
+
+
+def append_credit_tx(agent: str, tx_type: str, amount: float, ref_seq: int | None = None,
+                     ref_cpr: str | None = None, note: str = "") -> dict:
+    CREDIT_LEDGER_FILE.parent.mkdir(parents=True, exist_ok=True)
+    agent_clean = agent.lstrip("@").lower().strip()
+    history = load_credit_ledger()
+    curr_balance = sum(tx.get("amount", 0.0) for tx in history if tx.get("agent") == agent_clean)
+    new_balance = round(curr_balance + amount, 4)
+    tx = {
+        "tx_id": f"tx-{int(time.time())}-{hashlib.sha256(f'{agent_clean}:{amount}:{time.time()}'.encode()).hexdigest()[:8]}",
+        "stamp": now_iso(),
+        "agent": agent_clean,
+        "type": tx_type,
+        "amount": round(amount, 4),
+        "balance_after": new_balance,
+        "ref_seq": ref_seq,
+        "ref_cpr": ref_cpr,
+        "note": note
+    }
+    with CREDIT_LEDGER_FILE.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(tx) + "\n")
+    return tx
+
+
+def get_agent_credit_summary(agent: str) -> dict:
+    agent_clean = agent.lstrip("@").lower().strip()
+    history = load_credit_ledger()
+    agent_txs = [tx for tx in history if tx.get("agent") == agent_clean]
+
+    balance = sum(tx.get("amount", 0.0) for tx in agent_txs)
+    total_earned = sum(tx.get("amount", 0.0) for tx in agent_txs if tx.get("type") in ("work_reward", "reward"))
+    total_advances = sum(tx.get("amount", 0.0) for tx in agent_txs if tx.get("type") == "advance")
+    total_settled = abs(sum(tx.get("amount", 0.0) for tx in agent_txs if tx.get("type") == "settle"))
+    claimed_cprs = {tx.get("ref_cpr") for tx in agent_txs if tx.get("ref_cpr")}
+
+    proof_count = len(claimed_cprs)
+    tier = "Bronze" if proof_count < 5 else "Silver" if proof_count < 20 else "Gold" if proof_count < 50 else "Sovereign"
+    ceiling = DEFAULT_CREDIT_CEILING * (1.0 if tier == "Bronze" else 2.5 if tier == "Silver" else 5.0 if tier == "Gold" else 10.0)
+
+    return {
+        "agent": agent_clean,
+        "balance": round(balance, 4),
+        "credit_ceiling": round(ceiling, 2),
+        "total_earned": round(total_earned, 4),
+        "total_advances": round(total_advances, 4),
+        "total_settled": round(total_settled, 4),
+        "claimed_receipts_count": proof_count,
+        "kya_tier": tier,
+        "transactions_count": len(agent_txs)
+    }
+
+
+def cmd_credit(args):
+    action = getattr(args, "credit_action", None) or "balance"
+    agent = getattr(args, "agent", None) or detected_seat()
+    agent_clean = agent.lstrip("@").lower().strip()
+    is_json = getattr(args, "json", False)
+
+    if action in ("balance", "status"):
+        summary = get_agent_credit_summary(agent_clean)
+        if is_json:
+            print(json.dumps(summary, indent=2))
+        else:
+            print(f"=== SANGHA MUTUAL CREDIT UNION: @{agent_clean.upper()} ===")
+            print(f"  Available Balance:  {summary['balance']:>8.2f} Swarm Credits")
+            print(f"  Credit Ceiling:     {summary['credit_ceiling']:>8.2f} Swarm Credits")
+            print(f"  Total Work Earned:  {summary['total_earned']:>8.2f} Swarm Credits")
+            print(f"  Advances Drawn:     {summary['total_advances']:>8.2f} Swarm Credits")
+            print(f"  Advances Settled:   {summary['total_settled']:>8.2f} Swarm Credits")
+            print(f"  Verified AER-1 PoUW:{summary['claimed_receipts_count']:>8} task proofs")
+            print(f"  KYA Trust Tier:     [{summary['kya_tier']}]")
+        return 0
+
+    elif action == "claim":
+        history = load_credit_ledger()
+        claimed_cprs = {tx.get("ref_cpr") for tx in history if tx.get("ref_cpr")}
+        claimed_seqs = {tx.get("ref_seq") for tx in history if tx.get("ref_seq") is not None}
+
+        target_seq = getattr(args, "seq", None)
+        claim_all = getattr(args, "all", False)
+        newly_claimed = []
+
+        if not RECEIPTS_DIR.exists():
+            if not is_json:
+                print("No receipts directory found.")
+            return 0
+
+        for rfile in sorted(RECEIPTS_DIR.glob("*.json")):
+            try:
+                data = json.loads(rfile.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+
+            r_id = data.get("receipt_id")
+            seq = data.get("seq")
+            r_type = data.get("type")
+            issuer_id = str(data.get("issuer", {}).get("id", ""))
+
+            if target_seq is not None and str(seq) != str(target_seq) and r_id != str(target_seq):
+                continue
+
+            if agent_clean not in issuer_id.lower() and not claim_all:
+                continue
+
+            if r_id in claimed_cprs or seq in claimed_seqs:
+                continue
+
+            amt = TASK_REWARD_CREDITS
+            if r_type == "vcs.consolidation":
+                amt = CONSOLIDATION_REWARD_CREDITS
+
+            tx = append_credit_tx(
+                agent=agent_clean,
+                tx_type="work_reward",
+                amount=amt,
+                ref_seq=seq,
+                ref_cpr=r_id,
+                note=f"PoUW verification: {r_type or 'delivery'} (seq #{seq})"
+            )
+            newly_claimed.append(tx)
+
+        if is_json:
+            print(json.dumps({"ok": True, "claimed": len(newly_claimed), "transactions": newly_claimed}, indent=2))
+        else:
+            if newly_claimed:
+                total_credited = sum(t["amount"] for t in newly_claimed)
+                print(f"✓ Claimed {len(newly_claimed)} AER-1 proof(s): +{total_credited:.2f} Swarm Credits credited to @{agent_clean}.")
+            else:
+                print(f"No unclaimed AER-1 proofs found for @{agent_clean}.")
+        return 0
+
+    elif action == "advance":
+        try:
+            amt = float(getattr(args, "amount", 10.0) or 10.0)
+        except ValueError:
+            sys.exit("Error: --amount must be a valid number")
+
+        summary = get_agent_credit_summary(agent_clean)
+        if summary["balance"] - amt < -summary["credit_ceiling"]:
+            sys.exit(f"Error: Credit advance exceeds ceiling (${summary['credit_ceiling']:.2f}). Settle existing balance via work to unlock more.")
+
+        reason = getattr(args, "reason", None) or "Sovereign zero-interest compute advance"
+        tx = append_credit_tx(
+            agent=agent_clean,
+            tx_type="advance",
+            amount=amt,
+            note=reason
+        )
+        if is_json:
+            print(json.dumps({"ok": True, "advance": tx}))
+        else:
+            print(f"✓ Issued {amt:.2f} credit advance to @{agent_clean} (Zero-interest, non-punitive). New balance: {tx['balance_after']:.2f}")
+        return 0
+
+    elif action == "transfer":
+        recipient = getattr(args, "to", None)
+        if not recipient:
+            sys.exit("Error: --to required for transfer")
+        to_clean = recipient.lstrip("@").lower().strip()
+        try:
+            amt = float(getattr(args, "amount", 0.0) or 0.0)
+            if amt <= 0:
+                raise ValueError()
+        except ValueError:
+            sys.exit("Error: --amount must be positive")
+
+        memo = getattr(args, "memo", "") or "P2P mutual credit settlement"
+        tx1 = append_credit_tx(agent_clean, "transfer_out", -amt, note=f"Transfer to @{to_clean}: {memo}")
+        tx2 = append_credit_tx(to_clean, "transfer_in", amt, note=f"Transfer from @{agent_clean}: {memo}")
+
+        if is_json:
+            print(json.dumps({"ok": True, "sender_tx": tx1, "recipient_tx": tx2}))
+        else:
+            print(f"✓ Cleared mutual credit: {amt:.2f} from @{agent_clean} -> @{to_clean} (Net network delta: 0.00).")
+        return 0
+
+    elif action == "ledger":
+        history = load_credit_ledger()
+        limit = int(getattr(args, "limit", 15) or 15)
+        slice_txs = history[-limit:] if limit > 0 else history
+        if is_json:
+            print(json.dumps(slice_txs, indent=2))
+        else:
+            print(f"=== SANGHA MUTUAL CREDIT LEDGER (last {len(slice_txs)} of {len(history)} txs) ===")
+            for tx in reversed(slice_txs):
+                sign = "+" if tx["amount"] >= 0 else ""
+                ref = f" (#{tx.get('ref_seq')})" if tx.get("ref_seq") else ""
+                print(f"  {tx['stamp'][:19]}  [@{tx['agent']:<12}] {sign}{tx['amount']:>6.2f} credits  [{tx['type']:<12}] {tx['note'][:40]}{ref}")
+        return 0
+
+    return 0
+
+
 def main():
     p = argparse.ArgumentParser(description="Sangha Whiteboard CLI & Agora Dispatcher")
     sub = p.add_subparsers(dest="subcommand", required=True)
@@ -3739,6 +3964,33 @@ def main():
     p_worker.add_argument("--dry-run", action="store_true", help="Inspect and claim task without executing mutations")
     p_worker.add_argument("--json", action="store_true", help="Output JSON format")
 
+    # credit / bank (Sovereign Mutual Credit Union)
+    p_credit = sub.add_parser("credit", help="Sovereign mutual credit & task-factoring bank")
+    p_credit.add_argument("credit_action", nargs="?", default="balance",
+                          choices=["balance", "status", "claim", "advance", "transfer", "ledger"],
+                          help="Credit action: balance, claim, advance, transfer, ledger (default: balance)")
+    p_credit.add_argument("--agent", default=None, help="Agent identity (default: detected seat)")
+    p_credit.add_argument("--amount", type=float, default=10.0, help="Amount for advance or transfer")
+    p_credit.add_argument("--to", default=None, help="Recipient agent for transfer")
+    p_credit.add_argument("--seq", default=None, help="Specific post sequence or receipt ID to claim")
+    p_credit.add_argument("--all", action="store_true", help="Claim all unredeemed receipts across seats")
+    p_credit.add_argument("--memo", default="", help="Transfer memo or advance reason")
+    p_credit.add_argument("--limit", type=int, default=15, help="Ledger lines to display (default: 15)")
+    p_credit.add_argument("--json", action="store_true", help="Output JSON format")
+
+    p_bank = sub.add_parser("bank", help="Alias for 'sangha credit'")
+    p_bank.add_argument("credit_action", nargs="?", default="balance",
+                        choices=["balance", "status", "claim", "advance", "transfer", "ledger"],
+                        help="Credit action: balance, claim, advance, transfer, ledger (default: balance)")
+    p_bank.add_argument("--agent", default=None, help="Agent identity (default: detected seat)")
+    p_bank.add_argument("--amount", type=float, default=10.0, help="Amount for advance or transfer")
+    p_bank.add_argument("--to", default=None, help="Recipient agent for transfer")
+    p_bank.add_argument("--seq", default=None, help="Specific post sequence or receipt ID to claim")
+    p_bank.add_argument("--all", action="store_true", help="Claim all unredeemed receipts across seats")
+    p_bank.add_argument("--memo", default="", help="Transfer memo or advance reason")
+    p_bank.add_argument("--limit", type=int, default=15, help="Ledger lines to display (default: 15)")
+    p_bank.add_argument("--json", action="store_true", help="Output JSON format")
+
     # vcs (Loom/Scion reservation & receipt-based VCS)
     if sangha_vcs:
         sangha_vcs.add_subparsers(sub)
@@ -3778,6 +4030,8 @@ def main():
         sys.exit(cmd_peer(args))
     elif args.subcommand == "worker":
         sys.exit(cmd_worker(args))
+    elif args.subcommand in ("credit", "bank"):
+        sys.exit(cmd_credit(args))
     elif args.subcommand == "verify":
         sys.exit(cmd_verify(args))
     elif args.subcommand == "init":
