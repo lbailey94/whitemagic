@@ -4054,13 +4054,64 @@ fn compact_agent_context(input: CompactAgentContextInput<'_>) -> Value {
         "text": turn.content
     })).collect();
     let total_selected_turns = turns.len();
+    // This wrapper is diagnostic metadata outside the compact text byte cap.
+    // Preserve whole statements: report losses rather than truncate a decision
+    // into a sentence whose meaning may have changed.
+    let original_turns = turns.clone();
+    let finish = |mut context: Value, retained: &[Value]| {
+        let mut omissions = json!({});
+        for kind in ["arc", "decision", "salient", "recent"] {
+            let total = original_turns
+                .iter()
+                .filter(|turn| turn["kind"] == kind)
+                .count();
+            let kept = retained.iter().filter(|turn| turn["kind"] == kind).count();
+            omissions[kind] = json!(total.saturating_sub(kept));
+        }
+        context["critical_evidence_omitted"] = json!(
+            omissions["arc"].as_u64().unwrap_or(0) > 0
+                || omissions["decision"].as_u64().unwrap_or(0) > 0
+        );
+        context["budget_completeness"] = json!(if context["text"] == "" {
+            "empty"
+        } else if context["omitted_turns"].as_u64().unwrap_or(0) > 0
+            || context["omitted_other"].as_u64().unwrap_or(0) > 0
+            || context["crystal_titles_truncated"].as_u64().unwrap_or(0) > 0
+            || context["crystal_previews_truncated"].as_u64().unwrap_or(0) > 0
+        {
+            "partial"
+        } else {
+            "complete"
+        });
+        context["omitted_turns_by_kind"] = omissions;
+        context
+    };
     let mut cp = checkpoint.map(|c| {
         json!({"status": c.checkpoint_type, "created_at": c.timestamp_iso,
         "summary": c.summary, "record_id": c.record_id, "track": c.track})
     });
     let mut q: Vec<Value> = queue.iter().cloned().map(Value::String).collect();
     let mut f: Vec<Value> = flags.iter().cloned().map(Value::String).collect();
-    let mut c: Vec<Value> = crystals.iter().map(|item| json!({"id": item["record_id"], "title": item["title"], "preview": item["preview"]})).collect();
+    const CRYSTAL_TITLE_MAX_BYTES: usize = 120;
+    const CRYSTAL_PREVIEW_MAX_BYTES: usize = 160;
+    let mut crystal_title_truncated: Vec<bool> = Vec::with_capacity(crystals.len());
+    let mut crystal_preview_truncated: Vec<bool> = Vec::with_capacity(crystals.len());
+    let mut c: Vec<Value> = crystals
+        .iter()
+        .map(|item| {
+            let title = item["title"].as_str().unwrap_or_default();
+            let preview = item["preview"].as_str().unwrap_or_default();
+            let short_title = truncate_utf8(title, CRYSTAL_TITLE_MAX_BYTES);
+            let short_preview = truncate_utf8(preview, CRYSTAL_PREVIEW_MAX_BYTES);
+            crystal_title_truncated.push(short_title.len() < title.len());
+            crystal_preview_truncated.push(short_preview.len() < preview.len());
+            json!({
+                "id": item["record_id"],
+                "title": short_title,
+                "preview": short_preview
+            })
+        })
+        .collect();
     let briefing_duplicates_projection = briefing.is_some()
         && (!turns.is_empty() || cp.is_some() || !q.is_empty() || !f.is_empty() || !c.is_empty());
     let mut brief = if briefing_duplicates_projection {
@@ -4074,19 +4125,25 @@ fn compact_agent_context(input: CompactAgentContextInput<'_>) -> Value {
         let value = json!({"turns": turns, "checkpoint": cp, "queue": q, "flags": f, "crystals": c, "briefing": brief});
         let text = serde_json::to_string(&value).unwrap_or_else(|_| "{}".into());
         if byte_cap == 0 {
-            return json!({"text":"", "byte_cap":0, "bytes_used":0, "estimated_tokens":0, "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":total_selected_turns, "omitted_other":queue.len()+flags.len()+crystals.len()+usize::from(checkpoint.is_some())+usize::from(briefing.is_some())});
+            return finish(
+                json!({"text":"", "byte_cap":0, "bytes_used":0, "estimated_tokens":0, "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":total_selected_turns, "omitted_other":queue.len()+flags.len()+crystals.len()+usize::from(checkpoint.is_some())+usize::from(briefing.is_some()), "crystals_omitted":crystals.len(), "crystal_titles_truncated":0, "crystal_previews_truncated":0}),
+                &[],
+            );
         }
         if text.len() <= byte_cap {
-            return json!({"text":text, "byte_cap":byte_cap, "bytes_used":text.len(), "estimated_tokens":text.len().div_ceil(4), "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":omitted_turns, "omitted_other":omitted_other, "briefing_omitted_as_duplicate":briefing_duplicates_projection});
+            return finish(
+                json!({"text":text, "byte_cap":byte_cap, "bytes_used":text.len(), "estimated_tokens":text.len().div_ceil(4), "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":omitted_turns, "omitted_other":omitted_other, "crystals_omitted":crystals.len().saturating_sub(c.len()), "crystal_titles_truncated":crystal_title_truncated.iter().filter(|truncated| **truncated).count(), "crystal_previews_truncated":crystal_preview_truncated.iter().filter(|truncated| **truncated).count(), "briefing_omitted_as_duplicate":briefing_duplicates_projection}),
+                &turns,
+            );
         }
-        if !q.is_empty() {
+        if let Some(index) = turns.iter().rposition(|turn| turn["kind"] == "recent") {
+            turns.remove(index);
+            omitted_turns += 1;
+        } else if !q.is_empty() {
             q.pop();
             omitted_other += 1;
         } else if !f.is_empty() {
             f.pop();
-            omitted_other += 1;
-        } else if !c.is_empty() {
-            c.pop();
             omitted_other += 1;
         } else if cp.is_some() {
             cp = None;
@@ -4098,11 +4155,32 @@ fn compact_agent_context(input: CompactAgentContextInput<'_>) -> Value {
                 *text = truncate_utf8(text, text.len() / 2);
             }
             omitted_other += 1;
+        } else if let Some((index, _)) = c
+            .iter()
+            .enumerate()
+            .filter_map(|(index, crystal)| {
+                crystal["preview"].as_str().map(|preview| (index, preview))
+            })
+            .filter(|(_, preview)| !preview.is_empty())
+            .max_by_key(|(_, preview)| preview.len())
+        {
+            let preview = c[index]["preview"].as_str().unwrap_or_default();
+            let shortened = truncate_utf8(preview, preview.len() / 2);
+            c[index]["preview"] = json!(shortened);
+            crystal_preview_truncated[index] = true;
+        } else if !c.is_empty() {
+            c.pop();
+            crystal_title_truncated.pop();
+            crystal_preview_truncated.pop();
+            omitted_other += 1;
         } else if !turns.is_empty() {
             turns.pop();
             omitted_turns += 1;
         } else {
-            return json!({"text":"", "byte_cap":byte_cap, "bytes_used":0, "estimated_tokens":0, "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":total_selected_turns, "omitted_other":omitted_other});
+            return finish(
+                json!({"text":"", "byte_cap":byte_cap, "bytes_used":0, "estimated_tokens":0, "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":total_selected_turns, "omitted_other":omitted_other, "crystals_omitted":crystals.len(), "crystal_titles_truncated":0, "crystal_previews_truncated":0}),
+                &[],
+            );
         }
     }
 }
@@ -7873,9 +7951,75 @@ mod compact_agent_context_tests {
                 if budget == 280 {
                     assert_eq!(turns.iter().filter(|t| t["kind"] == "decision").count(), 4);
                     assert_eq!(turns.iter().filter(|t| t["kind"] == "arc").count(), 1);
+                    assert_eq!(parsed["crystals"].as_array().unwrap().len(), 1);
+                    assert_eq!(parsed["crystals"][0]["id"], 1);
+                    assert!(parsed["crystals"][0]["title"].as_str().is_some());
+                    assert!(parsed["crystals"][0]["preview"].as_str().unwrap().len() <= 160);
+                    assert_eq!(
+                        turns.len(),
+                        5,
+                        "the duplicate recent/salient turns are deduplicated and giant chatter is pruned"
+                    );
+                    assert!(ctx["crystal_previews_truncated"].as_u64().unwrap() >= 1);
                 }
             }
         }
+    }
+
+    #[test]
+    fn compact_projection_reports_critical_omissions_under_tiny_caps() {
+        let decision = turn("long-decision", "decision", 1, &"🪐 decision ".repeat(100));
+        let arc = turn("long-arc", "question", 2, &"🌙 unresolved ".repeat(100));
+        for byte_cap in [1, 100] {
+            let ctx = compact_agent_context(CompactAgentContextInput {
+                byte_cap,
+                recent: &[],
+                salient: std::slice::from_ref(&decision),
+                arcs: std::slice::from_ref(&arc),
+                checkpoint: None,
+                queue: &[],
+                flags: &[],
+                crystals: &[],
+                briefing: None,
+            });
+            let text = ctx["text"].as_str().unwrap();
+            assert!(text.len() <= byte_cap);
+            assert_eq!(ctx["critical_evidence_omitted"], true);
+            assert_eq!(ctx["omitted_turns_by_kind"]["decision"], 1);
+            assert_eq!(ctx["omitted_turns_by_kind"]["arc"], 1);
+            assert_eq!(ctx["omitted_turns"], 2);
+            if text.is_empty() {
+                assert_eq!(ctx["budget_completeness"], "empty");
+            } else {
+                let projection: Value = serde_json::from_str(text).unwrap();
+                assert!(projection["turns"].as_array().unwrap().is_empty());
+                assert_eq!(ctx["budget_completeness"], "partial");
+            }
+        }
+    }
+
+    #[test]
+    fn compact_projection_bounds_giant_utf8_crystal_preview() {
+        let preview = "🪐🌙".repeat(100);
+        let crystals = vec![json!({"record_id":42,"title":"Persistent crystal","preview":preview})];
+        let ctx = compact_agent_context(CompactAgentContextInput {
+            byte_cap: 2800 * 4,
+            recent: &[],
+            salient: &[],
+            arcs: &[],
+            checkpoint: None,
+            queue: &[],
+            flags: &[],
+            crystals: &crystals,
+            briefing: None,
+        });
+        let text = ctx["text"].as_str().unwrap();
+        assert!(text.len() <= 2800 * 4);
+        let projection: Value = serde_json::from_str(text).expect("valid compact JSON");
+        let retained_preview = projection["crystals"][0]["preview"].as_str().unwrap();
+        assert!(retained_preview.len() <= 160);
+        assert!(preview.starts_with(retained_preview));
+        assert_eq!(ctx["crystal_previews_truncated"], 1);
     }
 
     #[test]

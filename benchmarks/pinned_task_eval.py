@@ -852,7 +852,15 @@ def run_continuity_family(wm_bin: Path) -> dict[str, Any]:
                 failure_trace = {
                     "system": "whitemagic_v10_4",
                     "scenario": sc["id"],
-                    "cause": "One or more expected decisions, open arc, track crystal, routing or budget checks failed in the consumed compact context",
+                    "cause": "Consumed compact-context checks failed: " + ", ".join(
+                        name for name, passed in {
+                            "decision_recall": wm_dec_hits == len(sc["decisions"]),
+                            "open_arc_precision": wm_open_ok,
+                            "track_routing": new_session_routing_ok,
+                            "context_byte_budget": budget_enforced,
+                            "track_crystal_surfacing": crystal_surfaced,
+                        }.items() if not passed
+                    ),
                     "missing_decisions": missing,
                     "open_arc_ok": wm_open_ok, "track_routing_ok": new_session_routing_ok,
                     "crystal_surfaced": crystal_surfaced, "budget_enforced": budget_enforced,
