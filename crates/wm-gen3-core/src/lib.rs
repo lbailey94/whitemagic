@@ -93,7 +93,9 @@ pub use causal_ticket::CausalCapabilityTicket;
 pub use citta_oscillator::{
     BitsetSubagentProposal, BrainWaveBand, CittaOscillatorEngine, CittaOscillatorTickReport,
     MctsCladisticNode, MctsRolloutBatchReport, MonteCarloCladisticTree, ScopeBitset2048,
-    THETA_GAMMA_PHASE_SLOTS, ThetaGammaPacState,
+    SuperoptimizationReport, THETA_GAMMA_PHASE_SLOTS, ThetaGammaPacState,
+    ThetaGammaWorkingMemoryRing, VictorTaelinSuperoptimizer, WorkingMemoryChordSummary,
+    WorkingMemoryPhaseSlot,
 };
 pub use covenant::{
     CovenantView, GroundAspect, MandalaKosha, PrimordialCovenant, RSI_LAWS, SUBSTRATE_ARTICLES,
