@@ -1,8 +1,13 @@
 //! System 0.5 retrieval organ for WhiteMagic Gen3.
 //!
 //! Maps a state to a ranked shortlist of named candidates using a local static
-//! embedding table (Model2Vec). Pure Rust, no network, no threads, caller-driven;
-//! the substrate is never touched.
+//! embedding table (Model2Vec) and calibrated `TTTHead` conformal routing.
+//! Pure Rust, no network, no threads, caller-driven; the substrate is never touched.
+
+#![forbid(unsafe_code)]
+
+pub mod ttt;
+pub use ttt::{ConformalGateStatus, ConformalPrediction, TttHead};
 
 use std::collections::hash_map::DefaultHasher;
 use std::fmt;

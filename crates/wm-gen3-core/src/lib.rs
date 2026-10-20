@@ -56,6 +56,7 @@ pub mod mandala;
 pub mod mesh;
 pub mod ops;
 pub mod peer;
+pub mod pray_combinatorics;
 pub mod projection;
 pub mod pulse;
 pub mod pulse_compiler;
@@ -77,6 +78,11 @@ pub use hexagram::{Hexagram, HexagramMeta, Trigram, WuXing};
 pub use legion::{
     ChoHanVerdict, CloneEvaluationResult, CohortArchetype, LegionAdjudicationReport, LegionError,
     ShadowLegion,
+};
+pub use pray_combinatorics::{
+    CelestialQuadrant, CompiledPraySeal, GANA_CATALOG, GANA_COUNT, GANA_HEXAGRAM_SEALS,
+    GanaMansion, PrayChain, PrayCombinatorialEngine, PrayStage, STAGE_PURE_PRAY_CHAINS,
+    TOTAL_4GLYPH_CODONS,
 };
 pub use sutra::{CompoundSutra, SutraGlyph, SutraKekkaiProfile, SutraParseError};
 pub use tripartite_router::{CognitiveTier, RoutingDecision, TripartiteRouter};
