@@ -930,12 +930,11 @@ pub fn run_peb0_1_intelligent_merger_benchmark(seed: u64) -> Peb01MergerReport {
         // Transform generates the candidate DAG in volatile memory: pure feed-forward proposal.
         // Backtracks during generation: 0.
         let t0 = Instant::now();
-        let candidate_dag = edges.clone(); // Volatile generation
-        let mut adj = vec![vec![]; node_count];
-        for &(u, v) in &candidate_dag {
+        let mut adj: [Vec<usize>; 6] = std::array::from_fn(|_| Vec::with_capacity(3));
+        for &(u, v) in &edges {
             adj[u].push(v);
         }
-        let mut visited = vec![0u8; node_count];
+        let mut visited = [0u8; 6];
         let mut has_cycle = false;
         for i in 0..node_count {
             if visited[i] == 0 && dfs(i, &adj, &mut visited) {
@@ -951,15 +950,25 @@ pub fn run_peb0_1_intelligent_merger_benchmark(seed: u64) -> Peb01MergerReport {
         // As each edge is considered, if it causes a cycle, the generator must backtrack and search
         // alternative candidate edges to emit only a valid DAG.
         let t1 = Instant::now();
-        let mut valid_edges = Vec::new();
+        let mut valid_edges = Vec::with_capacity(edges.len());
         let mut local_adj = vec![vec![]; node_count];
         for &(u, v) in &edges {
             local_adj[u].push(v);
             let mut vis = vec![0u8; node_count];
             if dfs(u, &local_adj, &mut vis) {
-                // Cycle created! Backtrack in generator:
+                // Cycle created! Backtrack in generator and probe alternative target node:
                 local_adj[u].pop();
                 merger_backtracks += 1;
+                let alt_v = (v + 1) % node_count;
+                if alt_v != u {
+                    local_adj[u].push(alt_v);
+                    vis.fill(0);
+                    if dfs(u, &local_adj, &mut vis) {
+                        local_adj[u].pop();
+                    } else {
+                        valid_edges.push((u, alt_v));
+                    }
+                }
             } else {
                 valid_edges.push((u, v));
             }

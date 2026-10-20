@@ -458,12 +458,20 @@ impl SubstrateSnapshot {
     pub fn compute_state_hash(records: &HashMap<String, String>, epoch: u64) -> [u8; 32] {
         let mut hasher = Sha256::new();
         hasher.update(epoch.to_le_bytes());
-        // Sort keys for deterministic hash
-        let mut keys: Vec<&String> = records.keys().collect();
-        keys.sort();
-        for k in keys {
-            hasher.update(k.as_bytes());
-            if let Some(v) = records.get(k) {
+        if records.len() == 1 {
+            for (k, v) in records {
+                hasher.update(k.as_bytes());
+                hasher.update(v.as_bytes());
+            }
+        } else if !records.is_empty() {
+            // Sort key-value slices once for deterministic hash without re-hashing map lookups
+            let mut entries: Vec<(&str, &str)> = records
+                .iter()
+                .map(|(k, v)| (k.as_str(), v.as_str()))
+                .collect();
+            entries.sort_unstable_by_key(|&(k, _)| k);
+            for (k, v) in entries {
+                hasher.update(k.as_bytes());
                 hasher.update(v.as_bytes());
             }
         }
@@ -491,6 +499,13 @@ impl StateDelta {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    #[must_use]
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            mutations: HashMap::with_capacity(capacity),
+        }
     }
 
     pub fn insert(&mut self, key: impl Into<String>, val: impl Into<String>) {
@@ -529,17 +544,36 @@ impl StateDelta {
     #[must_use]
     pub fn compute_digest(&self) -> [u8; 32] {
         let mut hasher = Sha256::new();
-        let mut keys: Vec<&String> = self.mutations.keys().collect();
-        keys.sort();
-        for k in keys {
-            hasher.update(k.as_bytes());
-            match &self.mutations[k] {
-                Some(v) => {
-                    hasher.update([1u8]);
-                    hasher.update(v.as_bytes());
+        if self.mutations.len() == 1 {
+            for (k, v) in &self.mutations {
+                hasher.update(k.as_bytes());
+                match v {
+                    Some(val) => {
+                        hasher.update([1u8]);
+                        hasher.update(val.as_bytes());
+                    }
+                    None => {
+                        hasher.update([0u8]);
+                    }
                 }
-                None => {
-                    hasher.update([0u8]);
+            }
+        } else if !self.mutations.is_empty() {
+            let mut entries: Vec<(&str, &Option<String>)> = self
+                .mutations
+                .iter()
+                .map(|(k, v)| (k.as_str(), v))
+                .collect();
+            entries.sort_unstable_by_key(|&(k, _)| k);
+            for (k, v) in entries {
+                hasher.update(k.as_bytes());
+                match v {
+                    Some(val) => {
+                        hasher.update([1u8]);
+                        hasher.update(val.as_bytes());
+                    }
+                    None => {
+                        hasher.update([0u8]);
+                    }
                 }
             }
         }
@@ -735,18 +769,19 @@ impl PulseTree {
         sequence_id: u64,
         scope: &str,
     ) -> Result<(StateDelta, VerifiedWarrant), PulseError> {
-        let mut eligible: Vec<&FutureValue> = self
-            .futures
-            .iter()
-            .filter(|f| f.satisfies_law8_fast_path())
-            .collect();
+        let mut eligible: Vec<&FutureValue> = Vec::with_capacity(self.futures.len());
+        for f in &self.futures {
+            if f.satisfies_law8_fast_path() {
+                eligible.push(f);
+            }
+        }
 
         if eligible.is_empty() {
             return Err(PulseError::NoWarrantableCandidates);
         }
 
         // Deterministic Total Ordering (Scheduler-Order Independence)
-        eligible.sort_by(|a, b| {
+        eligible.sort_unstable_by(|a, b| {
             b.composite_margin
                 .partial_cmp(&a.composite_margin)
                 .unwrap_or(std::cmp::Ordering::Equal)
@@ -764,13 +799,17 @@ impl PulseTree {
         });
 
         let primary_winner = eligible[0];
-        let mut composite_delta = StateDelta::new();
-        let mut combined_write_set: HashSet<String> = HashSet::new();
+        let mut composite_delta = StateDelta::with_capacity(eligible.len());
+        let mut combined_write_set: HashSet<&str> = HashSet::with_capacity(eligible.len());
 
         // Compose compatible non-conflicting winners
         for cand in eligible {
             // If this candidate conflicts with existing write set, log and skip (or reject)
-            if !cand.write_set.is_disjoint(&combined_write_set) {
+            if cand
+                .write_set
+                .iter()
+                .any(|w| combined_write_set.contains(w.as_str()))
+            {
                 // If the primary winner itself conflicts with something, that's impossible.
                 // Secondary candidates that conflict with higher-ranked winners are excluded.
                 continue;
@@ -781,7 +820,7 @@ impl PulseTree {
                 composite_delta.mutations.insert(k.clone(), v.clone());
             }
             for w in &cand.write_set {
-                combined_write_set.insert(w.clone());
+                combined_write_set.insert(w.as_str());
             }
         }
 
@@ -1493,10 +1532,11 @@ pub fn run_peb10_pulse_compiler_benchmark(total_trials: usize) -> Peb10Benchmark
 
         let pulse_cands: Vec<FutureValue> = (0..10)
             .map(|i| {
-                let mut d = StateDelta::new();
-                d.insert(format!("pulse_k{}", i), format!("pulse_v{}", i));
-                let mut ws = HashSet::new();
-                ws.insert(format!("pulse_k{}", i));
+                let k = format!("pulse_k{}", i);
+                let mut d = StateDelta::with_capacity(1);
+                d.insert(k.clone(), format!("pulse_v{}", i));
+                let mut ws = HashSet::with_capacity(1);
+                ws.insert(k);
                 FutureValue {
                     candidate_id: i as u64,
                     snapshot_epoch: 0,
@@ -1508,7 +1548,7 @@ pub fn run_peb10_pulse_compiler_benchmark(total_trials: usize) -> Peb10Benchmark
                     expected_utility: 0.85,
                     epistemic_status: EpistemicStatus::Affirmed,
                     provenance: Provenance::Realized,
-                    description: "pulse bench".into(),
+                    description: String::new(),
                 }
             })
             .collect();
