@@ -386,6 +386,46 @@ impl TttHead {
         Ok(q_hat)
     }
 
+    /// Online Hippocampal-to-Neocortical Consolidation Step (Theta -> Gamma Plasticity).
+    ///
+    /// Given an embedding `x` whose ambiguity was resolved by Layer 1.5 (`Vega-U`) or
+    /// Theta-band `MC-CTS` into `winning_label`, applies one L2-regularized multinomial
+    /// logistic gradient step in PCA-`k` space and recomputes the fused `[C x dim]` operator.
+    /// Converts future similar queries from `EscalateMultiSet` into `660 ns` `Singleton`s.
+    pub fn consolidate_hebbian_step(
+        &mut self,
+        x: &[f32],
+        winning_label: &str,
+        lr: f32,
+        l2: f32,
+    ) -> Result<f32, String> {
+        if x.len() != self.dim {
+            return Err(format!("input dim {} != {}", x.len(), self.dim));
+        }
+        let target_cls = self
+            .labels
+            .iter()
+            .position(|c| c == winning_label)
+            .ok_or_else(|| format!("unknown winning_label '{winning_label}'"))?;
+
+        let mut z_buf = vec![0.0f32; self.dim];
+        let mut zp_buf = vec![0.0f32; self.k];
+        let mut probs = vec![0.0f32; self.labels.len()];
+        self.predict_unfused_into(x, &mut z_buf, &mut zp_buf, &mut probs);
+
+        for (cls, &p_cls) in probs.iter().enumerate() {
+            let diff = p_cls - if cls == target_cls { 1.0 } else { 0.0 };
+            self.bias[cls] -= lr * diff;
+            let w_row = &mut self.weights[cls * self.k..(cls + 1) * self.k];
+            for (comp, w_val) in w_row.iter_mut().enumerate() {
+                *w_val -= lr * (diff * zp_buf[comp] + l2 * (*w_val));
+            }
+        }
+        self.recompute_fused_operator();
+        self.predict_into(x, &mut z_buf, &mut zp_buf, &mut probs);
+        Ok(probs[target_cls])
+    }
+
     /// Zero-allocation hot-path probability computation using the algebraically fused
     /// `[C * dim]` affine operator (`O(C * dim)` instead of `O(k * dim + C * k)`).
     #[inline]
@@ -725,6 +765,25 @@ mod tests {
             1e6 / us_per_item_into,
             us_unfused / us_per_item_into,
             1e6 / us_per_item_batch
+        );
+
+        // 3. Test Online Hippocampal-to-Neocortical Consolidation (EscalateMultiSet -> Singleton)
+        let mut ambig_head = head.clone();
+        ambig_head.conformal_threshold = Some(0.45); // Strict threshold requiring p >= 0.55 for singleton
+        let q_ambig = &queries[7];
+        let before = ambig_head.predict_conformal(q_ambig);
+        for _ in 0..6 {
+            let _ = ambig_head
+                .consolidate_hebbian_step(q_ambig, "science", 0.35, 1e-4)
+                .unwrap();
+        }
+        let after = ambig_head.predict_conformal(q_ambig);
+        assert_eq!(after.top_label, "science");
+        assert_eq!(after.gate_status, ConformalGateStatus::Singleton);
+        assert!(after.top_prob > before.probabilities[2] + 0.30);
+        println!(
+            "Theta->Gamma Hebbian Consolidation: p('science') {:.4} ({:?}) -> {:.4} ({:?})",
+            before.probabilities[2], before.gate_status, after.top_prob, after.gate_status
         );
     }
 }

@@ -815,6 +815,143 @@ impl CittaOscillatorEngine {
         let elapsed_ns = t0.elapsed().as_nanos() as u64;
         (delta, elapsed_ns)
     }
+
+    /// Arbitrate a swarm of `n_subagents` using [`ScopeBitset2048`] zero-allocation bitwise
+    /// disjointness (`O(1)` 256-byte stack bitset instead of `HashMap<String, _>`).
+    pub fn arbitrate_bitset_swarm(
+        proposals: &mut [BitsetSubagentProposal],
+    ) -> (ScopeBitset2048, usize, f64) {
+        proposals.sort_unstable_by(|a, b| {
+            b.composite_margin
+                .partial_cmp(&a.composite_margin)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| a.candidate_id.cmp(&b.candidate_id))
+        });
+
+        let mut combined_mask = ScopeBitset2048::empty();
+        let mut admitted = 0usize;
+        let mut total_utility = 0.0f64;
+
+        for cand in proposals.iter() {
+            if cand.composite_margin >= 0.85 && cand.write_mask.is_disjoint(&combined_mask) {
+                combined_mask.union_in_place(&cand.write_mask);
+                admitted += 1;
+                total_utility += cand.composite_margin as f64;
+            }
+        }
+        (combined_mask, admitted, total_utility)
+    }
+
+    /// Arbitrate a 2-Tier Hierarchical Immortal Army (`28 Lunar Mansion Gana Lieutenants x clones_per_gana`)
+    /// in parallel across CPU cores using [`ScopeBitset2048`]:
+    /// - **Tier 1 (Gamma Burst):** All 28 Gana Lieutenants concurrently arbitrate their local clone cohorts
+    ///   in L1/L2 cache using bitwise `ScopeBitset2048` masks.
+    /// - **Tier 2 (Theta Peak):** The 28 Gana Lieutenant composite bitsets merge at the root arbiter.
+    #[must_use]
+    pub fn arbitrate_hierarchical_2tier_swarm(
+        clones_per_gana: usize,
+    ) -> (ScopeBitset2048, usize, f64, u64) {
+        let t0 = std::time::Instant::now();
+
+        // Tier 1: Parallel arbitration inside each of the 28 Lunar Mansion Ganas
+        let lieutenant_outcomes: Vec<(u8, ScopeBitset2048, usize, f64)> = (0..28u8)
+            .into_par_iter()
+            .map(|gana_idx| {
+                let mut local_clones = Vec::with_capacity(clones_per_gana);
+                let base_scope = (gana_idx as usize) * 64;
+                for c in 0..clones_per_gana {
+                    let scope_bit = base_scope + (c % 64);
+                    let mut mask = ScopeBitset2048::empty();
+                    mask.set_bit(scope_bit);
+                    let margin = 0.86 + (((gana_idx as usize * 31 + c * 17) % 13) as f32) * 0.01;
+                    local_clones.push(BitsetSubagentProposal {
+                        candidate_id: ((gana_idx as u64) << 32) | (c as u64),
+                        gana_id: gana_idx + 1,
+                        hexagram_id: ((c % 64) + 1) as u8,
+                        write_mask: mask,
+                        composite_margin: margin,
+                    });
+                }
+                let (mask, adm, util) = Self::arbitrate_bitset_swarm(&mut local_clones);
+                (gana_idx, mask, adm, util)
+            })
+            .collect();
+
+        // Tier 2: Root arbitration across the 28 Gana Lieutenants
+        let mut root_mask = ScopeBitset2048::empty();
+        let mut total_admitted = 0usize;
+        let mut total_utility = 0.0f64;
+        for (_g, l_mask, adm, util) in lieutenant_outcomes {
+            if l_mask.is_disjoint(&root_mask) {
+                root_mask.union_in_place(&l_mask);
+                total_admitted += adm;
+                total_utility += util;
+            }
+        }
+        let elapsed_ns = t0.elapsed().as_nanos() as u64;
+        (root_mask, total_admitted, total_utility, elapsed_ns)
+    }
+}
+
+/// Zero-allocation 2,048-bit stack write-set (`[u64; 32]` = 256 bytes).
+///
+/// Maps all `1,792` canonical `28 Gana x 64 Hexagram` macro-seal scopes (`0..1792`)
+/// plus `256` custom workspace/file scopes (`1792..2048`) into a single L1-cache-resident
+/// bitset. Replaces `HashSet<String>` hashing (`~1.6 µs`/agent) with 32 bitwise `AND`s (`~1.5 ns`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScopeBitset2048 {
+    pub words: [u64; 32],
+}
+
+impl ScopeBitset2048 {
+    #[inline]
+    #[must_use]
+    pub const fn empty() -> Self {
+        Self { words: [0u64; 32] }
+    }
+
+    #[inline]
+    pub fn set_bit(&mut self, bit_index: usize) {
+        let idx = bit_index & 2047;
+        self.words[idx >> 6] |= 1u64 << (idx & 63);
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn is_disjoint(&self, other: &Self) -> bool {
+        let mut acc = 0u64;
+        for i in 0..32 {
+            acc |= self.words[i] & other.words[i];
+        }
+        acc == 0
+    }
+
+    #[inline]
+    pub fn union_in_place(&mut self, other: &Self) {
+        for i in 0..32 {
+            self.words[i] |= other.words[i];
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn count_ones(&self) -> u32 {
+        let mut total = 0u32;
+        for &w in &self.words {
+            total += w.count_ones();
+        }
+        total
+    }
+}
+
+/// Zero-allocation subagent proposal carrying a [`ScopeBitset2048`] write mask.
+#[derive(Debug, Clone, Copy)]
+pub struct BitsetSubagentProposal {
+    pub candidate_id: u64,
+    pub gana_id: u8,
+    pub hexagram_id: u8,
+    pub write_mask: ScopeBitset2048,
+    pub composite_margin: f32,
 }
 
 #[cfg(test)]
@@ -935,7 +1072,61 @@ mod tests {
             let per_agent_us = avg_us / (swarm_n as f64);
             let agents_per_sec = (swarm_n as f64) / (avg_us * 1e-6);
             println!(
-                "Swarm Arbitration Knee (N={swarm_n:4} subagents): total={avg_us:9.2} us | per_subagent={per_agent_us:6.3} us | throughput={agents_per_sec:10.0} arbitrated_subagents/s"
+                "Swarm Arbitration Knee [HashMap] (N={swarm_n:4} subagents): total={avg_us:9.2} us | per_subagent={per_agent_us:6.3} us | throughput={agents_per_sec:10.0} arbitrated_subagents/s"
+            );
+        }
+
+        // 2b. Zero-Allocation ScopeBitset2048 Flat vs 2-Tier 28-Gana Hierarchical Swarm Arbitration (Up to 65,520 Clones!)
+        println!("------------------------------------------------------------------------");
+        for &swarm_n in &[64usize, 256, 1_024, 4_096, 16_384] {
+            let mut base_props = Vec::with_capacity(swarm_n);
+            for i in 0..swarm_n {
+                let mut mask = ScopeBitset2048::empty();
+                mask.set_bit(i % 2048);
+                base_props.push(BitsetSubagentProposal {
+                    candidate_id: i as u64,
+                    gana_id: ((i % 28) + 1) as u8,
+                    hexagram_id: ((i % 64) + 1) as u8,
+                    write_mask: mask,
+                    composite_margin: 0.86 + ((i % 13) as f32) * 0.01,
+                });
+            }
+            let runs = 50;
+            let t0 = Instant::now();
+            let mut total_admitted = 0usize;
+            for _ in 0..runs {
+                let mut props = base_props.clone();
+                let (mask, adm, _util) = CittaOscillatorEngine::arbitrate_bitset_swarm(&mut props);
+                assert_eq!(mask.count_ones() as usize, adm);
+                total_admitted = adm;
+            }
+            let avg_us = t0.elapsed().as_secs_f64() * 1e6 / (runs as f64);
+            let ns_per_agent = (avg_us * 1000.0) / (swarm_n as f64);
+            let agents_per_sec = (swarm_n as f64) / (avg_us * 1e-6);
+            println!(
+                "Swarm Arbitration [Bitset2048 Flat] (N={swarm_n:5} clones, admitted={total_admitted:4}): total={avg_us:7.2} us | per_clone={ns_per_agent:6.1} ns | throughput={agents_per_sec:11.0} clones/s"
+            );
+        }
+
+        println!("------------------------------------------------------------------------");
+        for &clones_per_gana in &[64usize, 256, 1_024, 2_340] {
+            let total_clones = 28 * clones_per_gana;
+            let runs = 25;
+            let mut sum_ns = 0u64;
+            let mut adm_out = 0usize;
+            for _ in 0..runs {
+                let (root_mask, adm, _util, ns) =
+                    CittaOscillatorEngine::arbitrate_hierarchical_2tier_swarm(clones_per_gana);
+                assert_eq!(root_mask.count_ones() as usize, adm);
+                assert_eq!(adm, 1792); // All 28 Ganas x 64 Hexagrams = 1,792 canonical scopes saturated!
+                sum_ns += ns;
+                adm_out = adm;
+            }
+            let avg_us = (sum_ns as f64 / runs as f64) / 1000.0;
+            let ns_per_clone = (avg_us * 1000.0) / (total_clones as f64);
+            let clones_per_sec = (total_clones as f64) / (avg_us * 1e-6);
+            println!(
+                "Swarm Arbitration [2-Tier 28x{clones_per_gana:<4} = {total_clones:5} clones, saturated={adm_out}/1792]: total={avg_us:7.2} us | per_clone={ns_per_clone:6.1} ns | throughput={clones_per_sec:11.0} clones/s"
             );
         }
 
