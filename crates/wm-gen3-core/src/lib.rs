@@ -30,6 +30,7 @@ pub mod capability;
 pub mod catuskoti;
 pub mod causal;
 pub mod causal_ticket;
+pub mod citta_oscillator;
 pub mod cladistics;
 pub mod compat;
 pub mod conformal;
@@ -89,6 +90,10 @@ pub use tripartite_router::{CognitiveTier, RoutingDecision, TripartiteRouter};
 
 pub use action_skeleton::{ActionSkeleton, AstActionType, AstDelta, SkeletonValidationResult};
 pub use causal_ticket::CausalCapabilityTicket;
+pub use citta_oscillator::{
+    BrainWaveBand, CittaOscillatorEngine, CittaOscillatorTickReport, MctsCladisticNode,
+    MctsRolloutBatchReport, MonteCarloCladisticTree, THETA_GAMMA_PHASE_SLOTS, ThetaGammaPacState,
+};
 pub use covenant::{
     CovenantView, GroundAspect, MandalaKosha, PrimordialCovenant, RSI_LAWS, SUBSTRATE_ARTICLES,
 };
