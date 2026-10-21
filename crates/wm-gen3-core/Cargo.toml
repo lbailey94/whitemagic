@@ -62,6 +62,10 @@ name = "cyberbrain_baseline_benchmark"
 required-features = ["operator"]
 
 [[test]]
+name = "cyberbrain_valkyrie_benchmark"
+required-features = ["operator"]
+
+[[test]]
 name = "gap_junction_swarm_benchmark"
 required-features = ["operator"]
 
