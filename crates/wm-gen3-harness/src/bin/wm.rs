@@ -1063,6 +1063,21 @@ enum SutraCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Execute a 12-Phase Tricameral Valkyrie-2 pulse or run the real-world corpus benchmark
+    Valkyrie {
+        /// Natural language inquiry or Sutra codon to evaluate
+        #[arg(default_value = "verify kekkai sandbox and superoptimize pulse pipeline")]
+        inquiry: String,
+        /// Run the full real-world 384-D X bookmark + 512-D Sutra + 4,133 Citadel antibody benchmark
+        #[arg(long)]
+        benchmark: bool,
+        /// Optional 64-bit candidate signature digest to test against CitadelAntibodyBloom2048
+        #[arg(long)]
+        digest: Option<u64>,
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -2998,6 +3013,14 @@ fn main() {
                 json: j,
             }) => {
                 run_sutra_chohan(&payload, proof.as_deref(), bid, j || json);
+            }
+            Some(SutraCommands::Valkyrie {
+                inquiry,
+                benchmark,
+                digest,
+                json: j,
+            }) => {
+                run_sutra_valkyrie(&inquiry, benchmark, digest, j || json);
             }
             None => {
                 if let Some(c) = codon {
@@ -10102,6 +10125,195 @@ fn run_sutra_chohan(payload: &str, proof: Option<&str>, bid: u64, json: bool) {
         );
         println!("Advisory Action:    {}", settlement_action);
         println!("==================================================");
+    }
+}
+
+fn run_sutra_valkyrie(inquiry: &str, benchmark: bool, digest: Option<u64>, json: bool) {
+    use wm_gen3_core::valkyrie::ValkyrieTwoEngine;
+
+    if benchmark {
+        let rep = ValkyrieTwoEngine::run_real_world_corpus_benchmark();
+        if json {
+            println!("{}", serde_json::to_string_pretty(&rep).unwrap_or_default());
+        } else {
+            println!(
+                "=================================================================================="
+            );
+            println!(
+                "   VALKYRIE-2 REAL-WORLD CORPUS, CITADEL ANTIBODY & WORLD AI MODEL BENCHMARK      "
+            );
+            println!(
+                "=================================================================================="
+            );
+            println!(
+                "  Real 512-D Model2Vec Sutra Canon Accuracy : {:5.1}%",
+                rep["sutra_512d_model2vec_accuracy_pct"]
+                    .as_f64()
+                    .unwrap_or(0.0)
+            );
+            println!(
+                "  Real 384-D x_api.db Bookmarks Evaluated   : {}",
+                rep["x_bookmarks_384d_count"].as_u64().unwrap_or(0)
+            );
+            println!(
+                "  Tabula Rasa (Random Init) 384-D Accuracy  : {:5.1}%",
+                rep["x_bookmarks_tabula_rasa_accuracy_pct"]
+                    .as_f64()
+                    .unwrap_or(0.0)
+            );
+            println!(
+                "  Valkyrie-2 (Trained) 384-D Choice Acc     : {:5.1}%",
+                rep["x_bookmarks_valkyrie_2_accuracy_pct"]
+                    .as_f64()
+                    .unwrap_or(0.0)
+            );
+            println!(
+                "  Valkyrie-2 (Trained) 384-D Noul Acc       : {:5.1}%",
+                rep["x_bookmarks_valkyrie_2_noul_pct"]
+                    .as_f64()
+                    .unwrap_or(0.0)
+            );
+            println!(
+                "  Mean Pulse Latency on Real 384-D Vectors  : {} ns",
+                rep["x_bookmarks_pulse_latency_ns"].as_u64().unwrap_or(0)
+            );
+            println!(
+                "  Live Production VPS Citadel Antibodies    : {}",
+                rep["live_vps_citadel_antibodies_verified"]
+                    .as_u64()
+                    .unwrap_or(0)
+            );
+            println!(
+                "  Total Benchmark Elapsed Time              : {:.2} ms",
+                rep["total_benchmark_elapsed_ms"].as_f64().unwrap_or(0.0)
+            );
+            println!(
+                "  Hardware CPU Package Temp / Mode          : {:.1} °C ({})",
+                rep["hardware_telemetry"]["cpu_temp_c"]
+                    .as_f64()
+                    .unwrap_or(0.0),
+                rep["hardware_telemetry"]["metabolism_mode"]
+                    .as_str()
+                    .unwrap_or("NominalSynthesis")
+            );
+            if let Some(comp) = rep["world_model_comparison"].as_array() {
+                println!(
+                    "----------------------------------------------------------------------------------"
+                );
+                println!(
+                    "  {:<36} | {:>12} | {:>13} | {:>7} | {:>7}",
+                    "Model Architecture", "Size (KB)", "CPU Latency", "Choice%", "384-D%"
+                );
+                println!(
+                    "----------------------------------------------------------------------------------"
+                );
+                for row in comp {
+                    println!(
+                        "  {:<36} | {:>12.2} | {:>10.2} µs | {:>6.1}% | {:>6.1}%",
+                        row["model"].as_str().unwrap_or(""),
+                        row["footprint_kb"].as_f64().unwrap_or(0.0),
+                        row["cpu_latency_us"].as_f64().unwrap_or(0.0),
+                        row["choice_accuracy_pct"].as_f64().unwrap_or(0.0),
+                        row["real_384d_bookmark_accuracy_pct"]
+                            .as_f64()
+                            .unwrap_or(0.0),
+                    );
+                }
+            }
+            println!(
+                "=================================================================================="
+            );
+        }
+        return;
+    }
+
+    let live_vec: Option<Vec<f32>> = wm_gen3_zeropointfive::System05::resolve_model_dir(None)
+        .ok()
+        .map(wm_gen3_zeropointfive::System05::new)
+        .and_then(|organ| organ.encode_single(inquiry).ok());
+
+    let mut engine = ValkyrieTwoEngine::bootstrap_production_engine();
+    let res = engine.evaluate_inquiry(inquiry, live_vec.as_deref(), digest);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&res).unwrap_or_default());
+    } else {
+        println!("==========================================================================");
+        println!("   VALKYRIE-2 TRICAMERAL PULSE & CROSS-LAYER ATTRIBUTION GRAPH            ");
+        println!("==========================================================================");
+        println!(
+            "  Sanitized Inquiry : {} (zero_pii_verified={})",
+            res["sanitized_inquiry"].as_str().unwrap_or(""),
+            res["zero_pii_verified"].as_bool().unwrap_or(true)
+        );
+        println!(
+            "  Embedding Source  : {}",
+            res["embedding_source"].as_str().unwrap_or("")
+        );
+        println!(
+            "  Curriculum Phase  : {} [{}] — {}",
+            res["curriculum_phase"]["code"].as_str().unwrap_or(""),
+            res["curriculum_phase"]["stage"].as_str().unwrap_or(""),
+            res["curriculum_phase"]["operation"].as_str().unwrap_or("")
+        );
+        println!(
+            "  Decision Metrics  : Class #{} (p={:.4}, margin={:.4}) | Noul={:.4} | Score={:.4} | Catuṣkoṭi={}",
+            res["decision"]["predicted_class"].as_u64().unwrap_or(0),
+            res["decision"]["top_probability"].as_f64().unwrap_or(0.0),
+            res["decision"]["margin"].as_f64().unwrap_or(0.0),
+            res["decision"]["noul_boolean_probability"]
+                .as_f64()
+                .unwrap_or(0.0),
+            res["decision"]["score_expectation"].as_f64().unwrap_or(0.0),
+            res["decision"]["catuskoti_corner"].as_str().unwrap_or("K1")
+        );
+        println!(
+            "  Superoptimized    : {} ({} glyphs) | Latency: {} ns",
+            res["superoptimizer"]["superoptimized_codon"]
+                .as_str()
+                .unwrap_or(""),
+            res["superoptimizer"]["reduced_glyph_len"]
+                .as_u64()
+                .unwrap_or(0),
+            res["decision"]["latency_ns"].as_u64().unwrap_or(0)
+        );
+        println!(
+            "  Tsao 15 Hz Ring   : AntibodyBlocked={} | CounterfactualFallback={} | LoadedAntibodies={}",
+            res["tsao_15hz_working_memory_ring"]["blocked_by_citadel_antibody"]
+                .as_bool()
+                .unwrap_or(false),
+            res["tsao_15hz_working_memory_ring"]["used_tsao_counterfactual_fallback"]
+                .as_bool()
+                .unwrap_or(false),
+            res["tsao_15hz_working_memory_ring"]["loaded_citadel_antibodies"]
+                .as_u64()
+                .unwrap_or(0)
+        );
+        if let Some(nodes) = res["attribution_graph"]["active_nodes"].as_array() {
+            println!("  Top-K Cross-Layer Sparse Transcoder Attribution Graph:");
+            for n in nodes {
+                println!(
+                    "    • Feature #{:<2} ({:<20}) | act={:.4} ──► Class #{} (edge={:+.4})",
+                    n["feature_id"].as_u64().unwrap_or(0),
+                    n["concept_name"].as_str().unwrap_or(""),
+                    n["activation"].as_f64().unwrap_or(0.0),
+                    n["top_downstream_class"].as_u64().unwrap_or(0),
+                    n["linear_causal_edge_weight"].as_f64().unwrap_or(0.0)
+                );
+            }
+        }
+        println!(
+            "  Hardware Telemetry: {:.1} °C | RAM Avail: {:.1} MB | Footprint: {:.2} KB",
+            res["hardware_telemetry"]["cpu_temp_c"]
+                .as_f64()
+                .unwrap_or(0.0),
+            res["hardware_telemetry"]["mem_available_mb"]
+                .as_f64()
+                .unwrap_or(0.0),
+            res["hardware_telemetry"]["footprint_kb"]
+                .as_f64()
+                .unwrap_or(0.0)
+        );
+        println!("==========================================================================");
     }
 }
 

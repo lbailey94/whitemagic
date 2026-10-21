@@ -341,6 +341,9 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "sutra.route" | "sutra_route" | "cognitive.route" | "cognitive_route" => "sutra.route",
         "legion.summon" | "legion_summon" | "sutra.legion" | "sutra_legion" => "legion.summon",
         "chohan.settle" | "chohan_settle" | "sutra.chohan" | "sutra_chohan" => "chohan.settle",
+        "valkyrie.pulse" | "valkyrie_pulse" | "sutra.valkyrie" | "sutra_valkyrie" => {
+            "valkyrie.pulse"
+        }
         _ => return None,
     })
 }
@@ -534,6 +537,7 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
     ("sutra.route", &["inquiry", "utility"]),
     ("legion.summon", &["edict", "clones", "peer", "archetype"]),
     ("chohan.settle", &["payload", "proof", "bid"]),
+    ("valkyrie.pulse", &["inquiry", "digest", "benchmark"]),
 ];
 
 /// Consumed-argument list for a canonical tool route, if declared.
@@ -725,6 +729,19 @@ fn sutra_tool_schemas_full(mode_hint: &str) -> Vec<Value> {
                     "bid": { "type": "integer", "description": "Advisory stake label in micro-USDC (default: 10000; not escrowed)" }
                 },
                 "required": ["payload"]
+            }
+        }),
+        json!({
+            "name": "valkyrie.pulse",
+            "title": "Valkyrie-2 Tricameral Cognitive Engine Pulse & Benchmark",
+            "description": "Execute a 12-Phase Tricameral Valkyrie-2 pulse (`Valkyrie-0` 1.58-bit Ternary + `RWKV-7` Delta-Rule 28-Gana Router + Cross-Layer Sparse Transcoder Attribution Graph + `Valkyrie-1` Corpus Callosum Fusion + Tsao 15 Hz Working-Memory Ring + Citadel Antibody Gate + Hardware Thermal Telemetry), or run the full real-world corpus & world model benchmark (`benchmark=true`).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "inquiry": { "type": "string", "description": "Natural language inquiry or Sutra codon to evaluate through Valkyrie-2" },
+                    "digest": { "type": "integer", "description": "Optional 64-bit candidate signature digest to test against the CitadelAntibodyBloom2048 immune filter" },
+                    "benchmark": { "type": "boolean", "description": "If true, runs the real-world 384-D X bookmark + 512-D Model2Vec Sutra + 4,133 Citadel antibody benchmark battery" }
+                }
             }
         }),
     ]
@@ -1758,6 +1775,9 @@ pub fn execute_hybrid_tool_call(
         }
         "chohan.settle" | "chohan_settle" | "sutra.chohan" | "sutra_chohan" => {
             handle_chohan_settle(args)
+        }
+        "valkyrie.pulse" | "valkyrie_pulse" | "sutra.valkyrie" | "sutra_valkyrie" => {
+            handle_valkyrie_pulse(args)
         }
 
         unknown => Err(format!(
@@ -6867,6 +6887,53 @@ fn handle_sutra_route(args: &Value) -> Result<Value, String> {
         "catuskoti": decision.catuskoti.map(|c| format!("{c:?}")),
         "bound_skeleton_id": decision.skeleton_id,
     }))
+}
+
+fn handle_valkyrie_pulse(args: &Value) -> Result<Value, String> {
+    reject_unknown_args("valkyrie.pulse", args)?;
+    let run_bench = args
+        .get("benchmark")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    if run_bench {
+        return Ok(wm_gen3_core::valkyrie::ValkyrieTwoEngine::run_real_world_corpus_benchmark());
+    }
+
+    let inquiry = args
+        .get("inquiry")
+        .and_then(Value::as_str)
+        .unwrap_or("⟪ 證 · 行 · 觀 · 鏡 · 察 ⟫")
+        .trim();
+    if inquiry.is_empty() {
+        return Err("Parameter 'inquiry' cannot be empty".to_string());
+    }
+    let digest = args.get("digest").and_then(Value::as_u64);
+
+    static MODEL2VEC: std::sync::OnceLock<Result<wm_gen3_zeropointfive::System05, String>> =
+        std::sync::OnceLock::new();
+    let m2v = MODEL2VEC.get_or_init(|| {
+        wm_gen3_zeropointfive::System05::resolve_model_dir(None)
+            .map(wm_gen3_zeropointfive::System05::new)
+            .map_err(|e| e.to_string())
+    });
+    let live_vec: Option<Vec<f32>> = m2v
+        .as_ref()
+        .ok()
+        .and_then(|organ| organ.encode_single(inquiry).ok());
+
+    static ENGINE: std::sync::OnceLock<
+        std::sync::Mutex<wm_gen3_core::valkyrie::ValkyrieTwoEngine>,
+    > = std::sync::OnceLock::new();
+    let engine_mutex = ENGINE.get_or_init(|| {
+        std::sync::Mutex::new(
+            wm_gen3_core::valkyrie::ValkyrieTwoEngine::bootstrap_production_engine(),
+        )
+    });
+
+    let mut guard = engine_mutex
+        .lock()
+        .map_err(|_| "valkyrie-2 engine mutex poisoned".to_string())?;
+    Ok(guard.evaluate_inquiry(inquiry, live_vec.as_deref(), digest))
 }
 
 fn handle_sutra_compile(args: &Value) -> Result<Value, String> {

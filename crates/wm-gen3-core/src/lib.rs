@@ -74,6 +74,7 @@ pub(crate) mod sweep_planner;
 pub mod transport;
 pub mod tripartite_router;
 pub mod tuple_space;
+pub mod valkyrie;
 
 pub use hexagram::{Hexagram, HexagramMeta, Trigram, WuXing};
 pub use legion::{
@@ -103,6 +104,14 @@ pub use covenant::{
 pub use gen1_gems::{GemCluster, Gen1Arsenal, Gen1Gem, PluginPack};
 pub use stigmergy::{Pheromone, PheromoneKind, StigmergicField};
 pub use tuple_space::{Tuple, TupleKind, TuplePattern, TupleSpace};
+pub use valkyrie::{
+    AlphaEditNullSpaceProjector, AttributionGraph, ConvergenceStage, CrossLayerSparseTranscoder,
+    CurriculumPhase, FisherHadamardProjector, GanaMicroExpert, HBitLinearTernary,
+    HomeostaticThermalSnapshot, KekkaiSanitizer, ModelBenchmarkMetrics, PhaseModality,
+    SyntheticWaveCompiler, TranscoderFeatureNode, ValkyrieOneSymbiont, ValkyriePulseDecision,
+    ValkyrieSample, ValkyrieTwoEngine, ValkyrieZeroEngine, fwht_in_place, project_srht_to_64d,
+    vsa_hadamard_bind,
+};
 
 pub use factory::{FactoryAdjudication, FactoryCandidate, SoftwareFactory, SoftwareFactoryConfig};
 pub use ops::{SessionCheckpoint, SessionContinuityView};

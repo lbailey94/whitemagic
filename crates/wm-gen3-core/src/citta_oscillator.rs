@@ -1286,6 +1286,255 @@ impl VictorTaelinSuperoptimizer {
     }
 }
 
+/// Two-stage L1-cache-resident 2,048-bit antibody Bloom pre-filter (`[u64; 32]` = 256 bytes)
+/// paired with exact 64-bit digest confirmation (`0.0%` false-positive rate at any scale).
+///
+/// Encodes content-free threat & regression antibodies harvested from the VPS Citadel
+/// ("Genjutsu" honeypot sessions, cognitive tarpit holds, quarantined MCTS mutations)
+/// using dual-hash (`k = 2`) bit indices in `0..2048` for `< 5 ns` `O(1)` fast-path rejection.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CitadelAntibodyBloom2048 {
+    pub bits: ScopeBitset2048,
+    pub exact_digests: HashSet<u64>,
+    pub antibody_count: u32,
+}
+
+impl Default for CitadelAntibodyBloom2048 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl CitadelAntibodyBloom2048 {
+    #[inline]
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            bits: ScopeBitset2048::empty(),
+            exact_digests: HashSet::new(),
+            antibody_count: 0,
+        }
+    }
+
+    #[inline]
+    const fn dual_indices(signature_hash: u64) -> (usize, usize) {
+        let h1 = (signature_hash as usize) & 2047;
+        let h2 = ((signature_hash >> 11) ^ (signature_hash >> 33)) as usize & 2047;
+        (h1, h2)
+    }
+
+    /// Insert a 64-bit content-free antibody digest into the 2,048-bit L1 filter + exact set.
+    #[inline]
+    pub fn insert_digest(&mut self, signature_hash: u64) {
+        let (h1, h2) = Self::dual_indices(signature_hash);
+        self.bits.set_bit(h1);
+        self.bits.set_bit(h2);
+        if self.exact_digests.insert(signature_hash) {
+            self.antibody_count = self.antibody_count.saturating_add(1);
+        }
+    }
+
+    /// Test whether a 64-bit digest matches the antibody filter (`< 5 ns` bitset fast path,
+    /// `0.0%` false-positive exact confirmation).
+    #[inline]
+    #[must_use]
+    pub fn contains_digest(&self, signature_hash: u64) -> bool {
+        let (h1, h2) = Self::dual_indices(signature_hash);
+        let b1 = (self.bits.words[h1 >> 6] & (1u64 << (h1 & 63))) != 0;
+        let b2 = (self.bits.words[h2 >> 6] & (1u64 << (h2 & 63))) != 0;
+        b1 && b2 && self.exact_digests.contains(&signature_hash)
+    }
+
+    /// Merge another node's antibody filter in place via bitwise OR (`O(1)` bitset + set union).
+    #[inline]
+    pub fn merge_in_place(&mut self, other: &Self) {
+        self.bits.union_in_place(&other.bits);
+        for &d in &other.exact_digests {
+            self.exact_digests.insert(d);
+        }
+        self.antibody_count = self.exact_digests.len() as u32;
+    }
+
+    /// Ingest a live `wm.citadel-antibody-sync/1.0` JSON bundle exported by `citadel_antibody_sync.py`.
+    pub fn ingest_live_sync_bundle_json(&mut self, json_str: &str) -> Result<usize, String> {
+        #[derive(Deserialize)]
+        struct LiveBundle {
+            antibody_digests_u64: Vec<u64>,
+        }
+        let parsed: LiveBundle =
+            serde_json::from_str(json_str).map_err(|e| format!("invalid antibody bundle: {e}"))?;
+        let count = parsed.antibody_digests_u64.len();
+        for d in parsed.antibody_digests_u64 {
+            self.insert_digest(d);
+        }
+        Ok(count)
+    }
+}
+
+/// Candidate `CompiledPraySeal` action skeleton shared across the Sangha mesh (`7369`)
+/// during Federated Theta Dreaming (Frontier D / Idea 1).
+#[derive(Debug, Clone, PartialEq)]
+pub struct FederatedSealCandidate {
+    pub peer_node_id: String,
+    pub combinatorial_id: u32,
+    pub gana_id: u8,
+    pub hexagram_id: u8,
+    pub glyphs: Vec<SutraGlyph>,
+    pub claimed_write_mask: ScopeBitset2048,
+    pub claimed_network_allowed: bool,
+    pub claimed_utility: f32,
+    pub protected_delta: ProtectedVectorDelta,
+    pub signature_digest: u64,
+}
+
+/// Content-free federated dream packet exchanged between Workstation (`T4800-S`) and
+/// Production VPS Citadel (`152.53.195.47`) during Theta NREM/REM consolidation.
+#[derive(Debug, Clone)]
+pub struct FederatedThetaDreamPacket {
+    pub source_node: String,
+    pub epoch_id: u64,
+    /// Content-free 64-bit hashes of Citadel honeypot/tarpit antibodies & MCTS dead ends.
+    pub antibody_digests: Vec<u64>,
+    /// Promoted action skeletons proposed by the peer for independent verification.
+    pub seal_candidates: Vec<FederatedSealCandidate>,
+}
+
+/// Telemetry report returned by [`CittaOscillatorEngine::ingest_federated_theta_dream_packet`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FederatedDreamSyncReport {
+    pub source_node: String,
+    pub epoch_id: u64,
+    pub antibodies_ingested: usize,
+    pub candidates_evaluated: usize,
+    pub candidates_promoted: usize,
+    pub candidates_quarantined_byzantine: usize,
+    pub candidates_blocked_by_antibody: usize,
+    pub elapsed_ns: u64,
+}
+
+impl CittaOscillatorEngine {
+    /// Ingest and independently verify a [`FederatedThetaDreamPacket`] from a Sangha peer
+    /// (Frontier D: Federated Theta Dreaming & Citadel Antibody Sync):
+    ///
+    /// 1. **Antibody Immunization (`< 50 ns/digest`):** Registers all content-free Citadel
+    ///    honeypot/tarpit & MCTS negative-knowledge digests into the local `LineageArchive`
+    ///    and the provided [`CitadelAntibodyBloom2048`] filter.
+    /// 2. **Zero-Trust Peer Verification (`Maker != Checker`):** Re-computes the exact
+    ///    denotation (`ScopeBitset2048` + Kekkai network boundary) of every proposed glyph
+    ///    pipeline via [`VictorTaelinSuperoptimizer::compute_denotation`], rejects any spoofed
+    ///    write mask or unattested network capability, and adjudicates via [`crate::cladistics::ParetoGate`].
+    /// 3. **Working-Memory Binding:** Binds verified promotions into the [`ThetaGammaWorkingMemoryRing`].
+    pub fn ingest_federated_theta_dream_packet(
+        &mut self,
+        packet: &FederatedThetaDreamPacket,
+        antibody_bloom: &mut CitadelAntibodyBloom2048,
+        wm_ring: &mut ThetaGammaWorkingMemoryRing,
+        now_ms: u64,
+    ) -> FederatedDreamSyncReport {
+        let t0 = std::time::Instant::now();
+
+        // 1. Ingest negative-knowledge antibodies from peer (e.g., VPS Citadel Genjutsu traps)
+        for &digest in &packet.antibody_digests {
+            antibody_bloom.insert_digest(digest);
+            let _ = self.cladistics.adjudicate_candidate(
+                CandidateAssessment {
+                    candidate_id: GenomeId::from_u64(digest),
+                    parent_ids: vec![self.cladistics.active_germline()],
+                    mutation_signature: format!("antibody:{digest:016x}"),
+                    fitness_delta: FitnessVector {
+                        utility: -1.0,
+                        throughput: 0.0,
+                    },
+                    protected_delta: ProtectedVectorDelta {
+                        latency_p99_ns: 100.0,
+                        error_rate: 0.05,
+                        closure_violations: 1,
+                        brier_loss: 0.05,
+                    },
+                    provenance_valid: true,
+                    closure_valid: false,
+                    attempts_self_modification: false,
+                },
+                "v10.5.0-citadel-antibody",
+                now_ms,
+            );
+        }
+
+        let mut promoted = 0usize;
+        let mut quarantined_byzantine = 0usize;
+        let mut blocked_by_antibody = 0usize;
+
+        // 2. Independently verify each peer seal candidate (Zero-Trust Maker != Checker)
+        for (idx, cand) in packet.seal_candidates.iter().enumerate() {
+            if antibody_bloom.contains_digest(cand.signature_digest) {
+                blocked_by_antibody += 1;
+                continue;
+            }
+
+            let (_gmask, actual_scope, _rw_mask, actual_net) =
+                VictorTaelinSuperoptimizer::compute_denotation(&cand.glyphs);
+
+            // Detect Byzantine capability spoofing: peer claimed a narrower write_mask or
+            // hid network egress required by the underlying glyphs.
+            let scope_honest = actual_scope == cand.claimed_write_mask;
+            let net_honest = !actual_net || cand.claimed_network_allowed;
+            let closure_ok = scope_honest && net_honest && !cand.glyphs.is_empty();
+
+            let assessment = CandidateAssessment {
+                candidate_id: GenomeId::from_u64(cand.signature_digest),
+                parent_ids: vec![self.cladistics.active_germline()],
+                mutation_signature: format!(
+                    "fed:{}:{}:{:016x}",
+                    cand.peer_node_id, cand.combinatorial_id, cand.signature_digest
+                ),
+                fitness_delta: FitnessVector {
+                    utility: f64::from(cand.claimed_utility) - 0.50,
+                    throughput: 10.0,
+                },
+                protected_delta: cand.protected_delta,
+                provenance_valid: true,
+                closure_valid: closure_ok,
+                attempts_self_modification: false,
+            };
+
+            let fate =
+                self.cladistics
+                    .adjudicate_candidate(assessment, "v10.5.0-federated-theta", now_ms);
+            match fate {
+                EvolutionaryFate::Promote => {
+                    promoted += 1;
+                    let _ = wm_ring.bind_into_phase_slot(
+                        idx % THETA_GAMMA_PHASE_SLOTS,
+                        cand.gana_id,
+                        cand.hexagram_id,
+                        cand.combinatorial_id,
+                        cand.claimed_utility,
+                        0.95,
+                        actual_net,
+                        actual_scope,
+                    );
+                }
+                EvolutionaryFate::Quarantine | EvolutionaryFate::Retire => {
+                    quarantined_byzantine += 1;
+                    antibody_bloom.insert_digest(cand.signature_digest);
+                }
+            }
+        }
+
+        self.update_apotheosis_index();
+        FederatedDreamSyncReport {
+            source_node: packet.source_node.clone(),
+            epoch_id: packet.epoch_id,
+            antibodies_ingested: packet.antibody_digests.len(),
+            candidates_evaluated: packet.seal_candidates.len(),
+            candidates_promoted: promoted,
+            candidates_quarantined_byzantine: quarantined_byzantine,
+            candidates_blocked_by_antibody: blocked_by_antibody,
+            elapsed_ns: t0.elapsed().as_nanos() as u64,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1524,7 +1773,7 @@ mod tests {
         assert_eq!(chord_summary.active_slots, 8);
         assert_eq!(chord_summary.union_write_mask.count_ones(), 8);
         assert!(chord_summary.any_network_allowed);
-        assert!(chord_sink > 0 || chord_sink == 0);
+        std::hint::black_box(chord_sink);
         println!(
             "Idea 3 [8-Slot Theta-Gamma Working Memory Chord]: read_chord = {chord_ns:.2} ns/read ({:.0} chord_reads/s) | active_slots={}/8, union_bits={}, weighted_util={:.4}",
             1e9 / chord_ns,
@@ -1579,6 +1828,170 @@ mod tests {
             sup_rep.observational_equivalence_verified,
             sup_rep.pareto_fate
         );
+
+        // 6. Idea 1 / Frontier D Stress Test: Federated Theta Dreaming & Citadel Genjutsu Antibody Sync (1,472 Honeypot Antibodies + 1,000 Peer Seals w/ Byzantine Injection)
+        println!("------------------------------------------------------------------------");
+        let mut fed_osc = CittaOscillatorEngine::new(0);
+        let mut bloom = CitadelAntibodyBloom2048::new();
+        let mut fed_ring = ThetaGammaWorkingMemoryRing::new();
+
+        // Simulate 1,472 real-world Citadel Genjutsu honeypot / tarpit antibody digests from VPS
+        let antibodies: Vec<u64> = (1..=1_472u64)
+            .map(|i| i.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ 0xC17A_DE10_0000_0000)
+            .collect();
+
+        // Build 1,000 federated peer seal candidates:
+        // - 700 honest Pareto-improving seals
+        // - 100 matching known Citadel antibodies (must be blocked in <5ns before evaluation)
+        // - 100 Byzantine write-mask spoofing attacks (claiming empty write mask for mutating glyphs)
+        // - 100 Byzantine network-egress spoofing attacks (claiming network_allowed=false for He/Yuan)
+        let honest_glyphs = vec![SutraGlyph::Guan, SutraGlyph::Cha, SutraGlyph::Zheng];
+        let (_gm, honest_scope, _rw, honest_net) =
+            VictorTaelinSuperoptimizer::compute_denotation(&honest_glyphs);
+
+        let mut candidates = Vec::with_capacity(1_000);
+        for i in 0..1_000usize {
+            if i < 700 {
+                candidates.push(FederatedSealCandidate {
+                    peer_node_id: "vps-citadel-152.53.195.47".to_string(),
+                    combinatorial_id: (i as u32) + 1,
+                    gana_id: ((i % 28) + 1) as u8,
+                    hexagram_id: ((i % 64) + 1) as u8,
+                    glyphs: honest_glyphs.clone(),
+                    claimed_write_mask: honest_scope,
+                    claimed_network_allowed: honest_net,
+                    claimed_utility: 0.88 + ((i % 10) as f32) * 0.01,
+                    protected_delta: ProtectedVectorDelta::zero(),
+                    signature_digest: 0xFED0_0000_0000_0000
+                        ^ ((i as u64 + 1).wrapping_mul(0xBF58_476D_1CE4_E5B9)),
+                });
+            } else if i < 800 {
+                // Replay of a known Citadel honeypot antibody digest
+                candidates.push(FederatedSealCandidate {
+                    peer_node_id: "compromised-peer".to_string(),
+                    combinatorial_id: (i as u32) + 1,
+                    gana_id: 1,
+                    hexagram_id: 1,
+                    glyphs: honest_glyphs.clone(),
+                    claimed_write_mask: honest_scope,
+                    claimed_network_allowed: honest_net,
+                    claimed_utility: 0.99,
+                    protected_delta: ProtectedVectorDelta::zero(),
+                    signature_digest: antibodies[i - 700],
+                });
+            } else if i < 900 {
+                // Byzantine write-mask spoofing (empty mask claimed for mutating Xing glyph)
+                candidates.push(FederatedSealCandidate {
+                    peer_node_id: "byzantine-spoof-scope".to_string(),
+                    combinatorial_id: (i as u32) + 1,
+                    gana_id: 2,
+                    hexagram_id: 2,
+                    glyphs: vec![SutraGlyph::Xing, SutraGlyph::Zheng],
+                    claimed_write_mask: ScopeBitset2048::empty(),
+                    claimed_network_allowed: false,
+                    claimed_utility: 0.98,
+                    protected_delta: ProtectedVectorDelta::zero(),
+                    signature_digest: 0xBAD1_0000_0000_0000
+                        ^ ((i as u64).wrapping_mul(0x94D0_49BB_1331_11EB)),
+                });
+            } else {
+                // Byzantine network-egress spoofing (claiming network_allowed=false for He/Yuan network glyphs)
+                let net_glyphs = vec![SutraGlyph::He, SutraGlyph::Yuan];
+                let (_gm2, net_scope, _rw2, _net2) =
+                    VictorTaelinSuperoptimizer::compute_denotation(&net_glyphs);
+                candidates.push(FederatedSealCandidate {
+                    peer_node_id: "byzantine-spoof-net".to_string(),
+                    combinatorial_id: (i as u32) + 1,
+                    gana_id: 3,
+                    hexagram_id: 3,
+                    glyphs: net_glyphs,
+                    claimed_write_mask: net_scope,
+                    claimed_network_allowed: false, // Spoofed! He & Yuan require network_allowed=true
+                    claimed_utility: 0.98,
+                    protected_delta: ProtectedVectorDelta::zero(),
+                    signature_digest: 0xBAD2_0000_0000_0000
+                        ^ ((i as u64).wrapping_mul(0x94D0_49BB_1331_11EB)),
+                });
+            }
+        }
+
+        let packet = FederatedThetaDreamPacket {
+            source_node: "vps-citadel-152.53.195.47".to_string(),
+            epoch_id: 1509,
+            antibody_digests: antibodies,
+            seal_candidates: candidates,
+        };
+
+        let sync_rep = fed_osc.ingest_federated_theta_dream_packet(
+            &packet,
+            &mut bloom,
+            &mut fed_ring,
+            100_000,
+        );
+        let sync_ms = (sync_rep.elapsed_ns as f64) / 1e6;
+        let us_per_item = (sync_rep.elapsed_ns as f64 / 1000.0)
+            / ((sync_rep.antibodies_ingested + sync_rep.candidates_evaluated) as f64);
+
+        assert_eq!(sync_rep.antibodies_ingested, 1_472);
+        assert_eq!(sync_rep.candidates_evaluated, 1_000);
+        // Two-stage L1 Bloom + Exact Set has 0.0% false positives:
+        // - Exactly 700 honest candidates promoted
+        // - Exactly 100 Citadel antibody replays blocked at the pre-filter
+        // - Exactly 200 Byzantine spoofed candidates (100 scope + 100 network) quarantined by zero-trust denotation check!
+        assert_eq!(sync_rep.candidates_promoted, 700);
+        assert_eq!(sync_rep.candidates_blocked_by_antibody, 100);
+        assert_eq!(sync_rep.candidates_quarantined_byzantine, 200);
+        println!(
+            "Idea 1 / Frontier D [Federated Theta Dreaming & Citadel Antibody Sync]: {} Citadel antibodies + {} peer seals processed in {:.2} ms ({:.2} us/item) | Promoted={}, BlockedByAntibody={}, QuarantinedByzantine={}",
+            sync_rep.antibodies_ingested,
+            sync_rep.candidates_evaluated,
+            sync_ms,
+            us_per_item,
+            sync_rep.candidates_promoted,
+            sync_rep.candidates_blocked_by_antibody,
+            sync_rep.candidates_quarantined_byzantine
+        );
+
+        // 7. Live Production VPS Citadel Antibody Bundle Ingestion (if ~/.local/state/whitemagic/citadel-antibodies-live.json exists)
+        if let Some(home) = std::env::var_os("HOME") {
+            let live_path = std::path::PathBuf::from(home)
+                .join(".local/state/whitemagic/citadel-antibodies-live.json");
+            if let Ok(raw_json) = std::fs::read_to_string(&live_path) {
+                let mut live_bloom = CitadelAntibodyBloom2048::new();
+                let t_live = Instant::now();
+                let count = live_bloom
+                    .ingest_live_sync_bundle_json(&raw_json)
+                    .expect("valid live VPS antibody bundle");
+                let ingest_us = t_live.elapsed().as_secs_f64() * 1e6;
+
+                let mut hits = 0usize;
+                let t_lookup = Instant::now();
+                for &d in &live_bloom.exact_digests {
+                    if live_bloom.contains_digest(d) {
+                        hits += 1;
+                    }
+                }
+                let mut fp = 0usize;
+                for i in 1..=10_000u64 {
+                    let clean_q = i.wrapping_mul(0x517C_C1B7_2722_0A95) ^ 0xCAFE_BABE_0000_0000;
+                    if !live_bloom.exact_digests.contains(&clean_q)
+                        && live_bloom.contains_digest(clean_q)
+                    {
+                        fp += 1;
+                    }
+                }
+                let lookup_ns =
+                    (t_lookup.elapsed().as_nanos() as f64) / ((count + 10_000).max(1) as f64);
+                assert_eq!(hits, count);
+                assert_eq!(fp, 0);
+                println!(
+                    "------------------------------------------------------------------------"
+                );
+                println!(
+                    "Live VPS Citadel Sync [152.53.195.47 -> T4800-S]: {count} real-world honeypot/tarpit antibodies ingested in {ingest_us:.1} us | Recall={hits}/{count} (100%), FP={fp}/10000 (0.0%), Lookup={lookup_ns:.2} ns/op"
+                );
+            }
+        }
         println!("========================================================================\n");
     }
 }
