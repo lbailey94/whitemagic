@@ -45,7 +45,7 @@ jobs:
           shared-key: zero-egress
 
       - name: Build release binary
-        run: cargo build --release --bin wm
+        run: cargo build --release --locked -p wm-gen3-harness --bin wm
 
       - name: Report binary identity
         run: |

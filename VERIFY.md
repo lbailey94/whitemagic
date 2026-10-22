@@ -21,7 +21,7 @@ If a link rots, that is a bug — open an issue.
 
 ```bash
 git clone https://github.com/lbailey94/whitemagic && cd whitemagic
-cargo build --release --bin wm
+cargo build --release --locked -p wm-gen3-harness --bin wm
 WM_BINARY=$PWD/target/release/wm bash scripts/zero_egress_test.sh
 ```
 
@@ -67,6 +67,10 @@ cosign verify-blob \
   --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
   wm-linux-x86_64
 ```
+
+The `v10.5.0` Git tag is annotated but unsigned. Its tag target is
+`021d9cd175d0247921e04298c61bbb5e1cab6a9f`; the manifest signature and
+keyless artifact signature are separate checks and do not make that tag signed.
 
 The expected signing identity and issuer above were read from the certificate
 in this release's bundle and matched to the `release.yml` workflow and

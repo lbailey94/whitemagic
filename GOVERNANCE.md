@@ -46,8 +46,10 @@ committee". Where that creates risk — a bus factor of one, no second reviewer
 ## Releases
 
 - Semantic versioning; stable and experimental channels are tagged separately.
-- A release is: signed tag, release manifest, SBOMs, cosign bundles, published
-  install artifacts, and green CI on the release commit. The candidate
+- The release pipeline publishes a manifest, SBOMs, cosign bundles and install
+  artifacts. Verify each selected release separately: `v10.5.0` has signed
+  artifacts but its Git tag is unsigned, and the release script currently
+  permits an unsigned annotated tag when tag signing fails. The candidate
   [zero-egress workflow](.github/workflows/zero-egress.yml) has a release-tag
   trigger, but until it is merged into the tagged release source it does not
   run for tags on the default branch. GitHub currently has no required-status
