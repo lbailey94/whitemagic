@@ -423,7 +423,7 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L0.5 Unnecessary Cloud Calls", format!("{}/{}", base_cloud_escalations, test_prompts.len()), format!("{}/{}", valk_cloud_escalations, test_prompts.len()), "Cost Reduced");
     println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1 Temporal Supersession", "Heuristic Tie", "100% Ratified First", "Zero Hallucination");
     println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1.5 Macro Superoptimization", "8 glyphs unreduced", format!("{} glyphs (-{:.0}%)", nav_report.reduced_glyph_count, glyph_reduction_pct), format!("{:.1}x Speedup", nav_report.speedup_factor));
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1.5 Counterfactual Fallback", "None (Fails closed)", format!("Safe in {} ns", nav_report.switch_latency_ns), "Sub-microsecond");
+    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1.5 Counterfactual Fallback", "None (Fails closed)", format!("Safe in {} ns", nav_report.switch_latency_ns), format!("{:.1} us", nav_report.switch_latency_ns as f64 / 1000.0));
     println!("  {:<32} | {:<22} | {:<24} | {:<12}", "Total Fleet RAM Footprint", "N/A (Multi-GB cloud)", format!("{:.1} KB total", fleet_footprint_kb), "100% L2 Cache");
     println!("========================================================================================\n");
 }
