@@ -107,8 +107,10 @@ pub use tuple_space::{Tuple, TupleKind, TuplePattern, TupleSpace};
 pub use valkyrie::{
     AlphaEditNullSpaceProjector, AttributionGraph, ConvergenceStage, CrossLayerSparseTranscoder,
     CurriculumPhase, FisherHadamardProjector, GanaMicroExpert, HBitLinearTernary,
-    HomeostaticThermalSnapshot, KekkaiSanitizer, ModelBenchmarkMetrics, PhaseModality,
-    SyntheticWaveCompiler, TranscoderFeatureNode, ValkyrieOneSymbiont, ValkyriePulseDecision,
+    HomeostaticThermalSnapshot, KekkaiSanitizer, ModelBenchmarkMetrics, NavigatorRolloutResult,
+    PhaseModality, SentinelIntakeAction, SyntheticWaveCompiler, TranscoderFeatureNode,
+    ValkyrieCyberBrainFleet, ValkyrieL0Sentinel, ValkyrieL05Router, ValkyrieL1Epistemic,
+    ValkyrieL15Navigator, ValkyrieOneSymbiont, ValkyriePulseDecision, ValkyrieRoutingResult,
     ValkyrieSample, ValkyrieTwoEngine, ValkyrieZeroEngine, fwht_in_place, project_srht_to_64d,
     vsa_hadamard_bind,
 };

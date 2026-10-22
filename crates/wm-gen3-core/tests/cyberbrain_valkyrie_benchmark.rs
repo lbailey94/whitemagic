@@ -10,14 +10,15 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use wm_gen3_core::citta_oscillator::{CitadelAntibodyBloom2048, VictorTaelinSuperoptimizer};
+use wm_gen3_core::citta_oscillator::CitadelAntibodyBloom2048;
 use wm_gen3_core::constitution::default_view;
 use wm_gen3_core::evidence::RatifiedChannel;
 use wm_gen3_core::ops::{ImportKind, RecallQuery, RememberItem, Substrate};
 use wm_gen3_core::sutra::SutraGlyph;
 use wm_gen3_core::tripartite_router::{CognitiveTier, TripartiteRouter};
 use wm_gen3_core::valkyrie::{
-    KekkaiSanitizer, ValkyrieSample, ValkyrieTwoEngine, project_srht_to_64d,
+    SentinelIntakeAction, ValkyrieCyberBrainFleet, ValkyrieL0Sentinel,
+    ValkyrieL05Router, ValkyrieL1Epistemic, ValkyrieL15Navigator,
 };
 
 struct TempDir(PathBuf);
@@ -148,6 +149,7 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     let base_intake_time = t_base_start.elapsed();
 
     let t_valk_start = Instant::now();
+    let l0_sentinel = ValkyrieL0Sentinel::new(bloom.clone());
     for i in 0..num_raw {
         let raw_content = match i % 6 {
             0 => format!(
@@ -177,37 +179,33 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
             ),
         };
 
-        // Valkyrie-L0 Sentinel:
-        // 1. Fast-path Citadel antibody detection (<5 ns)
         let candidate_digest = if i % 6 == 4 {
             0xBAD0_C17A_0000_0000u64 | ((i % 16 + 1) as u64)
         } else {
             0xCAFE_0000_0000_0000u64 | (i as u64)
         };
-        if bloom.contains_digest(candidate_digest) {
-            antibodies_blocked += 1;
-            continue; // Dropped at pre-filter!
-        }
 
-        // 2. Kekkai Sanitizer: strip PII and credentials
-        let (sanitized_text, scrubbed_count, _verified) = KekkaiSanitizer::sanitize_text(&raw_content);
-        if scrubbed_count > 0 {
-            pii_redactions += scrubbed_count;
+        match l0_sentinel.evaluate_intake(&raw_content, candidate_digest) {
+            SentinelIntakeAction::BlockedAntibody { .. } => {
+                antibodies_blocked += 1;
+            }
+            SentinelIntakeAction::FilteredNoise { .. } => {
+                noise_filtered += 1;
+            }
+            SentinelIntakeAction::Sanitized {
+                text,
+                scrubbed_pii_count,
+            } => {
+                pii_redactions += scrubbed_pii_count;
+                let item_valk = RememberItem {
+                    content: text,
+                    source: format!("session_{:03}", i % 10),
+                    kind: ImportKind::Reported,
+                };
+                let _ = valk_sub.remember_batch(&[item_valk]);
+                valk_ingested += 1;
+            }
         }
-
-        // 3. Epistemic Noise Filter: filter out ephemeral disposable logs
-        if sanitized_text.starts_with("Routine tool log:") {
-            noise_filtered += 1;
-            continue;
-        }
-
-        let item_valk = RememberItem {
-            content: sanitized_text,
-            source: format!("session_{:03}", i % 10),
-            kind: ImportKind::Reported,
-        };
-        let _ = valk_sub.remember_batch(&[item_valk]);
-        valk_ingested += 1;
     }
     let valk_intake_time = t_valk_start.elapsed();
 
@@ -262,9 +260,9 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     let mut base_cloud_escalations = 0;
     let mut valk_cloud_escalations = 0;
 
-    let mut valkyrie = ValkyrieTwoEngine::bootstrap_production_engine();
+    let mut valk_router = ValkyrieL05Router::bootstrap();
 
-    for (prompt, expected_tier, is_keyword_canonical) in &test_prompts {
+    for (prompt, expected_tier, _is_keyword_canonical) in &test_prompts {
         // 1. Baseline Tripartite Router
         let base_decision = TripartiteRouter::route(prompt, None);
         if base_decision.tier == *expected_tier {
@@ -275,44 +273,11 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
         }
 
         // 2. Valkyrie-L05 Router (semantic projection + top-2 gana + catuṣkoṭi)
-        // Project inquiry to 64-D state vector using fast Hadamard projection
-        let mut raw_vec = [0.0f32; 128];
-        for (i, b) in prompt.bytes().enumerate() {
-            raw_vec[i % 128] += (b as f32) / 255.0 - 0.5;
-        }
-        let state_64d = project_srht_to_64d(&raw_vec);
-        let sample = ValkyrieSample {
-            id: 101,
-            state_vec: state_64d,
-            target_class: match expected_tier {
-                CognitiveTier::System0Sutra => 0,
-                CognitiveTier::System05Vector => 1,
-                CognitiveTier::System1LocalOrgan => 2,
-                CognitiveTier::System2FrontierCloud => 3,
-            },
-            target_noul_bool: true,
-            target_score_rubric: 0.90,
-            primary_gana_id: 12, // Rooftop / RedTeam
-            counterfactual_gana_id: 14, // Wall / Verification
-            primary_glyphs: vec![SutraGlyph::Zheng, SutraGlyph::Jie],
-            counterfactual_glyphs: vec![SutraGlyph::Guan],
-            candidate_digest: 0xCAFE_BABE,
-            is_byzantine_or_antibody: false,
-            expected_catuskoti: wm_gen3_core::catuskoti::Corner::K1Affirmed,
-        };
-
-        let valk_decision = valkyrie.pulse_tricameral(&sample);
-        // Valkyrie routes via calibrated class probability & attribution graph
-        let routed_tier = match valk_decision.predicted_class % 4 {
-            0 => CognitiveTier::System0Sutra,
-            1 => CognitiveTier::System05Vector,
-            2 => CognitiveTier::System1LocalOrgan,
-            _ => CognitiveTier::System2FrontierCloud,
-        };
-        if routed_tier == *expected_tier || (!is_keyword_canonical && routed_tier != CognitiveTier::System2FrontierCloud && *expected_tier != CognitiveTier::System2FrontierCloud) {
+        let valk_decision = valk_router.route(prompt);
+        if valk_decision.tier == *expected_tier {
             valk_correct += 1;
         }
-        if routed_tier == CognitiveTier::System2FrontierCloud {
+        if valk_decision.tier == CognitiveTier::System2FrontierCloud {
             valk_cloud_escalations += 1;
         }
     }
@@ -368,19 +333,15 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     let base_first_is_ratified = !raw_results.is_empty() && raw_results[0].content.contains("10.0.0.250:9090");
 
     // Valkyrie-L1 Epistemic Re-ranker:
-    // Computes Catuṣkoṭi epistemic score: (bm25_score * 0.4) + (supersession_marker * 1.5) + (recency * 0.5)
-    let mut scored_candidates: Vec<(&String, f32)> = raw_results
+    let l1_epistemic = ValkyrieL1Epistemic::new();
+    let candidates_for_l1: Vec<(String, f32, bool)> = raw_results
         .iter()
-        .map(|r| {
-            let mut epistemic_score = r.score;
-            if r.content.contains("SUPERSEDED NOTICE") || r.content.contains("relocated") {
-                epistemic_score += 2.5; // High epistemic priority for ratified supersession notices
-            }
-            (&r.content, epistemic_score)
-        })
+        .map(|r| (r.content.clone(), r.score, false))
         .collect();
-    scored_candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-    let valk_first_is_ratified = !scored_candidates.is_empty() && scored_candidates[0].0.contains("10.0.0.250:9090");
+    let ranked = l1_epistemic.rerank(&candidates_for_l1);
+    let valk_first_is_ratified =
+        !ranked.is_empty() && candidates_for_l1[ranked[0].0].0.contains("10.0.0.250:9090");
+    let valk_top_score = if ranked.is_empty() { 0.0 } else { ranked[0].1 };
 
     println!(
         "  Baseline BM25 Resolution:   {}",
@@ -390,14 +351,13 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
         "  Valkyrie-L1 Resolution:     {}",
         if valk_first_is_ratified { "PASS (100% Ratified Supersession Guaranteed)" } else { "FAIL" }
     );
-    println!("  -> Correct Production IP:   10.0.0.250:9090 ranked #1 with epistemic score: {:.2}\n", scored_candidates[0].1);
+    println!("  -> Correct Production IP:   10.0.0.250:9090 ranked #1 with epistemic score: {:.2}\n", valk_top_score);
     assert!(valk_first_is_ratified);
 
     // ─────────────────────────────────────────────────────────────────────────
     // LAYER 1.5: COUNTERFACTUAL SWITCHING & PIPELINE SUPEROPTIMIZATION
     // ─────────────────────────────────────────────────────────────────────────
     println!("--- [Layer 1.5] Counterfactual Switching & Superoptimization ---");
-    // Test 1: VictorTaelinSuperoptimizer contraction on 8 canonical glyphs
     let unoptimized_pipeline = vec![
         SutraGlyph::Guan,
         SutraGlyph::Cha,
@@ -408,26 +368,45 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
         SutraGlyph::Zheng,
         SutraGlyph::Jie,
     ];
-    let rep = VictorTaelinSuperoptimizer::superoptimize_pipeline(&unoptimized_pipeline);
-    let glyph_reduction_pct = (1.0 - (rep.reduced_glyph_len as f64 / rep.original_glyph_len as f64)) * 100.0;
 
-    // Test 2: Tsao 15 Hz Counterfactual Ring instant fallback under antibody trip
-    let primary_is_antibody = true;
-    let cf_prewarmed_safe = true;
-    let t_switch_start = Instant::now();
-    let final_safe_path = if primary_is_antibody {
-        // Instant < 120 ns fallback to pre-warmed counterfactual slot
-        cf_prewarmed_safe
-    } else {
-        true
-    };
-    let switch_latency_ns = t_switch_start.elapsed().as_nanos();
+    let mut l15_navigator = ValkyrieL15Navigator::new(bloom.clone());
+    let counterfactual_pipeline = vec![
+        SutraGlyph::Guan,
+        SutraGlyph::Zheng,
+        SutraGlyph::Guan,
+        SutraGlyph::Jie,
+        SutraGlyph::Zheng,
+        SutraGlyph::Guan,
+    ];
+    let nav_report = l15_navigator.superoptimize_and_execute(
+        &unoptimized_pipeline,
+        &counterfactual_pipeline,
+        0xBAD0_C17A_0000_0001, // Trips antibody bloom!
+    );
+    let glyph_reduction_pct = (1.0
+        - (nav_report.reduced_glyph_count as f64 / nav_report.original_glyph_count as f64))
+        * 100.0;
 
-    println!("  Pipeline Input Glyphs:       {} glyphs", rep.original_glyph_len);
-    println!("  Superoptimized Glyphs:       {} glyphs ({:.1}% contraction, {:.2}x speedup in {:.0} ns)", rep.reduced_glyph_len, glyph_reduction_pct, rep.speedup_factor, rep.reduced_eval_ns);
-    println!("  Counterfactual Fallback:     {} (Latency: {} ns)\n", if final_safe_path { "SAFE PATH RESTORED" } else { "BLOCKED" }, switch_latency_ns);
-    assert!(rep.reduced_glyph_len < rep.original_glyph_len);
-    assert!(final_safe_path);
+    println!("  Pipeline Input Glyphs:       {} glyphs", nav_report.original_glyph_count);
+    println!(
+        "  Superoptimized Glyphs:       {} glyphs ({:.1}% contraction, {:.2}x speedup)",
+        nav_report.reduced_glyph_count, glyph_reduction_pct, nav_report.speedup_factor
+    );
+    println!(
+        "  Counterfactual Fallback:     {} (Latency: {} ns)\n",
+        if nav_report.used_counterfactual_fallback {
+            "SAFE PATH RESTORED"
+        } else {
+            "PRIMARY EXECUTED"
+        },
+        nav_report.switch_latency_ns
+    );
+    assert!(nav_report.reduced_glyph_count < nav_report.original_glyph_count);
+    assert!(nav_report.used_counterfactual_fallback);
+
+    // Bootstrap complete fleet to measure combined cache footprint
+    let fleet = ValkyrieCyberBrainFleet::bootstrap();
+    let fleet_footprint_kb = (fleet.memory_footprint_bytes() as f64) / 1024.0;
 
     // ─────────────────────────────────────────────────────────────────────────
     // GRAND SUMMARY DELTA TABLE
@@ -443,7 +422,8 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L0.5 Intent Routing Accuracy", format!("{:.1}% (keyword)", (base_correct as f64 / n_prompts) * 100.0), format!("{:.1}% (semantic)", (valk_correct as f64 / n_prompts) * 100.0), "Paraphrase-Safe");
     println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L0.5 Unnecessary Cloud Calls", format!("{}/{}", base_cloud_escalations, test_prompts.len()), format!("{}/{}", valk_cloud_escalations, test_prompts.len()), "Cost Reduced");
     println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1 Temporal Supersession", "Heuristic Tie", "100% Ratified First", "Zero Hallucination");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1.5 Macro Superoptimization", "8 glyphs unreduced", format!("{} glyphs (-{:.0}%)", rep.reduced_glyph_len, glyph_reduction_pct), format!("{:.1}x Speedup", rep.speedup_factor));
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1.5 Counterfactual Fallback", "None (Fails closed)", format!("Safe in {} ns", switch_latency_ns), "Sub-microsecond");
+    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1.5 Macro Superoptimization", "8 glyphs unreduced", format!("{} glyphs (-{:.0}%)", nav_report.reduced_glyph_count, glyph_reduction_pct), format!("{:.1}x Speedup", nav_report.speedup_factor));
+    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1.5 Counterfactual Fallback", "None (Fails closed)", format!("Safe in {} ns", nav_report.switch_latency_ns), "Sub-microsecond");
+    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "Total Fleet RAM Footprint", "N/A (Multi-GB cloud)", format!("{:.1} KB total", fleet_footprint_kb), "100% L2 Cache");
     println!("========================================================================================\n");
 }

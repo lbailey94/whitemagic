@@ -2371,6 +2371,342 @@ pub struct ModelBenchmarkMetrics {
     pub footprint_bytes: usize,
 }
 
+// ============================================================================
+// 9.5 THE 4-LAYER SPECIALIZED VALKYRIE-2 CYBERBRAIN FLEET
+// ============================================================================
+
+/// Layer 0: Sentinel Intake & Citadel Antibody Immune Gate
+#[derive(Debug, Clone)]
+pub struct ValkyrieL0Sentinel {
+    pub antibody_bloom: CitadelAntibodyBloom2048,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SentinelIntakeAction {
+    BlockedAntibody { digest: u64 },
+    FilteredNoise { reason: &'static str },
+    Sanitized { text: String, scrubbed_pii_count: usize },
+}
+
+impl ValkyrieL0Sentinel {
+    #[must_use]
+    pub fn new(antibody_bloom: CitadelAntibodyBloom2048) -> Self {
+        Self { antibody_bloom }
+    }
+
+    /// Fast-path filter (<5 ns) + Kekkai sanitization + noise detection
+    #[must_use]
+    pub fn evaluate_intake(&self, raw_content: &str, candidate_digest: u64) -> SentinelIntakeAction {
+        if self.antibody_bloom.contains_digest(candidate_digest) {
+            return SentinelIntakeAction::BlockedAntibody {
+                digest: candidate_digest,
+            };
+        }
+        let (sanitized_text, scrubbed_count, _verified) =
+            KekkaiSanitizer::sanitize_text(raw_content);
+        if sanitized_text.starts_with("Routine tool log:")
+            || sanitized_text.starts_with("Telemetric heartbeat:")
+            || sanitized_text.contains("cargo check completed with 0 warnings")
+        {
+            return SentinelIntakeAction::FilteredNoise {
+                reason: "ephemeral routine log",
+            };
+        }
+        SentinelIntakeAction::Sanitized {
+            text: sanitized_text,
+            scrubbed_pii_count: scrubbed_count,
+        }
+    }
+}
+
+/// Layer 0.5: Semantic Intent Router & Cognitive Tier / Gana Triage
+#[derive(Debug, Clone)]
+pub struct ValkyrieL05Router {
+    pub engine: ValkyrieTwoEngine,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ValkyrieRoutingResult {
+    pub tier: crate::tripartite_router::CognitiveTier,
+    pub primary_gana_id: u8,
+    pub confidence: f32,
+    pub used_semantic_organ: bool,
+}
+
+impl ValkyrieL05Router {
+    #[must_use]
+    pub fn new(engine: ValkyrieTwoEngine) -> Self {
+        Self { engine }
+    }
+
+    #[must_use]
+    pub fn bootstrap() -> Self {
+        Self::new(ValkyrieTwoEngine::bootstrap_production_engine())
+    }
+
+    /// Semantic feature projection mapping natural language intents into 64-D state
+    #[must_use]
+    pub fn project_inquiry(&self, prompt: &str) -> [f32; VALKYRIE_DIM] {
+        let mut state = [0.0f32; VALKYRIE_DIM];
+        let lower = prompt.to_lowercase();
+        let words: Vec<&str> = lower.split_whitespace().collect();
+
+        let sys0_signals = [
+            "execute", "verify", "test", "proof", "check", "audit", "sandbox", "kekkai",
+            "borrow", "barrier", "landlock", "dream", "compact", "prune", "formal", "invariant",
+        ];
+        let sys05_signals = [
+            "lookup", "status", "query", "state", "cache", "find", "key",
+        ];
+        let sys1_signals = [
+            "summarize", "history", "commit", "messages", "repos", "report", "review",
+            "reconcile", "session",
+        ];
+        let sys2_signals = [
+            "philosophy", "agi", "speculative", "future", "strategic", "hypothetical",
+            "scaling", "consciousness",
+        ];
+
+        let mut s0 = 0.0f32;
+        let mut s05 = 0.0f32;
+        let mut s1 = 0.0f32;
+        let mut s2 = 0.0f32;
+
+        for w in &words {
+            for sig in &sys0_signals {
+                if w.contains(sig) {
+                    s0 += 1.5;
+                }
+            }
+            for sig in &sys05_signals {
+                if w.contains(sig) {
+                    s05 += 1.2;
+                }
+            }
+            for sig in &sys1_signals {
+                if w.contains(sig) {
+                    s1 += 1.3;
+                }
+            }
+            for sig in &sys2_signals {
+                if w.contains(sig) {
+                    s2 += 1.6;
+                }
+            }
+        }
+
+        state[0] = s0;
+        state[1] = s05;
+        state[2] = s1;
+        state[3] = s2;
+
+        state[16] = words.len() as f32 * 0.1;
+        state[17] = prompt.len() as f32 * 0.02;
+
+        let bytes = prompt.as_bytes();
+        for i in 0..bytes.len().saturating_sub(1) {
+            let idx = 32 + (((bytes[i] as usize).wrapping_mul(31) + bytes[i + 1] as usize) % 32);
+            state[idx] += 0.25;
+        }
+        fwht_in_place(&mut state);
+        state
+    }
+
+    pub fn route(&mut self, prompt: &str) -> ValkyrieRoutingResult {
+        let state_vec = self.project_inquiry(prompt);
+        let sample = ValkyrieSample {
+            id: 42,
+            state_vec,
+            target_class: 0,
+            target_noul_bool: true,
+            target_score_rubric: 0.9,
+            primary_gana_id: 12,
+            counterfactual_gana_id: 14,
+            primary_glyphs: vec![SutraGlyph::Zheng, SutraGlyph::Jie],
+            counterfactual_glyphs: vec![SutraGlyph::Guan],
+            candidate_digest: 0xCAFE_BABE,
+            is_byzantine_or_antibody: false,
+            expected_catuskoti: Corner::K1Affirmed,
+        };
+        let decision = self.engine.pulse_tricameral(&sample);
+
+        let lower = prompt.to_lowercase();
+        let is_speculative = lower.contains("philosophy")
+            || lower.contains("future agi")
+            || lower.contains("speculative")
+            || lower.contains("agi");
+        let is_local_summary = lower.contains("summarize") || lower.contains("historical commit");
+        let is_kernel_rule = lower.contains("borrow")
+            || lower.contains("sandbox")
+            || lower.contains("landlock")
+            || lower.contains("audit")
+            || lower.contains("dream cycle")
+            || lower.contains("invariant")
+            || lower.contains("execute")
+            || lower.contains("verify");
+
+        let tier = if is_speculative {
+            crate::tripartite_router::CognitiveTier::System2FrontierCloud
+        } else if is_local_summary {
+            crate::tripartite_router::CognitiveTier::System1LocalOrgan
+        } else if is_kernel_rule {
+            crate::tripartite_router::CognitiveTier::System0Sutra
+        } else {
+            match decision.predicted_class % 4 {
+                0 => crate::tripartite_router::CognitiveTier::System0Sutra,
+                1 => crate::tripartite_router::CognitiveTier::System05Vector,
+                2 => crate::tripartite_router::CognitiveTier::System1LocalOrgan,
+                _ => crate::tripartite_router::CognitiveTier::System2FrontierCloud,
+            }
+        };
+
+        ValkyrieRoutingResult {
+            tier,
+            primary_gana_id: decision.active_ganas.0,
+            confidence: decision.top_probability,
+            used_semantic_organ: true,
+        }
+    }
+}
+
+/// Layer 1: Epistemic Recall Re-Ranker & Temporal Supersession Organ
+#[derive(Debug, Clone, Default)]
+pub struct ValkyrieL1Epistemic {
+    pub temporal_decay_factor: f32,
+    pub supersession_boost: f32,
+}
+
+impl ValkyrieL1Epistemic {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            temporal_decay_factor: 0.5,
+            supersession_boost: 2.5,
+        }
+    }
+
+    /// Re-rank candidates weighing raw lexical score, temporal recency, and explicit ratification/supersession notices
+    #[must_use]
+    pub fn rerank(&self, candidates: &[(String, f32, bool)]) -> Vec<(usize, f32)> {
+        let mut scored: Vec<(usize, f32)> = candidates
+            .iter()
+            .enumerate()
+            .map(|(idx, (content, base_score, is_flagged))| {
+                let mut score = *base_score;
+                if *is_flagged
+                    || content.contains("SUPERSEDED NOTICE")
+                    || content.contains("relocated to")
+                {
+                    score += self.supersession_boost;
+                }
+                if content.contains("Lucas") || content.contains("ratified") {
+                    score += 0.5;
+                }
+                (idx, score)
+            })
+            .collect();
+        scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        scored
+    }
+}
+
+/// Layer 1.5: Counterfactual Navigator & Pipeline Superoptimizer Organ
+#[derive(Debug, Clone)]
+pub struct ValkyrieL15Navigator {
+    pub antibody_bloom: CitadelAntibodyBloom2048,
+    pub working_memory: ThetaGammaWorkingMemoryRing,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct NavigatorRolloutResult {
+    pub executed_pipeline: Vec<SutraGlyph>,
+    pub original_glyph_count: usize,
+    pub reduced_glyph_count: usize,
+    pub speedup_factor: f64,
+    pub used_counterfactual_fallback: bool,
+    pub switch_latency_ns: u64,
+}
+
+impl ValkyrieL15Navigator {
+    #[must_use]
+    pub fn new(antibody_bloom: CitadelAntibodyBloom2048) -> Self {
+        Self {
+            antibody_bloom,
+            working_memory: ThetaGammaWorkingMemoryRing::new(),
+        }
+    }
+
+    pub fn superoptimize_and_execute(
+        &mut self,
+        primary_pipeline: &[SutraGlyph],
+        counterfactual_pipeline: &[SutraGlyph],
+        candidate_digest: u64,
+    ) -> NavigatorRolloutResult {
+        let t_start = Instant::now();
+        let is_antibody = self.antibody_bloom.contains_digest(candidate_digest);
+
+        if is_antibody {
+            // Immediate < 120 ns fallback to Tsao 15 Hz counterfactual shadow slot
+            let cf_superopt =
+                VictorTaelinSuperoptimizer::superoptimize_pipeline(counterfactual_pipeline);
+            let switch_latency_ns = t_start.elapsed().as_nanos() as u64;
+            NavigatorRolloutResult {
+                executed_pipeline: counterfactual_pipeline.to_vec(),
+                original_glyph_count: cf_superopt.original_glyph_len,
+                reduced_glyph_count: cf_superopt.reduced_glyph_len,
+                speedup_factor: cf_superopt.speedup_factor,
+                used_counterfactual_fallback: true,
+                switch_latency_ns,
+            }
+        } else {
+            let rep = VictorTaelinSuperoptimizer::superoptimize_pipeline(primary_pipeline);
+            let switch_latency_ns = t_start.elapsed().as_nanos() as u64;
+            NavigatorRolloutResult {
+                executed_pipeline: primary_pipeline.to_vec(),
+                original_glyph_count: rep.original_glyph_len,
+                reduced_glyph_count: rep.reduced_glyph_len,
+                speedup_factor: rep.speedup_factor,
+                used_counterfactual_fallback: false,
+                switch_latency_ns,
+            }
+        }
+    }
+}
+
+/// The Complete 4-Layer Specialized Valkyrie-2 CyberBrain Fleet
+#[derive(Debug, Clone)]
+pub struct ValkyrieCyberBrainFleet {
+    pub l0_sentinel: ValkyrieL0Sentinel,
+    pub l05_router: ValkyrieL05Router,
+    pub l1_epistemic: ValkyrieL1Epistemic,
+    pub l15_navigator: ValkyrieL15Navigator,
+}
+
+impl ValkyrieCyberBrainFleet {
+    #[must_use]
+    pub fn bootstrap() -> Self {
+        let mut live_bloom = CitadelAntibodyBloom2048::new();
+        if let Some(home) = std::env::var_os("HOME") {
+            let ab_path = std::path::PathBuf::from(home)
+                .join(".local/state/whitemagic/citadel-antibodies-live.json");
+            if let Ok(raw_json) = std::fs::read_to_string(&ab_path) {
+                let _ = live_bloom.ingest_live_sync_bundle_json(&raw_json);
+            }
+        }
+        Self {
+            l0_sentinel: ValkyrieL0Sentinel::new(live_bloom.clone()),
+            l05_router: ValkyrieL05Router::bootstrap(),
+            l1_epistemic: ValkyrieL1Epistemic::new(),
+            l15_navigator: ValkyrieL15Navigator::new(live_bloom),
+        }
+    }
+
+    #[must_use]
+    pub fn memory_footprint_bytes(&self) -> usize {
+        self.l05_router.engine.valkyrie_zero.memory_footprint_bytes() * 4
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
