@@ -495,17 +495,67 @@ def unseal_crystal(
     return _aead_for(cipher_norm, payload_key).decrypt(nonce, ciphertext, aad)
 
 
+def _erased_ids_digest(erasures: list[dict[str, Any]]) -> tuple[int, str]:
+    """(count, digest) over the sorted set of erased crystal ids."""
+    erased_ids = sorted({str(e.get("crystal_id", "")).lower() for e in erasures})
+    digest = "sha256:" + hashlib.sha256("\n".join(erased_ids).encode("utf-8")).hexdigest()
+    return len(erased_ids), digest
+
+
+def _check_erasure_binding(
+    commitment: dict[str, Any],
+    erasures: list[dict[str, Any]] | None,
+    crystal_ids: list[str],
+    where: str,
+) -> None:
+    """T10 (erasure resurrection): an erasure-aware commitment must still match
+    the store after a pre-erasure copy has been restored over it.
+
+    A high-water cell count alone cannot catch this: erasure *lowers* the count,
+    so a restored pre-erasure copy is a superset of what the anchor recorded and
+    passes a ``len(store) >= count`` check. The commitment therefore also carries
+    ``erasure_count``, ``erased_crystal_ids_digest`` and ``revision`` (cells +
+    erasures, which strictly increases on every add *and* every erase).
+    """
+    if "revision" not in commitment and "erasure_count" not in commitment:
+        return
+    if erasures is None:
+        raise CrystalRollbackError(
+            f"{where}: anchor commits to an erasure-aware state but no erasure list was supplied"
+        )
+    count, digest = _erased_ids_digest(erasures)
+    if count != int(commitment.get("erasure_count", -1)):
+        raise CrystalRollbackError(
+            f"{where}: erasure_count mismatch: store has {count}, anchor committed to {commitment.get('erasure_count')}"
+        )
+    if digest != commitment.get("erased_crystal_ids_digest"):
+        raise CrystalRollbackError(f"{where}: erased_crystal_ids_digest mismatch against anchor commitment")
+    revision = len(crystal_ids) + count
+    if "revision" in commitment and revision != int(commitment["revision"]):
+        raise CrystalRollbackError(
+            f"{where}: revision mismatch: store is at {revision}, anchor committed to {commitment['revision']}"
+        )
+    erased = {str(e.get("crystal_id", "")).lower() for e in erasures}
+    overlap = sorted(erased.intersection(crystal_ids))
+    if overlap:
+        raise CrystalRollbackError(f"{where}: erased crystal served again: {overlap[0]}")
+
+
 def compute_crystal_set_commitment(
     crystals: list[dict[str, Any]],
     tenant_hash: str,
     *,
     retrieved_at: str | None = None,
     signing_key: bytes | None = None,
+    erasures: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Compute an export-level head and ordered-set commitment over a sequence of crystals (I6).
 
     Binds ``count``, ``ordered_crystal_ids_digest``, ``head_crystal_id``, ``tenant_hash``,
-    ``spec``, and ``retrieved_at`` inside the signed commitment payload.
+    ``spec``, and ``retrieved_at`` inside the signed commitment payload. When
+    ``erasures`` is supplied it also binds ``erasure_count``,
+    ``erased_crystal_ids_digest`` and ``revision``, which is what lets a verifier
+    catch a restored pre-erasure copy (T10).
     """
     ordered_ids = [str(c["crystal_id"]).lower() for c in crystals]
     ordered_digest = "sha256:" + hashlib.sha256("\n".join(ordered_ids).encode("utf-8")).hexdigest()
@@ -521,6 +571,11 @@ def compute_crystal_set_commitment(
         "head_crystal_id": head_id,
         "retrieved_at": ts,
     }
+    if erasures is not None:
+        erasure_count, erasure_digest = _erased_ids_digest(erasures)
+        commitment["erasure_count"] = erasure_count
+        commitment["erased_crystal_ids_digest"] = erasure_digest
+        commitment["revision"] = len(ordered_ids) + erasure_count
     canon = json.dumps(commitment, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     commitment_digest = "sha256:" + hashlib.sha256(canon).hexdigest()
     if signing_key is not None:
@@ -546,6 +601,7 @@ def verify_and_unseal_crystal_set(
     *,
     expected_commitment: dict[str, Any] | None = None,
     anchor_public_key: bytes | None = None,
+    erasures: list[dict[str, Any]] | None = None,
 ) -> list[bytes]:
     """Read-path verifier for an ordered crystal set before session resumption (I6/I7).
 
@@ -583,6 +639,12 @@ def verify_and_unseal_crystal_set(
                 raise CrystalRollbackError(f"anchor commitment signature invalid: {exc}") from exc
         if expected_commitment.get("tenant_hash") != expected_tenant_hash:
             raise CrystalContextError("anchor commitment tenant_hash mismatch")
+        _check_erasure_binding(
+            expected_commitment,
+            erasures,
+            [str(c.get("crystal_id", "")).lower() for c in crystals if isinstance(c, dict)],
+            "crystal set",
+        )
 
     plaintexts: list[bytes] = []
     seen_ids: set[str] = set()
@@ -678,6 +740,7 @@ def verify_crystal_set_third_party(
     notary_public_key: bytes | None = None,
     expected_highwater_digest: str | None = None,
     expected_min_count: int | None = None,
+    erasures: list[dict[str, Any]] | None = None,
     pq_verifier=None,
     expected_pq_public_key: str | None = None,
 ) -> dict[str, Any]:
@@ -730,6 +793,13 @@ def verify_crystal_set_third_party(
 
     if expected_commitment.get("tenant_hash") != expected_tenant_hash:
         raise CrystalContextError("anchor commitment tenant_hash mismatch")
+
+    _check_erasure_binding(
+        expected_commitment,
+        erasures,
+        [str(c.get("crystal_id", "")).lower() for c in crystals if isinstance(c, dict)],
+        "crystal set (third-party)",
+    )
 
     if expected_highwater_digest is not None and computed_comm_digest != expected_highwater_digest:
         raise CrystalRollbackError(
