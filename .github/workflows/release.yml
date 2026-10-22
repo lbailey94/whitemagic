@@ -9,15 +9,14 @@ env:
   CARGO_TERM_COLOR: always
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 jobs:
   truth:
     name: Version truth gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Validate release tag shape
         if: startsWith(github.ref, 'refs/tags/v')
         # Phase 2 (2026-10-15): a two-component tag (v10.3) broke every
@@ -60,7 +59,7 @@ jobs:
           # restored. Stable v9.3.4 still ships the Windows installer.
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install musl tools (static Linux build)
         if: contains(matrix.target, '-linux-musl')
@@ -72,11 +71,11 @@ jobs:
             sudo ln -sf "$(command -v musl-gcc)" /usr/local/bin/aarch64-linux-musl-gcc
           fi
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           targets: ${{ matrix.target }}
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
 
       - name: Ensure target installed
         run: rustup target add ${{ matrix.target }}
@@ -130,14 +129,14 @@ jobs:
           sha256sum ${{ matrix.artifact }}.gz > ${{ matrix.artifact }}.gz.sha256
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.artifact }}
           path: target/${{ matrix.target }}/release/${{ matrix.artifact }}
           if-no-files-found: error
 
       - name: Upload checksum artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.artifact }}.sha256
           path: target/${{ matrix.target }}/release/${{ matrix.artifact }}.sha256
@@ -145,7 +144,7 @@ jobs:
 
       - name: Upload compressed artifact + checksum (Linux/macOS)
         if: matrix.os != 'windows-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.artifact }}.gz
           path: |
@@ -157,8 +156,8 @@ jobs:
     name: SBOM (CycloneDX)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: taiki-e/install-action@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: taiki-e/install-action@a4d3f3f761dcd95cce1b72cb61cb6d1963438177 # v2
         with:
           tool: cargo-cyclonedx
       - name: Generate SBOMs for the workspace
@@ -168,29 +167,32 @@ jobs:
           mkdir -p sbom
           find . -name '*.cdx.json' -not -path './target/*' -exec cp {} sbom/ \;
           ls -la sbom/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: sbom
           path: sbom/
           if-no-files-found: error
 
   publish:
+    permissions:
+      contents: write
+      id-token: write
     name: Publish GitHub Release
     needs: [build, sbom]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       # The manifest step needs the repo (scripts/release_manifest.py).
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 1
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: artifacts
           merge-multiple: true
 
-      - uses: sigstore/cosign-installer@v3
+      - uses: sigstore/cosign-installer@f713795cb21599bc4e5c4b58cbad1da852d7eeb9 # v3
 
       - name: Fetch CI facts (tests, benchmarks) — best effort
         env:
@@ -267,7 +269,7 @@ jobs:
             --changelog CHANGELOG.md --out release-notes.md
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: artifacts/*
           body_path: release-notes.md
@@ -292,7 +294,7 @@ jobs:
             arch: aarch64-macos
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       # The signed manifest declares these targets install-gated; this job
       # earns that claim by installing the PUBLISHED release through the
       # public installer (raw or .gz, checksum-verified) and running the
@@ -324,9 +326,9 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
       - name: Publish crates.io (dependency order, 429-aware)
         env:
@@ -356,7 +358,7 @@ jobs:
             done
           done
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
@@ -394,10 +396,10 @@ jobs:
           echo "::warning::npm whitemagic-mcp@${VERSION} not visible after ~4 minutes; continuing to MCP registry with retries"
 
       - name: Set up QEMU (arm64 image builds)
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Publish Docker Hub (multi-arch; skips without secrets)
         env:
