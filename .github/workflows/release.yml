@@ -17,7 +17,7 @@ jobs:
     name: Version truth gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Validate release tag shape
         if: startsWith(github.ref, 'refs/tags/v')
         # Phase 2 (2026-10-15): a two-component tag (v10.3) broke every
@@ -60,7 +60,7 @@ jobs:
           # restored. Stable v9.3.4 still ships the Windows installer.
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install musl tools (static Linux build)
         if: contains(matrix.target, '-linux-musl')
@@ -130,14 +130,14 @@ jobs:
           sha256sum ${{ matrix.artifact }}.gz > ${{ matrix.artifact }}.gz.sha256
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: target/${{ matrix.target }}/release/${{ matrix.artifact }}
           if-no-files-found: error
 
       - name: Upload checksum artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}.sha256
           path: target/${{ matrix.target }}/release/${{ matrix.artifact }}.sha256
@@ -145,7 +145,7 @@ jobs:
 
       - name: Upload compressed artifact + checksum (Linux/macOS)
         if: matrix.os != 'windows-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}.gz
           path: |
@@ -157,7 +157,7 @@ jobs:
     name: SBOM (CycloneDX)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-cyclonedx
@@ -168,7 +168,7 @@ jobs:
           mkdir -p sbom
           find . -name '*.cdx.json' -not -path './target/*' -exec cp {} sbom/ \;
           ls -la sbom/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sbom
           path: sbom/
@@ -181,11 +181,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # The manifest step needs the repo (scripts/release_manifest.py).
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
@@ -267,7 +267,7 @@ jobs:
             --changelog CHANGELOG.md --out release-notes.md
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: artifacts/*
           body_path: release-notes.md
@@ -292,7 +292,7 @@ jobs:
             arch: aarch64-macos
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # The signed manifest declares these targets install-gated; this job
       # earns that claim by installing the PUBLISHED release through the
       # public installer (raw or .gz, checksum-verified) and running the
@@ -324,7 +324,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -356,7 +356,7 @@ jobs:
             done
           done
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
@@ -394,10 +394,10 @@ jobs:
           echo "::warning::npm whitemagic-mcp@${VERSION} not visible after ~4 minutes; continuing to MCP registry with retries"
 
       - name: Set up QEMU (arm64 image builds)
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Publish Docker Hub (multi-arch; skips without secrets)
         env:
