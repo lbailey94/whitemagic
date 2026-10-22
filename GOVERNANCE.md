@@ -49,11 +49,17 @@ committee". Where that creates risk — a bus factor of one, no second reviewer
 - The release pipeline publishes a manifest, SBOMs, cosign bundles and install
   artifacts. Verify each selected release separately: `v10.5.0` has signed
   artifacts but its Git tag is unsigned, and the release script currently
-  permits an unsigned annotated tag when tag signing fails. The candidate
-  [zero-egress workflow](.github/workflows/zero-egress.yml) has a release-tag
-  trigger, but until it is merged into the tagged release source it does not
-  run for tags on the default branch. GitHub currently has no required-status
-  rule to enforce that workflow on `main`.
+  permits an unsigned annotated tag when tag signing fails. The
+  [zero-egress workflow](.github/workflows/zero-egress.yml) was merged into
+  `main` in [PR #11](https://github.com/lbailey94/whitemagic/pull/11) on
+  2026-10-22. It is configured for pushes to `main`/`master`, pull requests
+  targeting those branches, `v*` release tags, a weekly schedule, and manual
+  dispatch. The successful [2026-10-22 pull-request proof run](https://github.com/lbailey94/whitemagic/actions/runs/39798815012/job/119893326454)
+  records checkout `8c97f70abc2d52be07a2d1c71bef3505b8c17da5`; GitHub confirms
+  that checkout and merged `main` commit `8932c81f2f4ff8f44f37a145df35001afc1022d7`
+  share tree `6f2348b5a2cd8d04ba441b105e7971ebaf922a02`. This is proof for
+  that source tree, not a post-merge push or tag run. GitHub currently has no
+  required-status rule to enforce this workflow on `main`.
 - Older minors are archival (see the support window in `SECURITY.md`).
 
 ## Known limitations
