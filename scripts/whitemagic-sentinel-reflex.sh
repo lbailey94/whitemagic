@@ -61,11 +61,13 @@ WATCHDOG_ALERT_SUPPRESSED=0
 WATCHDOG_ALERT_SERVICE=""
 WATCHDOG_OPEN=0
 WATCHDOG_OPEN_SERVICES=""
+WATCHDOG_OPEN_GENERATIONS=""
 WATCHDOG_INFO=""
 
 check_and_heal_service() {
     local service_name="$1"
     local probe_url="$2"
+    local recovery_mode="${3:-restart}"
 
     if curl -s -f --max-time 3 "$probe_url" >/dev/null 2>&1; then
         # A healthy probe ends the consecutive-failure streak for this service.
@@ -85,8 +87,10 @@ check_and_heal_service() {
 
     echo "[$(date -u +%FT%TZ)] Watchdog probe failed for $service_name ($probe_url)!"
 
-    # Informational probes stay visible without paging, and never trigger a restart.
-    if [ "${3:-alert}" = "info" ]; then
+    # Informational probes stay visible without paging or state. The observe
+    # mode below counts failures and pages after the normal bounded threshold,
+    # but never restarts a dependency service.
+    if [ "$recovery_mode" = "info" ]; then
         WATCHDOG_INFO="${WATCHDOG_INFO}${WATCHDOG_INFO:+$'\n'}- informational probe failing: $service_name at $probe_url"
         return 2
     fi
@@ -127,17 +131,27 @@ check_and_heal_service() {
         echo "[$(date -u +%FT%TZ)] CIRCUIT BREAKER OPEN for $service_name ($fail_count consecutive failures since $(date -u -d "@$first_seen" +%FT%TZ 2>/dev/null || echo "$first_seen")). Suppressing restart flapping."
         WATCHDOG_OPEN=1
         WATCHDOG_OPEN_SERVICES="${WATCHDOG_OPEN_SERVICES}${WATCHDOG_OPEN_SERVICES:+, }$service_name"
+        WATCHDOG_OPEN_GENERATIONS="${WATCHDOG_OPEN_GENERATIONS}${WATCHDOG_OPEN_GENERATIONS:+,}${service_name}@${first_seen}"
         # Hard 15-minute cooldown per service. The old rule also required the
         # *report* status to be nominal/warning, so a genuinely critical report
         # re-alerted on every single run — 15 posts for one condition.
         if [ "$alerted_at" -eq 0 ] || [ $((NOW_EPOCH - alerted_at)) -ge 900 ]; then
-            WATCHDOG_ALERT="Service probe failed: $service_name at $probe_url ($fail_count consecutive failures; watchdog circuit breaker open)."
+            if [ "$recovery_mode" = "observe" ]; then
+                WATCHDOG_ALERT="Gateway readiness discovery probe failed: authd tools/list via $probe_url ($fail_count consecutive failures; backend /health is checked separately; no automatic restart was attempted)."
+            else
+                WATCHDOG_ALERT="Service probe failed: $service_name at $probe_url ($fail_count consecutive failures; watchdog circuit breaker open)."
+            fi
             WATCHDOG_ALERT_SERVICE="$service_name"
         else
             WATCHDOG_ALERT_SUPPRESSED=1
             echo "[$(date -u +%FT%TZ)] Circuit-open alert suppressed for $service_name: last notification was $((NOW_EPOCH - alerted_at))s ago (15-minute cooldown)."
         fi
         return 1
+    fi
+
+    if [ "$recovery_mode" = "observe" ]; then
+        echo "[$(date -u +%FT%TZ)] Watchdog bounded observation: attempt $fail_count/3 for $service_name; no service restart will be attempted."
+        return 0
     fi
 
     echo "[$(date -u +%FT%TZ)] Watchdog bounded recovery: attempt $fail_count/3 for $service_name..."
@@ -150,13 +164,14 @@ check_and_heal_service() {
 
 # Run probes on services if we are on VPS
 if [ "${WM_WATCHDOG_ENABLED:-}" = "1" ] || { [ -z "${WM_WATCHDOG_ENABLED:-}" ] && [ -d "/srv/whitemagic" ]; }; then
-    # Probe the lane customers actually use: wm10 on 18789 serves /health (200).
-    # The old target was the 18797 readiness shim, a *different* process, so the
-    # watchdog could read red while the lane was perfectly healthy.
+    # Keep upstream process health separate from gateway MCP discovery. A
+    # backend /health success does not prove authd can serve tools/list.
     check_and_heal_service "whitemagic-hosted.service" "http://127.0.0.1:18789/health" alert || true
-    # The readiness shim stays visible but informationally only: it checks authd's
-    # wm tools/list, a dependency that legitimately lags a transport migration.
-    check_and_heal_service "whitemagic-readiness-shim" "http://127.0.0.1:18797/ready" info || true
+    # readiness.py performs the bounded, body-aware authd -> wm tools/list
+    # discovery check (2s upstream timeout). fresh=1 bypasses its 300s cache;
+    # curl remains bounded at 3s. Sustained gateway failures page but do not
+    # restart the backend or gateway automatically.
+    check_and_heal_service "whitemagic-gateway.service" "http://127.0.0.1:18797/ready?fresh=1" observe || true
 fi
 
 # ============================================================================
@@ -181,7 +196,7 @@ fi
 
 # Condition signature: an unchanged condition inherits the cooldown, while a
 # *changed* condition (new failing service, report escalated) alerts immediately.
-ALERT_SIG="report=${REPORT_STATUS};watchdog=${WATCHDOG_OPEN_SERVICES:-none}"
+ALERT_SIG="report=${REPORT_STATUS};watchdog=${WATCHDOG_OPEN_GENERATIONS:-none}"
 LAST_ALERT_AT=0
 if [ -f "$WATCHDOG_STATE" ]; then
     LAST_ALERT_AT=$(jq -r --arg k "$ALERT_SIG" '.["_cooldown"][$k] // 0' "$WATCHDOG_STATE" 2>/dev/null || echo 0)
@@ -202,6 +217,9 @@ HEADER+="- **Alert severity**: **$ALERT_STATUS**"$'\n'
 HEADER+="- **System report status**: **$REPORT_STATUS**"$'\n'
 if [ "$WATCHDOG_OPEN" = "1" ]; then
     HEADER+="- **Watchdog**: circuit open for ${WATCHDOG_OPEN_SERVICES}"$'\n'
+    if [[ "$WATCHDOG_OPEN_SERVICES" == *"whitemagic-gateway.service"* ]]; then
+        HEADER+="- **Gateway readiness**: authd tools/list discovery failed; backend health is checked separately."$'\n'
+    fi
 fi
 if [ -n "$WATCHDOG_INFO" ]; then
     HEADER+="- **Informational**: readiness shim not ready (does not page)"$'\n'
@@ -242,13 +260,15 @@ elif command -v sangha >/dev/null 2>&1; then
 fi
 
 # Record the cooldown only after delivery is confirmed, so a failed post retries
-# on the next run instead of silently swallowing the alert for 15 minutes.
-if [ "$POST_DELIVERED" = "1" ] && [ -f "$WATCHDOG_STATE" ]; then
+# on the next run instead of silently swallowing the alert for 15 minutes. Seed
+# the state from an empty JSON object when an independent critical report arrives
+# before any watchdog failure has created the state file.
+if [ "$POST_DELIVERED" = "1" ]; then
     tmp_state=$(mktemp "${WATCHDOG_STATE}.XXXXXX")
-    if jq --arg k "$ALERT_SIG" --argjson now "$NOW_EPOCH" \
+    if { if [ -f "$WATCHDOG_STATE" ]; then cat "$WATCHDOG_STATE"; else printf '{}\n'; fi; } | jq --arg k "$ALERT_SIG" --argjson now "$NOW_EPOCH" \
         '.["_cooldown"] = ((.["_cooldown"] // {}) + {($k): $now})
          | .["_cooldown"] |= with_entries(select($now - .value < 604800))' \
-        "$WATCHDOG_STATE" >"$tmp_state" 2>/dev/null; then
+        >"$tmp_state" 2>/dev/null; then
         mv -f "$tmp_state" "$WATCHDOG_STATE"
     else
         rm -f "$tmp_state"

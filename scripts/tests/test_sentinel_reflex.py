@@ -20,7 +20,8 @@ class SentinelReflexTests(unittest.TestCase):
         self.store.mkdir()
         self.capture = self.root / "posted.json"
         self.lane = self.root / "lane-health"
-        self.shim = self.root / "shim-health"
+        self.shim = self.root / "gateway-readiness"
+        self.restart_capture = self.root / "restarts.txt"
         self.lane.write_text("fail")
         self.shim.write_text("success")
         self._tool("wm", '''#!/bin/sh
@@ -32,8 +33,7 @@ else
   exit 2
 fi
 ''')
-        # Served lane (18789/health) is the *alerting* probe; the readiness shim
-        # (18797/ready) is informational only.
+        # Backend health and gateway discovery are independent signals.
         self._tool("curl", '''#!/bin/sh
 case "$*" in
   *8787/api/post*)
@@ -55,7 +55,10 @@ case "$*" in
 esac
 exit 1
 ''')
-        self._tool("sudo", "#!/bin/sh\nexit 0\n")
+        self._tool("sudo", '''#!/bin/sh
+printf '%s\\n' "$*" >> "$WM_TEST_RESTART_CAPTURE"
+exit 0
+''')
         self._tool("date", '''#!/bin/sh
 case "$*" in
   +%s) printf '%s\\n' "$WM_TEST_NOW" ;;
@@ -74,6 +77,7 @@ esac
             "WM_WATCHDOG_ENABLED": "1",
             "WM_TEST_LANE": str(self.lane),
             "WM_TEST_SHIM": str(self.shim),
+            "WM_TEST_RESTART_CAPTURE": str(self.restart_capture),
             "WM_TEST_CAPTURE": str(self.capture),
             "WM_TEST_NOW": str(STORE_START),
             "WM_TEST_STATUS": "warning",
@@ -192,6 +196,25 @@ esac
         self.run_reflex(now=STORE_START + 30)
         self.assertTrue(self.capture.exists(), "severity escalation must not wait out the cooldown")
 
+    def test_new_gateway_failure_escalates_existing_backend_condition(self):
+        self.lane.write_text("fail")
+        self.shim.write_text("success")
+        for offset in range(4):
+            self.run_reflex(now=STORE_START + offset)
+        self.assertTrue(self.capture.exists())
+        self.capture.unlink()
+
+        self.shim.write_text("fail")
+        for offset in range(4, 8):
+            result = self.run_reflex(now=STORE_START + offset)
+        self.assertTrue(self.capture.exists(), "a newly open gateway condition must bypass prior backend cooldown")
+        payload = json.loads(self.capture.read_text())
+        self.assertIn("whitemagic-hosted.service", payload["body"])
+        self.assertIn("whitemagic-gateway.service", payload["body"])
+        self.assertIn("authd tools/list discovery failed", payload["body"])
+        restarts = self.restart_capture.read_text() if self.restart_capture.exists() else ""
+        self.assertNotIn("whitemagic-gateway.service", restarts, "gateway-only failure must not restart the gateway")
+
     # ── defect 3: probe what customers use ────────────────────────────────
     def test_served_lane_is_what_pages(self):
         self.lane.write_text("fail")
@@ -202,21 +225,79 @@ esac
         payload = json.loads(self.capture.read_text())
         self.assertIn("18789/health", payload["body"])
 
-    def test_readiness_shim_failure_is_informational_only(self):
+    def test_gateway_discovery_failure_pages_without_restarting_backend(self):
         self.lane.write_text("success")
         self.shim.write_text("fail")
         posted = 0
-        for offset in range(6):
+        first_payload = None
+        for offset in range(12):
             if self.capture.exists():
                 self.capture.unlink()
-            result = self.run_reflex(now=STORE_START + offset)
+            result = self.run_reflex(now=STORE_START + offset * 60)
             if self.capture.exists():
                 posted += 1
-        self.assertEqual(posted, 0, "a readiness-shim failure must never page")
-        self.assertIn("informational probe failing", result.stdout)
-        state_path = self.store / "watchdog-circuit.json"
-        if state_path.exists():
-            self.assertNotIn("whitemagic-readiness-shim", self.state())
+                if first_payload is None:
+                    first_payload = json.loads(self.capture.read_text())
+        self.assertEqual(posted, 1, "persistent gateway discovery failure should page once in the cooldown")
+        payload = first_payload
+        self.assertIn("whitemagic-gateway.service", payload["body"])
+        self.assertIn("18797/ready?fresh=1", payload["body"])
+        self.assertIn("authd tools/list discovery failed", payload["body"])
+        self.assertIn("no automatic restart was attempted", payload["body"])
+        self.assertFalse(self.restart_capture.exists(), "gateway-only failure must not restart backend")
+
+    def test_gateway_recovery_rearms_new_failure_generation(self):
+        self.lane.write_text("success")
+        self.shim.write_text("fail")
+        for offset in range(4):
+            self.run_reflex(now=STORE_START + offset * 60)
+        self.assertTrue(self.capture.exists())
+        self.capture.unlink()
+
+        self.shim.write_text("success")
+        self.run_reflex(now=STORE_START + 300)
+        self.assertNotIn("whitemagic-gateway.service", self.state())
+        self.assertFalse(self.capture.exists())
+
+        self.shim.write_text("fail")
+        for offset in range(5, 9):
+            self.run_reflex(now=STORE_START + offset * 60)
+        self.assertTrue(self.capture.exists(), "recovery followed by a new outage must rearm notification")
+        self.assertFalse(self.restart_capture.exists(), "gateway-only failure must not restart backend")
+
+    def test_gateway_delivery_failure_retries_without_cooldown(self):
+        self.lane.write_text("success")
+        self.shim.write_text("fail")
+        self.env["WM_TEST_POST_FAIL"] = "1"
+        for offset in range(4):
+            self.run_reflex(now=STORE_START + offset * 60)
+        self.assertFalse(self.capture.exists())
+        self.assertNotIn("_cooldown", self.state())
+
+        self.env.pop("WM_TEST_POST_FAIL")
+        retried = self.run_reflex(now=STORE_START + 240)
+        self.assertEqual(retried.returncode, 0, retried.stderr)
+        self.assertTrue(self.capture.exists())
+        self.assertFalse(self.restart_capture.exists())
+
+    def test_fresh_critical_report_creates_delivered_cooldown_atomically(self):
+        self.lane.write_text("success")
+        self.shim.write_text("success")
+        self.env["WM_TEST_STATUS"] = "critical"
+        first = self.run_reflex(now=STORE_START)
+        self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertTrue(self.capture.exists())
+        self.assertEqual(self.state()["_cooldown"]["report=critical;watchdog=none"], STORE_START)
+
+        self.capture.unlink()
+        repeated = self.run_reflex(now=STORE_START + 60)
+        self.assertFalse(self.capture.exists())
+        self.assertIn("15-minute cooldown", repeated.stdout)
+        self.assertEqual(self.state()["_cooldown"]["report=critical;watchdog=none"], STORE_START)
+
+        expired = self.run_reflex(now=STORE_START + 900)
+        self.assertEqual(expired.returncode, 0, expired.stderr)
+        self.assertTrue(self.capture.exists())
 
     # ── delivery + streak bookkeeping ─────────────────────────────────────
     def test_delivery_failure_does_not_start_cooldown(self):
