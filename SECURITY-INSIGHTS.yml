@@ -1,0 +1,130 @@
+header:
+  schema-version: 2.2.0
+  last-updated: '2026-10-22'
+  last-reviewed: '2026-10-22'
+  url: https://raw.githubusercontent.com/lbailey94/whitemagic/main/SECURITY-INSIGHTS.yml
+  comment: |
+    Security-insights for the WhiteMagic repository, in the OpenSSF
+    security-insights format. Every field below describes what exists in this
+    repository today; self-assessment is deliberately conservative and does not
+    claim a third-party audit.
+
+project:
+  name: WhiteMagic
+  homepage: https://www.whitemagic.dev
+  funding: https://www.whitemagic.dev/support
+  administrators:
+    - name: Lucas Bailey
+      affiliation: WhiteMagic
+      email: security@whitemagic.dev
+      social: https://github.com/lbailey94
+      primary: true
+  documentation:
+    quickstart-guide: https://www.whitemagic.dev/install
+    detailed-guide: https://www.whitemagic.dev/whitemagic
+    code-of-conduct: https://github.com/lbailey94/whitemagic/blob/main/CODE_OF_CONDUCT.md
+    signature-verification: https://www.whitemagic.dev/trust
+    support-policy: https://github.com/lbailey94/whitemagic/blob/main/SECURITY.md
+  repositories:
+    - name: whitemagic
+      url: https://github.com/lbailey94/whitemagic
+      comment: |
+        Core substrate: local-first agent memory, governance (mandates and
+        leases) and the receipt-writing surface. MIT.
+    - name: continuity-receipt
+      url: https://github.com/lbailey94/continuity-receipt
+      comment: |
+        Receipt format specification, conformance vectors and the independent
+        Rust and Python reference verifiers. Apache-2.0 / MIT.
+  vulnerability-reporting:
+    reports-accepted: true
+    bug-bounty-available: false
+    contact:
+      name: Lucas Bailey (sole maintainer)
+      email: security@whitemagic.dev
+      primary: true
+    policy: https://github.com/lbailey94/whitemagic/blob/main/SECURITY.md
+    in-scope:
+      - broken access control
+      - credential exposure
+      - denial of service
+      - injection
+      - privilege escalation
+      - sandbox escape
+      - other
+    out-of-scope:
+      - other
+    comment: |
+      Private reports only: GitHub Security Advisories (preferred) or
+      security@whitemagic.dev. Acknowledgement target is 48 hours; a detailed
+      response target is 7 days. Please do not open a public issue for a
+      vulnerability.
+
+repository:
+  url: https://github.com/lbailey94/whitemagic
+  status: active
+  accepts-change-request: true
+  accepts-automated-change-request: true
+  core-team:
+    - name: Lucas Bailey
+      affiliation: WhiteMagic
+      email: security@whitemagic.dev
+      social: https://github.com/lbailey94
+      primary: true
+  license:
+    url: https://github.com/lbailey94/whitemagic/blob/main/LICENSE
+    expression: MIT
+  documentation:
+    contributing-guide: https://github.com/lbailey94/whitemagic/blob/main/CONTRIBUTING.md
+    governance: https://github.com/lbailey94/whitemagic/blob/main/GOVERNANCE.md
+    review-policy: https://github.com/lbailey94/whitemagic/blob/main/GOVERNANCE.md#how-decisions-are-made
+    dependency-management-policy: https://github.com/lbailey94/whitemagic/blob/main/deny.toml
+    security-policy: https://github.com/lbailey94/whitemagic/blob/main/SECURITY.md
+  release:
+    automated-pipeline: true
+    distribution-points:
+      - uri: https://github.com/lbailey94/whitemagic/releases
+        comment: Signed releases with manifest, SBOMs and cosign bundles.
+      - uri: https://crates.io/crates/whitemagic
+        comment: Workspace crates.
+      - uri: https://www.npmjs.com/package/whitemagic-mcp
+        comment: npm launcher.
+      - uri: https://hub.docker.com/r/lbailey94/whitemagic
+        comment: Container image.
+    changelog: https://github.com/lbailey94/whitemagic/blob/main/CHANGELOG.md
+    attestations:
+      - name: CycloneDX SBOM + cosign bundle + signed release manifest
+        predicate-uri: https://cyclonedx.org/schema/bom-1.5.schema.json
+        location: https://github.com/lbailey94/whitemagic/releases
+        comment: |
+          Every release publishes CycloneDX SBOMs, cosign bundles and per-asset
+          SHA-256 files alongside a signed release manifest. Signature
+          verification steps are in VERIFY.md.
+  security:
+    assessments:
+      self:
+        name: WhiteMagic self-assessment (2026-10-22)
+        date: '2026-10-22'
+        evidence: https://github.com/lbailey94/whitemagic/blob/main/VERIFY.md
+        comment: |
+          Self-assessment only as of 2026-10-22; no third-party audit has been
+          completed. What exists in-tree and runs on every change:
+
+          - Linux Landlock write confinement (ABI auto-selected by a
+            ruleset-creation probe; loud degrade when unavailable).
+          - Zero-egress proof: scripts/zero_egress_test.sh runs the product loop
+            inside a network namespace whose only interface is a DOWN loopback.
+            Wired as the `zero-egress` workflow on push, pull request, release
+            tag and a weekly schedule; the log is kept as a build artifact.
+          - Secret scanning (gitleaks) with an allowlist for detector fixtures,
+            and a cargo-deny dependency/advisory gate.
+          - Signed release manifests, CycloneDX SBOMs and cosign bundles
+            published on every release.
+          - Hash-chained write audit (declared vs actual writes) with a deep
+            chain verifier.
+
+          Known gaps, stated plainly: no external security audit; no
+          independent reproduction of the test corpus by a third party;
+          branch-protection and review requirements are single-maintainer
+          (see GOVERNANCE.md); the OWASP LLM Top-10 mapping is an internal
+          document and is not published in this repository.

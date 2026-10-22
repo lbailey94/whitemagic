@@ -23,6 +23,14 @@ next session — without sending your memory store to any hosted service.
 }
 ```
 
+## Check the claims instead of trusting them
+
+Five-minute verification path: [VERIFY.md](VERIFY.md) — source, the
+zero-egress proof you can run yourself, release signatures and SBOMs, and what
+a receipt signature does *not* establish. Security posture in
+[SECURITY-INSIGHTS.yml](SECURITY-INSIGHTS.yml); who decides what in
+[GOVERNANCE.md](GOVERNANCE.md).
+
 ## Hosted services (separate from the local package)
 
 - **Remote MCP** — `https://mcp.whitemagic.dev/mcp` (streamable-http):
