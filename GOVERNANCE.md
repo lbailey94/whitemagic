@@ -55,8 +55,8 @@ committee". Where that creates risk — a bus factor of one, no second reviewer
   2026-10-22. It is configured for pushes to `main`/`master`, pull requests
   targeting those branches, `v*` release tags, a weekly schedule, and manual
   dispatch. The successful [2026-10-22 pull-request proof run](https://github.com/lbailey94/whitemagic/actions/runs/39798815012/job/119893326454)
-  used PR head `69105ef487a64fdc3a3d2ec0b730fd88d673d157`; GitHub confirms
-  that head and merged `main` commit `8932c81f2f4ff8f44f37a145df35001afc1022d7`
+  records checkout `8c97f70abc2d52be07a2d1c71bef3505b8c17da5`; GitHub confirms
+  that checkout and merged `main` commit `8932c81f2f4ff8f44f37a145df35001afc1022d7`
   share tree `6f2348b5a2cd8d04ba441b105e7971ebaf922a02`. This is proof for
   that source tree, not a post-merge push or tag run. GitHub currently has no
   required-status rule to enforce this workflow on `main`.
