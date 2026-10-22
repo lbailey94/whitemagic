@@ -1,0 +1,107 @@
+name: zero-egress
+
+# The zero-egress proof as a gate, not a claim.
+#
+# scripts/zero_egress_test.sh runs the product loop (serve -> memory.create ->
+# memory.search) inside a network namespace whose only interface is a DOWN
+# loopback. If the loop passes there, no egress path existed during the run.
+#
+# This workflow runs it on every mainline push, every pull request, every
+# release tag (v*), and weekly on a schedule, and publishes the log as an
+# artifact so a reviewer can read the proof instead of taking our word for it.
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: "0 5 * * 1" # Mondays 05:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "zero-egress-${{ github.ref }}"
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  proof:
+    name: Zero-Egress Proof (netns, lo DOWN)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: zero-egress
+
+      - name: Build release binary
+        run: cargo build --release --bin wm
+
+      - name: Report binary identity
+        run: |
+          set -euo pipefail
+          target/release/wm --version | tee binary-version.txt
+          sha256sum target/release/wm | tee -a binary-version.txt
+
+      # Ubuntu 24.04 ships kernel.apparmor_restrict_unprivileged_userns=1, which
+      # turns `unshare -rn` into EPERM. The proof needs the namespace, so lift
+      # the restriction on the ephemeral runner only (never on a real host) and
+      # fail loudly if the namespace still cannot be created.
+      - name: Ensure unprivileged network namespaces are available
+        run: |
+          set -euo pipefail
+          if ! unshare -rn true 2>/dev/null; then
+            echo "unprivileged userns blocked; lifting AppArmor restriction on this runner"
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          unshare -rn true
+          echo "userns: available"
+
+      - name: Run the proof
+        env:
+          WM: ${{ github.workspace }}/target/release/wm
+        run: |
+          set -o pipefail
+          bash scripts/zero_egress_test.sh 2>&1 | tee zero-egress-proof.log
+
+      - name: Publish summary
+        if: always()
+        run: |
+          set -euo pipefail
+          {
+            echo "## Zero-egress proof"
+            echo
+            echo "Method: \`scripts/zero_egress_test.sh\` — the product loop runs inside"
+            echo "\`unshare -rn\` with a single interface (\`lo\`, DOWN), asserts the"
+            echo "interface set before doing anything, then asserts the full"
+            echo "serve → \`memory.create\` → \`memory.search\` loop still works."
+            echo
+            echo "Scope: this demonstrates operation with networking disabled. It is"
+            echo "not a proof that no code path could ever attempt egress on a host"
+            echo "with a live interface."
+            echo
+            echo '```'
+            cat zero-egress-proof.log 2>/dev/null || echo "(no log produced)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload proof log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zero-egress-proof
+          path: |
+            zero-egress-proof.log
+            binary-version.txt
+          retention-days: 90
+          if-no-files-found: warn
