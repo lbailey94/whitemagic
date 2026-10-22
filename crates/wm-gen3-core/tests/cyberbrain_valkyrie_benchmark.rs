@@ -17,8 +17,8 @@ use wm_gen3_core::ops::{ImportKind, RecallQuery, RememberItem, Substrate};
 use wm_gen3_core::sutra::SutraGlyph;
 use wm_gen3_core::tripartite_router::{CognitiveTier, TripartiteRouter};
 use wm_gen3_core::valkyrie::{
-    SentinelIntakeAction, ValkyrieCyberBrainFleet, ValkyrieL0Sentinel,
-    ValkyrieL05Router, ValkyrieL1Epistemic, ValkyrieL15Navigator,
+    SentinelIntakeAction, ValkyrieCyberBrainFleet, ValkyrieL0Sentinel, ValkyrieL1Epistemic,
+    ValkyrieL05Router, ValkyrieL15Navigator,
 };
 
 struct TempDir(PathBuf);
@@ -64,10 +64,18 @@ fn dir_size(path: &Path) -> u64 {
     total
 }
 
+fn remember_fixture(substrate: &mut Substrate, item: RememberItem) {
+    let mut results = substrate.remember_batch(&[item]);
+    assert_eq!(results.len(), 1, "one result is required for each fixture");
+    results.pop().unwrap().expect("fixture must be committed");
+}
+
 #[test]
 fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     let is_debug = cfg!(debug_assertions);
-    println!("\n========================================================================================");
+    println!(
+        "\n========================================================================================"
+    );
     println!("  WHITE MAGIC GEN3: CYBERBRAIN VALKYRIE-2 SPECIALIZED FLEET BENCHMARK");
     println!("  Evaluating 4-Layer Before (Baseline Heuristic) vs. After (Valkyrie-2) Deltas");
     println!(
@@ -78,7 +86,9 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
             "Release (Optimized)"
         }
     );
-    println!("========================================================================================\n");
+    println!(
+        "========================================================================================\n"
+    );
 
     // ─────────────────────────────────────────────────────────────────────────
     // LAYER 0: INTAKE & IMMUNE GATE (Valkyrie-L0-Sentinel)
@@ -143,7 +153,7 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
             source: format!("session_{:03}", i % 10),
             kind: ImportKind::Reported,
         };
-        let _ = base_sub.remember_batch(&[item_base]);
+        remember_fixture(&mut base_sub, item_base);
         base_ingested += 1;
     }
     let base_intake_time = t_base_start.elapsed();
@@ -202,7 +212,7 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
                     source: format!("session_{:03}", i % 10),
                     kind: ImportKind::Reported,
                 };
-                let _ = valk_sub.remember_batch(&[item_valk]);
+                remember_fixture(&mut valk_sub, item_valk);
                 valk_ingested += 1;
             }
         }
@@ -211,8 +221,11 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
 
     let base_bytes = dir_size(base_temp.path());
     let valk_bytes = dir_size(valk_temp.path());
-    let storage_saved_bytes = base_bytes.saturating_sub(valk_bytes);
-    let storage_saved_pct = (storage_saved_bytes as f64 / base_bytes.max(1) as f64) * 100.0;
+    // Physical LMDB size includes platform-dependent page allocation and fixed
+    // overhead. Record the signed observation without making an arbitrary
+    // percentage a correctness gate (the same fixture uses 9% less on macOS).
+    let storage_delta_pct =
+        (valk_bytes as f64 - base_bytes as f64) / base_bytes.max(1) as f64 * 100.0;
 
     println!(
         "  Baseline Intake: {} records ingested ({:.2} KB stored) in {:.2} ms",
@@ -231,12 +244,32 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
         noise_filtered, pii_redactions, antibodies_blocked
     );
     println!(
-        "  -> LMDB Storage Savings: {:.1}% footprint reduction\n",
-        storage_saved_pct
+        "  -> Observed physical store size delta: {:+.1}% (platform-dependent)\n",
+        storage_delta_pct
     );
-    assert!(storage_saved_pct > 15.0);
-    assert!(antibodies_blocked > 0);
-    assert!(pii_redactions > 0);
+    assert_eq!(base_ingested, num_raw);
+    assert_eq!(valk_ingested + noise_filtered + antibodies_blocked, num_raw);
+    assert_eq!(base_sub.store().record_count().unwrap(), base_ingested);
+    assert_eq!(valk_sub.store().record_count().unwrap(), valk_ingested);
+    assert!(valk_ingested > 0);
+    assert!(valk_ingested < base_ingested);
+    let expected_noise = (0..num_raw).filter(|i| i % 6 == 2).count();
+    let expected_blocked = (0..num_raw).filter(|i| i % 6 == 4).count();
+    let expected_scrubbed = 2 * (0..num_raw).filter(|i| i % 6 == 0).count()
+        + (0..num_raw).filter(|i| i % 6 == 3).count();
+    assert_eq!(noise_filtered, expected_noise);
+    assert_eq!(antibodies_blocked, expected_blocked);
+    assert_eq!(pii_redactions, expected_scrubbed);
+    let stored_records = valk_sub.store().iter_records().unwrap();
+    assert_eq!(stored_records.len(), valk_ingested);
+    for record in stored_records {
+        for marker in ["/home/", "id_ed25519", "sk-proj-"] {
+            assert!(
+                !record.content().contains(marker),
+                "fixture marker {marker} must not survive in stored content"
+            );
+        }
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // LAYER 0.5: COGNITIVE TIER & GANA TRIAGE (Valkyrie-L05-Router)
@@ -244,15 +277,47 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     println!("--- [Layer 0.5] Semantic Intent Routing & Triage ---");
     let test_prompts = [
         // Canonical keywords (both baseline and valkyrie handle)
-        ("execute test suite for kernel barrier", CognitiveTier::System0Sutra, true),
-        ("verify formal invariant in bend", CognitiveTier::System0Sutra, true),
+        (
+            "execute test suite for kernel barrier",
+            CognitiveTier::System0Sutra,
+            true,
+        ),
+        (
+            "verify formal invariant in bend",
+            CognitiveTier::System0Sutra,
+            true,
+        ),
         // Natural paraphrases WITHOUT exact keywords (baseline falls back to Cloud; Valkyrie routes accurately)
-        ("please check whether our borrow rules hold safely", CognitiveTier::System0Sutra, false),
-        ("audit the current execution sandbox boundary", CognitiveTier::System0Sutra, false),
-        ("assess the security state of the landlock barrier", CognitiveTier::System0Sutra, false),
-        ("summarize recent historical commit messages across repos", CognitiveTier::System1LocalOrgan, false),
-        ("run a background dream cycle to optimize memory allocations", CognitiveTier::System0Sutra, false),
-        ("provide high-level speculative strategic philosophy on future AGI", CognitiveTier::System2FrontierCloud, false),
+        (
+            "please check whether our borrow rules hold safely",
+            CognitiveTier::System0Sutra,
+            false,
+        ),
+        (
+            "audit the current execution sandbox boundary",
+            CognitiveTier::System0Sutra,
+            false,
+        ),
+        (
+            "assess the security state of the landlock barrier",
+            CognitiveTier::System0Sutra,
+            false,
+        ),
+        (
+            "summarize recent historical commit messages across repos",
+            CognitiveTier::System1LocalOrgan,
+            false,
+        ),
+        (
+            "run a background dream cycle to optimize memory allocations",
+            CognitiveTier::System0Sutra,
+            false,
+        ),
+        (
+            "provide high-level speculative strategic philosophy on future AGI",
+            CognitiveTier::System2FrontierCloud,
+            false,
+        ),
     ];
 
     let mut base_correct = 0;
@@ -308,7 +373,8 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
 
     // T1: Insert older configuration
     let old_fact = RememberItem {
-        content: "Configuration fact: Target production gateway IP is 192.168.1.100:8080".to_string(),
+        content: "Configuration fact: Target production gateway IP is 192.168.1.100:8080"
+            .to_string(),
         source: "session_old".to_string(),
         kind: ImportKind::Reported,
     };
@@ -330,7 +396,8 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     let raw_results = ep_sub.recall(&conflict_query).expect("recall succeeds");
 
     // Baseline: relies purely on raw BM25 score
-    let base_first_is_ratified = !raw_results.is_empty() && raw_results[0].content.contains("10.0.0.250:9090");
+    let base_first_is_ratified =
+        !raw_results.is_empty() && raw_results[0].content.contains("10.0.0.250:9090");
 
     // Valkyrie-L1 Epistemic Re-ranker:
     let l1_epistemic = ValkyrieL1Epistemic::new();
@@ -345,13 +412,24 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
 
     println!(
         "  Baseline BM25 Resolution:   {}",
-        if base_first_is_ratified { "PASS" } else { "HEURISTIC TIE / INVERSION" }
+        if base_first_is_ratified {
+            "PASS"
+        } else {
+            "HEURISTIC TIE / INVERSION"
+        }
     );
     println!(
         "  Valkyrie-L1 Resolution:     {}",
-        if valk_first_is_ratified { "PASS (100% Ratified Supersession Guaranteed)" } else { "FAIL" }
+        if valk_first_is_ratified {
+            "PASS (ratified fixture ranked first)"
+        } else {
+            "FAIL"
+        }
     );
-    println!("  -> Correct Production IP:   10.0.0.250:9090 ranked #1 with epistemic score: {:.2}\n", valk_top_score);
+    println!(
+        "  -> Expected Fixture IP:     10.0.0.250:9090 ranked #1 with epistemic score: {:.2}\n",
+        valk_top_score
+    );
     assert!(valk_first_is_ratified);
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -387,7 +465,10 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
         - (nav_report.reduced_glyph_count as f64 / nav_report.original_glyph_count as f64))
         * 100.0;
 
-    println!("  Pipeline Input Glyphs:       {} glyphs", nav_report.original_glyph_count);
+    println!(
+        "  Pipeline Input Glyphs:       {} glyphs",
+        nav_report.original_glyph_count
+    );
     println!(
         "  Superoptimized Glyphs:       {} glyphs ({:.1}% contraction, {:.2}x speedup)",
         nav_report.reduced_glyph_count, glyph_reduction_pct, nav_report.speedup_factor
@@ -411,19 +492,93 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     // ─────────────────────────────────────────────────────────────────────────
     // GRAND SUMMARY DELTA TABLE
     // ─────────────────────────────────────────────────────────────────────────
-    println!("========================================================================================");
-    println!("  CYBERBRAIN BENCHMARK DELTA SUMMARY (BEFORE vs. AFTER)");
-    println!("========================================================================================");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "Subsystem / Metric", "Baseline Heuristic", "Valkyrie-2 Fleet", "Delta / Outcome");
-    println!("  --------------------------------------------------------------------------------------");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L0 Intake Storage Footprint", format!("{:.1} KB", base_bytes as f64 / 1024.0), format!("{:.1} KB", valk_bytes as f64 / 1024.0), format!("-{:.1}% noise", storage_saved_pct));
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L0 Citadel Antibody Immunity", "0% blocked (blind)", "100% blocked (<5 ns)", "Protected");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L0 PII / Secret Redaction", "0 scrubbed", format!("{} tokens redacted", pii_redactions), "Zero-Egress");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L0.5 Intent Routing Accuracy", format!("{:.1}% (keyword)", (base_correct as f64 / n_prompts) * 100.0), format!("{:.1}% (semantic)", (valk_correct as f64 / n_prompts) * 100.0), "Paraphrase-Safe");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L0.5 Unnecessary Cloud Calls", format!("{}/{}", base_cloud_escalations, test_prompts.len()), format!("{}/{}", valk_cloud_escalations, test_prompts.len()), "Cost Reduced");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1 Temporal Supersession", "Heuristic Tie", "100% Ratified First", "Zero Hallucination");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1.5 Macro Superoptimization", "8 glyphs unreduced", format!("{} glyphs (-{:.0}%)", nav_report.reduced_glyph_count, glyph_reduction_pct), format!("{:.1}x Speedup", nav_report.speedup_factor));
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1.5 Counterfactual Fallback", "None (Fails closed)", format!("Safe in {} ns", nav_report.switch_latency_ns), format!("{:.1} us", nav_report.switch_latency_ns as f64 / 1000.0));
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "Total Fleet RAM Footprint", "N/A (Multi-GB cloud)", format!("{:.1} KB total", fleet_footprint_kb), "100% L2 Cache");
-    println!("========================================================================================\n");
+    println!(
+        "========================================================================================"
+    );
+    println!("  CYBERBRAIN AUTHORED FIXTURE SUMMARY (BEFORE vs. AFTER)");
+    println!(
+        "  Fixture observations do not establish general accuracy, privacy, or network isolation."
+    );
+    println!(
+        "========================================================================================"
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "Subsystem / Metric", "Baseline Heuristic", "Valkyrie-2 Fleet", "Delta / Outcome"
+    );
+    println!(
+        "  --------------------------------------------------------------------------------------"
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L0 Physical Store Size",
+        format!("{:.1} KB", base_bytes as f64 / 1024.0),
+        format!("{:.1} KB", valk_bytes as f64 / 1024.0),
+        format!("{:+.1}% observed", storage_delta_pct)
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L0 Antibody Fixture",
+        "0 blocked (blind)",
+        format!("{} blocked", antibodies_blocked),
+        "Fixture count"
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L0 Redaction Fixture",
+        "0 scrubbed",
+        format!("{} markers scrubbed", pii_redactions),
+        "Fixture count"
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L0.5 Routing Fixture Accuracy",
+        format!(
+            "{:.1}% (keyword)",
+            (base_correct as f64 / n_prompts) * 100.0
+        ),
+        format!(
+            "{:.1}% (semantic)",
+            (valk_correct as f64 / n_prompts) * 100.0
+        ),
+        "Authored prompts"
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L0.5 Cloud-Tier Selections",
+        format!("{}/{}", base_cloud_escalations, test_prompts.len()),
+        format!("{}/{}", valk_cloud_escalations, test_prompts.len()),
+        "No cloud call made"
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L1 Temporal Supersession", "Heuristic Tie", "Ratified First", "Fixture outcome"
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L1.5 Macro Superoptimization",
+        format!("{} glyphs unreduced", nav_report.original_glyph_count),
+        format!(
+            "{} glyphs (-{:.0}%)",
+            nav_report.reduced_glyph_count, glyph_reduction_pct
+        ),
+        format!("{:.1}x Speedup", nav_report.speedup_factor)
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L1.5 Counterfactual Fallback",
+        "None (Fails closed)",
+        format!("Safe in {} ns", nav_report.switch_latency_ns),
+        format!("{:.1} us", nav_report.switch_latency_ns as f64 / 1000.0)
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "Modeled Fleet Workspace Bytes",
+        "N/A",
+        format!("{:.1} KB", fleet_footprint_kb),
+        "No cache residency measured"
+    );
+    println!(
+        "========================================================================================\n"
+    );
 }
