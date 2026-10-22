@@ -116,10 +116,16 @@ repository:
           - Zero-egress proof: scripts/zero_egress_test.sh runs the full-profile
             product loop inside a network namespace whose only interface is a
             DOWN loopback, with a route-blocked egress control. The `zero-egress`
-            workflow is on this PR branch and is configured for pushes to
-            main/master, pull requests targeting them, release tags, and a
-            weekly schedule; the log is kept as a build artifact. It is not yet
-            on the default branch.
+            workflow was merged into `main` by PR #11 on 2026-10-22. It is
+            configured for pushes to main/master, pull requests targeting them,
+            `v*` release tags, a weekly schedule, and manual dispatch. The
+            successful [2026-10-22 pull-request run](https://github.com/lbailey94/whitemagic/actions/runs/39798815012/job/119893326454)
+            used PR head `69105ef487a64fdc3a3d2ec0b730fd88d673d157`; that head
+            and merged `main` commit `8932c81f2f4ff8f44f37a145df35001afc1022d7`
+            have the same Git tree (`6f2348b5a2cd8d04ba441b105e7971ebaf922a02`).
+            This is a passing run for that source tree, not evidence of a
+            post-merge push or tag run.
+            The proof log is retained as a build artifact.
           - Secret scanning (gitleaks) with an allowlist for detector fixtures,
             and a cargo-deny dependency/advisory gate.
           - The pinned v10.5.0 release includes a signed release manifest,
