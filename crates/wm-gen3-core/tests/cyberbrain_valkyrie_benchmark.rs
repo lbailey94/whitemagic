@@ -17,8 +17,8 @@ use wm_gen3_core::ops::{ImportKind, RecallQuery, RememberItem, Substrate};
 use wm_gen3_core::sutra::SutraGlyph;
 use wm_gen3_core::tripartite_router::{CognitiveTier, TripartiteRouter};
 use wm_gen3_core::valkyrie::{
-    SentinelIntakeAction, ValkyrieCyberBrainFleet, ValkyrieL0Sentinel,
-    ValkyrieL05Router, ValkyrieL1Epistemic, ValkyrieL15Navigator,
+    SentinelIntakeAction, ValkyrieCyberBrainFleet, ValkyrieL0Sentinel, ValkyrieL1Epistemic,
+    ValkyrieL05Router, ValkyrieL15Navigator,
 };
 
 struct TempDir(PathBuf);
@@ -67,7 +67,9 @@ fn dir_size(path: &Path) -> u64 {
 #[test]
 fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     let is_debug = cfg!(debug_assertions);
-    println!("\n========================================================================================");
+    println!(
+        "\n========================================================================================"
+    );
     println!("  WHITE MAGIC GEN3: CYBERBRAIN VALKYRIE-2 SPECIALIZED FLEET BENCHMARK");
     println!("  Evaluating 4-Layer Before (Baseline Heuristic) vs. After (Valkyrie-2) Deltas");
     println!(
@@ -78,7 +80,9 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
             "Release (Optimized)"
         }
     );
-    println!("========================================================================================\n");
+    println!(
+        "========================================================================================\n"
+    );
 
     // ─────────────────────────────────────────────────────────────────────────
     // LAYER 0: INTAKE & IMMUNE GATE (Valkyrie-L0-Sentinel)
@@ -244,15 +248,47 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     println!("--- [Layer 0.5] Semantic Intent Routing & Triage ---");
     let test_prompts = [
         // Canonical keywords (both baseline and valkyrie handle)
-        ("execute test suite for kernel barrier", CognitiveTier::System0Sutra, true),
-        ("verify formal invariant in bend", CognitiveTier::System0Sutra, true),
+        (
+            "execute test suite for kernel barrier",
+            CognitiveTier::System0Sutra,
+            true,
+        ),
+        (
+            "verify formal invariant in bend",
+            CognitiveTier::System0Sutra,
+            true,
+        ),
         // Natural paraphrases WITHOUT exact keywords (baseline falls back to Cloud; Valkyrie routes accurately)
-        ("please check whether our borrow rules hold safely", CognitiveTier::System0Sutra, false),
-        ("audit the current execution sandbox boundary", CognitiveTier::System0Sutra, false),
-        ("assess the security state of the landlock barrier", CognitiveTier::System0Sutra, false),
-        ("summarize recent historical commit messages across repos", CognitiveTier::System1LocalOrgan, false),
-        ("run a background dream cycle to optimize memory allocations", CognitiveTier::System0Sutra, false),
-        ("provide high-level speculative strategic philosophy on future AGI", CognitiveTier::System2FrontierCloud, false),
+        (
+            "please check whether our borrow rules hold safely",
+            CognitiveTier::System0Sutra,
+            false,
+        ),
+        (
+            "audit the current execution sandbox boundary",
+            CognitiveTier::System0Sutra,
+            false,
+        ),
+        (
+            "assess the security state of the landlock barrier",
+            CognitiveTier::System0Sutra,
+            false,
+        ),
+        (
+            "summarize recent historical commit messages across repos",
+            CognitiveTier::System1LocalOrgan,
+            false,
+        ),
+        (
+            "run a background dream cycle to optimize memory allocations",
+            CognitiveTier::System0Sutra,
+            false,
+        ),
+        (
+            "provide high-level speculative strategic philosophy on future AGI",
+            CognitiveTier::System2FrontierCloud,
+            false,
+        ),
     ];
 
     let mut base_correct = 0;
@@ -308,7 +344,8 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
 
     // T1: Insert older configuration
     let old_fact = RememberItem {
-        content: "Configuration fact: Target production gateway IP is 192.168.1.100:8080".to_string(),
+        content: "Configuration fact: Target production gateway IP is 192.168.1.100:8080"
+            .to_string(),
         source: "session_old".to_string(),
         kind: ImportKind::Reported,
     };
@@ -330,7 +367,8 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     let raw_results = ep_sub.recall(&conflict_query).expect("recall succeeds");
 
     // Baseline: relies purely on raw BM25 score
-    let base_first_is_ratified = !raw_results.is_empty() && raw_results[0].content.contains("10.0.0.250:9090");
+    let base_first_is_ratified =
+        !raw_results.is_empty() && raw_results[0].content.contains("10.0.0.250:9090");
 
     // Valkyrie-L1 Epistemic Re-ranker:
     let l1_epistemic = ValkyrieL1Epistemic::new();
@@ -345,13 +383,24 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
 
     println!(
         "  Baseline BM25 Resolution:   {}",
-        if base_first_is_ratified { "PASS" } else { "HEURISTIC TIE / INVERSION" }
+        if base_first_is_ratified {
+            "PASS"
+        } else {
+            "HEURISTIC TIE / INVERSION"
+        }
     );
     println!(
         "  Valkyrie-L1 Resolution:     {}",
-        if valk_first_is_ratified { "PASS (100% Ratified Supersession Guaranteed)" } else { "FAIL" }
+        if valk_first_is_ratified {
+            "PASS (100% Ratified Supersession Guaranteed)"
+        } else {
+            "FAIL"
+        }
     );
-    println!("  -> Correct Production IP:   10.0.0.250:9090 ranked #1 with epistemic score: {:.2}\n", valk_top_score);
+    println!(
+        "  -> Correct Production IP:   10.0.0.250:9090 ranked #1 with epistemic score: {:.2}\n",
+        valk_top_score
+    );
     assert!(valk_first_is_ratified);
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -387,7 +436,10 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
         - (nav_report.reduced_glyph_count as f64 / nav_report.original_glyph_count as f64))
         * 100.0;
 
-    println!("  Pipeline Input Glyphs:       {} glyphs", nav_report.original_glyph_count);
+    println!(
+        "  Pipeline Input Glyphs:       {} glyphs",
+        nav_report.original_glyph_count
+    );
     println!(
         "  Superoptimized Glyphs:       {} glyphs ({:.1}% contraction, {:.2}x speedup)",
         nav_report.reduced_glyph_count, glyph_reduction_pct, nav_report.speedup_factor
@@ -411,19 +463,87 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     // ─────────────────────────────────────────────────────────────────────────
     // GRAND SUMMARY DELTA TABLE
     // ─────────────────────────────────────────────────────────────────────────
-    println!("========================================================================================");
+    println!(
+        "========================================================================================"
+    );
     println!("  CYBERBRAIN BENCHMARK DELTA SUMMARY (BEFORE vs. AFTER)");
-    println!("========================================================================================");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "Subsystem / Metric", "Baseline Heuristic", "Valkyrie-2 Fleet", "Delta / Outcome");
-    println!("  --------------------------------------------------------------------------------------");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L0 Intake Storage Footprint", format!("{:.1} KB", base_bytes as f64 / 1024.0), format!("{:.1} KB", valk_bytes as f64 / 1024.0), format!("-{:.1}% noise", storage_saved_pct));
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L0 Citadel Antibody Immunity", "0% blocked (blind)", "100% blocked (<5 ns)", "Protected");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L0 PII / Secret Redaction", "0 scrubbed", format!("{} tokens redacted", pii_redactions), "Zero-Egress");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L0.5 Intent Routing Accuracy", format!("{:.1}% (keyword)", (base_correct as f64 / n_prompts) * 100.0), format!("{:.1}% (semantic)", (valk_correct as f64 / n_prompts) * 100.0), "Paraphrase-Safe");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L0.5 Unnecessary Cloud Calls", format!("{}/{}", base_cloud_escalations, test_prompts.len()), format!("{}/{}", valk_cloud_escalations, test_prompts.len()), "Cost Reduced");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1 Temporal Supersession", "Heuristic Tie", "100% Ratified First", "Zero Hallucination");
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1.5 Macro Superoptimization", "8 glyphs unreduced", format!("{} glyphs (-{:.0}%)", nav_report.reduced_glyph_count, glyph_reduction_pct), format!("{:.1}x Speedup", nav_report.speedup_factor));
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "L1.5 Counterfactual Fallback", "None (Fails closed)", format!("Safe in {} ns", nav_report.switch_latency_ns), format!("{:.1} us", nav_report.switch_latency_ns as f64 / 1000.0));
-    println!("  {:<32} | {:<22} | {:<24} | {:<12}", "Total Fleet RAM Footprint", "N/A (Multi-GB cloud)", format!("{:.1} KB total", fleet_footprint_kb), "100% L2 Cache");
-    println!("========================================================================================\n");
+    println!(
+        "========================================================================================"
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "Subsystem / Metric", "Baseline Heuristic", "Valkyrie-2 Fleet", "Delta / Outcome"
+    );
+    println!(
+        "  --------------------------------------------------------------------------------------"
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L0 Intake Storage Footprint",
+        format!("{:.1} KB", base_bytes as f64 / 1024.0),
+        format!("{:.1} KB", valk_bytes as f64 / 1024.0),
+        format!("-{:.1}% noise", storage_saved_pct)
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L0 Citadel Antibody Immunity", "0% blocked (blind)", "100% blocked (<5 ns)", "Protected"
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L0 PII / Secret Redaction",
+        "0 scrubbed",
+        format!("{} tokens redacted", pii_redactions),
+        "Zero-Egress"
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L0.5 Intent Routing Accuracy",
+        format!(
+            "{:.1}% (keyword)",
+            (base_correct as f64 / n_prompts) * 100.0
+        ),
+        format!(
+            "{:.1}% (semantic)",
+            (valk_correct as f64 / n_prompts) * 100.0
+        ),
+        "Paraphrase-Safe"
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L0.5 Unnecessary Cloud Calls",
+        format!("{}/{}", base_cloud_escalations, test_prompts.len()),
+        format!("{}/{}", valk_cloud_escalations, test_prompts.len()),
+        "Cost Reduced"
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L1 Temporal Supersession", "Heuristic Tie", "100% Ratified First", "Zero Hallucination"
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L1.5 Macro Superoptimization",
+        "8 glyphs unreduced",
+        format!(
+            "{} glyphs (-{:.0}%)",
+            nav_report.reduced_glyph_count, glyph_reduction_pct
+        ),
+        format!("{:.1}x Speedup", nav_report.speedup_factor)
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "L1.5 Counterfactual Fallback",
+        "None (Fails closed)",
+        format!("Safe in {} ns", nav_report.switch_latency_ns),
+        format!("{:.1} us", nav_report.switch_latency_ns as f64 / 1000.0)
+    );
+    println!(
+        "  {:<32} | {:<22} | {:<24} | {:<12}",
+        "Total Fleet RAM Footprint",
+        "N/A (Multi-GB cloud)",
+        format!("{:.1} KB total", fleet_footprint_kb),
+        "100% L2 Cache"
+    );
+    println!(
+        "========================================================================================\n"
+    );
 }

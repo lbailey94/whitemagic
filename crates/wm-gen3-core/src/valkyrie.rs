@@ -2383,9 +2383,16 @@ pub struct ValkyrieL0Sentinel {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SentinelIntakeAction {
-    BlockedAntibody { digest: u64 },
-    FilteredNoise { reason: &'static str },
-    Sanitized { text: String, scrubbed_pii_count: usize },
+    BlockedAntibody {
+        digest: u64,
+    },
+    FilteredNoise {
+        reason: &'static str,
+    },
+    Sanitized {
+        text: String,
+        scrubbed_pii_count: usize,
+    },
 }
 
 impl ValkyrieL0Sentinel {
@@ -2396,7 +2403,11 @@ impl ValkyrieL0Sentinel {
 
     /// Fast-path filter (<5 ns) + Kekkai sanitization + noise detection
     #[must_use]
-    pub fn evaluate_intake(&self, raw_content: &str, candidate_digest: u64) -> SentinelIntakeAction {
+    pub fn evaluate_intake(
+        &self,
+        raw_content: &str,
+        candidate_digest: u64,
+    ) -> SentinelIntakeAction {
         if self.antibody_bloom.contains_digest(candidate_digest) {
             return SentinelIntakeAction::BlockedAntibody {
                 digest: candidate_digest,
@@ -2452,19 +2463,44 @@ impl ValkyrieL05Router {
         let words: Vec<&str> = lower.split_whitespace().collect();
 
         let sys0_signals = [
-            "execute", "verify", "test", "proof", "check", "audit", "sandbox", "kekkai",
-            "borrow", "barrier", "landlock", "dream", "compact", "prune", "formal", "invariant",
+            "execute",
+            "verify",
+            "test",
+            "proof",
+            "check",
+            "audit",
+            "sandbox",
+            "kekkai",
+            "borrow",
+            "barrier",
+            "landlock",
+            "dream",
+            "compact",
+            "prune",
+            "formal",
+            "invariant",
         ];
-        let sys05_signals = [
-            "lookup", "status", "query", "state", "cache", "find", "key",
-        ];
+        let sys05_signals = ["lookup", "status", "query", "state", "cache", "find", "key"];
         let sys1_signals = [
-            "summarize", "history", "commit", "messages", "repos", "report", "review",
-            "reconcile", "session",
+            "summarize",
+            "history",
+            "commit",
+            "messages",
+            "repos",
+            "report",
+            "review",
+            "reconcile",
+            "session",
         ];
         let sys2_signals = [
-            "philosophy", "agi", "speculative", "future", "strategic", "hypothetical",
-            "scaling", "consciousness",
+            "philosophy",
+            "agi",
+            "speculative",
+            "future",
+            "strategic",
+            "hypothetical",
+            "scaling",
+            "consciousness",
         ];
 
         let mut s0 = 0.0f32;
@@ -2703,7 +2739,11 @@ impl ValkyrieCyberBrainFleet {
 
     #[must_use]
     pub fn memory_footprint_bytes(&self) -> usize {
-        self.l05_router.engine.valkyrie_zero.memory_footprint_bytes() * 4
+        self.l05_router
+            .engine
+            .valkyrie_zero
+            .memory_footprint_bytes()
+            * 4
     }
 }
 
