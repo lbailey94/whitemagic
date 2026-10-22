@@ -11,28 +11,29 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+permissions:
+  contents: read
+
 jobs:
   benchmark:
     name: PEB-0 release evidence
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    # The release upload remains tag-only below; keep the existing permission
-    # because softprops/action-gh-release needs contents: write on tag runs.
     permissions:
-      contents: write
+      contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
 
       - name: Qualify PEB-10 timing (repeated release-mode samples)
         run: python3 benchmarks/qualify_peb10_timing.py
 
       - name: Upload PEB-10 timing samples
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: peb10-timing-${{ github.run_id }}-${{ github.run_attempt }}
           path: benchmark-results/peb10-timing.json
@@ -74,7 +75,7 @@ jobs:
 
       - name: Upload release-mode benchmark evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: benchmark-results
           path: |
@@ -82,11 +83,24 @@ jobs:
             benchmark-results/
           if-no-files-found: warn
 
-      - name: Attach benchmark evidence to release tag
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v3
+  publish-benchmark-evidence:
+    name: Attach release benchmark evidence
+    needs: [benchmark]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download benchmark evidence from this run
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          files: benchmark_results.txt
+          name: benchmark-results
+          path: benchmark-release-artifacts
+
+      - name: Attach benchmark evidence to release tag
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
+        with:
+          files: benchmark-release-artifacts/benchmark_results.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -97,13 +111,13 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
 
       - name: Run PR head PEB-0 tests in release mode
         shell: bash
@@ -141,7 +155,7 @@ jobs:
           run_one_peb_test pulse::tests::test_peb0_1_intelligent_merger_benchmark_execution benchmark-comparison/pr-peb0.1.log
 
       - name: Checkout exact PR base commit
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           path: base
@@ -204,7 +218,7 @@ jobs:
 
       - name: Upload PR/base raw benchmark evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: benchmark-comparison-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
