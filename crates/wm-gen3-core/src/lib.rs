@@ -109,7 +109,7 @@ pub use valkyrie::{
     CurriculumPhase, FisherHadamardProjector, GanaMicroExpert, HBitLinearTernary,
     HomeostaticThermalSnapshot, KekkaiSanitizer, ModelBenchmarkMetrics, NavigatorRolloutResult,
     PhaseModality, SentinelIntakeAction, SyntheticWaveCompiler, TranscoderFeatureNode,
-    ValkyrieCyberBrainFleet, ValkyrieL0Sentinel, ValkyrieL05Router, ValkyrieL1Epistemic,
+    ValkyrieCyberBrainFleet, ValkyrieL0Sentinel, ValkyrieL1Epistemic, ValkyrieL05Router,
     ValkyrieL15Navigator, ValkyrieOneSymbiont, ValkyriePulseDecision, ValkyrieRoutingResult,
     ValkyrieSample, ValkyrieTwoEngine, ValkyrieZeroEngine, fwht_in_place, project_srht_to_64d,
     vsa_hadamard_bind,
