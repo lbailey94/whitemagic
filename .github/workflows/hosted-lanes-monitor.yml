@@ -28,20 +28,20 @@ jobs:
           init="$(curl -fsS --max-time 20 -X POST https://mcp.whitemagic.dev/mcp \
             -H 'Content-Type: application/json' \
             -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}')"
-          echo "$init" | grep -q '"result"' || { echo "initialize: $init"; exit 1; }
+          [[ "$init" == *'"result"'* ]] || { echo "initialize: $init"; exit 1; }
           tools="$(curl -fsS --max-time 20 -X POST https://mcp.whitemagic.dev/mcp \
             -H 'Content-Type: application/json' \
             -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}')"
-          echo "$tools" | grep -q '"tools"' || { echo "tools/list: $tools"; exit 1; }
+          [[ "$tools" == *'"tools"'* ]] || { echo "tools/list: $tools"; exit 1; }
           card="$(curl -fsS --max-time 15 https://mcp.whitemagic.dev/.well-known/mcp/server-card.json)"
-          echo "$card" | grep -q 'serverInfo' || { echo "card: $card"; exit 1; }
+          [[ "$card" == *'"serverInfo"'* ]] || { echo "card: $card"; exit 1; }
           echo "mcp lane ok"
 
       - name: Probe api.whitemagic.dev
         run: |
           set -euo pipefail
           health="$(curl -fsS --max-time 15 https://api.whitemagic.dev/health)"
-          echo "$health" | grep -q 'true' || { echo "health: $health"; exit 1; }
+          [[ "$health" == *"true"* ]] || { echo "health: $health"; exit 1; }
           info="$(curl -fsS --max-time 15 https://api.whitemagic.dev/info)"
-          echo "$info" | grep -q 'continuity-receipt-verify' || { echo "info: $info"; exit 1; }
+          [[ "$info" == *"continuity-receipt-verify"* ]] || { echo "info: $info"; exit 1; }
           echo "api lane ok"
