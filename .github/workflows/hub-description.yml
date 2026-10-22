@@ -11,7 +11,7 @@ jobs:
     name: PATCH full_description from the runbook block
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Extract the README block from docs/DOCKER_HUB_RUNBOOK.md
         run: |

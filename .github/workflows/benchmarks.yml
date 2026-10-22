@@ -21,7 +21,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -32,7 +32,7 @@ jobs:
 
       - name: Upload PEB-10 timing samples
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: peb10-timing-${{ github.run_id }}-${{ github.run_attempt }}
           path: benchmark-results/peb10-timing.json
@@ -74,7 +74,7 @@ jobs:
 
       - name: Upload release-mode benchmark evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-results
           path: |
@@ -97,7 +97,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
@@ -141,7 +141,7 @@ jobs:
           run_one_peb_test pulse::tests::test_peb0_1_intelligent_merger_benchmark_execution benchmark-comparison/pr-peb0.1.log
 
       - name: Checkout exact PR base commit
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           path: base
@@ -204,7 +204,7 @@ jobs:
 
       - name: Upload PR/base raw benchmark evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-comparison-${{ github.run_id }}-${{ github.run_attempt }}
           path: |

@@ -19,7 +19,7 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # full history so the scan covers every commit
       - uses: gitleaks/gitleaks-action@v3
@@ -43,7 +43,7 @@ jobs:
     name: public-surface guard
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: bash scripts/public_surface_check.sh
 
   # Ported concept from the v26 archives (og_whitemagic
@@ -55,5 +55,5 @@ jobs:
     name: dependency audit (cargo-deny)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: EmbarkStudios/cargo-deny-action@v2
