@@ -34,14 +34,17 @@ namespace routing. It then completes a full-profile JSON-RPC
 that cannot be created, an unexpected reply, timeout, or host-policy denial
 fails without producing a pass.
 
-The [`zero-egress`](.github/workflows/zero-egress.yml) workflow is present on
-the open [PR #11](https://github.com/lbailey94/whitemagic/pull/11) branch
-`ci/evidence-gates-20261022`. It is configured there for pushes to `main` or
-`master`, pull requests targeting those branches, release tags, and a weekly
-schedule; it uploads the run log and binary identity. When checked on
-2026-10-22, PR #11 was still open, so this workflow had not yet become a
-default-branch check. A passing run or uploaded artifact does not establish
-that GitHub requires the check for merging.
+The [`zero-egress`](.github/workflows/zero-egress.yml) workflow runs on pushes
+to `main`, pull requests targeting `main`, release tags, and a weekly schedule.
+It uploads the run log and the binary identity (path, digest, version) as a
+90-day artifact and mirrors the log into the job summary. It has run on
+`main`: [run 39799102908](https://github.com/lbailey94/whitemagic/actions/runs/39799102908),
+2026-10-22T14:53Z, `wm 10.5.0`, PASS.
+
+Two honest limits on that sentence: a green run does not establish that GitHub
+*requires* the check for merging (branch protection is separate from CI), and
+a green run on one commit does not establish that the property holds for every
+future commit — which is why the trigger list matters more than the one result.
 
 **What this does not establish:** that no code path could ever attempt egress
 on a host that *has* a live interface. The proof is about the product loop
