@@ -4,8 +4,8 @@ name: scorecard
 # funder asks first (branch protection, pinned dependencies, token
 # permissions, dangerous workflows, signed releases).
 #
-# Results are published to the public OpenSSF API when this runs on the
-# default branch, which is what makes the score citeable:
+# Default-branch runs request publication to the public OpenSSF API.
+# Confirm an accepted result before citing a published score:
 #   https://api.securityscorecards.dev/projects/github.com/lbailey94/whitemagic
 
 on:
@@ -29,6 +29,9 @@ jobs:
       contents: read
       actions: read
 
+    # Publication accepts only approved action steps in this job; shell
+    # summary steps cause the results service to reject the workflow.
+    # https://github.com/ossf/scorecard-action#workflow-restrictions
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -53,14 +56,3 @@ jobs:
         uses: github/codeql-action/upload-sarif@4bfa242aa49c5f7c6770b98670d354a7dfac05f8 # v3
         with:
           sarif_file: results.sarif
-
-      - name: Summary
-        if: always()
-        run: |
-          {
-            echo "## OpenSSF Scorecard"
-            echo
-            echo "Published score (default branch only): https://securityscorecards.dev/viewer/?uri=github.com/lbailey94/whitemagic"
-            echo
-            echo "Raw API: https://api.securityscorecards.dev/projects/github.com/lbailey94/whitemagic"
-          } >> "$GITHUB_STEP_SUMMARY"
