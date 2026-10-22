@@ -47,9 +47,11 @@ committee". Where that creates risk — a bus factor of one, no second reviewer
 
 - Semantic versioning; stable and experimental channels are tagged separately.
 - A release is: signed tag, release manifest, SBOMs, cosign bundles, published
-  install artifacts, and green CI on the release commit. The
-  [zero-egress workflow](.github/workflows/zero-egress.yml) runs on every
-  release tag.
+  install artifacts, and green CI on the release commit. The candidate
+  [zero-egress workflow](.github/workflows/zero-egress.yml) has a release-tag
+  trigger, but until it is merged into the tagged release source it does not
+  run for tags on the default branch. GitHub currently has no required-status
+  rule to enforce that workflow on `main`.
 - Older minors are archival (see the support window in `SECURITY.md`).
 
 ## Known limitations
@@ -59,8 +61,12 @@ Stated so that reviewers do not have to discover them:
 - **Bus factor of one.** No second maintainer, no succession plan yet.
 - **No third-party security audit.** Self-assessment only (see
   `SECURITY-INSIGHTS.yml`).
-- **Branch protection is enforceable but narrow** — the maintainer can merge
-  their own changes after CI passes; there is no second human reviewer.
+- **GitHub does not enforce the documented review process on `main`.** As
+  checked on 2026-10-22, the branch-protection endpoint reports `Branch not
+  protected` and the branch-ruleset query returns no rules. CI workflows run,
+  but no required status checks or human review are configured as merge gates.
+  The maintainer review described above is project policy, not a platform
+  restriction; the single maintainer can merge without a second reviewer.
 - **No formal RFC process.** Design notes live in issues and in the
   specification repository.
 

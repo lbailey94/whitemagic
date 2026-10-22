@@ -4,35 +4,44 @@ A reviewer should not have to trust this repository's prose. This page is the
 shortest path from "interesting claim" to "I checked it myself", and it says
 which claims are checkable and which are not.
 
-Everything below was checked on **2026-10-22** against the live endpoints and
-the release artifacts. If a link rots, that is a bug — open an issue.
+The concrete examples below pin the release and fixture they exercise. Their
+results apply to those versions; a moving release page or a passing local
+check does not establish the state of a newer artifact or a protected branch.
+If a link rots, that is a bug — open an issue.
 
 ## 1. The source and the licence
 
 | Check | Where | What it establishes |
 |---|---|---|
-| Source, MIT licence | <https://github.com/lbailey94/whitemagic> | OSI-approved licence; every claim in this file is reproducible from this tree |
-| Receipt spec + verifiers | <https://github.com/lbailey94/continuity-receipt> | The format is separate from the product; two independent implementations |
-| Verifier package | <https://pypi.org/project/continuity-receipt/> | `pip install continuity-receipt` — runs offline |
+| Source, MIT licence | <https://github.com/lbailey94/whitemagic> | The source and in-tree licence are available here; this does not establish release provenance or hosted settings |
+| Receipt spec + verifiers | <https://github.com/lbailey94/continuity-receipt> | The format is separate from the product and has Python and Rust reference verifiers |
+| Verifier package | <https://pypi.org/project/continuity-receipt/> | Pin the tested release with `pip install continuity-receipt==0.5.1` |
 
 ## 2. The zero-egress proof (the claim people most want to check)
 
 ```bash
 git clone https://github.com/lbailey94/whitemagic && cd whitemagic
 cargo build --release --bin wm
-WM=$PWD/target/release/wm bash scripts/zero_egress_test.sh
+WM_BINARY=$PWD/target/release/wm bash scripts/zero_egress_test.sh
 ```
 
-The script enters a network namespace whose only interface is a **down**
-loopback, asserts that interface set before doing anything, then asserts the
-full `serve` → `memory.create` → `memory.search` loop still completes. It
-prints `PASS` and exits 0 only if the whole loop worked with no network path.
+The script checks the selected binary's digest before executing it, then uses
+a fresh temporary home, XDG directories, and store. Inside a Linux user and
+network namespace it asserts that the only interface is a **down** loopback,
+the route tables are empty, and an external TCP negative control is blocked by
+namespace routing. It then completes a full-profile JSON-RPC
+`initialize` → `memory.create` → exact-ID `memory.search` loop. A namespace
+that cannot be created, an unexpected reply, timeout, or host-policy denial
+fails without producing a pass.
 
-The same script runs in CI as the
-[`zero-egress`](.github/workflows/zero-egress.yml) workflow on every push,
-pull request, release tag and a weekly schedule, and the log is uploaded as a
-build artifact — so the newest run is always inspectable, not just the one we
-photographed.
+The [`zero-egress`](.github/workflows/zero-egress.yml) workflow is present on
+the open [PR #11](https://github.com/lbailey94/whitemagic/pull/11) branch
+`ci/evidence-gates-20261022`. It is configured there for pushes to `main` or
+`master`, pull requests targeting those branches, release tags, and a weekly
+schedule; it uploads the run log and binary identity. When checked on
+2026-10-22, PR #11 was still open, so this workflow had not yet become a
+default-branch check. A passing run or uploaded artifact does not establish
+that GitHub requires the check for merging.
 
 **What this does not establish:** that no code path could ever attempt egress
 on a host that *has* a live interface. The proof is about the product loop
@@ -41,24 +50,56 @@ stricter, kernel-enforced version is work in progress, not a shipped claim.
 
 ## 3. Releases, signatures, SBOMs
 
-- Latest stable release: <https://github.com/lbailey94/whitemagic/releases>
-- Each release publishes a signed manifest (`release-manifest.json` +
-  `.sig`), CycloneDX SBOMs, cosign bundles and per-asset `.sha256` files.
-- Verify a downloaded artifact:
+- Tested release: <https://github.com/lbailey94/whitemagic/releases/tag/v10.5.0>
+- The pinned `v10.5.0` release publishes a signed manifest
+  (`release-manifest.json` + `.sig`), CycloneDX SBOMs, cosign bundles and
+  per-asset `.sha256` files. Other releases need their own asset checks.
+- Verify the Linux x86-64 artifact from the pinned `v10.5.0` release:
 
 ```bash
-sha256sum -c <artifact>.sha256
-cosign verify-blob --bundle <artifact>.bundle --key <published key> <artifact>
+curl -fLO https://github.com/lbailey94/whitemagic/releases/download/v10.5.0/wm-linux-x86_64
+curl -fLO https://github.com/lbailey94/whitemagic/releases/download/v10.5.0/wm-linux-x86_64.bundle
+curl -fLO https://github.com/lbailey94/whitemagic/releases/download/v10.5.0/wm-linux-x86_64.sha256
+sha256sum -c wm-linux-x86_64.sha256
+cosign verify-blob \
+  --bundle wm-linux-x86_64.bundle \
+  --certificate-identity 'https://github.com/lbailey94/whitemagic/.github/workflows/release.yml@refs/tags/v10.5.0' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+  wm-linux-x86_64
 ```
+
+The expected signing identity and issuer above were read from the certificate
+in this release's bundle and matched to the `release.yml` workflow and
+`v10.5.0` tag. This command was exercised against the published artifact
+(SHA-256 `7d7082a470b16f661469aef2e544d32dce57fa6903384c1457f40e928323f1f0`)
+with Cosign 2.4.1 and returned `Verified OK`; a wrong-identity control failed.
+`sha256sum` checks byte integrity against the downloaded sidecar. The Cosign
+check separately verifies the blob signature against the specified keyless
+workflow identity and issuer. Neither establishes that the source or release
+is free of defects.
 
 ## 4. Receipts: what a valid signature actually means
 
-Verify a published receipt, or your own:
+Verify the pinned `continuity-receipt` v0.5.1 full fixture offline:
 
 ```bash
-pip install continuity-receipt
-continuity-receipt verify <receipt.json>
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install continuity-receipt==0.5.1
+git clone --depth 1 --branch v0.5.1 \
+  https://github.com/lbailey94/continuity-receipt.git continuity-receipt-v0.5.1
+test "$(git -C continuity-receipt-v0.5.1 rev-parse HEAD)" = \
+  3a4b9c2eb141381517e94def5117d25788c9fb93
+continuity-receipt-verify \
+  continuity-receipt-v0.5.1/vectors/02_happy_full.json
 ```
+
+The tested PyPI wheel SHA-256 was
+`9268eeff8208a3ac3ee9425c9267a48632d59ddd7044097a5542ee4880183144`, matching
+the GitHub v0.5.1 release wheel. The fixture is from tag commit
+`3a4b9c2eb141381517e94def5117d25788c9fb93` and returned `TRUSTED` with no
+errors. It is a bundle fixture using spec `continuity-receipt/0.1`; the CLI
+expects a bundle, not an arbitrary single receipt.
 
 A passing check establishes that **the stated key signed these canonical
 bytes and they have not changed since**. It does **not** establish that the
@@ -67,9 +108,9 @@ revoked, that an action happened, or that a payment settled. A cryptographic
 check is narrower than a policy decision, and this repository tries not to
 blur the two.
 
-The format, vectors and both reference verifiers are in
-[`continuity-receipt`](https://github.com/lbailey94/continuity-receipt);
-conformance is claimed for those vectors only.
+The format, vectors and both reference verifiers are in the pinned
+[`continuity-receipt` v0.5.1 source](https://github.com/lbailey94/continuity-receipt/tree/v0.5.1);
+conformance is claimed for the published vectors only.
 
 ## 5. Continuous security signals
 

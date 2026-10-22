@@ -1,95 +1,62 @@
 #!/usr/bin/env bash
-# zero_egress_test.sh — Q37: the zero-egress proof.
-#
-# "Zero cloud, zero telemetry" stops being a claim and becomes a test:
-# run `wm serve` + a real create + recall inside a network namespace with
-# NO interfaces except a down loopback — if the product works there, it
-# cannot have phoned home. The proof is the passing run itself; CI (the
-# release lane) wires this into the workflow and publishes the artifact.
-#
-# Requirements: Linux user namespaces (kernel.unprivileged_userns_clone=1
-# or root), wm binary on PATH. No root needed with -r (map root).
-#
-# Exit 0 = proof holds. Any failure exits 1 and prints why.
-set -u
-WM="${WM:-$HOME/.local/bin/wm}"
-STORE="$(mktemp -d /tmp/wm-zero-egress.XXXXXX)"
-trap 'rm -rf "$STORE"' EXIT
+# Portable no-network qualification for an explicitly selected WM Gen3
+# binary. This candidate runs against a caller-supplied source build in CI or
+# an explicitly pinned installed artifact locally.
+set -Eeuo pipefail
 
-[ -x "$WM" ] || { echo "FAIL: wm binary not at $WM"; exit 1; }
+WM_BINARY="${WM_BINARY:-${WM:-}}"
+EXPECTED_SHA256="${WM_EXPECTED_SHA256:-}"
+HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
-# The proof environment: user + network namespace, loopback stays DOWN
-# (not even localhost TCP exists — SSE transports must not be needed for
-# the product's core loop). Assert the interface set first: if anything
-# beyond lo exists, the isolation failed and the run proves nothing.
-unshare -rn bash -s -- "$WM" "$STORE" <<'PROOF' || exit 1
-WM="$1"; STORE="$2"
-set -u
-links="$(ip -o link show | awk -F': ' '{print $2}')"
-n_links="$(ip -o link show | wc -l)"
-if [ "$n_links" -ne 1 ] || [ "$links" != "lo" ]; then
-  echo "FAIL: expected exactly one interface (lo), got: $links"
-  ip -o link show
-  exit 1
+fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
+
+[[ "$(uname -s)" == Linux ]] || fail "Linux is required for user+network namespace qualification"
+[[ -n "$WM_BINARY" ]] || fail "set WM_BINARY (or WM) to the explicit binary under test"
+[[ -x "$WM_BINARY" ]] || fail "WM_BINARY is not executable: $WM_BINARY"
+actual_sha="$(sha256sum -- "$WM_BINARY" | awk '{print $1}')"
+if [[ -n "$EXPECTED_SHA256" && "$actual_sha" != "$EXPECTED_SHA256" ]]; then
+  fail "binary SHA-256 mismatch: expected $EXPECTED_SHA256, got $actual_sha"
 fi
-if ip link show lo | grep -q UP; then
-  echo "FAIL: loopback is UP; tighten the namespace (ip link set lo down) "
-  exit 1
-fi
-echo "[proof] namespace: $(ip -o link show | wc -l) interface(s): lo (DOWN) — no egress path exists"
+version="$("$WM_BINARY" --version 2>&1 | head -n 1)"
+[[ "$version" =~ ^wm[[:space:]]+[^[:space:]]+$ ]] || fail "could not identify binary version from: $version"
+version_number="${version#wm }"
+source_rev="${WM_SOURCE_REVISION:-unspecified}"
 
-# The product loop over stdio: initialize → create → recall.
-python3 - "$WM" "$STORE" <<'EOF'
-import json, subprocess, os, sys, time, threading
+printf '[identity] binary=%s\n' "$WM_BINARY"
+printf '[identity] sha256=%s expected_sha256=%s version=%s\n' "$actual_sha" "${EXPECTED_SHA256:-unspecified}" "$version"
+printf '[identity] platform=%s source_revision_claim=%s profile=full\n' "$(uname -srmo)" "$source_rev"
+printf '[identity] binary_source_mapping=unverified unless the caller establishes the build from this revision\n'
 
-wm, store = sys.argv[1], sys.argv[2]
-p = subprocess.Popen(
-    [wm, "serve", "--store", store, "--profile", "minimal", "--transport", "stdio"],
-    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
-out = []
-threading.Thread(target=lambda: [out.append(l.strip()) for l in p.stdout], daemon=True).start()
-time.sleep(2)
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/wm-no-network.XXXXXXXX")" || fail "cannot create owned temporary workspace"
+cleanup() { rm -rf -- "$tmp"; }
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
+mkdir -p "$tmp/home" "$tmp/xdg-data" "$tmp/xdg-config" "$tmp/store"
 
-def rpc(rid, method, params):
-    p.stdin.write(json.dumps({"jsonrpc": "2.0", "id": rid, "method": method, "params": params}) + "\n")
-    p.stdin.flush()
+# Do not let user credentials, store selection, or provider settings enter the
+# isolated server process. The binary and store path are explicit.
+export WM_BINARY
+export WM_NO_NETWORK_STORE="$tmp/store"
+export WM_NO_NETWORK_HOME="$tmp/home"
+export WM_NO_NETWORK_XDG_DATA="$tmp/xdg-data"
+export WM_NO_NETWORK_XDG_CONFIG="$tmp/xdg-config"
+export WM_NO_NETWORK_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export WM_NO_NETWORK_VERSION="$version_number"
+export WM_NO_NETWORK_SOURCE_REVISION="$source_rev"
 
-rpc(1, "initialize", {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "zero-egress-proof", "version": "1"}})
-time.sleep(1)
-rpc(2, "notifications/initialized", {})
-rpc(3, "tools/call", {"name": "wm", "arguments": {"route": "memory.create", "args": {
-    "content": "Zero-egress proof memory: written inside a namespace with no interfaces.", "galaxy": "codex"}}})
-time.sleep(1.5)
-rpc(4, "tools/call", {"name": "wm", "arguments": {"route": "memory.search", "args": {"query": "zero-egress proof"}}})
-time.sleep(2)
-p.terminate()
-
-results = {}
-for line in out:
-    try:
-        r = json.loads(line)
-        if r.get("id") in (3, 4) and "result" in r:
-            results[r["id"]] = json.loads(r["result"]["content"][0]["text"])
-    except Exception:
-        pass
-
-created = results.get(3, {})
-found_raw = json.dumps(results.get(4, {}))
-if created.get("status") != "success":
-    print(f"FAIL: create inside netns did not succeed: {created.get('message', created)}")
-    sys.exit(1)
-if "zero-egress proof memory" not in found_raw.lower():
-    print(f"FAIL: recall inside netns did not find the memory: {found_raw[:300]}")
-    sys.exit(1)
-print(f"[proof] create OK (id {str(created.get('id', '?'))[:8]}…), recall OK — full product loop with zero network")
-EOF
-python_rc=$?
-if [ "$python_rc" -ne 0 ]; then
-  echo "FAIL: proof harness exited $python_rc"
-  exit 1
-fi
-echo "[proof] PASS: WhiteMagic works with no network. Zero egress is a test result, not a claim."
-PROOF
+set +e
+timeout --signal=TERM --kill-after=5s 150s \
+  unshare --user --map-root-user --net \
+  bash "$HERE/no_network_inner.sh" "$HERE/zero_egress_rpc.py"
 rc=$?
-[ $rc -eq 0 ] && echo "zero_egress_test: PASS ($(date -u +%Y-%m-%dT%H:%M:%SZ), wm=$($WM --version 2>/dev/null || echo '?'))"
-exit $rc
+set -e
+if [[ $rc -eq 124 || $rc -eq 137 ]]; then
+  fail "bounded no-network run exceeded 150 seconds; no proof produced"
+elif [[ $rc -eq 42 ]]; then
+  fail "HOST POLICY blocked the egress control (EPERM); this is not product failure or namespace proof"
+elif [[ $rc -ne 0 ]]; then
+  fail "user+network namespace run failed (exit $rc); namespace unavailability is not a pass"
+fi
+printf '[proof] PASS: profile=full Gen3 %s create+recall succeeded with lo DOWN; egress control was route-blocked. This is scoped local evidence, not a universal zero-egress or CI claim.\n' "$version_number"

@@ -108,23 +108,30 @@ repository:
         evidence: https://github.com/lbailey94/whitemagic/blob/main/VERIFY.md
         comment: |
           Self-assessment only as of 2026-10-22; no third-party audit has been
-          completed. What exists in-tree and runs on every change:
+          completed. The source tree contains these controls and workflows;
+          each workflow runs only on its configured triggers:
 
           - Linux Landlock write confinement (ABI auto-selected by a
             ruleset-creation probe; loud degrade when unavailable).
-          - Zero-egress proof: scripts/zero_egress_test.sh runs the product loop
-            inside a network namespace whose only interface is a DOWN loopback.
-            Wired as the `zero-egress` workflow on push, pull request, release
-            tag and a weekly schedule; the log is kept as a build artifact.
+          - Zero-egress proof: scripts/zero_egress_test.sh runs the full-profile
+            product loop inside a network namespace whose only interface is a
+            DOWN loopback, with a route-blocked egress control. The `zero-egress`
+            workflow is on this PR branch and is configured for pushes to
+            main/master, pull requests targeting them, release tags, and a
+            weekly schedule; the log is kept as a build artifact. It is not yet
+            on the default branch.
           - Secret scanning (gitleaks) with an allowlist for detector fixtures,
             and a cargo-deny dependency/advisory gate.
-          - Signed release manifests, CycloneDX SBOMs and cosign bundles
-            published on every release.
+          - The pinned v10.5.0 release includes a signed release manifest,
+            CycloneDX SBOMs and cosign bundles; other releases need separate
+            artifact checks (see VERIFY.md).
           - Hash-chained write audit (declared vs actual writes) with a deep
             chain verifier.
 
           Known gaps, stated plainly: no external security audit; no
           independent reproduction of the test corpus by a third party;
-          branch-protection and review requirements are single-maintainer
-          (see GOVERNANCE.md); the OWASP LLM Top-10 mapping is an internal
-          document and is not published in this repository.
+          no branch protection or ruleset currently requires CI status or human
+          review on main (checked 2026-10-22; see GOVERNANCE.md); the documented
+          review process is policy, not GitHub enforcement. The OWASP LLM
+          Top-10 mapping is an internal document and is not published in this
+          repository.

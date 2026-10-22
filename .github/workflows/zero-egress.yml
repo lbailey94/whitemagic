@@ -2,9 +2,9 @@ name: zero-egress
 
 # The zero-egress proof as a gate, not a claim.
 #
-# scripts/zero_egress_test.sh runs the product loop (serve -> memory.create ->
-# memory.search) inside a network namespace whose only interface is a DOWN
-# loopback. If the loop passes there, no egress path existed during the run.
+# scripts/zero_egress_test.sh runs a full-profile Gen3 create -> exact-ID
+# recall journey inside a network namespace whose only interface is a DOWN
+# loopback, with a separate route-blocked egress control.
 #
 # This workflow runs it on every mainline push, every pull request, every
 # release tag (v*), and weekly on a schedule, and publishes the log as an
@@ -36,11 +36,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           shared-key: zero-egress
 
@@ -50,8 +50,14 @@ jobs:
       - name: Report binary identity
         run: |
           set -euo pipefail
-          target/release/wm --version | tee binary-version.txt
-          sha256sum target/release/wm | tee -a binary-version.txt
+          echo "source_revision=$GITHUB_SHA" | tee binary-version.txt
+          target/release/wm --version | tee -a binary-version.txt
+          binary_sha="$(sha256sum target/release/wm | awk '{print $1}')"
+          echo "binary_sha256=$binary_sha" | tee -a binary-version.txt
+          echo "WM_EXPECTED_SHA256=$binary_sha" >> "$GITHUB_ENV"
+
+      - name: Test zero-egress RPC harness
+        run: python3 -m unittest discover -s scripts/tests -p 'test_zero_egress_rpc.py' -v
 
       # Ubuntu 24.04 ships kernel.apparmor_restrict_unprivileged_userns=1, which
       # turns `unshare -rn` into EPERM. The proof needs the namespace, so lift
@@ -69,8 +75,11 @@ jobs:
 
       - name: Run the proof
         env:
-          WM: ${{ github.workspace }}/target/release/wm
+          WM_BINARY: ${{ github.workspace }}/target/release/wm
+          WM_SOURCE_REVISION: ${{ github.sha }}
         run: |
+          set -euo pipefail
+          : "${WM_EXPECTED_SHA256:?build identity step must supply expected binary SHA-256}"
           set -o pipefail
           bash scripts/zero_egress_test.sh 2>&1 | tee zero-egress-proof.log
 
@@ -82,9 +91,10 @@ jobs:
             echo "## Zero-egress proof"
             echo
             echo "Method: \`scripts/zero_egress_test.sh\` — the product loop runs inside"
-            echo "\`unshare -rn\` with a single interface (\`lo\`, DOWN), asserts the"
-            echo "interface set before doing anything, then asserts the full"
-            echo "serve → \`memory.create\` → \`memory.search\` loop still works."
+            echo "\`unshare --user --map-root-user --net\` with a single interface (\`lo\`, DOWN), asserts the"
+            echo "interface set and empty route tables, confirms an external TCP"
+            echo "negative control is route-blocked, then asserts the full-profile"
+            echo "serve → \`memory.create\` → exact-ID \`memory.search\` loop works."
             echo
             echo "Scope: this demonstrates operation with networking disabled. It is"
             echo "not a proof that no code path could ever attempt egress on a host"
@@ -97,7 +107,7 @@ jobs:
 
       - name: Upload proof log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: zero-egress-proof
           path: |
