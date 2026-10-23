@@ -1766,7 +1766,7 @@ pub fn execute_hybrid_tool_call(
         "sutra.list" | "sutra_list" => handle_sutra_list(args),
         "sutra.hexagram" | "sutra_hexagram" => handle_sutra_hexagram(args),
         "sutra.route" | "sutra_route" | "cognitive.route" | "cognitive_route" => {
-            handle_sutra_route(args)
+            handle_sutra_route(args, store_path)
         }
 
         // ── General Agentic System (GAS) Legion & Cho-Han Operations ──────────
@@ -6848,7 +6848,80 @@ fn handle_sutra_hexagram(args: &Value) -> Result<Value, String> {
     }))
 }
 
-fn handle_sutra_route(args: &Value) -> Result<Value, String> {
+fn cognitive_tier_name(tier: wm_gen3_core::tripartite_router::CognitiveTier) -> &'static str {
+    match tier {
+        wm_gen3_core::tripartite_router::CognitiveTier::System0Sutra => "System0Sutra",
+        wm_gen3_core::tripartite_router::CognitiveTier::System05Vector => "System05Vector",
+        wm_gen3_core::tripartite_router::CognitiveTier::System1LocalOrgan => "System1LocalOrgan",
+        wm_gen3_core::tripartite_router::CognitiveTier::System2FrontierCloud => {
+            "System2FrontierCloud"
+        }
+    }
+}
+
+/// Run the trained Valkyrie-L0.5 routing organ as a shadow alongside the live
+/// TripartiteRouter decision, appending one comparison line to
+/// `<store>/routing_shadow.jsonl` (OATS precedent: agreement evidence accrues
+/// until the shadow earns promotion). Returns the response-side shadow block;
+/// every failure degrades to `{"available": false}` — the live route never
+/// waits on or inherits shadow faults.
+fn shadow_route_l05(
+    inquiry: &str,
+    decision: &wm_gen3_core::tripartite_router::RoutingDecision,
+    store_path: &Path,
+) -> Value {
+    static L05_ORGAN: OnceLock<
+        Result<std::sync::Mutex<wm_gen3_core::valkyrie::ValkyrieL05Router>, String>,
+    > = OnceLock::new();
+    let organ = L05_ORGAN.get_or_init(|| {
+        std::panic::catch_unwind(wm_gen3_core::valkyrie::ValkyrieL05Router::bootstrap)
+            .map(std::sync::Mutex::new)
+            .map_err(|_| "L0.5 router bootstrap panicked".to_string())
+    });
+    let Ok(organ) = organ else {
+        return json!({"available": false});
+    };
+    let start = std::time::Instant::now();
+    let Ok(mut guard) = organ.lock() else {
+        return json!({"available": false});
+    };
+    let result = guard.route(inquiry);
+    drop(guard);
+    let shadow_us = start.elapsed().as_micros() as u64;
+
+    let agree = result.tier == decision.tier;
+    let entry = json!({
+        "ts": now_epoch_secs(),
+        "inquiry": inquiry.chars().take(160).collect::<String>(),
+        "tripartite_tier": cognitive_tier_name(decision.tier),
+        "tripartite_confidence": decision.confidence,
+        "l05_tier": cognitive_tier_name(result.tier),
+        "l05_confidence": result.confidence,
+        "l05_used_semantic_organ": result.used_semantic_organ,
+        "l05_primary_gana_id": result.primary_gana_id,
+        "agree": agree,
+        "shadow_latency_us": shadow_us,
+    });
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(store_path.join("routing_shadow.jsonl"))
+    {
+        let _ = writeln!(file, "{entry}");
+    }
+
+    json!({
+        "available": true,
+        "tier": cognitive_tier_name(result.tier),
+        "confidence": result.confidence,
+        "used_semantic_organ": result.used_semantic_organ,
+        "primary_gana_id": result.primary_gana_id,
+        "agree": agree,
+        "latency_us": shadow_us,
+    })
+}
+
+fn handle_sutra_route(args: &Value, store_path: &Path) -> Result<Value, String> {
     reject_unknown_args("sutra.route", args)?;
     let inquiry = args
         .get("inquiry")
@@ -6866,26 +6939,19 @@ fn handle_sutra_route(args: &Value) -> Result<Value, String> {
     let start = std::time::Instant::now();
     let decision = wm_gen3_core::tripartite_router::TripartiteRouter::route(inquiry, None);
     let latency_us = start.elapsed().as_micros();
-
-    let tier_str = match decision.tier {
-        wm_gen3_core::tripartite_router::CognitiveTier::System0Sutra => "System0Sutra",
-        wm_gen3_core::tripartite_router::CognitiveTier::System05Vector => "System05Vector",
-        wm_gen3_core::tripartite_router::CognitiveTier::System1LocalOrgan => "System1LocalOrgan",
-        wm_gen3_core::tripartite_router::CognitiveTier::System2FrontierCloud => {
-            "System2FrontierCloud"
-        }
-    };
+    let shadow = shadow_route_l05(inquiry, &decision, store_path);
 
     Ok(json!({
         "status": "ok",
         "inquiry": inquiry,
-        "tier": tier_str,
+        "tier": cognitive_tier_name(decision.tier),
         "latency_micros": latency_us,
         "confidence": decision.confidence,
         "rationale": decision.rationale,
         "selected_glyph": decision.selected_glyph.map(|c| c.to_string()),
         "catuskoti": decision.catuskoti.map(|c| format!("{c:?}")),
         "bound_skeleton_id": decision.skeleton_id,
+        "shadow": shadow,
     }))
 }
 
@@ -10311,6 +10377,44 @@ mod diaml_and_salience_refinement_tests {
         .expect("replay pattern B");
         assert_eq!(replay_b["session_id"], "c1_arch_s1");
         assert_eq!(replay_b["returned"], 1);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod routing_shadow_tests {
+    use super::*;
+
+    #[test]
+    fn sutra_route_logs_shadow_comparison() {
+        let dir = std::env::temp_dir().join(format!("wm-shadow-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+
+        let result = handle_sutra_route(
+            &json!({"inquiry": "summarize the session history and what changed"}),
+            &dir,
+        )
+        .expect("sutra.route");
+
+        let shadow = &result["shadow"];
+        assert_eq!(shadow["available"], true, "shadow organ must answer");
+        assert!(shadow["tier"].is_string());
+        assert!(shadow["agree"].is_boolean());
+        // The live tier is untouched by the shadow.
+        assert!(result["tier"].is_string());
+
+        let log = std::fs::read_to_string(dir.join("routing_shadow.jsonl")).expect("shadow log");
+        let line: Value =
+            serde_json::from_str(log.lines().next().expect("one line")).expect("valid jsonl");
+        assert_eq!(
+            line["inquiry"],
+            "summarize the session history and what changed"
+        );
+        assert_eq!(line["tripartite_tier"], result["tier"]);
+        assert_eq!(line["l05_tier"], shadow["tier"]);
+        assert_eq!(line["agree"], shadow["agree"]);
+        assert!(line["shadow_latency_us"].is_number());
 
         let _ = std::fs::remove_dir_all(&dir);
     }
