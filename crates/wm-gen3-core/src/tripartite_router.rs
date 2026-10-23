@@ -28,6 +28,31 @@ pub enum CognitiveTier {
     System2FrontierCloud,
 }
 
+impl CognitiveTier {
+    /// Stable ordinal used as the `ValkyrieSample.target_class` label when training
+    /// routing organs (S0=0, S0.5=1, S1=2, S2=3).
+    #[must_use]
+    pub fn index(self) -> usize {
+        match self {
+            Self::System0Sutra => 0,
+            Self::System05Vector => 1,
+            Self::System1LocalOrgan => 2,
+            Self::System2FrontierCloud => 3,
+        }
+    }
+
+    /// Inverse of [`CognitiveTier::index`]; out-of-range classes fold via `% 4`.
+    #[must_use]
+    pub fn from_index(class: usize) -> Self {
+        match class % 4 {
+            0 => Self::System0Sutra,
+            1 => Self::System05Vector,
+            2 => Self::System1LocalOrgan,
+            _ => Self::System2FrontierCloud,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RoutingDecision {
     pub tier: CognitiveTier,
