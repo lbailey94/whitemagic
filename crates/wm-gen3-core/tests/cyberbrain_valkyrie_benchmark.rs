@@ -358,6 +358,68 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
             "wargame out our options if the grants all fail",
             CognitiveTier::System2FrontierCloud,
         ),
+        // Colloquial block: chat-register phrasing with contractions,
+        // abbreviations, and discourse markers — the confusion-matrix
+        // expansion target. Disjoint from the colloquial train/cal items.
+        (
+            "yo can u check if the tests still pass",
+            CognitiveTier::System0Sutra,
+        ),
+        ("make it build clean pls", CognitiveTier::System0Sutra),
+        ("is clippy happy yet", CognitiveTier::System0Sutra),
+        ("run it back on a fresh clone", CognitiveTier::System0Sutra),
+        (
+            "gonna need the proofs green before i merge",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "hmm what's on my plate today",
+            CognitiveTier::System05Vector,
+        ),
+        ("gimme the last checkpoint", CognitiveTier::System05Vector),
+        ("any peers up rn", CognitiveTier::System05Vector),
+        ("whats in the inbox", CognitiveTier::System05Vector),
+        ("how bigs the store gotten", CognitiveTier::System05Vector),
+        (
+            "tl;dr the last hour of scrollback",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "sum up what changed since tuesday",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "sort these bugs by who's fault",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "walk me thru this patch real quick",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "turn this ramble into action items",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "lol what if agents just ran the whole economy",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "idk man thinkin bout whether memory is identity",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "play out the scenario where the mesh goes dark",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "blue sky it — best case for the grant stuff",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "shower thought: can a swarm ever really sleep",
+            CognitiveTier::System2FrontierCloud,
+        ),
     ];
 
     // Train the routing organ on the canonical corpus (V0 curriculum + V1

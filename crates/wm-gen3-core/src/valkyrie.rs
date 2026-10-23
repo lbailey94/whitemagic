@@ -2666,6 +2666,25 @@ pub fn default_routing_train_prompts() -> &'static [(&'static str, CognitiveTier
             "execute the formal verification pipeline on the proofs directory",
             CognitiveTier::System0Sutra,
         ),
+        // Colloquial surface forms — same intents, no lexicon crutch. Keeps the
+        // organ honest on the phrasing people actually type.
+        ("yo lint this thing real quick", CognitiveTier::System0Sutra),
+        (
+            "pls run the bench one more time",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "double check the confine boundary for me",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "gotta compile clean before anything ships",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "sandbox this lil script and see if it escapes",
+            CognitiveTier::System0Sutra,
+        ),
         (
             "look up the current status of the mesh peers",
             CognitiveTier::System05Vector,
@@ -2701,6 +2720,26 @@ pub fn default_routing_train_prompts() -> &'static [(&'static str, CognitiveTier
         ),
         (
             "search memories for the sangha claim number",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "what's the store looking like size wise",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "got anything waiting in the inbox",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "pull up that note from yesterday real quick",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "who's online on the mesh right now",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "gimme the current gateway status",
             CognitiveTier::System05Vector,
         ),
         (
@@ -2744,6 +2783,26 @@ pub fn default_routing_train_prompts() -> &'static [(&'static str, CognitiveTier
             CognitiveTier::System1LocalOrgan,
         ),
         (
+            "break down this wall of text for me",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "group these crashes by root cause pls",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "walk me thru the diff like i'm five",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "sum up the session so i don't have to reread",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "turn this mess into a changelog",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
             "provide high-level speculative strategic philosophy on future agi",
             CognitiveTier::System2FrontierCloud,
         ),
@@ -2783,6 +2842,26 @@ pub fn default_routing_train_prompts() -> &'static [(&'static str, CognitiveTier
             "discuss the philosophical limits of formal verification",
             CognitiveTier::System2FrontierCloud,
         ),
+        (
+            "random idea: memory that outlives the mesh",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "lowkey wonder if tiny organs can dream together",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "idk just thinking about what a trillion-param ternary eats",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "imagine the wildest agent swarm that could exist",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "blue sky: post-transformer everything, go",
+            CognitiveTier::System2FrontierCloud,
+        ),
     ]
 }
 
@@ -2804,6 +2883,11 @@ pub fn default_routing_cal_prompts() -> &'static [(&'static str, CognitiveTier)]
             CognitiveTier::System0Sutra,
         ),
         (
+            "yo re-check the proofs real quick",
+            CognitiveTier::System0Sutra,
+        ),
+        ("run the whole suite again pls", CognitiveTier::System0Sutra),
+        (
             "how many records are in the active galaxy",
             CognitiveTier::System05Vector,
         ),
@@ -2814,6 +2898,11 @@ pub fn default_routing_cal_prompts() -> &'static [(&'static str, CognitiveTier)]
         ("show the uptime of the vps", CognitiveTier::System05Vector),
         (
             "look up who holds the current track claim",
+            CognitiveTier::System05Vector,
+        ),
+        ("any news in the inbox today", CognitiveTier::System05Vector),
+        (
+            "whats the fleet uptime lookin like",
             CognitiveTier::System05Vector,
         ),
         (
@@ -2833,6 +2922,14 @@ pub fn default_routing_cal_prompts() -> &'static [(&'static str, CognitiveTier)]
             CognitiveTier::System1LocalOrgan,
         ),
         (
+            "sum up the thread real quick",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "sort my notes into something readable",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
             "imagine a future where memory crystals are universal",
             CognitiveTier::System2FrontierCloud,
         ),
@@ -2846,6 +2943,14 @@ pub fn default_routing_cal_prompts() -> &'static [(&'static str, CognitiveTier)]
         ),
         (
             "speculate on what intelligence means for a hive of tiny organs",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "idk dream up a mesh protocol for mars",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "deep think: can receipts be conscious",
             CognitiveTier::System2FrontierCloud,
         ),
     ]
