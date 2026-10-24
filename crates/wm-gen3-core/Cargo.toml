@@ -70,7 +70,7 @@ name = "gap_junction_swarm_benchmark"
 required-features = ["operator"]
 
 [dependencies]
-fastembed = "5.17.4"
+fastembed = "7.1.2"
 lmdb = "0.8"
 rmp-serde = "1"
 serde = { version = "1", features = ["derive"] }
