@@ -6881,11 +6881,43 @@ fn shadow_route_l05(
     let Ok(organ) = organ else {
         return json!({"available": false});
     };
+
+    static MODEL2VEC: OnceLock<Result<wm_gen3_zeropointfive::System05, String>> = OnceLock::new();
+    let m2v = MODEL2VEC.get_or_init(|| {
+        wm_gen3_zeropointfive::System05::resolve_model_dir(None)
+            .map(wm_gen3_zeropointfive::System05::new)
+            .map_err(|e| e.to_string())
+    });
+
+    static PROJECTOR: OnceLock<Option<wm_gen3_core::valkyrie::FisherHadamardProjector>> =
+        OnceLock::new();
+    let projector = PROJECTOR.get_or_init(|| {
+        if let Ok(m2v_organ) = m2v.as_ref() {
+            let train_pairs = wm_gen3_core::valkyrie::default_routing_train_prompts();
+            let texts: Vec<String> = train_pairs.iter().map(|(p, _)| (*p).to_string()).collect();
+            let labels: Vec<usize> = train_pairs.iter().map(|(_, t)| t.index()).collect();
+            if let Ok(train_embs) = m2v_organ.encode_batch(&texts) {
+                return Some(wm_gen3_core::valkyrie::FisherHadamardProjector::fit(
+                    &train_embs,
+                    &labels,
+                    4,
+                ));
+            }
+        }
+        None
+    });
+
+    let live_vec: Option<Vec<f32>> = m2v
+        .as_ref()
+        .ok()
+        .and_then(|organ| organ.encode_single(inquiry).ok());
+    let used_hybrid = live_vec.is_some() && projector.is_some();
+
     let start = std::time::Instant::now();
     let Ok(mut guard) = organ.lock() else {
         return json!({"available": false});
     };
-    let result = guard.route(inquiry);
+    let result = guard.route_hybrid(inquiry, live_vec.as_deref(), projector.as_ref());
     drop(guard);
     let shadow_us = start.elapsed().as_micros() as u64;
 
@@ -6898,6 +6930,7 @@ fn shadow_route_l05(
         "l05_tier": cognitive_tier_name(result.tier),
         "l05_confidence": result.confidence,
         "l05_used_semantic_organ": result.used_semantic_organ,
+        "l05_used_hybrid_projection": used_hybrid,
         "l05_primary_gana_id": result.primary_gana_id,
         "agree": agree,
         "shadow_latency_us": shadow_us,
@@ -6915,6 +6948,7 @@ fn shadow_route_l05(
         "tier": cognitive_tier_name(result.tier),
         "confidence": result.confidence,
         "used_semantic_organ": result.used_semantic_organ,
+        "used_hybrid_projection": used_hybrid,
         "primary_gana_id": result.primary_gana_id,
         "agree": agree,
         "latency_us": shadow_us,

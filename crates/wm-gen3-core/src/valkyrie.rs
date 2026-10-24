@@ -3088,6 +3088,17 @@ impl ValkyrieL05Router {
     /// glyphs, hexagrams) take the same System-0 reflex the baseline applies —
     /// everything else is decided by `pulse_tricameral`, not keyword overrides.
     pub fn route(&mut self, prompt: &str) -> ValkyrieRoutingResult {
+        self.route_hybrid(prompt, None, None)
+    }
+
+    /// Route a prompt using either a hybrid semantic+lexical projection (when an
+    /// embedding and FisherHadamardProjector are provided) or the pure lexical projection.
+    pub fn route_hybrid(
+        &mut self,
+        prompt: &str,
+        embedding: Option<&[f32]>,
+        projector: Option<&FisherHadamardProjector>,
+    ) -> ValkyrieRoutingResult {
         for glyph in SutraGlyph::ALL {
             let c = glyph.as_char();
             let a = glyph.alchemical_char();
@@ -3109,7 +3120,19 @@ impl ValkyrieL05Router {
             };
         }
 
-        let state_vec = Self::project_inquiry(prompt);
+        let state_vec = match (embedding, projector) {
+            (Some(emb), Some(proj)) => {
+                let sem_vec = proj.project(emb);
+                let lex_vec = Self::project_inquiry(prompt);
+                let mut state = [0.0f32; VALKYRIE_DIM];
+                for d in 0..VALKYRIE_DIM {
+                    state[d] = 0.72 * sem_vec[d] + 0.28 * lex_vec[d];
+                }
+                state
+            }
+            _ => Self::project_inquiry(prompt),
+        };
+
         let sample = ValkyrieSample {
             id: 42,
             state_vec,
