@@ -1341,6 +1341,23 @@ impl Substrate {
 
     /// Production compatibility route. Every accepted item crosses the authorized LMDB
     /// transaction; without an installed local authority it fails closed.
+    /// Intake-gated variant of [`Substrate::remember_batch`]: `admit` inspects
+    /// each candidate item and returns the (possibly rewritten, e.g. sanitized)
+    /// item to store, or `None` to drop it. Results correspond to admitted
+    /// items only; the second tuple element counts dropped records.
+    pub fn remember_batch_gated<F>(
+        &mut self,
+        items: &[RememberItem],
+        mut admit: F,
+    ) -> (Vec<Result<u64, String>>, usize)
+    where
+        F: FnMut(&RememberItem) -> Option<RememberItem>,
+    {
+        let admitted: Vec<RememberItem> = items.iter().filter_map(&mut admit).collect();
+        let dropped = items.len() - admitted.len();
+        (self.remember_batch(&admitted), dropped)
+    }
+
     pub fn remember_batch(&mut self, items: &[RememberItem]) -> Vec<Result<u64, String>> {
         let Some(authority) = self.intake_authority.take() else {
             return items

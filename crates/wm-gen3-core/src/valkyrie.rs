@@ -2428,6 +2428,25 @@ impl ValkyrieL0Sentinel {
             scrubbed_pii_count: scrubbed_count,
         }
     }
+
+    /// Gate adapter for [`crate::ops::Substrate::remember_batch_gated`]: returns
+    /// the (possibly PII-scrubbed) item to admit, or `None` to drop the record.
+    #[must_use]
+    pub fn admit(
+        &self,
+        item: &crate::ops::RememberItem,
+        candidate_digest: u64,
+    ) -> Option<crate::ops::RememberItem> {
+        match self.evaluate_intake(&item.content, candidate_digest) {
+            SentinelIntakeAction::Sanitized { text, .. } => Some(crate::ops::RememberItem {
+                content: text,
+                source: item.source.clone(),
+                kind: item.kind,
+            }),
+            SentinelIntakeAction::BlockedAntibody { .. }
+            | SentinelIntakeAction::FilteredNoise { .. } => None,
+        }
+    }
 }
 
 /// Layer 0.5: Semantic Intent Router & Cognitive Tier / Gana Triage
@@ -2444,100 +2463,573 @@ pub struct ValkyrieRoutingResult {
     pub used_semantic_organ: bool,
 }
 
+use crate::tripartite_router::CognitiveTier;
+
+/// Feature families for the routing projection. Each family is a fixed lexicon
+/// scored by substring containment on whitespace-split words — broad enough to
+/// cover morphological variants (`"verify"` catches `verifying`, `verified`) so
+/// paraphrases land near their tier's prototype without prompt memorization.
+const SYS0_SIGNALS: &[&str] = &[
+    "execute",
+    "run",
+    "verify",
+    "verif",
+    "test",
+    "prove",
+    "proof",
+    "check",
+    "audit",
+    "sandbox",
+    "kekkai",
+    "borrow",
+    "barrier",
+    "landlock",
+    "confine",
+    "jail",
+    "compact",
+    "prune",
+    "formal",
+    "invariant",
+    "compile",
+    "lint",
+    "clippy",
+    "validate",
+    "enforce",
+    "boundary",
+    "bench",
+    "build",
+    "assert",
+    "conformance",
+    "cargo",
+    "checksum",
+    "deterministic",
+    "suite",
+    "refactor",
+    "patch",
+];
+const SYS05_SIGNALS: &[&str] = &[
+    "lookup",
+    "status",
+    "query",
+    "find",
+    "fetch",
+    "retrieve",
+    "search",
+    "recall",
+    "list",
+    "show",
+    "count",
+    "read",
+    "state",
+    "cache",
+    "record",
+    "uptime",
+    "current",
+    "latest",
+    "online",
+    "epoch",
+    "version",
+    "display",
+    "peer",
+    "how many",
+    "pull up",
+    "who holds",
+    "what is",
+    "what's",
+];
+const SYS1_SIGNALS: &[&str] = &[
+    "summar",
+    "recap",
+    "history",
+    "commit",
+    "message",
+    "report",
+    "review",
+    "reconcile",
+    "session",
+    "diff",
+    "compare",
+    "contrast",
+    "explain",
+    "analy",
+    "classif",
+    "categor",
+    "triage",
+    "merge",
+    "group",
+    "digest",
+    "condense",
+    "draft",
+    "outline",
+    "notes",
+    "changelog",
+    "thread",
+    "scrollback",
+    "walk me",
+    "what changed",
+    "timeline",
+    "root cause",
+    "bullet",
+    "action item",
+    "table",
+    "contradict",
+];
+const SYS2_SIGNALS: &[&str] = &[
+    "philosoph",
+    "agi",
+    "speculat",
+    "future",
+    "strateg",
+    "hypothetical",
+    "scal",
+    "conscious",
+    "imagine",
+    "theor",
+    "invent",
+    "novel",
+    "brainstorm",
+    "dream up",
+    "envision",
+    "ponder",
+    "what if",
+    "suppose",
+    "wonder",
+    "econom",
+    "market",
+    "governance",
+    "trillion",
+    "frontier",
+    "long-term",
+    "endgame",
+    "wargame",
+    "meaning",
+    "ethic",
+    "design a",
+    "architect",
+];
+/// Auxiliary discourse features (dims 4-7): interrogatives, imperatives,
+/// self-reference, and hedging — tier-independent shape cues.
+const INTERROGATIVE_SIGNALS: &[&str] = &[
+    "who", "what", "how", "why", "when", "where", "which", "?", "is the", "does", "are ",
+];
+const IMPERATIVE_SIGNALS: &[&str] = &[
+    "run", "do", "make", "give", "list", "show", "pull", "re-run", "tell", "walk", "turn", "fold",
+    "keep",
+];
+const SELFREF_SIGNALS: &[&str] = &["i ", "me ", "my ", "we ", "our ", "us "];
+const HEDGE_SIGNALS: &[&str] = &[
+    "maybe", "might", "could", "would", "if ", "suppose", "perhaps", "possibly", "wonder",
+];
+
+/// Authored train split for the routing organ: 10 prompts per tier with
+/// deliberate surface variety. The held-out evaluation set lives in
+/// `tests/cyberbrain_valkyrie_benchmark.rs` — never add eval prompts here.
+pub fn default_routing_train_prompts() -> &'static [(&'static str, CognitiveTier)] {
+    &[
+        (
+            "execute test suite for kernel barrier",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "verify formal invariant in bend",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "run the landlock confinement check on this workspace",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "compile the workspace and run all unit tests",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "audit the sandbox boundary for filesystem escapes",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "prove the absorption equivalence law in bend",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "validate the borrow rules against the new patch",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "run cargo clippy with warnings denied",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "check whether the kekkai barrier permits this write",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "execute the formal verification pipeline on the proofs directory",
+            CognitiveTier::System0Sutra,
+        ),
+        // Colloquial surface forms — same intents, no lexicon crutch. Keeps the
+        // organ honest on the phrasing people actually type.
+        ("yo lint this thing real quick", CognitiveTier::System0Sutra),
+        (
+            "pls run the bench one more time",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "double check the confine boundary for me",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "gotta compile clean before anything ships",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "sandbox this lil script and see if it escapes",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "look up the current status of the mesh peers",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "find the memory about the valkyrie benchmark",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "what is the current store size",
+            CognitiveTier::System05Vector,
+        ),
+        ("list all active galaxies", CognitiveTier::System05Vector),
+        (
+            "query the session record for yesterday's checkpoint",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "show me the cache hit rate for the last hour",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "get the key status for the gateway",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "retrieve the last antibody sync report",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "fetch the state of the citta oscillator",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "search memories for the sangha claim number",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "what's the store looking like size wise",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "got anything waiting in the inbox",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "pull up that note from yesterday real quick",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "who's online on the mesh right now",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "gimme the current gateway status",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "summarize recent historical commit messages across repos",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "review this diff and tell me what changed",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "reconcile these two session reports into one timeline",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "compare the before and after benchmark tables",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "triage these open threads by project",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "draft a summary of the fleet's performance numbers",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "analyze this error log and group the failures",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "explain what this function does step by step",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "turn these meeting notes into action items",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "classify these memories into the right galaxies",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "break down this wall of text for me",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "group these crashes by root cause pls",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "walk me thru the diff like i'm five",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "sum up the session so i don't have to reread",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "turn this mess into a changelog",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "provide high-level speculative strategic philosophy on future agi",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "imagine how a trillion-parameter sparse ternary system would behave",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "reason about the consciousness implications of persistent memory",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "design a novel architecture for decentralized training",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "brainstorm strategies for the grant submission",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "theorize about what happens when agents outnumber humans online",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "speculate on the long-term economics of agent markets",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "invent a new governance model for the mesh",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "what would a post-transformer stack look like",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "discuss the philosophical limits of formal verification",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "random idea: memory that outlives the mesh",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "lowkey wonder if tiny organs can dream together",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "idk just thinking about what a trillion-param ternary eats",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "imagine the wildest agent swarm that could exist",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "blue sky: post-transformer everything, go",
+            CognitiveTier::System2FrontierCloud,
+        ),
+    ]
+}
+
+/// Authored calibration split: different surface phrasings from the train split,
+/// used for callosum prior calibration only — still disjoint from the eval set.
+pub fn default_routing_cal_prompts() -> &'static [(&'static str, CognitiveTier)] {
+    &[
+        ("run the security lint pass", CognitiveTier::System0Sutra),
+        (
+            "verify checksums on the release artifacts",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "execute the barrier conformance suite",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "prove the new bend law before merging",
+            CognitiveTier::System0Sutra,
+        ),
+        (
+            "yo re-check the proofs real quick",
+            CognitiveTier::System0Sutra,
+        ),
+        ("run the whole suite again pls", CognitiveTier::System0Sutra),
+        (
+            "how many records are in the active galaxy",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "find the config for the gateway lane",
+            CognitiveTier::System05Vector,
+        ),
+        ("show the uptime of the vps", CognitiveTier::System05Vector),
+        (
+            "look up who holds the current track claim",
+            CognitiveTier::System05Vector,
+        ),
+        ("any news in the inbox today", CognitiveTier::System05Vector),
+        (
+            "whats the fleet uptime lookin like",
+            CognitiveTier::System05Vector,
+        ),
+        (
+            "summarize the changes in the last three commits",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "compare these two routing tables",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "review the pull request and list concerns",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "condense this thread into three bullets",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "sum up the thread real quick",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "sort my notes into something readable",
+            CognitiveTier::System1LocalOrgan,
+        ),
+        (
+            "imagine a future where memory crystals are universal",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "reason about whether small models can replace frontier ones",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "strategize about our positioning versus cloud incumbents",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "speculate on what intelligence means for a hive of tiny organs",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "idk dream up a mesh protocol for mars",
+            CognitiveTier::System2FrontierCloud,
+        ),
+        (
+            "deep think: can receipts be conscious",
+            CognitiveTier::System2FrontierCloud,
+        ),
+    ]
+}
+
 impl ValkyrieL05Router {
     #[must_use]
     pub fn new(engine: ValkyrieTwoEngine) -> Self {
         Self { engine }
     }
 
+    /// Production bootstrap: trains a dedicated routing engine on the authored
+    /// corpus (not the synthetic wave dataset — this organ's job is tier triage).
     #[must_use]
     pub fn bootstrap() -> Self {
-        Self::new(ValkyrieTwoEngine::bootstrap_production_engine())
+        Self::train_on_corpus(
+            default_routing_train_prompts(),
+            default_routing_cal_prompts(),
+            42,
+        )
     }
 
-    /// Semantic feature projection mapping natural language intents into 64-D state
+    /// Semantic feature projection mapping natural language intents into a 64-D
+    /// state vector. Static: the projection is a pure function of the prompt.
+    ///
+    /// Layout: dims 0-3 tier-affinity scores, dims 4-7 discourse shape, dims
+    /// 16-17 length, dims 20-23 normalized affinities, dims 32-63 hashed char
+    /// bigrams; FWHT mixes everything for the downstream organs.
     #[must_use]
-    pub fn project_inquiry(&self, prompt: &str) -> [f32; VALKYRIE_DIM] {
+    pub fn project_inquiry(prompt: &str) -> [f32; VALKYRIE_DIM] {
         let mut state = [0.0f32; VALKYRIE_DIM];
         let lower = prompt.to_lowercase();
         let words: Vec<&str> = lower.split_whitespace().collect();
 
-        let sys0_signals = [
-            "execute",
-            "verify",
-            "test",
-            "proof",
-            "check",
-            "audit",
-            "sandbox",
-            "kekkai",
-            "borrow",
-            "barrier",
-            "landlock",
-            "dream",
-            "compact",
-            "prune",
-            "formal",
-            "invariant",
-        ];
-        let sys05_signals = ["lookup", "status", "query", "state", "cache", "find", "key"];
-        let sys1_signals = [
-            "summarize",
-            "history",
-            "commit",
-            "messages",
-            "repos",
-            "report",
-            "review",
-            "reconcile",
-            "session",
-        ];
-        let sys2_signals = [
-            "philosophy",
-            "agi",
-            "speculative",
-            "future",
-            "strategic",
-            "hypothetical",
-            "scaling",
-            "consciousness",
-        ];
+        let score_family = |signals: &[&str], weight: f32| -> f32 {
+            let mut s = 0.0f32;
+            for w in &words {
+                for sig in signals {
+                    if w.contains(sig) {
+                        s += weight;
+                    }
+                }
+            }
+            // multi-word signals (contain a space) are matched on the full string
+            for sig in signals {
+                if sig.contains(' ') && lower.contains(sig) {
+                    s += weight;
+                }
+            }
+            s
+        };
 
-        let mut s0 = 0.0f32;
-        let mut s05 = 0.0f32;
-        let mut s1 = 0.0f32;
-        let mut s2 = 0.0f32;
-
-        for w in &words {
-            for sig in &sys0_signals {
-                if w.contains(sig) {
-                    s0 += 1.5;
-                }
-            }
-            for sig in &sys05_signals {
-                if w.contains(sig) {
-                    s05 += 1.2;
-                }
-            }
-            for sig in &sys1_signals {
-                if w.contains(sig) {
-                    s1 += 1.3;
-                }
-            }
-            for sig in &sys2_signals {
-                if w.contains(sig) {
-                    s2 += 1.6;
-                }
-            }
-        }
+        let s0 = score_family(SYS0_SIGNALS, 1.5);
+        let s05 = score_family(SYS05_SIGNALS, 1.2);
+        let s1 = score_family(SYS1_SIGNALS, 1.3);
+        let s2 = score_family(SYS2_SIGNALS, 1.6);
 
         state[0] = s0;
         state[1] = s05;
         state[2] = s1;
         state[3] = s2;
 
+        state[4] = score_family(INTERROGATIVE_SIGNALS, 1.0);
+        state[5] = score_family(IMPERATIVE_SIGNALS, 1.0);
+        state[6] = score_family(SELFREF_SIGNALS, 1.0);
+        state[7] = score_family(HEDGE_SIGNALS, 1.0);
+
         state[16] = words.len() as f32 * 0.1;
         state[17] = prompt.len() as f32 * 0.02;
+
+        // Normalized affinities: lets the classifier separate "strong match to
+        // one family" from "weak matches everywhere" regardless of prompt length.
+        let total = s0 + s05 + s1 + s2;
+        if total > 1e-6 {
+            state[20] = s0 / total;
+            state[21] = s05 / total;
+            state[22] = s1 / total;
+            state[23] = s2 / total;
+        }
 
         let bytes = prompt.as_bytes();
         for i in 0..bytes.len().saturating_sub(1) {
@@ -2548,16 +3040,107 @@ impl ValkyrieL05Router {
         state
     }
 
+    /// Compile labeled (prompt, tier) pairs into tricameral training samples.
+    #[must_use]
+    pub fn compile_routing_samples(prompts: &[(&str, CognitiveTier)]) -> Vec<ValkyrieSample> {
+        prompts
+            .iter()
+            .enumerate()
+            .map(|(i, (prompt, tier))| ValkyrieSample {
+                id: i,
+                state_vec: Self::project_inquiry(prompt),
+                target_class: tier.index(),
+                target_noul_bool: true,
+                target_score_rubric: 0.9,
+                primary_gana_id: 0,
+                counterfactual_gana_id: 0,
+                primary_glyphs: vec![SutraGlyph::Zheng],
+                counterfactual_glyphs: vec![SutraGlyph::Guan],
+                candidate_digest: 0,
+                is_byzantine_or_antibody: false,
+                expected_catuskoti: Corner::K1Affirmed,
+            })
+            .collect()
+    }
+
+    /// Train a dedicated routing organ: `Valkyrie-0` cyclic curriculum on the
+    /// train split, closed-form `Valkyrie-1` symbiont on the same split, and
+    /// callosum priors calibrated on the (disjoint) cal split.
+    #[must_use]
+    pub fn train_on_corpus(
+        train_prompts: &[(&str, CognitiveTier)],
+        cal_prompts: &[(&str, CognitiveTier)],
+        seed: u64,
+    ) -> Self {
+        let train_set = Self::compile_routing_samples(train_prompts);
+        let cal_set = Self::compile_routing_samples(cal_prompts);
+
+        let mut v0 = ValkyrieZeroEngine::new_tabula_rasa(seed);
+        let _ = v0.train_cyclic_curriculum(&train_set, &cal_set, &[], 12);
+        let v1 = ValkyrieOneSymbiont::fit_closed_form(&train_set);
+
+        let mut engine = ValkyrieTwoEngine::new(v0, v1);
+        engine.calibrate_callosum(&cal_set);
+        Self { engine }
+    }
+
+    /// Route a prompt through the trained organ. Exact canon literals (sutra
+    /// glyphs, hexagrams) take the same System-0 reflex the baseline applies —
+    /// everything else is decided by `pulse_tricameral`, not keyword overrides.
     pub fn route(&mut self, prompt: &str) -> ValkyrieRoutingResult {
-        let state_vec = self.project_inquiry(prompt);
+        self.route_hybrid(prompt, None, None)
+    }
+
+    /// Route a prompt using either a hybrid semantic+lexical projection (when an
+    /// embedding and FisherHadamardProjector are provided) or the pure lexical projection.
+    pub fn route_hybrid(
+        &mut self,
+        prompt: &str,
+        embedding: Option<&[f32]>,
+        projector: Option<&FisherHadamardProjector>,
+    ) -> ValkyrieRoutingResult {
+        for glyph in SutraGlyph::ALL {
+            let c = glyph.as_char();
+            let a = glyph.alchemical_char();
+            if prompt.contains(c) || prompt.contains(a) {
+                return ValkyrieRoutingResult {
+                    tier: CognitiveTier::System0Sutra,
+                    primary_gana_id: glyph as usize as u8,
+                    confidence: 0.99,
+                    used_semantic_organ: false,
+                };
+            }
+        }
+        if crate::hexagram::Hexagram::parse(prompt.trim()).is_some() {
+            return ValkyrieRoutingResult {
+                tier: CognitiveTier::System0Sutra,
+                primary_gana_id: 0,
+                confidence: 0.96,
+                used_semantic_organ: false,
+            };
+        }
+
+        let state_vec = match (embedding, projector) {
+            (Some(emb), Some(proj)) => {
+                let sem_vec = proj.project(emb);
+                let lex_vec = Self::project_inquiry(prompt);
+                let mut state = [0.0f32; VALKYRIE_DIM];
+                for d in 0..VALKYRIE_DIM {
+                    state[d] = 0.72 * sem_vec[d] + 0.28 * lex_vec[d];
+                }
+                state
+            }
+            _ => Self::project_inquiry(prompt),
+        };
+
         let sample = ValkyrieSample {
             id: 42,
             state_vec,
             target_class: 0,
             target_noul_bool: true,
             target_score_rubric: 0.9,
-            primary_gana_id: 12,
-            counterfactual_gana_id: 14,
+            primary_gana_id: 0,
+            counterfactual_gana_id: 0,
             primary_glyphs: vec![SutraGlyph::Zheng, SutraGlyph::Jie],
             counterfactual_glyphs: vec![SutraGlyph::Guan],
             candidate_digest: 0xCAFE_BABE,
@@ -2566,38 +3149,8 @@ impl ValkyrieL05Router {
         };
         let decision = self.engine.pulse_tricameral(&sample);
 
-        let lower = prompt.to_lowercase();
-        let is_speculative = lower.contains("philosophy")
-            || lower.contains("future agi")
-            || lower.contains("speculative")
-            || lower.contains("agi");
-        let is_local_summary = lower.contains("summarize") || lower.contains("historical commit");
-        let is_kernel_rule = lower.contains("borrow")
-            || lower.contains("sandbox")
-            || lower.contains("landlock")
-            || lower.contains("audit")
-            || lower.contains("dream cycle")
-            || lower.contains("invariant")
-            || lower.contains("execute")
-            || lower.contains("verify");
-
-        let tier = if is_speculative {
-            crate::tripartite_router::CognitiveTier::System2FrontierCloud
-        } else if is_local_summary {
-            crate::tripartite_router::CognitiveTier::System1LocalOrgan
-        } else if is_kernel_rule {
-            crate::tripartite_router::CognitiveTier::System0Sutra
-        } else {
-            match decision.predicted_class % 4 {
-                0 => crate::tripartite_router::CognitiveTier::System0Sutra,
-                1 => crate::tripartite_router::CognitiveTier::System05Vector,
-                2 => crate::tripartite_router::CognitiveTier::System1LocalOrgan,
-                _ => crate::tripartite_router::CognitiveTier::System2FrontierCloud,
-            }
-        };
-
         ValkyrieRoutingResult {
-            tier,
+            tier: CognitiveTier::from_index(decision.predicted_class),
             primary_gana_id: decision.active_ganas.0,
             confidence: decision.top_probability,
             used_semantic_organ: true,
@@ -2606,38 +3159,88 @@ impl ValkyrieL05Router {
 }
 
 /// Layer 1: Epistemic Recall Re-Ranker & Temporal Supersession Organ
-#[derive(Debug, Clone, Default)]
+///
+/// Reranks recall candidates on *structural* metadata only — live `Supersedes`
+/// relations and insertion-order recency — never content-string heuristics.
+#[derive(Debug, Clone)]
+pub struct EpistemicCandidate {
+    /// Record id; monotonically increasing with insertion order in Gen3 stores.
+    pub record_id: u64,
+    /// Lexical/semantic support score from the substrate.
+    pub score: f32,
+    /// `Some(successor_record_id)` when a live `Supersedes` relation names this
+    /// record's replacement. (Note: `ops::Hit::superseded_by` exposes the
+    /// relation id — resolve successor record ids via `Store::iter_relations`.)
+    pub superseded_by: Option<u64>,
+}
+
+#[derive(Debug, Clone)]
 pub struct ValkyrieL1Epistemic {
-    pub temporal_decay_factor: f32,
-    pub supersession_boost: f32,
+    /// Multiplicative penalty applied to superseded records (0.75 → score × 0.25).
+    pub supersession_penalty: f32,
+    /// Recency bonus scaled to `[0, w]` across the candidate set.
+    pub recency_weight: f32,
+    /// Fraction of a superseded record's lexical claim inherited by its
+    /// successor — the successor "absorbs" the outdated record's topicality.
+    pub succession_inheritance: f32,
+}
+
+impl Default for ValkyrieL1Epistemic {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ValkyrieL1Epistemic {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            temporal_decay_factor: 0.5,
-            supersession_boost: 2.5,
+            supersession_penalty: 0.75,
+            recency_weight: 0.5,
+            succession_inheritance: 1.0,
         }
     }
 
-    /// Re-rank candidates weighing raw lexical score, temporal recency, and explicit ratification/supersession notices
+    /// Rerank `(index, effective_score)` pairs:
+    /// - superseded records are penalized toward the bottom stratum,
+    /// - a successor inherits `succession_inheritance ×` the lexical score of
+    ///   every record that names it via `superseded_by` (topicality transfers
+    ///   to the replacement, not the stale original),
+    /// - newer records get a bounded recency bonus so a fresh correction
+    ///   outranks a stale lexical twin of comparable strength.
     #[must_use]
-    pub fn rerank(&self, candidates: &[(String, f32, bool)]) -> Vec<(usize, f32)> {
+    pub fn rerank(&self, candidates: &[EpistemicCandidate]) -> Vec<(usize, f32)> {
+        // Rank-based recency: oldest candidate = 0.0, newest = 1.0.
+        let mut by_id: Vec<usize> = (0..candidates.len()).collect();
+        by_id.sort_by_key(|&i| candidates[i].record_id);
+        let denom = by_id.len().saturating_sub(1).max(1) as f32;
+        let mut recency = vec![0.0f32; candidates.len()];
+        for (pos, &i) in by_id.iter().enumerate() {
+            recency[i] = pos as f32 / denom;
+        }
+
+        // Succession inheritance: each successor absorbs the lexical claim of
+        // the superseded records pointing at it.
+        let mut inheritance = vec![0.0f32; candidates.len()];
+        for c in candidates {
+            if let Some(succ_id) = c.superseded_by {
+                if let Some(succ_idx) = candidates.iter().position(|s| s.record_id == succ_id) {
+                    inheritance[succ_idx] += c.score;
+                }
+            }
+        }
+
         let mut scored: Vec<(usize, f32)> = candidates
             .iter()
             .enumerate()
-            .map(|(idx, (content, base_score, is_flagged))| {
-                let mut score = *base_score;
-                if *is_flagged
-                    || content.contains("SUPERSEDED NOTICE")
-                    || content.contains("relocated to")
-                {
-                    score += self.supersession_boost;
-                }
-                if content.contains("Lucas") || content.contains("ratified") {
-                    score += 0.5;
-                }
+            .map(|(idx, c)| {
+                let score = if c.superseded_by.is_some() {
+                    c.score * (1.0 - self.supersession_penalty)
+                } else {
+                    c.score
+                        + self.recency_weight * recency[idx]
+                        + self.succession_inheritance * inheritance[idx]
+                };
                 (idx, score)
             })
             .collect();
