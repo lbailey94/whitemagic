@@ -39,7 +39,7 @@ wm-gen3-shm = { workspace = true }
 wm-gen3-vault = { workspace = true }
 wm-gen3-zeropointfive = { workspace = true }
 wm-gen3-systemone = { workspace = true, optional = true }
-sha2 = "0.10"
+sha2 = "0.11"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 clap = { version = "4", features = ["derive"] }
