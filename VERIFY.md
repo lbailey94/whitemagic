@@ -71,9 +71,10 @@ cosign verify-blob \
   wm-linux-x86_64
 ```
 
-The `v10.5.0` Git tag is annotated but unsigned. Its tag target is
-`021d9cd175d0247921e04298c61bbb5e1cab6a9f`; the manifest signature and
-keyless artifact signature are separate checks and do not make that tag signed.
+The `v10.5.0` Git tag is annotated but unsigned (its tag target is
+`021d9cd175d0247921e04298c61bbb5e1cab6a9f`; the manifest signature and keyless
+artifact signature are separate checks). Beginning with `v10.5.1`, Git release
+tags are cryptographically SSH-signed (`git tag -v v10.5.1`).
 
 The expected signing identity and issuer above were read from the certificate
 in this release's bundle and matched to the `release.yml` workflow and
