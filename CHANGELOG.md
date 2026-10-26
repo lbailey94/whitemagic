@@ -5,6 +5,16 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.6.0] — 2026-10-26
+
+### Added
+- **Present-Belief State, Temporal Validity Windows & PACMI Cascading Invalidation (`wm-gen3-core::belief`)** — Implements `BeliefClaim`, `BeliefValidityState`, `PacmiCascadeReport`, and statutory `W1_B4` Brier/Wilson-95%/Empirical-Bayes (`k = 20`) calibration without mutating raw reported confidences (`EvoBelief` `arXiv:2610.12789`, `PACMI`, `TIDER`). When root evidence is superseded or erased, `Substrate::cascade_invalidation` transitively marks dependent beliefs across `Causal` and `Supersedes` edges as `StaleByCascade`.
+- **`QEMem` / `JointCore` Evidence-Sufficiency Set-Cover Selector (`Arbitration::SufficiencyCover`)** — Adds a submodular greedy set-cover arbitration mode to `Substrate::recall` (`WM_GEN3_ARBITRATION=sufficiency`) that maximizes uncovered query-token IDF facet coverage and includes 1-hop causal/supersession provenance neighborhood coverage (`arXiv:2610.22668`).
+- **Outcome-Anchored Memory Marginal Worth & `ScopeMem` Interference Demotion** — Adds `MemoryWorthStats`, `WriteWorthAssessment`, `Substrate::record_memory_outcome`, and `Substrate::evaluate_write_worth` (`TokenWorth` `arXiv:2610.26453`, `ScopeMem`, `MGPO`) to credit/demote memories by verified task outcomes and suppress records that repeatedly break prior passing decisions.
+- **Gate 9C `MemCut` Certified Erasure & Derived-Cache GC (`Substrate::erase_record_certified`)** — Purges erased records across `records`, `postings`, `embeddings`, unshared `embed_cache` entries, incident `relations`, and `identity`, emits a cryptographic `MemCutAuditReport` (`arXiv:2610.21405`), and adds `Substrate::gc_derived_embed_cache` for bounded derived-cache eviction.
+- **Action Reversibility Taxonomy, `STEPGATE` Escalation & Prospective Obligation Ledger** — Adds `ReversibilityClass` (`ReadOnly`, `Idempotent`, `Reversible`, `Compensable`, `Irreversible`) and `ActionSkeleton::evaluate_stepgate` (`Revisable by Design`, `SafeActBench`, `STEPGATE`), plus `ProspectiveObligation` persistence across brain/model replacement (`RunningTab`, `ObligationGuard`, `ProMemAgent`).
+- **`ParetoGate` Independent Verifier Certification & P0 Benchmark Suite** — Adds `ParetoGate::certify_verifier_integrity` seeding 5 adversarial/null canary classes (`Who Verifies the Verifier?`), `CladisticsEngine::rollback_to_genome` for exact germline rollback, and the P0.1–P0.4 verification harness (`crates/wm-gen3-core/tests/gen3_v10_6_research_synthesis_battery.rs`, `benchmarks/driver_p0_research_archive_suite.py`).
+
 ## [10.5.1] — 2026-10-25
 
 ### Added

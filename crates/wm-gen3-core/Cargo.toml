@@ -69,6 +69,10 @@ required-features = ["operator"]
 name = "gap_junction_swarm_benchmark"
 required-features = ["operator"]
 
+[[test]]
+name = "gen3_v10_6_research_synthesis_battery"
+required-features = ["operator"]
+
 [dependencies]
 fastembed = "5.17.4"
 lmdb = "0.8"

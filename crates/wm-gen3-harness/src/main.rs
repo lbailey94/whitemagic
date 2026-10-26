@@ -85,11 +85,14 @@ fn main() {
     };
     substrate.set_projection_gated(projection_gated);
     substrate.set_projection_gate_count(projection_gate_count);
-    if std::env::var("WM_GEN3_ARBITRATION")
-        .map(|v| v == "structural")
-        .unwrap_or(false)
-    {
-        substrate.set_arbitration(wm_gen3_core::ops::Arbitration::Structural);
+    match std::env::var("WM_GEN3_ARBITRATION").as_deref() {
+        Ok("structural") => {
+            substrate.set_arbitration(wm_gen3_core::ops::Arbitration::Structural);
+        }
+        Ok("sufficiency" | "qemem") => {
+            substrate.set_arbitration(wm_gen3_core::ops::Arbitration::SufficiencyCover);
+        }
+        _ => {}
     }
     let dispersion_on = std::env::var("WM_GEN3_DISPERSION")
         .map(|v| v == "1")

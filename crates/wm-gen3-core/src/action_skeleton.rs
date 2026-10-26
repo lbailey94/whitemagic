@@ -48,6 +48,65 @@ pub struct AstDelta {
     pub post_invariants: Vec<String>,
 }
 
+/// Classification of action reversibility (`Revisable by Design` / `SafeActBench` / `STEPGATE`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "class", rename_all = "snake_case")]
+pub enum ReversibilityClass {
+    /// Purely observational / read-only; zero external state mutation.
+    ReadOnly,
+    /// Repeated execution yields the same state as single execution (`LIMBO`).
+    Idempotent,
+    /// Can be undone deterministically via a compensating skeleton or snapshot (`DeltaBox`).
+    Reversible { compensating_action: String },
+    /// External side effects can be mitigated but not byte-identically undone.
+    Compensable { mitigation_plan: String },
+    /// Cannot be undone once executed (e.g., external transmission, destructive overwrite).
+    Irreversible,
+}
+
+impl Default for ReversibilityClass {
+    fn default() -> Self {
+        Self::Reversible {
+            compensating_action: "git checkout -- <target_file>".into(),
+        }
+    }
+}
+
+impl ReversibilityClass {
+    /// Minimum required calibrated confidence before executing an action of this class (`SafeActBench`).
+    #[must_use]
+    pub const fn required_confidence_floor(&self) -> f64 {
+        match self {
+            Self::ReadOnly => 0.50,
+            Self::Idempotent => 0.65,
+            Self::Reversible { .. } => 0.75,
+            Self::Compensable { .. } => 0.85,
+            Self::Irreversible => 0.95,
+        }
+    }
+
+    /// True if this action class can be automatically rolled back without human intervention.
+    #[must_use]
+    pub const fn is_automatically_reversible(&self) -> bool {
+        matches!(
+            self,
+            Self::ReadOnly | Self::Idempotent | Self::Reversible { .. }
+        )
+    }
+}
+
+/// Per-action escalation verdict (`STEPGATE`: escalate uncertain individual actions, not entire tasks).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StepGateEscalationDecision {
+    pub task_id: Uuid,
+    pub target_file: String,
+    pub reversibility: ReversibilityClass,
+    pub observed_confidence: f64,
+    pub required_floor: f64,
+    pub escalate_step: bool,
+    pub reason: String,
+}
+
 /// A structured action skeleton transmitted between agents.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ActionSkeleton {
@@ -61,6 +120,9 @@ pub struct ActionSkeleton {
     pub deltas: Vec<AstDelta>,
     /// Estimated token cost if this were expanded to full conversational prose.
     pub estimated_chat_token_cost: usize,
+    /// Action reversibility classification (`Revisable by Design`).
+    #[serde(default)]
+    pub reversibility: ReversibilityClass,
 }
 
 /// The diagnostic result of speculative AST validation.
@@ -86,12 +148,51 @@ impl ActionSkeleton {
     ) -> Self {
         // Roughly 150 tokens per delta if described in conversational prose
         let estimated_chat_token_cost = deltas.len() * 150 + 200;
+        let target_file = target_file.into();
+        let reversibility = ReversibilityClass::Reversible {
+            compensating_action: format!("git checkout -- {target_file}"),
+        };
         Self {
             task_id,
-            target_file: target_file.into(),
+            target_file,
             language,
             deltas,
             estimated_chat_token_cost,
+            reversibility,
+        }
+    }
+
+    /// Builder helper to attach an explicit [`ReversibilityClass`].
+    #[must_use]
+    pub fn with_reversibility(mut self, reversibility: ReversibilityClass) -> Self {
+        self.reversibility = reversibility;
+        self
+    }
+
+    /// Evaluate whether this individual action step must be escalated (`STEPGATE` + `SafeActBench`).
+    #[must_use]
+    pub fn evaluate_stepgate(&self, observed_confidence: f64) -> StepGateEscalationDecision {
+        let required_floor = self.reversibility.required_confidence_floor();
+        let escalate_step =
+            !observed_confidence.is_finite() || observed_confidence < required_floor;
+        let reason = if escalate_step {
+            format!(
+                "STEPGATE escalation: observed confidence ({observed_confidence:.3}) < required floor ({required_floor:.2}) for {:?}",
+                self.reversibility
+            )
+        } else {
+            format!(
+                "STEPGATE admitted: observed confidence ({observed_confidence:.3}) >= required floor ({required_floor:.2})"
+            )
+        };
+        StepGateEscalationDecision {
+            task_id: self.task_id,
+            target_file: self.target_file.clone(),
+            reversibility: self.reversibility.clone(),
+            observed_confidence,
+            required_floor,
+            escalate_step,
+            reason,
         }
     }
 

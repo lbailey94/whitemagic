@@ -1781,6 +1781,89 @@ impl Store {
         Ok(())
     }
 
+    /// Remove a specific content-hash key from `embed_cache` (`MemCut` certified erasure).
+    pub(crate) fn remove_embedding_cache(&self, hash: &str) -> Result<bool, StoreError> {
+        self.ensure_writable()?;
+        let mut txn = self.env.begin_rw_txn()?;
+        let removed = match txn.del(self.embed_cache, &hash, None) {
+            Ok(()) => true,
+            Err(lmdb::Error::NotFound) => false,
+            Err(e) => return Err(e.into()),
+        };
+        txn.commit()?;
+        Ok(removed)
+    }
+
+    /// Remove all relations incident to `record_id` (`src == record_id || dst == record_id`)
+    /// during authorized erasure (`MemCut` / Charter Invariant 2).
+    pub(crate) fn remove_incident_relations(&self, record_id: u64) -> Result<usize, StoreError> {
+        self.ensure_writable()?;
+        let incident_ids: Vec<u64> = self
+            .iter_relations()?
+            .into_iter()
+            .filter(|r| r.src() == record_id || r.dst() == record_id)
+            .map(|r| r.id())
+            .collect();
+        if incident_ids.is_empty() {
+            return Ok(0);
+        }
+        let mut txn = self.env.begin_rw_txn()?;
+        let mut removed = 0usize;
+        for rel_id in incident_ids {
+            match txn.del(self.relations, &bytes_u64(rel_id), None) {
+                Ok(()) => removed += 1,
+                Err(lmdb::Error::NotFound) => {}
+                Err(e) => return Err(e.into()),
+            }
+        }
+        if removed > 0 {
+            bump_relation_view_stamp(&mut txn, self.default)?;
+        }
+        txn.commit()?;
+        if removed > 0 {
+            self.invalidate_relations_view();
+        }
+        Ok(removed)
+    }
+
+    /// Gate 9C follow-on: garbage-collect orphaned `embed_cache` entries not referenced by
+    /// `active_hashes` and enforce an optional `max_retain` size bound.
+    pub(crate) fn gc_orphan_embedding_cache(
+        &self,
+        active_hashes: &HashSet<String>,
+        max_retain: usize,
+    ) -> Result<usize, StoreError> {
+        self.ensure_writable()?;
+        let mut to_remove: Vec<String> = Vec::new();
+        let mut retained = 0usize;
+        {
+            let txn = self.env.begin_ro_txn()?;
+            let mut cursor = txn.open_ro_cursor(self.embed_cache)?;
+            for (k, _) in cursor.iter() {
+                let key_str = String::from_utf8_lossy(k).into_owned();
+                if !active_hashes.contains(&key_str) || retained >= max_retain {
+                    to_remove.push(key_str);
+                } else {
+                    retained += 1;
+                }
+            }
+        }
+        if to_remove.is_empty() {
+            return Ok(0);
+        }
+        let mut txn = self.env.begin_rw_txn()?;
+        let mut evicted = 0usize;
+        for key in &to_remove {
+            match txn.del(self.embed_cache, key, None) {
+                Ok(()) => evicted += 1,
+                Err(lmdb::Error::NotFound) => {}
+                Err(e) => return Err(e.into()),
+            }
+        }
+        txn.commit()?;
+        Ok(evicted)
+    }
+
     /// Number of derived cache entries (test/evidence helper; never canonical).
     #[cfg(test)]
     pub(crate) fn embedding_cache_len(&self) -> Result<usize, StoreError> {

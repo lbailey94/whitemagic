@@ -25,6 +25,7 @@ pub mod apotheosis;
 pub mod at_rest;
 pub mod attestation;
 pub mod attractor;
+pub mod belief;
 pub mod bicameral;
 pub mod capability;
 pub mod catuskoti;
@@ -89,7 +90,15 @@ pub use pray_combinatorics::{
 pub use sutra::{CompoundSutra, SutraGlyph, SutraKekkaiProfile, SutraParseError};
 pub use tripartite_router::{CognitiveTier, RoutingDecision, TripartiteRouter};
 
-pub use action_skeleton::{ActionSkeleton, AstActionType, AstDelta, SkeletonValidationResult};
+pub use action_skeleton::{
+    ActionSkeleton, AstActionType, AstDelta, ReversibilityClass, SkeletonValidationResult,
+    StepGateEscalationDecision,
+};
+pub use belief::{
+    BeliefCalibrationReport, BeliefClaim, BeliefValidityState, PacmiCascadeReport,
+    STATUTORY_EB_PRIOR_K, compute_statutory_calibration, empirical_bayes_recalibrate,
+    wilson_95_interval,
+};
 pub use causal_ticket::CausalCapabilityTicket;
 pub use citta_oscillator::{
     BitsetSubagentProposal, BrainWaveBand, CittaOscillatorEngine, CittaOscillatorTickReport,
@@ -98,6 +107,7 @@ pub use citta_oscillator::{
     ThetaGammaWorkingMemoryRing, VictorTaelinSuperoptimizer, WorkingMemoryChordSummary,
     WorkingMemoryPhaseSlot,
 };
+pub use cladistics::{VerifierCanaryResult, VerifierCertificationReport};
 pub use covenant::{
     CovenantView, GroundAspect, MandalaKosha, PrimordialCovenant, RSI_LAWS, SUBSTRATE_ARTICLES,
 };
@@ -117,7 +127,9 @@ pub use valkyrie::{
 
 pub use factory::{FactoryAdjudication, FactoryCandidate, SoftwareFactory, SoftwareFactoryConfig};
 pub use ops::{
+    MemCutAuditReport, MemoryWorthStats, ObligationStatus, ProspectiveObligation,
     SessionCheckpoint, SessionContinuityView, VectorProjectionState, VectorRepairReport,
+    WriteWorthAssessment,
 };
 pub use sweep::{ChamberAuditReport, CognitiveChamber, is_disposable_telemetry};
 pub use transport::{

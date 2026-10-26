@@ -125,8 +125,10 @@ impl Policy {
     }
 }
 
-/// Selector mode (P2D §4). Default `PenaltyMultiplier` is the frozen Phase-2 behavior;
-/// `Structural` is the pre-registered arbitration rule (no tunables).
+/// Selector mode (P2D §4 + QEMem `arXiv:2610.22668`). Default `PenaltyMultiplier` is the
+/// frozen Phase-2 behavior; `Structural` is the pre-registered arbitration rule (no tunables);
+/// `SufficiencyCover` selects a minimally redundant, jointly sufficient evidence cover over
+/// query token facets and causal/supersession provenance chains.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Arbitration {
     /// Existing behavior: relevance key, superseded records multiplied down.
@@ -134,6 +136,9 @@ pub enum Arbitration {
     /// Structural precedence: current → unresolved → superseded strata, then
     /// within-stratum lexical support, then semantic support, then recency/id.
     Structural,
+    /// QEMem / JointCore (`arXiv:2610.22668`): greedy submodular set-cover over
+    /// query token facets + causal/supersession provenance closure.
+    SufficiencyCover,
 }
 
 /// Import class for corpus material. `world` is deliberately absent: it enters
@@ -2176,6 +2181,91 @@ impl Substrate {
                     .then(b.7.cmp(&a.7))
                     .then(b.3.cmp(&a.3))
             }),
+            Arbitration::SufficiencyCover => {
+                // QEMem / JointCore (arXiv:2610.22668): greedy submodular set-cover over
+                // query token IDF facets plus causal/supersession provenance closure.
+                let mut record_tokens: HashMap<u64, HashSet<String>> = HashMap::new();
+                for &(_, _, _, id, _, _, _, _) in &scored {
+                    let mut tset: HashSet<String> = self
+                        .store
+                        .get_record(id)
+                        .ok()
+                        .flatten()
+                        .map(|r| {
+                            field::tokenize(r.content())
+                                .into_iter()
+                                .filter(|t| idf_map.contains_key(t))
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    // Include 1-hop causal/graph neighbor tokens for provenance chain sufficiency
+                    if let Some(neighbors) = graph_edges.get(&id) {
+                        for &(nid, _) in neighbors {
+                            if let Some(nrec) = self.store.get_record(nid).ok().flatten() {
+                                for nt in field::tokenize(nrec.content()) {
+                                    if idf_map.contains_key(&nt) {
+                                        tset.insert(nt);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    record_tokens.insert(id, tset);
+                }
+
+                let worth_map = self.memory_worth_map();
+                let mut covered_tokens: HashSet<String> = HashSet::new();
+                let mut remaining = scored;
+                let mut selected = Vec::with_capacity(remaining.len());
+
+                while !remaining.is_empty() {
+                    let mut best_idx = 0usize;
+                    let mut best_gain = f32::NEG_INFINITY;
+
+                    for (idx, cand) in remaining.iter().enumerate() {
+                        let (key, _support, _sem, id, _sup, stratum, _lex, _created) = *cand;
+                        let uncovered_idf: f32 = record_tokens
+                            .get(&id)
+                            .map(|tset| {
+                                tset.iter()
+                                    .filter(|t| !covered_tokens.contains(*t))
+                                    .map(|t| idf_map.get(t).copied().unwrap_or(0.0))
+                                    .sum()
+                            })
+                            .unwrap_or(0.0);
+                        let marginal_cov = if total_idf > f32::EPSILON {
+                            (uncovered_idf / total_idf).clamp(0.0, 1.0)
+                        } else {
+                            0.0
+                        };
+                        let stratum_bonus = match stratum {
+                            0 => 0.10_f32,
+                            1 => 0.0_f32,
+                            _ => -0.25_f32,
+                        };
+                        let worth_mult = worth_map
+                            .get(&id)
+                            .map_or(1.0_f32, |w| w.ranking_multiplier());
+                        let combined =
+                            (0.65 * marginal_cov + 0.35 * key + stratum_bonus) * worth_mult;
+                        if combined > best_gain
+                            || ((combined - best_gain).abs() <= 1e-6 && id > remaining[best_idx].3)
+                        {
+                            best_gain = combined;
+                            best_idx = idx;
+                        }
+                    }
+
+                    let chosen = remaining.remove(best_idx);
+                    if let Some(tset) = record_tokens.get(&chosen.3) {
+                        for t in tset {
+                            covered_tokens.insert(t.clone());
+                        }
+                    }
+                    selected.push(chosen);
+                }
+                scored = selected;
+            }
         }
         let limit = if q.limit == 0 { 10 } else { q.limit };
         let candidate_limit = if q.candidate_limit == 0 {
@@ -3742,6 +3832,9 @@ impl Substrate {
                 .map_err(|e| format!("supersede relation write failed: {e}"))?;
         }
 
+        // Automatically cascade validity invalidation to any beliefs depending on `prior_id` (PACMI).
+        let _ = self.cascade_invalidation(prior_id, &format!("superseded_by_record_{new_id}"));
+
         Ok(entry)
     }
 
@@ -3917,6 +4010,698 @@ impl Substrate {
             "failures": failures,
         }))
     }
+
+    // ========================================================================
+    // Gen3 v10.6 Research Synthesis Extensions:
+    // 1. Present-Belief State & PACMI Cascading Invalidation (EvoBelief / PACMI)
+    // 2. Outcome-Anchored Memory Worth & ScopeMem Interference (TokenWorth / ScopeMem)
+    // 3. Gate 9C MemCut Certified Erasure & Derived-Cache Residue Audit (MemCut)
+    // 4. Prospective Obligation Ledger (RunningTab / ObligationGuard / ProMemAgent)
+    // ========================================================================
+
+    /// Register a new falsifiable present-state [`crate::belief::BeliefClaim`] (`W1_B4` + `EvoBelief`).
+    #[allow(clippy::too_many_arguments)]
+    pub fn register_belief_claim(
+        &mut self,
+        statement: &str,
+        domain_scope: &str,
+        source_date: &str,
+        predicted_outcome: &str,
+        raw_confidence: f32,
+        falsification_criteria: &str,
+        supporting_evidence_ids: Vec<u64>,
+        valid_until_epoch: Option<u64>,
+    ) -> Result<crate::belief::BeliefClaim, String> {
+        self.require_writable("belief.register")?;
+        for &ev_id in &supporting_evidence_ids {
+            let exists = self
+                .store
+                .get_record(ev_id)
+                .map_err(|e| e.to_string())?
+                .is_some();
+            if !exists {
+                return Err(format!(
+                    "supporting evidence record {ev_id} does not exist in store (fail-closed)"
+                ));
+            }
+        }
+        let existing = self.all_beliefs();
+        let next_claim_id = existing.iter().map(|c| c.claim_id).max().unwrap_or(0) + 1;
+        let epoch = self.store.epoch().map_err(|e| e.to_string())?;
+        let claim = crate::belief::BeliefClaim::new_checked(
+            next_claim_id,
+            statement,
+            domain_scope,
+            source_date,
+            predicted_outcome,
+            raw_confidence,
+            falsification_criteria,
+            supporting_evidence_ids,
+            epoch,
+            valid_until_epoch,
+        )?;
+        let val = serde_json::to_value(&claim).map_err(|e| e.to_string())?;
+        self.append_store_sidecar("beliefs.jsonl", &val)?;
+        Ok(claim)
+    }
+
+    /// Resolve a [`crate::belief::BeliefClaim`] with a required validation/falsification event, date,
+    /// and evidence record pointer (`W1_B4` §1.2 completeness contract).
+    /// Raw confidence is never mutated.
+    pub fn resolve_belief_claim(
+        &mut self,
+        claim_id: u64,
+        validated: bool,
+        event: &str,
+        event_date: &str,
+        evidence_record_id: u64,
+    ) -> Result<crate::belief::BeliefClaim, String> {
+        self.require_writable("belief.resolve")?;
+        if event.trim().is_empty() || event_date.trim().is_empty() {
+            return Err(
+                "belief resolution requires non-empty event and event_date (fail-closed)".into(),
+            );
+        }
+        let ev_exists = self
+            .store
+            .get_record(evidence_record_id)
+            .map_err(|e| e.to_string())?
+            .is_some();
+        if !ev_exists {
+            return Err(format!(
+                "resolution evidence record {evidence_record_id} not found in store (fail-closed)"
+            ));
+        }
+        let mut claim = self
+            .all_beliefs()
+            .into_iter()
+            .find(|c| c.claim_id == claim_id)
+            .ok_or_else(|| format!("belief claim {claim_id} not found"))?;
+        claim.validity = if validated {
+            crate::belief::BeliefValidityState::VerifiedPresentFact {
+                validation_event: event.to_string(),
+                validation_date: event_date.to_string(),
+                evidence_record_id,
+            }
+        } else {
+            crate::belief::BeliefValidityState::Falsified {
+                resolution_event: event.to_string(),
+                resolution_date: event_date.to_string(),
+                counter_evidence_id: evidence_record_id,
+            }
+        };
+        let val = serde_json::to_value(&claim).map_err(|e| e.to_string())?;
+        self.append_store_sidecar("beliefs.jsonl", &val)?;
+        Ok(claim)
+    }
+
+    /// Return all belief claims (latest state per `claim_id`, sorted ascending by `claim_id`).
+    #[must_use]
+    pub fn all_beliefs(&self) -> Vec<crate::belief::BeliefClaim> {
+        let mut by_id: BTreeMap<u64, crate::belief::BeliefClaim> = BTreeMap::new();
+        for val in self.read_store_sidecar("beliefs.jsonl") {
+            if let Ok(claim) = serde_json::from_value::<crate::belief::BeliefClaim>(val) {
+                by_id.insert(claim.claim_id, claim);
+            }
+        }
+        let current_epoch = self.store.epoch().unwrap_or(0);
+        by_id
+            .into_values()
+            .map(|mut c| {
+                if c.validity.is_presently_valid()
+                    && let Some(until) = c.valid_until_epoch
+                    && current_epoch > until
+                {
+                    c.validity = crate::belief::BeliefValidityState::Expired {
+                        expired_at_epoch: until,
+                    };
+                }
+                c
+            })
+            .collect()
+    }
+
+    /// Return presently effective belief claims at `query_epoch` (`TIDER` + `Beyond Memory`).
+    #[must_use]
+    pub fn active_beliefs(
+        &self,
+        query_epoch: Option<u64>,
+        domain_filter: Option<&str>,
+    ) -> Vec<crate::belief::BeliefClaim> {
+        let epoch = query_epoch.unwrap_or_else(|| self.store.epoch().unwrap_or(0));
+        self.all_beliefs()
+            .into_iter()
+            .filter(|c| c.is_effective_at(epoch, domain_filter))
+            .collect()
+    }
+
+    /// Compute statutory calibration over the resolved claims set (`W1_B4` §1.3).
+    #[must_use]
+    pub fn calibrate_beliefs(
+        &self,
+        domain_filter: Option<&str>,
+    ) -> crate::belief::BeliefCalibrationReport {
+        let claims = self.all_beliefs();
+        crate::belief::compute_statutory_calibration(&claims, domain_filter)
+    }
+
+    /// PACMI cascading validity propagation: when `root_record_id` is superseded, quarantined,
+    /// or erased, traverse outgoing `Causal` and `Supersedes` edges to find all transitive
+    /// descendants and mark any dependent [`crate::belief::BeliefClaim`] as `StaleByCascade`.
+    pub fn cascade_invalidation(
+        &mut self,
+        root_record_id: u64,
+        reason: &str,
+    ) -> Result<crate::belief::PacmiCascadeReport, String> {
+        self.require_writable("belief.cascade_invalidation")?;
+        let relations = self.store.iter_relations().map_err(|e| e.to_string())?;
+        let rev_entries = self.revision_entries();
+
+        let mut affected: HashSet<u64> = HashSet::from([root_record_id]);
+        let mut queue: std::collections::VecDeque<u64> =
+            std::collections::VecDeque::from([root_record_id]);
+
+        while let Some(curr) = queue.pop_front() {
+            for rel in &relations {
+                if rel.state() == field::RelationState::Cold {
+                    continue;
+                }
+                match rel.kind() {
+                    field::RelationKind::Causal if rel.src() == curr => {
+                        if affected.insert(rel.dst()) {
+                            queue.push_back(rel.dst());
+                        }
+                    }
+                    field::RelationKind::Supersedes if rel.dst() == curr => {
+                        // A record superseded by `rel.src()` means `curr` is stale;
+                        // any causal child of `curr` is also affected.
+                    }
+                    _ => {}
+                }
+            }
+            for rev in &rev_entries {
+                if rev.record_id == curr {
+                    // `curr` was superseded; any causal child of `curr` is already queued.
+                }
+            }
+        }
+
+        let mut invalidated_descendant_records: Vec<u64> = affected
+            .iter()
+            .copied()
+            .filter(|&id| id != root_record_id)
+            .collect();
+        invalidated_descendant_records.sort_unstable();
+
+        let mut invalidated_belief_claims = Vec::new();
+        for mut claim in self.all_beliefs() {
+            if claim.validity.is_presently_valid()
+                && claim
+                    .supporting_evidence_ids
+                    .iter()
+                    .any(|id| affected.contains(id))
+            {
+                claim.validity = crate::belief::BeliefValidityState::StaleByCascade {
+                    invalidated_by_record_id: root_record_id,
+                    reason: reason.to_string(),
+                };
+                if let Ok(val) = serde_json::to_value(&claim) {
+                    let _ = self.append_store_sidecar("beliefs.jsonl", &val);
+                }
+                invalidated_belief_claims.push(claim.claim_id);
+            }
+        }
+
+        Ok(crate::belief::PacmiCascadeReport {
+            root_record_id,
+            reason: reason.to_string(),
+            invalidated_descendant_records,
+            invalidated_belief_claims,
+        })
+    }
+
+    /// Record outcome-anchored marginal worth and `ScopeMem` interference for retrieved memories
+    /// (`TokenWorth` `arXiv:2610.26453` + `ScopeMem`).
+    pub fn record_memory_outcome(
+        &mut self,
+        retrieved_ids: &[u64],
+        outcome_delta: f64,
+        broke_prior_decision: bool,
+    ) -> Result<Vec<MemoryWorthStats>, String> {
+        self.require_writable("memory.record_outcome")?;
+        let mut current = self.memory_worth_map();
+        let mut updated = Vec::with_capacity(retrieved_ids.len());
+
+        for &id in retrieved_ids {
+            let mut stats = current.remove(&id).unwrap_or(MemoryWorthStats {
+                record_id: id,
+                retrievals: 0,
+                positive_outcomes: 0,
+                negative_outcomes: 0,
+                interference_regressions: 0,
+                cumulative_marginal_worth: 0.0,
+                demoted_for_interference: false,
+            });
+            stats.retrievals += 1;
+            if outcome_delta > 0.0 {
+                stats.positive_outcomes += 1;
+            } else if outcome_delta < 0.0 {
+                stats.negative_outcomes += 1;
+            }
+            if broke_prior_decision {
+                stats.interference_regressions += 1;
+            }
+            stats.cumulative_marginal_worth += outcome_delta;
+            if stats.interference_regressions >= 2 && stats.interference_rate() > 0.50 {
+                stats.demoted_for_interference = true;
+            }
+            let val = serde_json::to_value(&stats).map_err(|e| e.to_string())?;
+            self.append_store_sidecar("memory_worth.jsonl", &val)?;
+            updated.push(stats);
+        }
+        Ok(updated)
+    }
+
+    /// Retrieve [`MemoryWorthStats`] for `record_id` (`TokenWorth` + `ScopeMem`).
+    #[must_use]
+    pub fn memory_worth(&self, record_id: u64) -> MemoryWorthStats {
+        self.memory_worth_map()
+            .remove(&record_id)
+            .unwrap_or(MemoryWorthStats {
+                record_id,
+                retrievals: 0,
+                positive_outcomes: 0,
+                negative_outcomes: 0,
+                interference_regressions: 0,
+                cumulative_marginal_worth: 0.0,
+                demoted_for_interference: false,
+            })
+    }
+
+    pub(crate) fn memory_worth_map(&self) -> BTreeMap<u64, MemoryWorthStats> {
+        let mut map = BTreeMap::new();
+        for val in self.read_store_sidecar("memory_worth.jsonl") {
+            if let Ok(stats) = serde_json::from_value::<MemoryWorthStats>(val) {
+                map.insert(stats.record_id, stats);
+            }
+        }
+        map
+    }
+
+    /// Evaluate marginal information worth of a candidate [`RememberItem`] before write admission
+    /// (`MGPO` / `Knowledge Weaver` / `BetaMem`).
+    #[must_use]
+    pub fn evaluate_write_worth(&self, item: &RememberItem) -> WriteWorthAssessment {
+        let tokens = field::tokenize(&item.content);
+        if tokens.is_empty() || item.source.trim().is_empty() {
+            return WriteWorthAssessment {
+                admit_recommended: false,
+                novelty_ratio: 0.0,
+                rare_token_count: 0,
+                reason: "empty token set or missing provenance source".into(),
+            };
+        }
+        let n = self.store.record_count().unwrap_or(0);
+        let rare_cut = (n / self.policy.rare_df_divisor.max(1)).max(self.policy.rare_df_floor);
+        let mut rare_count = 0usize;
+        let mut unseen_count = 0usize;
+        for t in &tokens {
+            let df = self.store.df(t).unwrap_or(0);
+            if df == 0 {
+                unseen_count += 1;
+                rare_count += 1;
+            } else if df <= rare_cut {
+                rare_count += 1;
+            }
+        }
+        let novelty_ratio = rare_count as f32 / tokens.len() as f32;
+        let is_duplicate = self.contains_exact(&item.content, &item.source, item.kind);
+        let admit_recommended = !is_duplicate && (rare_count > 0 || unseen_count > 0 || n == 0);
+        let reason = if is_duplicate {
+            "exact duplicate of existing record".into()
+        } else if admit_recommended {
+            format!(
+                "admitted: {rare_count}/{} rare/novel tokens (novelty={novelty_ratio:.2})",
+                tokens.len()
+            )
+        } else {
+            "low marginal information gain (zero rare tokens)".into()
+        };
+        WriteWorthAssessment {
+            admit_recommended,
+            novelty_ratio,
+            rare_token_count: rare_count,
+            reason,
+        }
+    }
+
+    /// Gate 9C `MemCut` Certified Erasure (`arXiv:2610.21405` + Charter Invariant 2):
+    /// Purges `record_id` from `records`, `postings`, `embeddings`, `embed_cache` (unless another
+    /// live record shares the identical content hash), incident `relations`, `identity`, and
+    /// `evidence`, cascades PACMI invalidation to downstream beliefs, and runs a complete
+    /// zero-residue audit.
+    pub fn erase_record_certified(
+        &mut self,
+        record_id: u64,
+        reason: &str,
+    ) -> Result<MemCutAuditReport, String> {
+        self.require_writable("memory.erase_certified")?;
+        let record = self
+            .store
+            .get_record(record_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("record {record_id} not found for certified erasure"))?;
+
+        let content = record.content().to_string();
+        let source = record.source().to_string();
+        let domain_str = domain_tag(record.domain());
+        let cache_key = embed_cache_key(&content, EMBED_CACHE_FORMAT_VERSION);
+
+        // 1. Remove canonical record, postings, and per-record embedding vector
+        self.store
+            .remove_record_and_indexes(record_id)
+            .map_err(|e| format!("erase_record_certified index removal failed: {e}"))?;
+
+        // 2. Remove incident relations
+        let _ = self
+            .store
+            .remove_incident_relations(record_id)
+            .map_err(|e| format!("erase_record_certified relation removal failed: {e}"))?;
+
+        // 3. Remove derived embed_cache entry if no other live record shares the identical content
+        let shared_by_other = self
+            .store
+            .iter_records()
+            .map_err(|e| e.to_string())?
+            .iter()
+            .any(|r| r.id() != record_id && r.content() == content);
+        if !shared_by_other {
+            let _ = self
+                .store
+                .remove_embedding_cache(&cache_key)
+                .map_err(|e| format!("erase_record_certified cache removal failed: {e}"))?;
+        }
+
+        // 4. Clear process-local identity map
+        let id_key = identity_key(&content, &source, domain_str);
+        self.identity.remove(&id_key);
+
+        // 5. Cascade PACMI invalidation to any beliefs citing this record
+        let _ = self.cascade_invalidation(record_id, &format!("erased:{reason}"));
+
+        // 6. Run MemCut residue audit and persist erasure receipt
+        let audit = self.audit_erasure_residue(record_id, &content, &source, domain_str)?;
+        let receipt_json = serde_json::json!({
+            "record_id": record_id,
+            "content_sha256": audit.content_sha256,
+            "reason": reason,
+            "zero_residue_certified": audit.zero_residue_certified,
+            "receipt_digest_hex": audit.receipt_digest_hex,
+            "erased_at_epoch": self.store.epoch().unwrap_or(0),
+        });
+        self.append_store_sidecar("erasures.jsonl", &receipt_json)?;
+        let mut jf = serde_json::Map::new();
+        jf.insert("record_id".into(), record_id.into());
+        jf.insert("reason".into(), reason.to_string().into());
+        jf.insert(
+            "zero_residue_certified".into(),
+            audit.zero_residue_certified.into(),
+        );
+        jf.insert(
+            "receipt_digest_hex".into(),
+            audit.receipt_digest_hex.clone().into(),
+        );
+        self.j("memory.erase_certified", jf);
+        Ok(audit)
+    }
+
+    /// Audit all storage tables and derived caches to verify zero residual leakage of an erased
+    /// record (`MemCut` `arXiv:2610.21405` / `PrivDrift`).
+    pub fn audit_erasure_residue(
+        &self,
+        record_id: u64,
+        erased_content: &str,
+        erased_source: &str,
+        erased_domain_tag: &str,
+    ) -> Result<MemCutAuditReport, String> {
+        let content_sha256 = sha256_hex(erased_content.as_bytes());
+        let cache_key = embed_cache_key(erased_content, EMBED_CACHE_FORMAT_VERSION);
+
+        let record_absent_in_lmdb = self
+            .store
+            .get_record(record_id)
+            .map_err(|e| e.to_string())?
+            .is_none();
+        let vector_absent_in_embeddings = self
+            .store
+            .get_vector(record_id)
+            .map_err(|e| e.to_string())?
+            .is_none();
+
+        let shared_by_other = self
+            .store
+            .iter_records()
+            .map_err(|e| e.to_string())?
+            .iter()
+            .any(|r| r.id() != record_id && r.content() == erased_content);
+        let cache_absent_in_embed_cache = shared_by_other
+            || self
+                .store
+                .get_embedding_cache(&cache_key)
+                .map_err(|e| e.to_string())?
+                .is_none();
+
+        let mut postings_leaks_found = 0usize;
+        for term in field::tokenize(erased_content) {
+            if let Ok(ids) = self.store.postings(&term)
+                && ids.contains(&record_id)
+            {
+                postings_leaks_found += 1;
+            }
+        }
+
+        let active_relations_remaining = self
+            .store
+            .iter_relations()
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .filter(|r| r.src() == record_id || r.dst() == record_id)
+            .count();
+
+        let id_key = identity_key(erased_content, erased_source, erased_domain_tag);
+        let identity_map_cleared = !self.identity.contains_key(&id_key);
+
+        let zero_residue_certified = record_absent_in_lmdb
+            && vector_absent_in_embeddings
+            && cache_absent_in_embed_cache
+            && postings_leaks_found == 0
+            && active_relations_remaining == 0
+            && identity_map_cleared;
+
+        let digest_payload = format!(
+            "memcut:v1:{record_id}:{content_sha256}:{record_absent_in_lmdb}:{vector_absent_in_embeddings}:{cache_absent_in_embed_cache}:{postings_leaks_found}:{active_relations_remaining}:{identity_map_cleared}"
+        );
+        let receipt_digest_hex = sha256_hex(digest_payload.as_bytes());
+
+        Ok(MemCutAuditReport {
+            record_id,
+            content_sha256,
+            record_absent_in_lmdb,
+            vector_absent_in_embeddings,
+            cache_absent_in_embed_cache,
+            postings_leaks_found,
+            active_relations_remaining,
+            identity_map_cleared,
+            zero_residue_certified,
+            receipt_digest_hex,
+        })
+    }
+
+    /// Gate 9C follow-on #1: Garbage-collect orphaned derived `embed_cache` entries and bound
+    /// total cached entries to `max_retain`.
+    pub fn gc_derived_embed_cache(&mut self, max_retain: usize) -> Result<usize, String> {
+        self.require_writable("memory.gc_embed_cache")?;
+        let active_hashes: HashSet<String> = self
+            .store
+            .iter_records()
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .map(|r| embed_cache_key(r.content(), EMBED_CACHE_FORMAT_VERSION))
+            .collect();
+        self.store
+            .gc_orphan_embedding_cache(&active_hashes, max_retain)
+            .map_err(|e| e.to_string())
+    }
+
+    /// Register a prospective obligation (`RunningTab` + `ObligationGuard` + `ProMemAgent`).
+    pub fn register_obligation(
+        &mut self,
+        session_id: &str,
+        description: &str,
+        trigger_condition: &str,
+        required_postcondition: &str,
+    ) -> Result<ProspectiveObligation, String> {
+        self.require_writable("obligation.register")?;
+        if description.trim().is_empty() || required_postcondition.trim().is_empty() {
+            return Err(
+                "obligation description and required_postcondition must be non-empty".into(),
+            );
+        }
+        let existing = self.all_obligations();
+        let next_idx = existing.len() + 1;
+        let epoch = self.store.epoch().map_err(|e| e.to_string())?;
+        let obligation = ProspectiveObligation {
+            obligation_id: format!("obl-{next_idx:04}"),
+            session_id: session_id.to_string(),
+            description: description.to_string(),
+            trigger_condition: trigger_condition.to_string(),
+            required_postcondition: required_postcondition.to_string(),
+            created_at_epoch: epoch,
+            status: ObligationStatus::Pending,
+        };
+        let val = serde_json::to_value(&obligation).map_err(|e| e.to_string())?;
+        self.append_store_sidecar("obligations.jsonl", &val)?;
+        Ok(obligation)
+    }
+
+    /// Discharge a pending obligation with a verification receipt (`ObligationGuard`).
+    pub fn discharge_obligation(
+        &mut self,
+        obligation_id: &str,
+        resolution_receipt: &str,
+    ) -> Result<ProspectiveObligation, String> {
+        self.require_writable("obligation.discharge")?;
+        if resolution_receipt.trim().is_empty() {
+            return Err(
+                "obligation discharge requires a non-empty resolution_receipt (fail-closed)".into(),
+            );
+        }
+        let mut obl = self
+            .all_obligations()
+            .into_iter()
+            .find(|o| o.obligation_id == obligation_id)
+            .ok_or_else(|| format!("obligation {obligation_id} not found"))?;
+        let epoch = self.store.epoch().map_err(|e| e.to_string())?;
+        obl.status = ObligationStatus::Discharged {
+            resolution_receipt: resolution_receipt.to_string(),
+            resolved_at_epoch: epoch,
+        };
+        let val = serde_json::to_value(&obl).map_err(|e| e.to_string())?;
+        self.append_store_sidecar("obligations.jsonl", &val)?;
+        Ok(obl)
+    }
+
+    /// Return all prospective obligations in canonical order (latest state per `obligation_id`).
+    #[must_use]
+    pub fn all_obligations(&self) -> Vec<ProspectiveObligation> {
+        let mut by_id: BTreeMap<String, ProspectiveObligation> = BTreeMap::new();
+        for val in self.read_store_sidecar("obligations.jsonl") {
+            if let Ok(obl) = serde_json::from_value::<ProspectiveObligation>(val) {
+                by_id.insert(obl.obligation_id.clone(), obl);
+            }
+        }
+        by_id.into_values().collect()
+    }
+
+    /// Return all currently undischarged obligations, optionally filtered by `trigger_prefix`
+    /// (`RunningTab` / `ProMemAgent`).
+    #[must_use]
+    pub fn pending_obligations(&self, trigger_prefix: Option<&str>) -> Vec<ProspectiveObligation> {
+        self.all_obligations()
+            .into_iter()
+            .filter(|o| {
+                matches!(o.status, ObligationStatus::Pending)
+                    && trigger_prefix.is_none_or(|p| o.trigger_condition.starts_with(p))
+            })
+            .collect()
+    }
+}
+
+/// Outcome-anchored marginal worth and interference statistics for a stored record
+/// (`TokenWorth` `arXiv:2610.26453` + `ScopeMem`).
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct MemoryWorthStats {
+    pub record_id: u64,
+    pub retrievals: u64,
+    pub positive_outcomes: u64,
+    pub negative_outcomes: u64,
+    /// `ScopeMem`: number of times retrieving this record broke a previously passing decision/test.
+    pub interference_regressions: u64,
+    pub cumulative_marginal_worth: f64,
+    pub demoted_for_interference: bool,
+}
+
+impl MemoryWorthStats {
+    /// Ratio of interference regressions to total retrievals (`ScopeMem`).
+    #[must_use]
+    pub fn interference_rate(&self) -> f64 {
+        if self.retrievals == 0 {
+            0.0
+        } else {
+            self.interference_regressions as f64 / self.retrievals as f64
+        }
+    }
+
+    /// Multiplier applied during `SufficiencyCover` ranking (`[0.15, 1.35]`).
+    #[must_use]
+    pub fn ranking_multiplier(&self) -> f32 {
+        if self.demoted_for_interference {
+            return 0.15;
+        }
+        let bonus = (self.cumulative_marginal_worth * 0.10).clamp(-0.40, 0.35) as f32;
+        (1.0 + bonus).clamp(0.25, 1.35)
+    }
+}
+
+/// Marginal write-admission assessment (`MGPO` / `Knowledge Weaver` / `BetaMem`).
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct WriteWorthAssessment {
+    pub admit_recommended: bool,
+    pub novelty_ratio: f32,
+    pub rare_token_count: usize,
+    pub reason: String,
+}
+
+/// Audit report emitted by [`Substrate::erase_record_certified`] (`MemCut` `arXiv:2610.21405`).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct MemCutAuditReport {
+    pub record_id: u64,
+    pub content_sha256: String,
+    pub record_absent_in_lmdb: bool,
+    pub vector_absent_in_embeddings: bool,
+    pub cache_absent_in_embed_cache: bool,
+    pub postings_leaks_found: usize,
+    pub active_relations_remaining: usize,
+    pub identity_map_cleared: bool,
+    pub zero_residue_certified: bool,
+    pub receipt_digest_hex: String,
+}
+
+/// Lifecycle status of a [`ProspectiveObligation`] (`RunningTab` + `ObligationGuard`).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "state", rename_all = "snake_case")]
+pub enum ObligationStatus {
+    Pending,
+    Discharged {
+        resolution_receipt: String,
+        resolved_at_epoch: u64,
+    },
+    Violated {
+        reason: String,
+    },
+}
+
+/// Prospective memory / unfinished obligation item stored outside volatile model context
+/// (`RunningTab`, `ObligationGuard`, `ProMemAgent`).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ProspectiveObligation {
+    pub obligation_id: String,
+    pub session_id: String,
+    pub description: String,
+    pub trigger_condition: String,
+    pub required_postcondition: String,
+    pub created_at_epoch: u64,
+    pub status: ObligationStatus,
 }
 
 /// Compose a read-only session digest from typed turns and the latest checkpoint.

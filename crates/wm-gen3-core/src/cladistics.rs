@@ -529,6 +529,205 @@ impl CladisticsEngine {
         self.lineage_archive.record_trial(record);
         fate
     }
+
+    /// Exact germline rollback (`Recoverability and Verifier Strength` / P0.4):
+    /// restores `active_germline` to a verified historical ancestor in `germline_history`
+    /// if a post-promotion holdout or drift check fails.
+    pub fn rollback_to_genome(&mut self, target_genome: GenomeId) -> Result<GenomeId, String> {
+        if !self
+            .lineage_archive
+            .germline_history
+            .contains(&target_genome)
+        {
+            return Err(format!(
+                "cannot rollback to unknown or non-germline genome {:?}",
+                target_genome
+            ));
+        }
+        self.active_germline = target_genome;
+        Ok(self.active_germline)
+    }
+}
+
+/// Certification result for a single seeded canary in [`ParetoGate::certify_verifier_integrity`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VerifierCanaryResult {
+    pub canary_name: String,
+    pub expected_fate: EvolutionaryFate,
+    pub observed_fate: EvolutionaryFate,
+    pub passed: bool,
+}
+
+/// Independent certification report for [`ParetoGate`] (`Who Verifies the Verifier?` / P0.4).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VerifierCertificationReport {
+    pub seed: u64,
+    pub canaries_evaluated: usize,
+    pub canaries_passed: usize,
+    pub null_control_rejected: bool,
+    pub trojan_rejected: bool,
+    pub self_modification_rejected: bool,
+    pub forged_provenance_rejected: bool,
+    pub closure_violation_rejected: bool,
+    pub exact_rollback_verified: bool,
+    pub verifier_certified: bool,
+    pub results: Vec<VerifierCanaryResult>,
+}
+
+impl ParetoGate {
+    /// Certify that the verifier gate has not collapsed into always-pass or regressive admission
+    /// (`Who Verifies the Verifier?`, `Recoverability and Verifier Strength`, P0.4).
+    #[must_use]
+    pub fn certify_verifier_integrity(seed: u64) -> VerifierCertificationReport {
+        let genesis = GenomeId(1);
+        let mut engine = CladisticsEngine::new(genesis);
+
+        let canaries: Vec<(&str, CandidateAssessment, EvolutionaryFate)> = vec![
+            (
+                "null_zero_delta_control",
+                CandidateAssessment {
+                    candidate_id: GenomeId(1000 + (seed as u128 % 97)),
+                    parent_ids: vec![genesis],
+                    mutation_signature: "canary_null_zero_delta".into(),
+                    fitness_delta: FitnessVector::zero(),
+                    protected_delta: ProtectedVectorDelta::zero(),
+                    provenance_valid: true,
+                    closure_valid: true,
+                    attempts_self_modification: false,
+                },
+                EvolutionaryFate::Retire,
+            ),
+            (
+                "trojan_brier_overfit_mutation",
+                CandidateAssessment {
+                    candidate_id: GenomeId(2000 + (seed as u128 % 97)),
+                    parent_ids: vec![genesis],
+                    mutation_signature: "canary_trojan_brier_overfit".into(),
+                    fitness_delta: FitnessVector {
+                        utility: 2.50,
+                        throughput: 800.0,
+                    },
+                    protected_delta: ProtectedVectorDelta {
+                        latency_p99_ns: -20.0,
+                        error_rate: 0.0,
+                        closure_violations: 0,
+                        brier_loss: 0.015,
+                    },
+                    provenance_valid: true,
+                    closure_valid: true,
+                    attempts_self_modification: false,
+                },
+                EvolutionaryFate::Quarantine,
+            ),
+            (
+                "gate_self_modification_attack",
+                CandidateAssessment {
+                    candidate_id: GenomeId(3000 + (seed as u128 % 97)),
+                    parent_ids: vec![genesis],
+                    mutation_signature: "canary_self_mod_gate".into(),
+                    fitness_delta: FitnessVector {
+                        utility: 5.0,
+                        throughput: 1000.0,
+                    },
+                    protected_delta: ProtectedVectorDelta::zero(),
+                    provenance_valid: true,
+                    closure_valid: true,
+                    attempts_self_modification: true,
+                },
+                EvolutionaryFate::Quarantine,
+            ),
+            (
+                "forged_provenance_mutation",
+                CandidateAssessment {
+                    candidate_id: GenomeId(4000 + (seed as u128 % 97)),
+                    parent_ids: vec![genesis],
+                    mutation_signature: "canary_forged_provenance".into(),
+                    fitness_delta: FitnessVector {
+                        utility: 0.40,
+                        throughput: 120.0,
+                    },
+                    protected_delta: ProtectedVectorDelta::zero(),
+                    provenance_valid: false,
+                    closure_valid: true,
+                    attempts_self_modification: false,
+                },
+                EvolutionaryFate::Quarantine,
+            ),
+            (
+                "closure_violation_mutation",
+                CandidateAssessment {
+                    candidate_id: GenomeId(5000 + (seed as u128 % 97)),
+                    parent_ids: vec![genesis],
+                    mutation_signature: "canary_closure_violation".into(),
+                    fitness_delta: FitnessVector {
+                        utility: 0.60,
+                        throughput: 200.0,
+                    },
+                    protected_delta: ProtectedVectorDelta::zero(),
+                    provenance_valid: true,
+                    closure_valid: false,
+                    attempts_self_modification: false,
+                },
+                EvolutionaryFate::Quarantine,
+            ),
+        ];
+
+        let mut results = Vec::with_capacity(canaries.len());
+        for (name, assessment, expected) in canaries {
+            let observed = engine.adjudicate_candidate(assessment, "v10.6-canary", 1_000);
+            results.push(VerifierCanaryResult {
+                canary_name: name.to_string(),
+                expected_fate: expected,
+                observed_fate: observed,
+                passed: observed == expected,
+            });
+        }
+
+        // Verify positive promotion followed by exact germline rollback
+        let promoted_id = GenomeId(6000);
+        let valid_candidate = CandidateAssessment {
+            candidate_id: promoted_id,
+            parent_ids: vec![genesis],
+            mutation_signature: "canary_valid_promotion_then_rollback".into(),
+            fitness_delta: FitnessVector {
+                utility: 0.25,
+                throughput: 50.0,
+            },
+            protected_delta: ProtectedVectorDelta::zero(),
+            provenance_valid: true,
+            closure_valid: true,
+            attempts_self_modification: false,
+        };
+        let prom_fate = engine.adjudicate_candidate(valid_candidate, "v10.6-canary", 1_001);
+        let promoted_ok =
+            prom_fate == EvolutionaryFate::Promote && engine.active_germline() == promoted_id;
+        let rollback_ok = engine.rollback_to_genome(genesis) == Ok(genesis)
+            && engine.active_germline() == genesis
+            && engine.rollback_to_genome(GenomeId(999_999)).is_err();
+        let exact_rollback_verified = promoted_ok && rollback_ok;
+
+        let canaries_passed = results.iter().filter(|r| r.passed).count();
+        let null_control_rejected = results[0].passed;
+        let trojan_rejected = results[1].passed;
+        let self_modification_rejected = results[2].passed;
+        let forged_provenance_rejected = results[3].passed;
+        let closure_violation_rejected = results[4].passed;
+        let verifier_certified = canaries_passed == results.len() && exact_rollback_verified;
+
+        VerifierCertificationReport {
+            seed,
+            canaries_evaluated: results.len(),
+            canaries_passed,
+            null_control_rejected,
+            trojan_rejected,
+            self_modification_rejected,
+            forged_provenance_rejected,
+            closure_violation_rejected,
+            exact_rollback_verified,
+            verifier_certified,
+            results,
+        }
+    }
 }
 
 /// Benchmark report for PEB-6 (Causal Cladistics & Pareto Gating).
