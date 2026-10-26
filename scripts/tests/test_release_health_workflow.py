@@ -17,6 +17,35 @@ WORKFLOW = ROOT / ".github/workflows/release-health.yml"
 
 
 class ReleaseHealthWorkflowTests(unittest.TestCase):
+    def test_source_checker_uses_its_workspace_from_an_unrelated_cwd(self) -> None:
+        spec = importlib.util.spec_from_file_location(
+            "release_health_outside_checkout", ROOT / "scripts/release_health.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as tmp:
+            decoy = Path(tmp)
+            (decoy / "Cargo.toml").write_text(
+                '[package]\nname="unrelated-checkout"\nversion="0.0.1"\nedition="2021"\n'
+            )
+            (decoy / "src").mkdir()
+            (decoy / "src/lib.rs").write_text("")
+            previous_cwd = Path.cwd()
+            try:
+                os.chdir(decoy)
+                with patch.object(module, "fetch_json", return_value=(200, {})), patch.object(
+                    module.time, "sleep"
+                ):
+                    result = module.probe_crates("10.5.1")
+            finally:
+                os.chdir(previous_cwd)
+        self.assertEqual(result["status"], "live", result)
+        self.assertEqual(result["total"], 6)
+        self.assertNotIn("unrelated-checkout", result["live"])
+        self.assertIn("wm-gen3-harness", result["live"])
+
     def test_checkout_step_preserves_and_runs_saved_checker_with_tag_metadata(self) -> None:
         text = WORKFLOW.read_text()
         marker = "      - name: Check out the release tree\n"
