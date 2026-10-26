@@ -5,6 +5,16 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.5.1] — 2026-10-25
+
+### Added
+- **Valkyrie-2 4-Organ CyberBrain Fleet & Erasure-Aware Crystal Set Commitments** — Trained L0.5 routing organ with shadow routing (`routing_shadow.jsonl`), L0 Sentinel intake gate adapter, L1 structural Supersedes reranker, and erasure-aware `wm.crystal-set-commitment` (`erasure_count`, `erased_crystal_ids_digest`, `revision`) achieving 10/10 on the `agmi` ten-edit battery (`T1–T10`, including `T10` erasure resurrection).
+- **Derived Vector Projection Status & T10-Safe Bounded Repair** — Explicit `VectorProjectionState` (`ready`, `pending`, `not_requested`, `record_absent`), bounded `memory.repair_vectors` repair scan, replay/duplicate-retry vector recovery, and an in-transaction LMDB liveness guard in `Store::put_vector` ensuring repair can never resurrect an erased or compensated record.
+- **Mandala Landlock Subprocess Wrapper** — `LandlockSandbox::spawn_sandboxed_command` confining child processes under `wm-sandbox` with workspace RW/RO path rules, memory/PID limits, and optional network denial.
+
+### Fixed
+- **Valkyrie L0.5 Boundary-Aware Lexical Matcher** — Replaced raw substring matching in `ValkyrieL05Router::project_inquiry` with boundary-aware token, curated stem, and contiguous token-sequence phrase matching, eliminating false `SYS0` collisions on compound words (`"checkpoint"`, `"latest"`, `"shower"`) and lifting 44-prompt held-out routing accuracy from 84.1% to 90.9%.
+
 ## [10.5.0] — 2026-10-18
 
 ### Added
