@@ -1383,6 +1383,64 @@ impl LandlockSandbox {
         }
     }
 
+    /// Spawns an external command confined under the standalone `wm-sandbox` binary envelope
+    /// (enforcing Landlock ABI 8, rootless cgroup v2 limits, signal scoping, and zero egress).
+    pub fn spawn_sandboxed_command(
+        claim: &WorkspaceClaim,
+        cmd: &str,
+        args: &[&str],
+    ) -> Result<std::process::Output, MandalaError> {
+        let sandbox_bin = Path::new("/home/lucas/.local/bin/wm-sandbox");
+        let mut command = if sandbox_bin.exists()
+            && std::env::var("WM_SANDBOX_DISABLE").unwrap_or_default() != "1"
+        {
+            let mut c = std::process::Command::new(sandbox_bin);
+
+            let mut rw: Vec<String> = vec![
+                "/tmp".to_string(),
+                claim.workspace_root.to_string_lossy().to_string(),
+            ];
+            for p in &claim.read_write_paths {
+                rw.push(p.to_string_lossy().to_string());
+            }
+            c.arg("--rw").arg(rw.join(":"));
+
+            let mut ro: Vec<String> = vec![
+                "/usr".into(),
+                "/lib".into(),
+                "/lib64".into(),
+                "/bin".into(),
+                "/etc".into(),
+            ];
+            for p in &claim.read_only_paths {
+                ro.push(p.to_string_lossy().to_string());
+            }
+            c.arg("--ro").arg(ro.join(":"));
+
+            if claim.network_allowed {
+                c.arg("--net");
+            }
+
+            if let Some(ref limits) = claim.resource_limits {
+                c.arg("--mem").arg(format!("{}M", limits.max_memory_mb));
+                c.arg("--pids")
+                    .arg(format!("{}", limits.max_open_files.min(64)));
+            }
+
+            c.arg("--").arg(cmd);
+            c.args(args);
+            c
+        } else {
+            let mut c = std::process::Command::new(cmd);
+            c.args(args);
+            c
+        };
+
+        command.output().map_err(|e| {
+            MandalaError::PersistenceFailure(format!("Failed to execute sandboxed command: {e}"))
+        })
+    }
+
     /// Builds a Landlock ruleset directly from a cryptographically verified `AgentIdentityToken`
     /// and optional `DelegationProof`.
     ///

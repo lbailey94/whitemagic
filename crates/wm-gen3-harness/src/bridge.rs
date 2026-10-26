@@ -6975,12 +6975,38 @@ fn handle_sutra_route(args: &Value, store_path: &Path) -> Result<Value, String> 
     let latency_us = start.elapsed().as_micros();
     let shadow = shadow_route_l05(inquiry, &decision, store_path);
 
+    // Shadow-by-default contract: keep Tripartite as primary unless explicit promotion
+    // (`WM_PROMOTE_VALKYRIE_L05=1`) is enabled.
+    let promote_l05 = std::env::var("WM_PROMOTE_VALKYRIE_L05").unwrap_or_default() == "1";
+    let (active_tier, active_confidence, is_graduated) = if promote_l05
+        && shadow["available"].as_bool() == Some(true)
+        && shadow["used_hybrid_projection"].as_bool() == Some(true)
+        && shadow.get("tier").and_then(Value::as_str).is_some()
+    {
+        (
+            shadow["tier"].as_str().unwrap().to_string(),
+            shadow["confidence"]
+                .as_f64()
+                .map(|c| c as f32)
+                .unwrap_or(decision.confidence),
+            true,
+        )
+    } else {
+        (
+            cognitive_tier_name(decision.tier).to_string(),
+            decision.confidence,
+            false,
+        )
+    };
+
     Ok(json!({
         "status": "ok",
         "inquiry": inquiry,
-        "tier": cognitive_tier_name(decision.tier),
+        "tier": active_tier,
+        "primary_router": if is_graduated { "valkyrie_l05_hybrid" } else { "tripartite" },
+        "tripartite_tier": cognitive_tier_name(decision.tier),
         "latency_micros": latency_us,
-        "confidence": decision.confidence,
+        "confidence": active_confidence,
         "rationale": decision.rationale,
         "selected_glyph": decision.selected_glyph.map(|c| c.to_string()),
         "catuskoti": decision.catuskoti.map(|c| format!("{c:?}")),
@@ -10445,10 +10471,15 @@ mod routing_shadow_tests {
             line["inquiry"],
             "summarize the session history and what changed"
         );
-        assert_eq!(line["tripartite_tier"], result["tier"]);
+        assert_eq!(line["tripartite_tier"], result["tripartite_tier"]);
         assert_eq!(line["l05_tier"], shadow["tier"]);
         assert_eq!(line["agree"], shadow["agree"]);
         assert!(line["shadow_latency_us"].is_number());
+        if result["primary_router"] == "valkyrie_l05_hybrid" {
+            assert_eq!(result["tier"], shadow["tier"]);
+        } else {
+            assert_eq!(result["tier"], line["tripartite_tier"]);
+        }
 
         let _ = std::fs::remove_dir_all(&dir);
     }

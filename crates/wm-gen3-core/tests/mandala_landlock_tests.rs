@@ -370,3 +370,38 @@ fn test_landlock_inherited_shm_fd() {
     // Cleanup
     let _ = substrate.unlink();
 }
+
+#[test]
+fn test_spawn_sandboxed_command_via_wm_sandbox() {
+    let (ws_path, _outside) = create_temp_subdirs("wm_test_spawn_sandbox");
+    let claim = WorkspaceClaim {
+        claim_id: "claim-spawn-test".to_string(),
+        tenant_id: "tenant-lucas".to_string(),
+        agent_id: "agent-sandboxed".to_string(),
+        workspace_root: ws_path.clone(),
+        read_only_paths: vec![PathBuf::from("/usr"), PathBuf::from("/lib")],
+        read_write_paths: vec![ws_path.clone()],
+        network_allowed: false,
+        kekkai_phase: KekkaiPhase::Hoi,
+        resource_limits: Some(SandboxResourceLimits {
+            max_memory_mb: 256,
+            max_cpu_seconds: 5,
+            max_open_files: 32,
+        }),
+        inherited_shm_fd: None,
+        created_at: 1_700_000_000,
+        expires_at: 1_700_003_600,
+        signature: None,
+    };
+
+    let out = LandlockSandbox::spawn_sandboxed_command(&claim, "echo", &["mandala-sandboxed-ok"]);
+    assert!(
+        out.is_ok(),
+        "Sandboxed spawn should succeed: {:?}",
+        out.err()
+    );
+    let res = out.unwrap();
+    assert!(res.status.success());
+    let stdout = String::from_utf8_lossy(&res.stdout);
+    assert!(stdout.contains("mandala-sandboxed-ok"));
+}

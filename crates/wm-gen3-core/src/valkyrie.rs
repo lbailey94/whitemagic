@@ -2973,6 +2973,228 @@ impl ValkyrieL05Router {
         )
     }
 
+    /// Normalize a prompt into lowercase boundary-aware tokens with curly
+    /// apostrophes unified to ASCII `'` and outer punctuation stripped.
+    #[must_use]
+    pub fn tokenize_routing_prompt(prompt: &str) -> Vec<String> {
+        let normalized = prompt
+            .to_lowercase()
+            .replace(['\u{2019}', '\u{2018}'], "'")
+            .replace(['\u{2014}', '\u{2013}'], " ");
+        normalized
+            .split_whitespace()
+            .filter_map(|raw| {
+                let tok = raw.trim_matches(|c: char| {
+                    matches!(
+                        c,
+                        '.' | ','
+                            | '!'
+                            | '?'
+                            | ';'
+                            | ':'
+                            | '"'
+                            | '('
+                            | ')'
+                            | '['
+                            | ']'
+                            | '{'
+                            | '}'
+                            | '<'
+                            | '>'
+                            | '~'
+                            | '`'
+                    )
+                });
+                if tok.is_empty() {
+                    None
+                } else {
+                    Some(tok.to_string())
+                }
+            })
+            .collect()
+    }
+
+    /// Returns true if `sig` is an explicit morphological stem rather than a
+    /// standalone word.
+    #[inline]
+    #[must_use]
+    pub fn is_curated_routing_stem(sig: &str) -> bool {
+        matches!(
+            sig,
+            "verif"
+                | "summar"
+                | "analy"
+                | "classif"
+                | "categor"
+                | "speculat"
+                | "strateg"
+                | "philosoph"
+                | "architect"
+                | "scal"
+                | "theor"
+                | "econom"
+                | "ethic"
+                | "contradict"
+        )
+    }
+
+    /// Boundary-aware single-token matcher: matches exact words, curated prefix
+    /// stems, and regular morphological inflections while rejecting internal
+    /// substring collisions (`"brunch"` != `"run"`, `"checkpoint"` != `"check"`,
+    /// `"latest"` != `"test"`, `"waterproof"` != `"proof"`, `"thread"` != `"read"`).
+    #[must_use]
+    pub fn token_matches_routing_signal(token: &str, sig: &str) -> bool {
+        let sig = sig.trim();
+        if token.is_empty() || sig.is_empty() {
+            return false;
+        }
+        if token == sig {
+            return true;
+        }
+        if let Some(base) = token.strip_suffix("'s")
+            && base == sig
+        {
+            return true;
+        }
+        if (sig == "what" || sig == "what's") && (token == "whats" || token == "what's") {
+            return true;
+        }
+        if sig == "who" && (token == "whos" || token == "who's") {
+            return true;
+        }
+        if sig == "i" && matches!(token, "i'm" | "im" | "i've" | "i'll" | "i'd") {
+            return true;
+        }
+        if sig == "we" && matches!(token, "we're" | "we've" | "we'll" | "we'd") {
+            return true;
+        }
+        for prefix in ["re-", "co-"] {
+            if let Some(rest) = token.strip_prefix(prefix)
+                && Self::token_matches_routing_signal(rest, sig)
+            {
+                return true;
+            }
+        }
+        if token.contains('-')
+            && !sig.contains('-')
+            && let Some((first, _)) = token.split_once('-')
+            && first == sig
+        {
+            return true;
+        }
+        if Self::is_curated_routing_stem(sig) {
+            return token.starts_with(sig);
+        }
+        match sig {
+            "run" => return matches!(token, "runs" | "ran" | "running" | "rerun"),
+            "bench" => {
+                return matches!(
+                    token,
+                    "benches"
+                        | "benched"
+                        | "benching"
+                        | "benchmark"
+                        | "benchmarks"
+                        | "benchmarked"
+                        | "benchmarking"
+                );
+            }
+            "conscious" => return matches!(token, "consciousness" | "consciously"),
+            "show" => return matches!(token, "shows" | "showed" | "showing" | "shown"),
+            "diff" => {
+                return matches!(
+                    token,
+                    "diffs"
+                        | "differ"
+                        | "differs"
+                        | "differed"
+                        | "differing"
+                        | "different"
+                        | "difference"
+                        | "differences"
+                );
+            }
+            _ => {}
+        }
+        if sig.len() >= 3
+            && let Some(rem) = token.strip_prefix(sig)
+        {
+            if matches!(
+                rem,
+                "s" | "es" | "ed" | "d" | "ing" | "ment" | "ments" | "able" | "tion" | "tions"
+            ) {
+                return true;
+            }
+        }
+        if sig.len() >= 4
+            && let Some(stem) = sig.strip_suffix('e')
+            && let Some(rem) = token.strip_prefix(stem)
+            && matches!(rem, "ing" | "ed" | "er" | "ers" | "ation" | "ations" | "en")
+        {
+            return true;
+        }
+        if sig.len() >= 4
+            && let Some(stem) = sig.strip_suffix('y')
+            && let Some(rem) = token.strip_prefix(stem)
+            && matches!(rem, "ies" | "ied" | "ying" | "ier" | "iers")
+        {
+            return true;
+        }
+        false
+    }
+
+    /// Score a signal lexicon against `prompt` using boundary-aware token,
+    /// stem, and contiguous token-sequence phrase matching, capping repeated
+    /// occurrences of any single signal at 2 to prevent prompt-length bias.
+    #[must_use]
+    pub fn score_signal_family(prompt: &str, signals: &[&str], weight: f32) -> f32 {
+        let tokens = Self::tokenize_routing_prompt(prompt);
+        let mut s = 0.0f32;
+        for &raw_sig in signals {
+            let sig = raw_sig.trim();
+            if sig.is_empty() {
+                continue;
+            }
+            if sig == "?" {
+                if prompt.contains('?') {
+                    s += weight;
+                }
+                continue;
+            }
+            if sig.contains(' ') {
+                let parts: Vec<&str> = sig.split_whitespace().collect();
+                if !parts.is_empty() && tokens.len() >= parts.len() {
+                    let mut hits = 0usize;
+                    for window in tokens.windows(parts.len()) {
+                        if window
+                            .iter()
+                            .zip(parts.iter())
+                            .all(|(tok, part)| Self::token_matches_routing_signal(tok, part))
+                        {
+                            hits += 1;
+                            if hits >= 2 {
+                                break;
+                            }
+                        }
+                    }
+                    s += (hits as f32) * weight;
+                }
+            } else {
+                let mut hits = 0usize;
+                for tok in &tokens {
+                    if Self::token_matches_routing_signal(tok, sig) {
+                        hits += 1;
+                        if hits >= 2 {
+                            break;
+                        }
+                    }
+                }
+                s += (hits as f32) * weight;
+            }
+        }
+        s
+    }
+
     /// Semantic feature projection mapping natural language intents into a 64-D
     /// state vector. Static: the projection is a pure function of the prompt.
     ///
@@ -2982,41 +3204,22 @@ impl ValkyrieL05Router {
     #[must_use]
     pub fn project_inquiry(prompt: &str) -> [f32; VALKYRIE_DIM] {
         let mut state = [0.0f32; VALKYRIE_DIM];
-        let lower = prompt.to_lowercase();
-        let words: Vec<&str> = lower.split_whitespace().collect();
+        let words = Self::tokenize_routing_prompt(prompt);
 
-        let score_family = |signals: &[&str], weight: f32| -> f32 {
-            let mut s = 0.0f32;
-            for w in &words {
-                for sig in signals {
-                    if w.contains(sig) {
-                        s += weight;
-                    }
-                }
-            }
-            // multi-word signals (contain a space) are matched on the full string
-            for sig in signals {
-                if sig.contains(' ') && lower.contains(sig) {
-                    s += weight;
-                }
-            }
-            s
-        };
-
-        let s0 = score_family(SYS0_SIGNALS, 1.5);
-        let s05 = score_family(SYS05_SIGNALS, 1.2);
-        let s1 = score_family(SYS1_SIGNALS, 1.3);
-        let s2 = score_family(SYS2_SIGNALS, 1.6);
+        let s0 = Self::score_signal_family(prompt, SYS0_SIGNALS, 1.5);
+        let s05 = Self::score_signal_family(prompt, SYS05_SIGNALS, 1.2);
+        let s1 = Self::score_signal_family(prompt, SYS1_SIGNALS, 1.3);
+        let s2 = Self::score_signal_family(prompt, SYS2_SIGNALS, 1.6);
 
         state[0] = s0;
         state[1] = s05;
         state[2] = s1;
         state[3] = s2;
 
-        state[4] = score_family(INTERROGATIVE_SIGNALS, 1.0);
-        state[5] = score_family(IMPERATIVE_SIGNALS, 1.0);
-        state[6] = score_family(SELFREF_SIGNALS, 1.0);
-        state[7] = score_family(HEDGE_SIGNALS, 1.0);
+        state[4] = Self::score_signal_family(prompt, INTERROGATIVE_SIGNALS, 1.0);
+        state[5] = Self::score_signal_family(prompt, IMPERATIVE_SIGNALS, 1.0);
+        state[6] = Self::score_signal_family(prompt, SELFREF_SIGNALS, 1.0);
+        state[7] = Self::score_signal_family(prompt, HEDGE_SIGNALS, 1.0);
 
         state[16] = words.len() as f32 * 0.1;
         state[17] = prompt.len() as f32 * 0.02;
@@ -3735,5 +3938,133 @@ mod tests {
                 >= 95.0,
             "Valkyrie-2 must achieve >= 95% on real 512-D Model2Vec Sutra embeddings"
         );
+    }
+
+    #[test]
+    fn test_boundary_aware_routing_matcher_invariants() {
+        // 1. Intended suffixes & morphology must match
+        assert!(ValkyrieL05Router::token_matches_routing_signal(
+            "verify", "verify"
+        ));
+        assert!(ValkyrieL05Router::token_matches_routing_signal(
+            "verified", "verify"
+        ));
+        assert!(ValkyrieL05Router::token_matches_routing_signal(
+            "verifying",
+            "verif"
+        ));
+        assert!(ValkyrieL05Router::token_matches_routing_signal(
+            "summarize",
+            "summar"
+        ));
+        assert!(ValkyrieL05Router::token_matches_routing_signal(
+            "summary", "summar"
+        ));
+        assert!(ValkyrieL05Router::token_matches_routing_signal(
+            "analyze", "analy"
+        ));
+        assert!(ValkyrieL05Router::token_matches_routing_signal(
+            "analysis", "analy"
+        ));
+        assert!(ValkyrieL05Router::token_matches_routing_signal(
+            "classify", "classif"
+        ));
+        assert!(ValkyrieL05Router::token_matches_routing_signal(
+            "classification",
+            "classif"
+        ));
+        assert!(ValkyrieL05Router::token_matches_routing_signal(
+            "running", "run"
+        ));
+        assert!(ValkyrieL05Router::token_matches_routing_signal(
+            "re-run", "run"
+        ));
+        assert!(ValkyrieL05Router::token_matches_routing_signal(
+            "re-check", "check"
+        ));
+        assert!(ValkyrieL05Router::token_matches_routing_signal(
+            "different",
+            "diff"
+        ));
+
+        // 2. False internal/compound matches must be rejected
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "checkpoint",
+            "check"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "checkout", "check"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "checksums",
+            "check"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "brunch", "run"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "prune", "run"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "waterproof",
+            "proof"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "contest", "test"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "latest", "test"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "thread", "read"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "shower", "show"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "shower", "how"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "whole", "who"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "does", "do"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "don't", "do"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "dispatch", "patch"
+        ));
+        assert!(!ValkyrieL05Router::token_matches_routing_signal(
+            "imagine", "agi"
+        ));
+
+        // 3. Phrase boundary checks
+        assert!(
+            ValkyrieL05Router::score_signal_family("what is the status", SYS05_SIGNALS, 1.0) > 0.0
+        );
+        assert_eq!(
+            ValkyrieL05Router::score_signal_family("somewhat is surprising", &["what is"], 1.0),
+            0.0
+        );
+        assert!(
+            ValkyrieL05Router::score_signal_family("turn into action items", &["action item"], 1.0)
+                > 0.0
+        );
+
+        // 4. Repeated term bounding
+        let two_score = ValkyrieL05Router::score_signal_family("verify verify", &["verify"], 1.0);
+        let five_score = ValkyrieL05Router::score_signal_family(
+            "verify verify verify verify verify",
+            &["verify"],
+            1.0,
+        );
+        assert_eq!(two_score, five_score);
+
+        // 5. End-to-end checkpoint prompt does not trigger false SYS0
+        let mut router = ValkyrieL05Router::bootstrap();
+        let res = router.route("gimme the last checkpoint");
+        assert_eq!(res.tier, CognitiveTier::System05Vector);
     }
 }
