@@ -3118,13 +3118,12 @@ impl ValkyrieL05Router {
         }
         if sig.len() >= 3
             && let Some(rem) = token.strip_prefix(sig)
-        {
-            if matches!(
+            && matches!(
                 rem,
                 "s" | "es" | "ed" | "d" | "ing" | "ment" | "ments" | "able" | "tion" | "tions"
-            ) {
-                return true;
-            }
+            )
+        {
+            return true;
         }
         if sig.len() >= 4
             && let Some(stem) = sig.strip_suffix('e')
