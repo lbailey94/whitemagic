@@ -12,10 +12,10 @@ databases hold **derived state**, never canonical evidence.
 |---|---|---|
 | Authority | None. No capability, no receipt; entries are not evidence. | Derived from committed records (`CommitReceipt.vector_effect == 0`). |
 | Canonical? | No. Canonical records/relations/receipts live in their own databases. | No. Canonical intake commits in `records`/`postings`/`nullifiers`/`receipts` first. |
-| Rebuildable? | Yes — from model computation over content; dropping the cache is safe. | Yes — via bounded `Substrate::repair_missing_vectors` (`memory.repair_vectors`), replay, or duplicate-retry repair. |
-| Atomicity | Outside the canonical LMDB transaction (Article 9 boundary). | Written in a separate LMDB transaction after `commit_intake`; status is exposed as `ready`, `pending`, `not_requested`, or `record_absent`. |
-| Reachability | Only when projection is enabled (`embed_cached`); projection-disabled recall performs no writes. | Written on projection-enabled intake or explicit bounded repair; read-only handles never write. |
-| Key / Format | `{MODEL_ID}:v{EMBED_CACHE_FORMAT_VERSION}:{sha256(content)}` | `u64` big-endian record ID → MessagePack `Vec<f32>` (`DIM = 384`, all finite, pinned to `MODEL_ID = "Qdrant/bge-small-en-v1.5-onnx-Q"`). |
+| Rebuildable? | Yes — from model computation over content; dropping the cache is safe. | Yes — by explicit bounded `memory.repair_vectors` calls with `max_records` and optional `after_record_id` continuation. |
+| Atomicity | Outside the canonical LMDB transaction (Article 9 boundary). | Written in a separate LMDB transaction after a fresh `commit_intake`; receipts keep `vector_effect == 0`. |
+| Reachability | Only when projection is enabled (`embed_cached`); projection-disabled recall performs no writes. | Fresh authorized intake may project; replay and duplicate refusal do not repair. Operator repair is writable-only; recall never migrates or repairs rows. |
+| Key / Format | `{MODEL_ID}:v{EMBED_CACHE_FORMAT_VERSION}:{sha256(content)}` | Vector rows remain MessagePack `Vec<f32>` for old-reader compatibility. A sibling key in the same LMDB database stores format version, model ID, dimension, and the vector-value digest atomically with the vector. Existing raw rows without provenance report `unknown_legacy`; absent rows report `unknown_missing` because no durable request marker exists. Unattributed or incompatible vectors are not returned to semantic scoring and are replaced only by explicit repair. |
 | Liveness / T10 Guard | Content-addressed cache only; never indexed directly by recall. | `Store::put_vector` verifies inside its LMDB RW transaction that `record_id` still exists in `records`, preventing repair from ever resurrecting a removed or erased record. |
 
 ## Evidence on the current tree
@@ -25,6 +25,9 @@ databases hold **derived state**, never canonical evidence.
 - `cache_writes_leave_canonical_state_unchanged` — records, epoch and relations unchanged after a
   cache write.
 - `projection_off_recall_writes_no_cache` — projection-disabled recall performs no derived writes.
+- Atomic per-record provenance rows attribute current raw vectors without changing the established vector value codec. This model ID reflects the trusted writer configuration; it does not authenticate the model weights or establish reproducibility. Legacy raw rows have unknown model provenance and trigger explicit rebuild; dimension alone is not model attribution. Malformed rows return decode errors rather than appearing absent.
+- Repair scan `max_records` bounds examined live records, including valid rows. The response continuation is the last scanned record ID; callers repeat with that cursor until a short page.
+- Replay and duplicate refusal preserve derived vector/cache state. Ordinary `remember.refusal` audit entries remain permitted.
 - Evil Gana attempt 7: the derived hologram has no handle to the canonical store; runtime test plus
   compile-fail proof (`hologram.rs`, `contract.rs::derived_hologram_index_cannot_mutate_canonical_store`).
 - Article 9: cache/model activity is inventoried in `archive/gate9a/GATE_9A_EXTERNAL_EFFECT_BOUNDARIES.md` with its

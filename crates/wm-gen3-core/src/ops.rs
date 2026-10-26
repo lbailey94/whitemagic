@@ -58,9 +58,13 @@ use crate::sweep_planner::{SweepPlanInputs, plan_sweep};
 pub enum VectorProjectionState {
     /// Valid 384-D vector is durable in LMDB `embeddings`.
     Ready,
-    /// Projection is enabled on this substrate, but the record's vector row is missing/pending repair.
+    /// The most recent attempted embedding or vector write failed in this operation.
     Pending,
-    /// Projection is not enabled on this substrate handle, and no vector row exists.
+    /// A legacy raw vector exists, but its model/version cannot be attributed.
+    UnknownLegacy,
+    /// No vector row exists and no durable evidence records whether one was requested.
+    UnknownMissing,
+    /// Legacy compatibility tag; new handles report missing rows as `UnknownMissing`.
     NotRequested,
     /// Record is absent or has been erased/removed.
     RecordAbsent,
@@ -76,6 +80,8 @@ pub struct VectorRepairReport {
     pub skipped_absent_or_erased: usize,
     pub model_id: &'static str,
     pub dimension: usize,
+    /// Last record id examined; pass as `after_record_id` to continue.
+    pub continuation: Option<u64>,
 }
 
 /// Statutory policy values (tier 2). Declared here, journaled with every sweep.
@@ -1502,9 +1508,6 @@ impl Substrate {
                     .map_err(|e| format!("hydrate replayed intake: {e:?}"))?;
                 self.identity.insert(replay_key, receipt.record_id);
             }
-            if self.projection.is_some() && !self.store.is_readonly() {
-                let _ = self.repair_record_vector(receipt.record_id);
-            }
             return Ok(CommitOutcome {
                 receipt,
                 disposition: CommitDisposition::Replay,
@@ -1540,9 +1543,6 @@ impl Substrate {
         };
         let key = identity_key(request.content(), request.source(), kind_tag);
         if let Some(&existing) = self.identity.get(&key) {
-            if self.projection.is_some() && !self.store.is_readonly() {
-                let _ = self.repair_record_vector(existing);
-            }
             let mut f = serde_json::Map::new();
             f.insert("reason".into(), "duplicate_exact".into());
             f.insert("content_sha256".into(), key.0.clone().into());
@@ -1565,9 +1565,6 @@ impl Substrate {
                 .exact_duplicate_id(request.content(), request.source(), import_kind)
                 .map_err(|error| error.to_string())?
             {
-                if self.projection.is_some() && !self.store.is_readonly() {
-                    let _ = self.repair_record_vector(existing);
-                }
                 let mut f = serde_json::Map::new();
                 f.insert("reason".into(), "duplicate_exact".into());
                 f.insert("content_sha256".into(), key.0.clone().into());
@@ -1595,18 +1592,6 @@ impl Substrate {
             Err(crate::store::StoreError::Msg(reason)) if reason == "duplicate_exact" => {
                 // Another writer may have committed after this process hydrated
                 // its identity map. Preserve the public refusal vocabulary.
-                if self.projection.is_some() && !self.store.is_readonly() {
-                    let import_kind = match request.kind() {
-                        IntakeKind::Reported => ImportKind::Reported,
-                        IntakeKind::System => ImportKind::System,
-                        IntakeKind::Simulated => ImportKind::Simulated,
-                    };
-                    if let Ok(Some(existing)) =
-                        self.exact_duplicate_id(request.content(), request.source(), import_kind)
-                    {
-                        let _ = self.repair_record_vector(existing);
-                    }
-                }
                 let mut fields = serde_json::Map::new();
                 fields.insert("reason".into(), "duplicate_exact".into());
                 fields.insert("content_sha256".into(), key.0.clone().into());
@@ -1658,17 +1643,18 @@ impl Substrate {
         else {
             return Ok(VectorProjectionState::RecordAbsent);
         };
-        if self
+        match self
             .store
-            .has_valid_vector(record_id)
+            .vector_state(record_id)
             .map_err(|e| e.to_string())?
         {
-            Ok(VectorProjectionState::Ready)
-        } else if self.projection.is_some() {
-            Ok(VectorProjectionState::Pending)
-        } else {
-            Ok(VectorProjectionState::NotRequested)
+            crate::store::StoredVectorState::Current => return Ok(VectorProjectionState::Ready),
+            crate::store::StoredVectorState::Legacy => {
+                return Ok(VectorProjectionState::UnknownLegacy);
+            }
+            crate::store::StoredVectorState::Missing => {}
         }
+        Ok(VectorProjectionState::UnknownMissing)
     }
 
     /// Repair a single live record's missing or invalid derived vector.
@@ -1691,12 +1677,14 @@ impl Substrate {
         else {
             return Ok(VectorProjectionState::RecordAbsent);
         };
-        if self
+        match self
             .store
-            .has_valid_vector(record_id)
+            .vector_state(record_id)
             .map_err(|e| e.to_string())?
         {
-            return Ok(VectorProjectionState::Ready);
+            crate::store::StoredVectorState::Current => return Ok(VectorProjectionState::Ready),
+            crate::store::StoredVectorState::Legacy => {}
+            crate::store::StoredVectorState::Missing => {}
         }
         let expected_hash = sha256_hex(record.content().as_bytes());
         let text = record.content().to_string();
@@ -1754,15 +1742,26 @@ impl Substrate {
         &mut self,
         max_records: usize,
     ) -> Result<VectorRepairReport, String> {
+        self.repair_missing_vectors_after(max_records, None)
+    }
+
+    /// Continue an explicitly requested repair scan after `after_record_id`.
+    /// The row limit bounds examined live records, whether or not they need repair.
+    pub fn repair_missing_vectors_after(
+        &mut self,
+        max_records: usize,
+        after_record_id: Option<u64>,
+    ) -> Result<VectorRepairReport, String> {
         self.require_writable("memory.repair_vectors")?;
         if self.projection.is_none() {
             return Err("projection is not enabled on this substrate".to_string());
         }
-        let (scanned, missing_ids) = self
+        let (scanned, missing_ids, continuation) = self
             .store
-            .missing_vector_record_ids(max_records)
+            .missing_vector_record_ids_after(max_records, after_record_id)
             .map_err(|e| e.to_string())?;
         let missing_found = missing_ids.len();
+        let has_more = scanned == max_records;
         let mut repaired = 0usize;
         let mut failed = 0usize;
         let mut skipped_absent_or_erased = 0usize;
@@ -1770,7 +1769,10 @@ impl Substrate {
             match self.repair_record_vector(id)? {
                 VectorProjectionState::Ready => repaired += 1,
                 VectorProjectionState::RecordAbsent => skipped_absent_or_erased += 1,
-                VectorProjectionState::Pending | VectorProjectionState::NotRequested => failed += 1,
+                VectorProjectionState::Pending
+                | VectorProjectionState::NotRequested
+                | VectorProjectionState::UnknownLegacy
+                | VectorProjectionState::UnknownMissing => failed += 1,
             }
         }
         let report = VectorRepairReport {
@@ -1781,6 +1783,7 @@ impl Substrate {
             skipped_absent_or_erased,
             model_id: crate::projection::MODEL_ID,
             dimension: crate::projection::DIM,
+            continuation: has_more.then_some(continuation).flatten(),
         };
         let mut f = serde_json::Map::new();
         f.insert("scanned".into(), report.scanned.into());

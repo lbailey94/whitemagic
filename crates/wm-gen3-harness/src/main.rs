@@ -455,7 +455,8 @@ fn handle_route(
                 .and_then(Value::as_u64)
                 .unwrap_or(64)
                 .clamp(1, 1024) as usize;
-            match substrate.repair_missing_vectors(max_records) {
+            let after_record_id = args.get("after_record_id").and_then(Value::as_u64);
+            match substrate.repair_missing_vectors_after(max_records, after_record_id) {
                 Ok(report) => Some(json!({
                     "status": "success",
                     "scanned": report.scanned,
@@ -465,6 +466,7 @@ fn handle_route(
                     "skipped_absent_or_erased": report.skipped_absent_or_erased,
                     "model_id": report.model_id,
                     "dimension": report.dimension,
+                    "continuation": report.continuation,
                 })),
                 Err(error) => Some(json!({"status": "error", "error": error})),
             }

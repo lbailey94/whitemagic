@@ -60,6 +60,47 @@ const META_RELATION_VIEW: &[u8] = b"__rvw__";
 /// Postings-index tokenizer/format marker used by the duplicate-probe fast path.
 const META_IDENTITY_INDEX: &[u8] = b"__iidx__";
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum StoredVectorState {
+    Missing,
+    Legacy,
+    Current,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct StoredVectorProvenance {
+    format_version: u8,
+    model_id: String,
+    dimension: usize,
+    vector_sha256: String,
+}
+const VECTOR_FORMAT_VERSION: u8 = 1;
+const VECTOR_META_PREFIX: &[u8] = b"__wmv1:";
+// lmdb 0.8 exposes cursor operation integers directly; MDB_SET_RANGE is 17.
+const MDB_SET_RANGE: u32 = 17;
+
+fn vector_meta_key(id: u64) -> Vec<u8> {
+    [VECTOR_META_PREFIX, &bytes_u64(id)].concat()
+}
+
+fn decode_vector(bytes: &[u8]) -> Result<Vec<f32>, rmp_serde::decode::Error> {
+    rmp_serde::from_slice::<Vec<f32>>(bytes)
+}
+
+fn decode_vector_provenance(
+    bytes: &[u8],
+) -> Result<StoredVectorProvenance, rmp_serde::decode::Error> {
+    rmp_serde::from_slice(bytes)
+}
+
+fn provenance_matches(bytes: &[u8], vector_bytes: &[u8]) -> Result<bool, rmp_serde::decode::Error> {
+    let provenance = decode_vector_provenance(bytes)?;
+    Ok(provenance.format_version == VECTOR_FORMAT_VERSION
+        && provenance.model_id == crate::projection::MODEL_ID
+        && provenance.dimension == crate::projection::DIM
+        && provenance.vector_sha256 == crate::journal::sha256_hex(vector_bytes))
+}
+
 /// Unforgeable-to-ops witness that a snapshot came from the authoritative Store.
 /// The tuple field is private: only this module can construct it.
 pub(crate) struct StoreAuthoritySeal(());
@@ -1475,6 +1516,10 @@ impl Store {
             Ok(()) | Err(lmdb::Error::NotFound) => {}
             Err(error) => return Err(error.into()),
         }
+        match txn.del(self.embeddings, &vector_meta_key(id), None) {
+            Ok(()) | Err(lmdb::Error::NotFound) => {}
+            Err(error) => return Err(error.into()),
+        }
         txn.commit()?;
         Ok(true)
     }
@@ -1695,6 +1740,12 @@ impl Store {
         }
         let key = bytes_u64(id);
         let value = rmp_serde::to_vec(&vector.to_vec())?;
+        let provenance = rmp_serde::to_vec(&StoredVectorProvenance {
+            format_version: VECTOR_FORMAT_VERSION,
+            model_id: crate::projection::MODEL_ID.to_string(),
+            dimension: vector.len(),
+            vector_sha256: crate::journal::sha256_hex(&value),
+        })?;
         let mut txn = self.env.begin_rw_txn()?;
         if txn.get(self.records, &key).is_err() {
             return Err(StoreError::Msg(format!(
@@ -1702,15 +1753,40 @@ impl Store {
             )));
         }
         txn.put(self.embeddings, &key, &value, lmdb::WriteFlags::empty())?;
+        txn.put(
+            self.embeddings,
+            &vector_meta_key(id),
+            &provenance,
+            lmdb::WriteFlags::empty(),
+        )?;
         txn.commit()?;
         Ok(())
     }
 
-    /// Returns true iff `embeddings` holds a decodable, finite 384-D vector for `id`.
+    /// Returns true iff `embeddings` holds a finite 384-D vector attributed to this model.
     pub fn has_valid_vector(&self, id: u64) -> Result<bool, StoreError> {
-        Ok(self
-            .get_vector(id)?
-            .is_some_and(|v| v.len() == crate::projection::DIM && v.iter().all(|x| x.is_finite())))
+        Ok(self.vector_state(id)? == StoredVectorState::Current)
+    }
+
+    pub(crate) fn vector_state(&self, id: u64) -> Result<StoredVectorState, StoreError> {
+        let txn = self.env.begin_ro_txn()?;
+        match txn.get(self.embeddings, &bytes_u64(id)) {
+            Ok(bytes) => {
+                let vector = decode_vector(bytes)?;
+                if vector.len() != crate::projection::DIM || !vector.iter().all(|x| x.is_finite()) {
+                    return Ok(StoredVectorState::Legacy);
+                }
+                match txn.get(self.embeddings, &vector_meta_key(id)) {
+                    Ok(metadata) if provenance_matches(metadata, bytes)? => {
+                        Ok(StoredVectorState::Current)
+                    }
+                    Ok(_) | Err(lmdb::Error::NotFound) => Ok(StoredVectorState::Legacy),
+                    Err(e) => Err(e.into()),
+                }
+            }
+            Err(lmdb::Error::NotFound) => Ok(StoredVectorState::Missing),
+            Err(e) => Err(e.into()),
+        }
     }
 
     /// Bounded scan over live `records` returning `(records_scanned, missing_record_ids)`
@@ -1719,40 +1795,92 @@ impl Store {
         &self,
         max_records: usize,
     ) -> Result<(usize, Vec<u64>), StoreError> {
+        let (scanned, missing, _) = self.missing_vector_record_ids_after(max_records, None)?;
+        Ok((scanned, missing))
+    }
+
+    /// Bounded scan continuation. The cursor seeks directly after `after_record_id`.
+    pub fn missing_vector_record_ids_after(
+        &self,
+        max_records: usize,
+        after_record_id: Option<u64>,
+    ) -> Result<(usize, Vec<u64>, Option<u64>), StoreError> {
         if max_records == 0 {
-            return Ok((0, Vec::new()));
+            return Ok((0, Vec::new(), after_record_id));
         }
         let txn = self.env.begin_ro_txn()?;
+        let start = match after_record_id {
+            Some(id) => match id.checked_add(1) {
+                Some(next) => Some(bytes_u64(next)),
+                None => return Ok((0, Vec::new(), None)),
+            },
+            None => None,
+        };
         let mut cursor = txn.open_ro_cursor(self.records)?;
         let mut scanned = 0usize;
         let mut missing = Vec::new();
-        for (key, _bytes) in cursor.iter() {
+        let mut continuation = after_record_id;
+        let first = if let Some(start_key) = start.as_ref() {
+            // MDB_SET_RANGE positions directly at the continuation key (or first
+            // later key), avoiding a repeated walk over the already-scanned prefix.
+            match cursor.get(Some(start_key), None, MDB_SET_RANGE) {
+                Ok((key, value)) => Some((key.unwrap_or(start_key), value)),
+                Err(lmdb::Error::NotFound) => None,
+                Err(error) => return Err(error.into()),
+            }
+        } else {
+            None
+        };
+        let rows = first.into_iter().chain(cursor.iter());
+        for (key, _bytes) in rows {
             if key.len() != 8 {
-                continue;
+                return Err(StoreError::Msg(
+                    "malformed record key during vector repair scan".into(),
+                ));
             }
             let id = record_key_id(key)?;
             scanned += 1;
+            continuation = Some(id);
             let valid = match txn.get(self.embeddings, &key) {
-                Ok(vbytes) => rmp_serde::from_slice::<Vec<f32>>(vbytes).is_ok_and(|v| {
-                    v.len() == crate::projection::DIM && v.iter().all(|x| x.is_finite())
-                }),
+                Ok(vbytes) => {
+                    let v = decode_vector(vbytes)?;
+                    if v.len() != crate::projection::DIM || !v.iter().all(|x| x.is_finite()) {
+                        false
+                    } else {
+                        match txn.get(self.embeddings, &vector_meta_key(id)) {
+                            Ok(metadata) => provenance_matches(metadata, vbytes)?,
+                            Err(lmdb::Error::NotFound) => false,
+                            Err(e) => return Err(e.into()),
+                        }
+                    }
+                }
                 Err(lmdb::Error::NotFound) => false,
                 Err(e) => return Err(e.into()),
             };
             if !valid {
                 missing.push(id);
-                if missing.len() >= max_records {
-                    break;
-                }
+            }
+            if scanned >= max_records {
+                break;
             }
         }
-        Ok((scanned, missing))
+        Ok((scanned, missing, continuation))
     }
 
     pub fn get_vector(&self, id: u64) -> Result<Option<Vec<f32>>, StoreError> {
         let txn = self.env.begin_ro_txn()?;
         match txn.get(self.embeddings, &bytes_u64(id)) {
-            Ok(bytes) => Ok(Some(rmp_serde::from_slice(bytes)?)),
+            Ok(bytes) => {
+                let vector = decode_vector(bytes)?;
+                if vector.len() != crate::projection::DIM || !vector.iter().all(|x| x.is_finite()) {
+                    return Ok(None);
+                }
+                match txn.get(self.embeddings, &vector_meta_key(id)) {
+                    Ok(metadata) if provenance_matches(metadata, bytes)? => Ok(Some(vector)),
+                    Ok(_) | Err(lmdb::Error::NotFound) => Ok(None),
+                    Err(e) => Err(e.into()),
+                }
+            }
             Err(lmdb::Error::NotFound) => Ok(None),
             Err(e) => Err(e.into()),
         }
@@ -1765,7 +1893,16 @@ impl Store {
         for (key, bytes) in cursor.iter() {
             if key.len() == 8 {
                 let id = u64::from_be_bytes(key.try_into().unwrap_or([0; 8]));
-                out.push((id, rmp_serde::from_slice(bytes)?));
+                let vector = decode_vector(bytes)?;
+                if vector.len() == crate::projection::DIM && vector.iter().all(|x| x.is_finite()) {
+                    match txn.get(self.embeddings, &vector_meta_key(id)) {
+                        Ok(metadata) if provenance_matches(metadata, bytes)? => {
+                            out.push((id, vector))
+                        }
+                        Ok(_) | Err(lmdb::Error::NotFound) => {}
+                        Err(e) => return Err(e.into()),
+                    }
+                }
             }
         }
         Ok(out)
@@ -2024,8 +2161,17 @@ impl Store {
             for (key, bytes) in cursor.iter() {
                 if key.len() == 8 {
                     let id = u64::from_be_bytes(key.try_into().unwrap_or([0; 8]));
-                    if let Ok(vec) = rmp_serde::from_slice(bytes) {
-                        vectors.insert(id, vec);
+                    let vector = decode_vector(bytes)?;
+                    if vector.len() == crate::projection::DIM
+                        && vector.iter().all(|value| value.is_finite())
+                    {
+                        match txn.get(self.embeddings, &vector_meta_key(id)) {
+                            Ok(metadata) if provenance_matches(metadata, bytes)? => {
+                                vectors.insert(id, vector);
+                            }
+                            Ok(_) | Err(lmdb::Error::NotFound) => {}
+                            Err(error) => return Err(error.into()),
+                        }
                     }
                 }
             }
@@ -2621,6 +2767,144 @@ mod tests {
 
     fn data_hash(path: &Path) -> [u8; 32] {
         Sha256::digest(std::fs::read(path.join("data.mdb")).unwrap()).into()
+    }
+
+    #[test]
+    fn vector_repair_scan_bounds_valid_rows_and_continues_to_late_holes() {
+        let dir = TempStore::new("projection-cursor");
+        let store = Store::open(&dir.0).unwrap();
+        let mut txn = store.env.begin_rw_txn().unwrap();
+        for id in 1..=3 {
+            txn.put(
+                store.records,
+                &bytes_u64(id),
+                &[0xA0],
+                lmdb::WriteFlags::empty(),
+            )
+            .unwrap();
+        }
+        txn.commit().unwrap();
+        let vector = vec![0.25f32; crate::projection::DIM];
+        store.put_vector(1, &vector).unwrap();
+        store.put_vector(2, &vector).unwrap();
+        let txn = store.env.begin_ro_txn().unwrap();
+        let legacy_reader_value: Vec<f32> =
+            rmp_serde::from_slice(txn.get(store.embeddings, &bytes_u64(1)).unwrap())
+                .expect("old reader still decodes raw vector row");
+        assert_eq!(legacy_reader_value, vector);
+        drop(txn);
+        assert_eq!(store.iter_vectors().unwrap().len(), 2);
+
+        let (scanned, holes, cursor) = store.missing_vector_record_ids_after(2, None).unwrap();
+        assert_eq!(scanned, 2);
+        assert!(holes.is_empty());
+        assert_eq!(cursor, Some(2));
+        let (scanned, holes, cursor) = store.missing_vector_record_ids_after(2, cursor).unwrap();
+        assert_eq!(scanned, 1);
+        assert_eq!(holes, vec![3]);
+        assert_eq!(cursor, Some(3));
+    }
+
+    #[test]
+    fn legacy_raw_vectors_are_unknown_and_never_current() {
+        let dir = TempStore::new("projection-legacy");
+        let store = Store::open(&dir.0).unwrap();
+        let mut txn = store.env.begin_rw_txn().unwrap();
+        txn.put(
+            store.records,
+            &bytes_u64(1),
+            &[0xA0],
+            lmdb::WriteFlags::empty(),
+        )
+        .unwrap();
+        txn.put(
+            store.embeddings,
+            &bytes_u64(1),
+            &rmp_serde::to_vec(&vec![0.0f32; crate::projection::DIM]).unwrap(),
+            lmdb::WriteFlags::empty(),
+        )
+        .unwrap();
+        txn.put(
+            store.records,
+            &bytes_u64(2),
+            &[0xA0],
+            lmdb::WriteFlags::empty(),
+        )
+        .unwrap();
+        txn.put(
+            store.embeddings,
+            &bytes_u64(2),
+            &rmp_serde::to_vec(&vec![0.0f32; crate::projection::DIM]).unwrap(),
+            lmdb::WriteFlags::empty(),
+        )
+        .unwrap();
+        txn.put(
+            store.embeddings,
+            &vector_meta_key(2),
+            &rmp_serde::to_vec(&StoredVectorProvenance {
+                format_version: VECTOR_FORMAT_VERSION,
+                model_id: "different-model".into(),
+                dimension: crate::projection::DIM,
+                vector_sha256: crate::journal::sha256_hex(
+                    &rmp_serde::to_vec(&vec![0.0f32; crate::projection::DIM]).unwrap(),
+                ),
+            })
+            .unwrap(),
+            lmdb::WriteFlags::empty(),
+        )
+        .unwrap();
+        txn.put(
+            store.records,
+            &bytes_u64(3),
+            &[0xA0],
+            lmdb::WriteFlags::empty(),
+        )
+        .unwrap();
+        txn.put(
+            store.embeddings,
+            &bytes_u64(3),
+            &[0xC1],
+            lmdb::WriteFlags::empty(),
+        )
+        .unwrap();
+        txn.commit().unwrap();
+        assert_eq!(store.vector_state(1).unwrap(), StoredVectorState::Legacy);
+        assert!(!store.has_valid_vector(1).unwrap());
+        assert!(store.iter_vectors().is_err());
+        assert!(store.get_vector(1).unwrap().is_none());
+        assert_eq!(store.vector_state(2).unwrap(), StoredVectorState::Legacy);
+        assert!(store.get_vector(2).unwrap().is_none());
+        assert!(store.vector_state(3).is_err());
+        assert!(store.get_vector(3).is_err());
+        drop(store);
+        let readonly = Store::open_readonly(&dir.0).unwrap();
+        assert!(readonly.get_vector(1).unwrap().is_none());
+        assert!(readonly.get_vector(2).unwrap().is_none());
+    }
+
+    #[test]
+    fn erase_removes_vector_and_provenance_atomically() {
+        let dir = TempStore::new("projection-provenance-erase");
+        let store = Store::open(&dir.0).unwrap();
+        let req = request(
+            &store,
+            [0x61; 16],
+            0,
+            "record for vector provenance erasure",
+        );
+        let terms = crate::field::tokenize(req.content());
+        let result = store
+            .commit_intake(capability(&store, &req), &req, &terms)
+            .unwrap();
+        let id = result.receipt.record_id;
+        store
+            .put_vector(id, &vec![0.5f32; crate::projection::DIM])
+            .unwrap();
+        assert_eq!(store.vector_state(id).unwrap(), StoredVectorState::Current);
+        assert!(store.remove_record_and_indexes(id).unwrap());
+        let txn = store.env.begin_ro_txn().unwrap();
+        assert!(txn.get(store.embeddings, &bytes_u64(id)).is_err());
+        assert!(txn.get(store.embeddings, &vector_meta_key(id)).is_err());
     }
 
     fn assert_intake_unchanged(store: &Store, before: [u8; 32]) {
