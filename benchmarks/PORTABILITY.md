@@ -6,7 +6,7 @@ so a valid Mac checkout could not run Phase 1→3 without editing files).
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `WMGEN3_ROOT` | `/home/lucas/Desktop/WMgen3` | Gen3 checkout root (all drivers) |
+| `WMGEN3_ROOT` | `<repo-root>` | Gen3 checkout root (all drivers) |
 | `WMGEN3_BIN` | `<WMGEN3_ROOT>/target/release/wm-gen3` | Binary under test (`driver_phase3_constitutional_fuzzing.py`, `driver_phase5_scale_slopes.py`) |
 | `WMGEN3_EXPECTED_HASH` | platform baseline (below) | Override the pinned core-binary hash check |
 

@@ -14,7 +14,7 @@ tags, and the AUR `whitemagic-bin` package.
 gh repo fork microsoft/winget-pkgs --clone --remote
 cd winget-pkgs
 mkdir -p manifests/l/lbailey94/WhiteMagic/9.3.4
-cp /home/lucas/Desktop/WHITEMAGIC/WMv10/packaging/winget/*.yaml \
+cp ../whitemagic/packaging/winget/*.yaml \
    manifests/l/lbailey94/WhiteMagic/9.3.4/
 git checkout -b lbailey94.WhiteMagic-9.3.4
 git add manifests/l/lbailey94/WhiteMagic

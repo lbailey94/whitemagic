@@ -318,5 +318,5 @@ security architecture** → `mandalaos-gate-lite`.
   <https://www.whitemagic.dev/support>. Services are paid via x402 or
   evaluation keys; the tip jar unlocks nothing.
 - Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md)
-- Security: email <lbailey94@protonmail.com> (please do not open public
+- Security: email <security@whitemagic.dev> (please do not open public
   issues for security reports)

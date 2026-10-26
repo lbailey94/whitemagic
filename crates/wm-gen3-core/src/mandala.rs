@@ -1390,11 +1390,13 @@ impl LandlockSandbox {
         cmd: &str,
         args: &[&str],
     ) -> Result<std::process::Output, MandalaError> {
-        let sandbox_bin = Path::new("/home/lucas/.local/bin/wm-sandbox");
+        let sandbox_bin = std::env::var_os("HOME")
+            .map(|h| PathBuf::from(h).join(".local/bin/wm-sandbox"))
+            .unwrap_or_else(|| PathBuf::from("wm-sandbox"));
         let mut command = if sandbox_bin.exists()
             && std::env::var("WM_SANDBOX_DISABLE").unwrap_or_default() != "1"
         {
-            let mut c = std::process::Command::new(sandbox_bin);
+            let mut c = std::process::Command::new(&sandbox_bin);
 
             let mut rw: Vec<String> = vec![
                 "/tmp".to_string(),

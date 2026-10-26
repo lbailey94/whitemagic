@@ -3559,14 +3559,14 @@ mod tests {
 
     #[test]
     fn test_phase1_kekkai_sanitizer_and_phase3_fwht_involution() {
-        let dirty = "good morning! reading /home/lucas/.ssh/id_ed25519 with key sk-proj-12345 on 152.53.195.47";
+        let dirty = "good morning! reading /home/alice/.ssh/id_ed25519 with key sk-proj-12345 on 152.53.0.1";
         let (clean, scrubbed_count, verified) = KekkaiSanitizer::sanitize_text(dirty);
         assert!(
             verified,
             "Sanitized text must contain zero forbidden markers"
         );
         assert!(scrubbed_count >= 4);
-        assert!(!clean.contains("/home/lucas"));
+        assert!(!clean.contains("/home/alice"));
         assert!(!clean.contains("sk-proj-"));
 
         let mut x = [0.0f32; VALKYRIE_DIM];

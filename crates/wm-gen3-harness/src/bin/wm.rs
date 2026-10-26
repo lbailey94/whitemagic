@@ -520,7 +520,7 @@ enum Commands {
         /// Strict precondition enforcement (fails if preconditions unmet)
         #[arg(long, default_value_t = true)]
         strict: bool,
-        /// Remote peer for cross-node handoff over Wire Protocol 7369 (e.g. 152.53.195.47:7369)
+        /// Remote peer for cross-node handoff over Wire Protocol 7369 (e.g. 203.0.113.10:7369)
         #[arg(long)]
         peer: Option<String>,
         /// Emit structured JSON output
@@ -610,7 +610,7 @@ enum PeerCommands {
         /// Trust tier: blocked, stranger, net, trusted, local (default: stranger)
         #[arg(long, default_value = "stranger")]
         tier: String,
-        /// Optional endpoint (e.g. 152.53.195.47:8787 or https://mcp.whitemagic.dev)
+        /// Optional endpoint (e.g. 203.0.113.10:8787 or https://mcp.whitemagic.dev)
         #[arg(long)]
         endpoint: Option<String>,
     },
@@ -966,7 +966,7 @@ enum MeshCommands {
     },
     /// Transmit a sovereign Logoglyphic Sutra / Mudra codon packet across the Gap Junction (Port 7369)
     Codon {
-        /// Peer socket address (e.g. 127.0.0.1:7369 or 152.53.195.47:7369)
+        /// Peer socket address (e.g. 127.0.0.1:7369 or 203.0.113.10:7369)
         #[arg(long)]
         peer: String,
         /// Codon or glyph sequence (e.g. "證 行 鏡", "🜅 🜂 🜅", "⟪ 證 · 行 · 鏡 ⟫")
@@ -1016,7 +1016,7 @@ enum SutraCommands {
         /// Strict precondition enforcement (fails if preconditions unmet)
         #[arg(long, default_value_t = true)]
         strict: bool,
-        /// Remote peer for cross-node handoff over Wire Protocol 7369 (e.g. 152.53.195.47:7369)
+        /// Remote peer for cross-node handoff over Wire Protocol 7369 (e.g. 203.0.113.10:7369)
         #[arg(long)]
         peer: Option<String>,
         /// Emit JSON output
