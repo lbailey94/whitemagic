@@ -52,6 +52,32 @@ use crate::store::Store;
 use crate::sweep::{LIFECYCLE_AGE_SWEEPS, SWEEP_PROFILE_V1, SweepOutcome, UsageSnapshotIssuer};
 use crate::sweep_planner::{SweepPlanInputs, plan_sweep};
 
+/// Derived vector projection status for a committed record.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VectorProjectionState {
+    /// Valid 384-D vector is durable in LMDB `embeddings`.
+    Ready,
+    /// Projection is enabled on this substrate, but the record's vector row is missing/pending repair.
+    Pending,
+    /// Projection is not enabled on this substrate handle, and no vector row exists.
+    NotRequested,
+    /// Record is absent or has been erased/removed.
+    RecordAbsent,
+}
+
+/// Summary returned by an explicit bounded vector repair pass.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct VectorRepairReport {
+    pub scanned: usize,
+    pub missing_found: usize,
+    pub repaired: usize,
+    pub failed: usize,
+    pub skipped_absent_or_erased: usize,
+    pub model_id: &'static str,
+    pub dimension: usize,
+}
+
 /// Statutory policy values (tier 2). Declared here, journaled with every sweep.
 #[derive(Debug, Clone)]
 pub struct Policy {
@@ -1471,6 +1497,9 @@ impl Substrate {
                     .map_err(|e| format!("hydrate replayed intake: {e:?}"))?;
                 self.identity.insert(replay_key, receipt.record_id);
             }
+            if self.projection.is_some() && !self.store.is_readonly() {
+                let _ = self.repair_record_vector(receipt.record_id);
+            }
             return Ok(CommitOutcome {
                 receipt,
                 disposition: CommitDisposition::Replay,
@@ -1506,6 +1535,9 @@ impl Substrate {
         };
         let key = identity_key(request.content(), request.source(), kind_tag);
         if let Some(&existing) = self.identity.get(&key) {
+            if self.projection.is_some() && !self.store.is_readonly() {
+                let _ = self.repair_record_vector(existing);
+            }
             let mut f = serde_json::Map::new();
             f.insert("reason".into(), "duplicate_exact".into());
             f.insert("content_sha256".into(), key.0.clone().into());
@@ -1528,6 +1560,9 @@ impl Substrate {
                 .exact_duplicate_id(request.content(), request.source(), import_kind)
                 .map_err(|error| error.to_string())?
             {
+                if self.projection.is_some() && !self.store.is_readonly() {
+                    let _ = self.repair_record_vector(existing);
+                }
                 let mut f = serde_json::Map::new();
                 f.insert("reason".into(), "duplicate_exact".into());
                 f.insert("content_sha256".into(), key.0.clone().into());
@@ -1555,6 +1590,18 @@ impl Substrate {
             Err(crate::store::StoreError::Msg(reason)) if reason == "duplicate_exact" => {
                 // Another writer may have committed after this process hydrated
                 // its identity map. Preserve the public refusal vocabulary.
+                if self.projection.is_some() && !self.store.is_readonly() {
+                    let import_kind = match request.kind() {
+                        IntakeKind::Reported => ImportKind::Reported,
+                        IntakeKind::System => ImportKind::System,
+                        IntakeKind::Simulated => ImportKind::Simulated,
+                    };
+                    if let Ok(Some(existing)) =
+                        self.exact_duplicate_id(request.content(), request.source(), import_kind)
+                    {
+                        let _ = self.repair_record_vector(existing);
+                    }
+                }
                 let mut fields = serde_json::Map::new();
                 fields.insert("reason".into(), "duplicate_exact".into());
                 fields.insert("content_sha256".into(), key.0.clone().into());
@@ -1580,11 +1627,7 @@ impl Substrate {
             self.identity.insert(key, id);
 
             if self.projection.is_some() {
-                if let Ok(mut vectors) = self.embed_cached(&[request.content().to_string()]) {
-                    if let Some(v) = vectors.pop() {
-                        let _ = self.store.put_vector(id, &v);
-                    }
-                }
+                let _ = self.repair_record_vector(id);
             }
 
             if !self.suppress_intake_journal {
@@ -1599,6 +1642,153 @@ impl Substrate {
             }
         }
         Ok(outcome)
+    }
+
+    /// Inspect the current derived vector projection state for `record_id`.
+    pub fn vector_projection_state(&self, record_id: u64) -> Result<VectorProjectionState, String> {
+        let Some(_record) = self
+            .store
+            .get_record(record_id)
+            .map_err(|e| e.to_string())?
+        else {
+            return Ok(VectorProjectionState::RecordAbsent);
+        };
+        if self
+            .store
+            .has_valid_vector(record_id)
+            .map_err(|e| e.to_string())?
+        {
+            Ok(VectorProjectionState::Ready)
+        } else if self.projection.is_some() {
+            Ok(VectorProjectionState::Pending)
+        } else {
+            Ok(VectorProjectionState::NotRequested)
+        }
+    }
+
+    /// Repair a single live record's missing or invalid derived vector.
+    ///
+    /// Rechecks record liveness and content digest after embedding and inside
+    /// [`Store::put_vector`] so an erased or compensated record can never be
+    /// resurrected.
+    pub fn repair_record_vector(
+        &mut self,
+        record_id: u64,
+    ) -> Result<VectorProjectionState, String> {
+        self.require_writable("memory.repair_vectors")?;
+        if self.projection.is_none() {
+            return self.vector_projection_state(record_id);
+        }
+        let Some(record) = self
+            .store
+            .get_record(record_id)
+            .map_err(|e| e.to_string())?
+        else {
+            return Ok(VectorProjectionState::RecordAbsent);
+        };
+        if self
+            .store
+            .has_valid_vector(record_id)
+            .map_err(|e| e.to_string())?
+        {
+            return Ok(VectorProjectionState::Ready);
+        }
+        let expected_hash = sha256_hex(record.content().as_bytes());
+        let text = record.content().to_string();
+        let vec_res = self.embed_cached(&[text]).and_then(|mut vs| {
+            vs.pop()
+                .ok_or_else(|| "projection returned empty embedding batch".to_string())
+        });
+        let vector = match vec_res {
+            Ok(v) => v,
+            Err(err) => {
+                let mut f = serde_json::Map::new();
+                f.insert("record_id".into(), record_id.into());
+                f.insert("stage".into(), "embed".into());
+                f.insert("error".into(), err.into());
+                self.j("projection.pending", f);
+                return Ok(VectorProjectionState::Pending);
+            }
+        };
+
+        // Liveness & content-identity recheck prior to writing (T10 non-resurrection guard).
+        let Some(live_now) = self
+            .store
+            .get_record(record_id)
+            .map_err(|e| e.to_string())?
+        else {
+            return Ok(VectorProjectionState::RecordAbsent);
+        };
+        if sha256_hex(live_now.content().as_bytes()) != expected_hash {
+            return Ok(VectorProjectionState::Pending);
+        }
+        match self.store.put_vector(record_id, &vector) {
+            Ok(()) => {
+                let mut f = serde_json::Map::new();
+                f.insert("record_id".into(), record_id.into());
+                f.insert("model_id".into(), crate::projection::MODEL_ID.into());
+                f.insert("dim".into(), crate::projection::DIM.into());
+                self.j("projection.ready", f);
+                Ok(VectorProjectionState::Ready)
+            }
+            Err(err) => {
+                let mut f = serde_json::Map::new();
+                f.insert("record_id".into(), record_id.into());
+                f.insert("stage".into(), "put_vector".into());
+                f.insert("error".into(), err.to_string().into());
+                self.j("projection.pending", f);
+                Ok(VectorProjectionState::Pending)
+            }
+        }
+    }
+
+    /// Bounded, operator-invoked repair scan over live records missing valid
+    /// projection vectors. Never runs in read-only mode or when projection is
+    /// disabled, and never resurrects removed/erased records.
+    pub fn repair_missing_vectors(
+        &mut self,
+        max_records: usize,
+    ) -> Result<VectorRepairReport, String> {
+        self.require_writable("memory.repair_vectors")?;
+        if self.projection.is_none() {
+            return Err("projection is not enabled on this substrate".to_string());
+        }
+        let (scanned, missing_ids) = self
+            .store
+            .missing_vector_record_ids(max_records)
+            .map_err(|e| e.to_string())?;
+        let missing_found = missing_ids.len();
+        let mut repaired = 0usize;
+        let mut failed = 0usize;
+        let mut skipped_absent_or_erased = 0usize;
+        for id in missing_ids {
+            match self.repair_record_vector(id)? {
+                VectorProjectionState::Ready => repaired += 1,
+                VectorProjectionState::RecordAbsent => skipped_absent_or_erased += 1,
+                VectorProjectionState::Pending | VectorProjectionState::NotRequested => failed += 1,
+            }
+        }
+        let report = VectorRepairReport {
+            scanned,
+            missing_found,
+            repaired,
+            failed,
+            skipped_absent_or_erased,
+            model_id: crate::projection::MODEL_ID,
+            dimension: crate::projection::DIM,
+        };
+        let mut f = serde_json::Map::new();
+        f.insert("scanned".into(), report.scanned.into());
+        f.insert("missing_found".into(), report.missing_found.into());
+        f.insert("repaired".into(), report.repaired.into());
+        f.insert("failed".into(), report.failed.into());
+        f.insert(
+            "skipped_absent_or_erased".into(),
+            report.skipped_absent_or_erased.into(),
+        );
+        f.insert("model_id".into(), report.model_id.into());
+        self.j("projection.repair_batch", f);
+        Ok(report)
     }
 
     /// B5 recall-view membership: the record's provenance source parses to exactly this label.

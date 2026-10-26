@@ -1,22 +1,22 @@
-# Derived embedding-cache policy — 2026-09-22
+# Derived embedding-cache and projection-vector policy — updated 2026-10-25
 
-Status: policy for the persistent derived embedding cache (`embed_cache` LMDB database). It
-resolves the Article 7 boundary recorded as open in `archive/gate9a/GATE_9A_EXTERNAL_EFFECT_BOUNDARIES.md` and
-errata #3/#57. This cache is **derived state**, never canonical evidence.
+Status: policy for the persistent derived embedding cache (`embed_cache` LMDB database) and
+per-record projection vectors (`embeddings` LMDB database). It resolves the Article 7 boundary
+recorded in `archive/gate9a/GATE_9A_EXTERNAL_EFFECT_BOUNDARIES.md` and errata #3/#57, and supersedes
+the historical Gate 9A Slice 1 projection-intake exclusion following Gate 9C requalification. Both
+databases hold **derived state**, never canonical evidence.
 
 ## Classification
 
-| Property | Value |
-|---|---|
-| Authority | None. No capability, no receipt; entries are not evidence and cannot be cited as such. |
-| Canonical? | No. Canonical records/relations/receipts live in their own databases; cache writes never touch them (tested). |
-| Rebuildable? | Yes — from model computation over content; dropping the cache is always safe. |
-| Atomicity | Outside the canonical LMDB transaction (Article 9 boundary). A cache write may be lost without affecting any commit. |
-| Reachability | Only when projection is enabled: the recall path (`embed_cached`). Projection-enabled intake and sweep refuse fail-closed (Slice 1), and projection-disabled recall performs no cache writes (tested). |
-| Key | `{MODEL_ID}:v{EMBED_CACHE_FORMAT_VERSION}:{sha256(content)}` — binds model identity, cache-format version and content. |
-| Invalidation | Bump `EMBED_CACHE_FORMAT_VERSION` (all prior keys unreachable); a model change (`MODEL_ID`) also invalidates; changed content changes the hash. |
-| Integrity | Trusted local store only; cached vectors are not re-verified against the model on read. |
-| GC | Not implemented. Superseded-version entries may remain until a later cleanup pass. |
+| Property | `embed_cache` (content-hash cache) | `embeddings` (per-record projection vectors) |
+|---|---|---|
+| Authority | None. No capability, no receipt; entries are not evidence. | Derived from committed records (`CommitReceipt.vector_effect == 0`). |
+| Canonical? | No. Canonical records/relations/receipts live in their own databases. | No. Canonical intake commits in `records`/`postings`/`nullifiers`/`receipts` first. |
+| Rebuildable? | Yes — from model computation over content; dropping the cache is safe. | Yes — via bounded `Substrate::repair_missing_vectors` (`memory.repair_vectors`), replay, or duplicate-retry repair. |
+| Atomicity | Outside the canonical LMDB transaction (Article 9 boundary). | Written in a separate LMDB transaction after `commit_intake`; status is exposed as `ready`, `pending`, `not_requested`, or `record_absent`. |
+| Reachability | Only when projection is enabled (`embed_cached`); projection-disabled recall performs no writes. | Written on projection-enabled intake or explicit bounded repair; read-only handles never write. |
+| Key / Format | `{MODEL_ID}:v{EMBED_CACHE_FORMAT_VERSION}:{sha256(content)}` | `u64` big-endian record ID → MessagePack `Vec<f32>` (`DIM = 384`, all finite, pinned to `MODEL_ID = "Qdrant/bge-small-en-v1.5-onnx-Q"`). |
+| Liveness / T10 Guard | Content-addressed cache only; never indexed directly by recall. | `Store::put_vector` verifies inside its LMDB RW transaction that `record_id` still exists in `records`, preventing repair from ever resurrecting a removed or erased record. |
 
 ## Evidence on the current tree
 

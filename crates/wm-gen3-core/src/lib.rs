@@ -116,7 +116,9 @@ pub use valkyrie::{
 };
 
 pub use factory::{FactoryAdjudication, FactoryCandidate, SoftwareFactory, SoftwareFactoryConfig};
-pub use ops::{SessionCheckpoint, SessionContinuityView};
+pub use ops::{
+    SessionCheckpoint, SessionContinuityView, VectorProjectionState, VectorRepairReport,
+};
 pub use sweep::{ChamberAuditReport, CognitiveChamber, is_disposable_telemetry};
 pub use transport::{
     ContextCacheToken, GraphEdge, GraphNode, RepresentationTransport, ToolSchemaDefinition,

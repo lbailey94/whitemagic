@@ -9,7 +9,6 @@
 //! construction or re-label path (Closure 2).
 
 use std::borrow::Cow;
-#[cfg(test)]
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -236,6 +235,8 @@ pub struct Store {
     cached_relations_view: Mutex<Option<(u64, Arc<RelationsView>)>>,
     #[cfg(test)]
     fail_after_stage: Cell<Option<u8>>,
+    /// Fault-injection switch for post-commit derived vector writes (`put_vector`).
+    fail_put_vector: Cell<bool>,
     /// Structural debug counter: stored-record decodes performed by this handle.
     #[cfg(test)]
     decode_count: Cell<u64>,
@@ -576,6 +577,7 @@ impl Store {
             cached_relations_view: Mutex::new(None),
             #[cfg(test)]
             fail_after_stage: Cell::new(None),
+            fail_put_vector: Cell::new(false),
             #[cfg(test)]
             decode_count: Cell::new(0),
         })
@@ -1668,15 +1670,83 @@ impl Store {
         self.decode_count.get()
     }
 
+    /// Enable or disable deterministic fault injection on [`Self::put_vector`].
+    pub fn set_fail_put_vector(&self, fail: bool) {
+        self.fail_put_vector.set(fail);
+    }
+
     /// Record vector by id (L2-normalized f32[384]).
+    ///
+    /// Enforces two invariants inside the LMDB write transaction:
+    /// 1. Vector dimension must equal [`crate::projection::DIM`] (`384`) with all finite values.
+    /// 2. Record `id` must still exist in `records` (T10 non-resurrection guard: a repair or
+    ///    delayed write can never attach a vector to a removed/erased record).
     pub(crate) fn put_vector(&self, id: u64, vector: &[f32]) -> Result<(), StoreError> {
         self.ensure_writable()?;
+        if self.fail_put_vector.get() {
+            return Err(StoreError::Msg("injected put_vector failure".into()));
+        }
+        if vector.len() != crate::projection::DIM || !vector.iter().all(|v| v.is_finite()) {
+            return Err(StoreError::Msg(format!(
+                "invalid vector dimension {} (expected {}) or non-finite element",
+                vector.len(),
+                crate::projection::DIM
+            )));
+        }
         let key = bytes_u64(id);
         let value = rmp_serde::to_vec(&vector.to_vec())?;
         let mut txn = self.env.begin_rw_txn()?;
+        if txn.get(self.records, &key).is_err() {
+            return Err(StoreError::Msg(format!(
+                "refusing to write vector for absent or erased record {id}"
+            )));
+        }
         txn.put(self.embeddings, &key, &value, lmdb::WriteFlags::empty())?;
         txn.commit()?;
         Ok(())
+    }
+
+    /// Returns true iff `embeddings` holds a decodable, finite 384-D vector for `id`.
+    pub fn has_valid_vector(&self, id: u64) -> Result<bool, StoreError> {
+        Ok(self
+            .get_vector(id)?
+            .is_some_and(|v| v.len() == crate::projection::DIM && v.iter().all(|x| x.is_finite())))
+    }
+
+    /// Bounded scan over live `records` returning `(records_scanned, missing_record_ids)`
+    /// for up to `max_records` live records whose `embeddings` entry is absent or invalid.
+    pub fn missing_vector_record_ids(
+        &self,
+        max_records: usize,
+    ) -> Result<(usize, Vec<u64>), StoreError> {
+        if max_records == 0 {
+            return Ok((0, Vec::new()));
+        }
+        let txn = self.env.begin_ro_txn()?;
+        let mut cursor = txn.open_ro_cursor(self.records)?;
+        let mut scanned = 0usize;
+        let mut missing = Vec::new();
+        for (key, _bytes) in cursor.iter() {
+            if key.len() != 8 {
+                continue;
+            }
+            let id = record_key_id(key)?;
+            scanned += 1;
+            let valid = match txn.get(self.embeddings, &key) {
+                Ok(vbytes) => rmp_serde::from_slice::<Vec<f32>>(vbytes).is_ok_and(|v| {
+                    v.len() == crate::projection::DIM && v.iter().all(|x| x.is_finite())
+                }),
+                Err(lmdb::Error::NotFound) => false,
+                Err(e) => return Err(e.into()),
+            };
+            if !valid {
+                missing.push(id);
+                if missing.len() >= max_records {
+                    break;
+                }
+            }
+        }
+        Ok((scanned, missing))
     }
 
     pub fn get_vector(&self, id: u64) -> Result<Option<Vec<f32>>, StoreError> {

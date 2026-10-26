@@ -426,18 +426,44 @@ fn handle_route(
                 Err(error) => return Some(json!({"status":"error", "error":error.to_string()})),
             };
             match substrate.remember_authorized(intake_authority, request) {
-                Ok(outcome) => Some(json!({
-                    "status":"success",
-                    "record_id":outcome.receipt.record_id,
-                    "created_at":outcome.receipt.created_at,
-                    "pre_epoch":outcome.receipt.pre_epoch,
-                    "post_epoch":outcome.receipt.post_epoch,
-                    "realm_id":hex_bytes(&outcome.receipt.realm_id),
-                    "operation_id":hex_bytes(outcome.receipt.operation_id.as_bytes()),
-                    "manifest_digest":hex_bytes(&outcome.receipt.manifest_digest),
-                    "replayed":outcome.disposition == CommitDisposition::Replay,
-                })),
+                Ok(outcome) => {
+                    let vector_state = substrate
+                        .vector_projection_state(outcome.receipt.record_id)
+                        .ok();
+                    Some(json!({
+                        "status":"success",
+                        "record_id":outcome.receipt.record_id,
+                        "created_at":outcome.receipt.created_at,
+                        "pre_epoch":outcome.receipt.pre_epoch,
+                        "post_epoch":outcome.receipt.post_epoch,
+                        "realm_id":hex_bytes(&outcome.receipt.realm_id),
+                        "operation_id":hex_bytes(outcome.receipt.operation_id.as_bytes()),
+                        "manifest_digest":hex_bytes(&outcome.receipt.manifest_digest),
+                        "replayed":outcome.disposition == CommitDisposition::Replay,
+                        "vector_state":vector_state,
+                    }))
+                }
                 Err(error) => Some(json!({"status":"error", "error":error})),
+            }
+        }
+        "memory.repair_vectors" => {
+            let max_records = args
+                .get("max_records")
+                .and_then(Value::as_u64)
+                .unwrap_or(64)
+                .clamp(1, 1024) as usize;
+            match substrate.repair_missing_vectors(max_records) {
+                Ok(report) => Some(json!({
+                    "status": "success",
+                    "scanned": report.scanned,
+                    "missing_found": report.missing_found,
+                    "repaired": report.repaired,
+                    "failed": report.failed,
+                    "skipped_absent_or_erased": report.skipped_absent_or_erased,
+                    "model_id": report.model_id,
+                    "dimension": report.dimension,
+                })),
+                Err(error) => Some(json!({"status": "error", "error": error})),
             }
         }
         "memory.episodic_search" => {
