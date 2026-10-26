@@ -1652,6 +1652,7 @@ impl Substrate {
             crate::store::StoredVectorState::Legacy => {
                 return Ok(VectorProjectionState::UnknownLegacy);
             }
+            crate::store::StoredVectorState::Pending => return Ok(VectorProjectionState::Pending),
             crate::store::StoredVectorState::Missing => {}
         }
         Ok(VectorProjectionState::UnknownMissing)
@@ -1684,8 +1685,12 @@ impl Substrate {
         {
             crate::store::StoredVectorState::Current => return Ok(VectorProjectionState::Ready),
             crate::store::StoredVectorState::Legacy => {}
+            crate::store::StoredVectorState::Pending => {}
             crate::store::StoredVectorState::Missing => {}
         }
+        self.store
+            .mark_vector_requested(record_id)
+            .map_err(|error| error.to_string())?;
         let expected_hash = sha256_hex(record.content().as_bytes());
         let text = record.content().to_string();
         let vec_res = self.embed_cached(&[text]).and_then(|mut vs| {

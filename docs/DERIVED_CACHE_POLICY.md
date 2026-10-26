@@ -1,4 +1,4 @@
-# Derived embedding-cache and projection-vector policy — updated 2026-10-25
+# Derived embedding-cache and projection-vector policy — updated 2026-10-26
 
 Status: policy for the persistent derived embedding cache (`embed_cache` LMDB database) and
 per-record projection vectors (`embeddings` LMDB database). It resolves the Article 7 boundary
@@ -15,7 +15,7 @@ databases hold **derived state**, never canonical evidence.
 | Rebuildable? | Yes — from model computation over content; dropping the cache is safe. | Yes — by explicit bounded `memory.repair_vectors` calls with `max_records` and optional `after_record_id` continuation. |
 | Atomicity | Outside the canonical LMDB transaction (Article 9 boundary). | Written in a separate LMDB transaction after a fresh `commit_intake`; receipts keep `vector_effect == 0`. |
 | Reachability | Only when projection is enabled (`embed_cached`); projection-disabled recall performs no writes. | Fresh authorized intake may project; replay and duplicate refusal do not repair. Operator repair is writable-only; recall never migrates or repairs rows. |
-| Key / Format | `{MODEL_ID}:v{EMBED_CACHE_FORMAT_VERSION}:{sha256(content)}` | Vector rows remain MessagePack `Vec<f32>` for old-reader compatibility. A sibling key in the same LMDB database stores format version, model ID, dimension, and the vector-value digest atomically with the vector. Existing raw rows without provenance report `unknown_legacy`; absent rows report `unknown_missing` because no durable request marker exists. Unattributed or incompatible vectors are not returned to semantic scoring and are replaced only by explicit repair. |
+| Key / Format | `{MODEL_ID}:v{EMBED_CACHE_FORMAT_VERSION}:{sha256(content)}` | Vector rows remain MessagePack `Vec<f32>` for old-reader compatibility. Sibling keys store atomic format/model/dimension/value-digest provenance and explicit request status. Existing raw rows without provenance report `unknown_legacy`; absent rows without request evidence report `unknown_missing`. A fresh authorized projection or explicit repair records a model/content-bound request before embedding, so failure remains `pending` across restart. Success replaces request status with ready provenance; erasure removes both. Unattributed or incompatible vectors never enter semantic scoring. |
 | Liveness / T10 Guard | Content-addressed cache only; never indexed directly by recall. | `Store::put_vector` verifies inside its LMDB RW transaction that `record_id` still exists in `records`, preventing repair from ever resurrecting a removed or erased record. |
 
 ## Evidence on the current tree

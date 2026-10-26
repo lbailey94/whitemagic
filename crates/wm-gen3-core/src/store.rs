@@ -64,6 +64,7 @@ const META_IDENTITY_INDEX: &[u8] = b"__iidx__";
 pub(crate) enum StoredVectorState {
     Missing,
     Legacy,
+    Pending,
     Current,
 }
 
@@ -76,11 +77,24 @@ struct StoredVectorProvenance {
 }
 const VECTOR_FORMAT_VERSION: u8 = 1;
 const VECTOR_META_PREFIX: &[u8] = b"__wmv1:";
+const VECTOR_REQUEST_PREFIX: &[u8] = b"__wmvr1:";
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct StoredVectorRequest {
+    format_version: u8,
+    model_id: String,
+    dimension: usize,
+    content_sha256: String,
+}
 // lmdb 0.8 exposes cursor operation integers directly; MDB_SET_RANGE is 17.
 const MDB_SET_RANGE: u32 = 17;
 
 fn vector_meta_key(id: u64) -> Vec<u8> {
     [VECTOR_META_PREFIX, &bytes_u64(id)].concat()
+}
+
+fn vector_request_key(id: u64) -> Vec<u8> {
+    [VECTOR_REQUEST_PREFIX, &bytes_u64(id)].concat()
 }
 
 fn decode_vector(bytes: &[u8]) -> Result<Vec<f32>, rmp_serde::decode::Error> {
@@ -1520,6 +1534,10 @@ impl Store {
             Ok(()) | Err(lmdb::Error::NotFound) => {}
             Err(error) => return Err(error.into()),
         }
+        match txn.del(self.embeddings, &vector_request_key(id), None) {
+            Ok(()) | Err(lmdb::Error::NotFound) => {}
+            Err(error) => return Err(error.into()),
+        }
         txn.commit()?;
         Ok(true)
     }
@@ -1720,6 +1738,31 @@ impl Store {
         self.fail_put_vector.set(fail);
     }
 
+    /// Record an explicit projection attempt separately from the canonical
+    /// receipt. Missing legacy rows have no such evidence and remain unknown.
+    pub(crate) fn mark_vector_requested(&self, id: u64) -> Result<(), StoreError> {
+        self.ensure_writable()?;
+        let record = self
+            .get_record(id)?
+            .ok_or_else(|| StoreError::Msg(format!("projection record {id} is absent")))?;
+        let request = rmp_serde::to_vec(&StoredVectorRequest {
+            format_version: VECTOR_FORMAT_VERSION,
+            model_id: crate::projection::MODEL_ID.into(),
+            dimension: crate::projection::DIM,
+            content_sha256: crate::journal::sha256_hex(record.content().as_bytes()),
+        })?;
+        let mut txn = self.env.begin_rw_txn()?;
+        txn.get(self.records, &bytes_u64(id))?;
+        txn.put(
+            self.embeddings,
+            &vector_request_key(id),
+            &request,
+            lmdb::WriteFlags::empty(),
+        )?;
+        txn.commit()?;
+        Ok(())
+    }
+
     /// Record vector by id (L2-normalized f32[384]).
     ///
     /// Enforces two invariants inside the LMDB write transaction:
@@ -1759,6 +1802,10 @@ impl Store {
             &provenance,
             lmdb::WriteFlags::empty(),
         )?;
+        match txn.del(self.embeddings, &vector_request_key(id), None) {
+            Ok(()) | Err(lmdb::Error::NotFound) => {}
+            Err(error) => return Err(error.into()),
+        }
         txn.commit()?;
         Ok(())
     }
@@ -1770,23 +1817,47 @@ impl Store {
 
     pub(crate) fn vector_state(&self, id: u64) -> Result<StoredVectorState, StoreError> {
         let txn = self.env.begin_ro_txn()?;
-        match txn.get(self.embeddings, &bytes_u64(id)) {
+        let state: Result<StoredVectorState, StoreError> = match txn
+            .get(self.embeddings, &bytes_u64(id))
+        {
             Ok(bytes) => {
                 let vector = decode_vector(bytes)?;
                 if vector.len() != crate::projection::DIM || !vector.iter().all(|x| x.is_finite()) {
-                    return Ok(StoredVectorState::Legacy);
-                }
-                match txn.get(self.embeddings, &vector_meta_key(id)) {
-                    Ok(metadata) if provenance_matches(metadata, bytes)? => {
-                        Ok(StoredVectorState::Current)
+                    Ok(StoredVectorState::Legacy)
+                } else {
+                    match txn.get(self.embeddings, &vector_meta_key(id)) {
+                        Ok(metadata) if provenance_matches(metadata, bytes)? => {
+                            Ok(StoredVectorState::Current)
+                        }
+                        Ok(_) | Err(lmdb::Error::NotFound) => Ok(StoredVectorState::Legacy),
+                        Err(e) => Err(e.into()),
                     }
-                    Ok(_) | Err(lmdb::Error::NotFound) => Ok(StoredVectorState::Legacy),
-                    Err(e) => Err(e.into()),
                 }
             }
             Err(lmdb::Error::NotFound) => Ok(StoredVectorState::Missing),
             Err(e) => Err(e.into()),
+        };
+        let state = state?;
+        if state == StoredVectorState::Current {
+            return Ok(state);
         }
+        let request: Option<StoredVectorRequest> =
+            match txn.get(self.embeddings, &vector_request_key(id)) {
+                Ok(bytes) => Some(rmp_serde::from_slice(bytes)?),
+                Err(lmdb::Error::NotFound) => None,
+                Err(error) => return Err(error.into()),
+            };
+        drop(txn);
+        if let Some(request) = request
+            && request.format_version == VECTOR_FORMAT_VERSION
+            && request.model_id == crate::projection::MODEL_ID
+            && request.dimension == crate::projection::DIM
+            && let Some(record) = self.get_record(id)?
+            && request.content_sha256 == crate::journal::sha256_hex(record.content().as_bytes())
+        {
+            return Ok(StoredVectorState::Pending);
+        }
+        Ok(state)
     }
 
     /// Bounded scan over live `records` returning `(records_scanned, missing_record_ids)`
@@ -2883,6 +2954,41 @@ mod tests {
     }
 
     #[test]
+    fn projection_request_status_survives_reopen_without_relabeling_legacy() {
+        let dir = TempStore::new("projection-pending");
+        let store = Store::open(&dir.0).unwrap();
+        let req = request(&store, [0x62; 16], 0, "explicit projection request");
+        let result = store
+            .commit_intake(
+                capability(&store, &req),
+                &req,
+                &crate::field::tokenize(req.content()),
+            )
+            .unwrap();
+        let id = result.receipt.record_id;
+        assert_eq!(store.vector_state(id).unwrap(), StoredVectorState::Missing);
+        store.mark_vector_requested(id).unwrap();
+        assert_eq!(store.vector_state(id).unwrap(), StoredVectorState::Pending);
+        drop(store);
+        let readonly = Store::open_readonly(&dir.0).unwrap();
+        let before = data_hash(&dir.0);
+        assert_eq!(
+            readonly.vector_state(id).unwrap(),
+            StoredVectorState::Pending
+        );
+        assert!(readonly.mark_vector_requested(id).is_err());
+        assert_eq!(data_hash(&dir.0), before);
+        drop(readonly);
+        let store = Store::open(&dir.0).unwrap();
+        store
+            .put_vector(id, &vec![0.5; crate::projection::DIM])
+            .unwrap();
+        assert_eq!(store.vector_state(id).unwrap(), StoredVectorState::Current);
+        let txn = store.env.begin_ro_txn().unwrap();
+        assert!(txn.get(store.embeddings, &vector_request_key(id)).is_err());
+    }
+
+    #[test]
     fn erase_removes_vector_and_provenance_atomically() {
         let dir = TempStore::new("projection-provenance-erase");
         let store = Store::open(&dir.0).unwrap();
@@ -2901,10 +3007,12 @@ mod tests {
             .put_vector(id, &vec![0.5f32; crate::projection::DIM])
             .unwrap();
         assert_eq!(store.vector_state(id).unwrap(), StoredVectorState::Current);
+        store.mark_vector_requested(id).unwrap();
         assert!(store.remove_record_and_indexes(id).unwrap());
         let txn = store.env.begin_ro_txn().unwrap();
         assert!(txn.get(store.embeddings, &bytes_u64(id)).is_err());
         assert!(txn.get(store.embeddings, &vector_meta_key(id)).is_err());
+        assert!(txn.get(store.embeddings, &vector_request_key(id)).is_err());
     }
 
     fn assert_intake_unchanged(store: &Store, before: [u8; 32]) {
