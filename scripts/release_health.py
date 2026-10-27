@@ -335,10 +335,18 @@ def probe_github(repo: str, version: str, pubkey_hex: str | None = None) -> dict
 
 def probe_crates(version: str) -> dict:
     script = Path(__file__).resolve().parent / "crates_publish_order.py"
+    # Normal invocations belong to this checkout, independent of the caller's
+    # cwd. CI also copies the checker/helpers to RUNNER_TEMP before checking
+    # out an older release; those saved copies intentionally use the selected
+    # tag checkout's manifest in cwd rather than the current source tree.
+    manifest = script.parent.parent / "Cargo.toml"
+    if not manifest.is_file():
+        manifest = Path.cwd() / "Cargo.toml"
     try:
         order = json.loads(
             subprocess.check_output(
-                [sys.executable, str(script), "--json"], text=True
+                [sys.executable, str(script), "--manifest-path", str(manifest), "--json"],
+                text=True,
             )
         )
     except (subprocess.CalledProcessError, json.JSONDecodeError) as exc:

@@ -318,7 +318,7 @@ fn h9c4_requalified_projection_intake_and_sweep() {
 }
 
 /// H9C-5: Post-commit vector failure, reopen, bounded repair, replay idempotence,
-/// duplicate-retry repair, read-only refusal, and T10 non-resurrection of erased records.
+/// refusal write-purity, read-only refusal, and T10 non-resurrection of erased records.
 #[test]
 fn h9c5_vector_ingestion_failure_reopen_repair_and_t10_erasure_guard() {
     use wm_gen3_core::VectorProjectionState;
@@ -331,11 +331,12 @@ fn h9c5_vector_ingestion_failure_reopen_repair_and_t10_erasure_guard() {
     }
 
     let dir = TempDir::new("h9c5-vector-repair");
+    let journal_path = dir.path().join("journal.jsonl");
     let op_id = OperationId::from_bytes([0x5A; 16]);
 
     // 1. Force put_vector failure during authorized intake: canonical commit succeeds, vector is Pending.
     let (committed_receipt, realm_id, pre_epoch) = {
-        let mut s = Substrate::open(dir.path(), None, default_view()).expect("open");
+        let mut s = Substrate::open(dir.path(), Some(&journal_path), default_view()).expect("open");
         let authority = RatifiedChannel::mint("test:h9c5");
         s.set_intake_authority(RatifiedChannel::mint("test:h9c5"));
         s.set_projection_enabled(true, Some(&cache_dir))
@@ -377,7 +378,8 @@ fn h9c5_vector_ingestion_failure_reopen_repair_and_t10_erasure_guard() {
 
     // 2. Read-only reopen: state is discoverable, repair is refused with zero writes.
     {
-        let mut ro = Substrate::open_readonly(dir.path(), None, default_view()).expect("open ro");
+        let mut ro = Substrate::open_readonly(dir.path(), Some(&journal_path), default_view())
+            .expect("open ro");
         ro.set_projection_enabled(true, Some(&cache_dir))
             .expect("projection loads on ro");
         assert_eq!(
@@ -390,7 +392,8 @@ fn h9c5_vector_ingestion_failure_reopen_repair_and_t10_erasure_guard() {
 
     // 3. Writable reopen: bounded repair fails while fault is active, then succeeds once cleared.
     {
-        let mut s = Substrate::open(dir.path(), None, default_view()).expect("reopen rw");
+        let mut s =
+            Substrate::open(dir.path(), Some(&journal_path), default_view()).expect("reopen rw");
         let authority = RatifiedChannel::mint("test:h9c5");
         s.set_intake_authority(RatifiedChannel::mint("test:h9c5"));
         s.set_projection_enabled(true, Some(&cache_dir))
@@ -431,6 +434,8 @@ fn h9c5_vector_ingestion_failure_reopen_repair_and_t10_erasure_guard() {
             "corp:repair".to_string(),
         )
         .expect("req replay");
+        let replay_db_before = std::fs::read(dir.path().join("data.mdb")).expect("db snapshot");
+        let replay_journal_before = std::fs::read(&journal_path).expect("journal snapshot");
         let replay = s
             .remember_authorized(&authority, req_replay)
             .expect("replay succeeds");
@@ -438,8 +443,18 @@ fn h9c5_vector_ingestion_failure_reopen_repair_and_t10_erasure_guard() {
         assert_eq!(replay.receipt, committed_receipt);
         assert_eq!(s.intake_epoch().unwrap(), epoch_before);
         assert_eq!(s.store().record_count().unwrap(), 1);
+        assert_eq!(
+            std::fs::read(dir.path().join("data.mdb")).expect("db after replay"),
+            replay_db_before,
+            "stable receipt replay must not write LMDB derived or canonical state"
+        );
+        assert_eq!(
+            std::fs::read(&journal_path).expect("journal after replay"),
+            replay_journal_before,
+            "receipt replay must not append a projection journal entry"
+        );
 
-        // 5. Duplicate batch retry opportunistically repairs a missing vector while still returning duplicate_exact.
+        // 5. Duplicate refusal does not repair; only the explicit operator call writes derived state.
         s.store().set_fail_put_vector(true);
         let batch_items = vec![item("duplicate retry vector target", "corp:repair")];
         let r1 = s.remember_batch(&batch_items);
@@ -449,12 +464,46 @@ fn h9c5_vector_ingestion_failure_reopen_repair_and_t10_erasure_guard() {
             VectorProjectionState::Pending
         );
         s.store().set_fail_put_vector(false);
+        let refusal_db_before = std::fs::read(dir.path().join("data.mdb")).expect("db snapshot");
+        let projection_events_before = std::fs::read_to_string(&journal_path)
+            .unwrap()
+            .lines()
+            .filter(|line| line.contains("\"type\":\"projection."))
+            .count();
         let r2 = s.remember_batch(&batch_items);
         assert_eq!(r2[0], Err("duplicate_exact".to_string()));
         assert_eq!(
-            s.vector_projection_state(*dup_id).unwrap(),
-            VectorProjectionState::Ready
+            std::fs::read(dir.path().join("data.mdb")).expect("db after refusal"),
+            refusal_db_before,
+            "duplicate refusal must not write vector or embedding cache state"
         );
+        let projection_events_after = std::fs::read_to_string(&journal_path)
+            .unwrap()
+            .lines()
+            .filter(|line| line.contains("\"type\":\"projection."))
+            .count();
+        assert_eq!(
+            projection_events_after, projection_events_before,
+            "duplicate refusal may audit refusal but must not append projection events"
+        );
+        assert_eq!(
+            s.vector_projection_state(*dup_id).unwrap(),
+            VectorProjectionState::Pending
+        );
+        let explicit = s.repair_record_vector(*dup_id).expect("explicit repair");
+        assert_eq!(explicit, VectorProjectionState::Ready);
+
+        // A one-row scan is bounded even when the scanned row has no hole;
+        // the continuation lets the caller cover later rows on a new request.
+        let page = s
+            .repair_missing_vectors_after(1, None)
+            .expect("bounded page");
+        assert_eq!(page.scanned, 1);
+        assert_eq!(page.continuation, Some(committed_receipt.record_id));
+        let next = s
+            .repair_missing_vectors_after(1, page.continuation)
+            .expect("next page");
+        assert!(next.scanned <= 1);
 
         // 6. T10 Erasure / Compensation Non-Resurrection Guard:
         // If a record is removed/compensated while its vector is pending, repair must NEVER resurrect it.

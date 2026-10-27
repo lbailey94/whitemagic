@@ -72,6 +72,7 @@ jobs:
           # checks use the tag tree's scripts and package manifests below.
           cp scripts/release_health.py "$RUNNER_TEMP/release_health.py"
           cp scripts/crates_publish_order.py "$RUNNER_TEMP/crates_publish_order.py"
+          cp scripts/release_channels.py "$RUNNER_TEMP/release_channels.py"
           git fetch --depth=1 origin "refs/tags/v${V}"
           git checkout --detach FETCH_HEAD
           TREE_V="$(python3 -c "import tomllib;print(tomllib.load(open('Cargo.toml','rb'))['workspace']['package']['version'])")"
@@ -112,17 +113,17 @@ jobs:
         run: |
           [ -s release-health.json ] || { echo "no probe record; skipping retry"; exit 0; }
           [ "$(jq -r '.registries.npm.status' release-health.json)" = "live" ] && { echo "npm live"; exit 0; }
+          if ! jq -e '.registries["github-release"].status == "live"
+                     and .registries["github-release"].manifest_signature_valid == true
+                     and .registries["github-release"].artifact_integrity == "verified"' release-health.json >/dev/null; then
+            echo "signed complete release assets are not verified; refusing npm publication"
+            exit 0
+          fi
           cd npm/whitemagic-mcp
           VERSION="${{ steps.version.outputs.version }}"
-          # Phase 2 (2026-10-15): prerelease status comes from the release
-          # object, not a '-' suffix guess — a suffix-less prerelease (10.3.0)
-          # would otherwise publish as npm `latest`.
-          PRERELEASE="$(gh api "repos/${{ github.repository }}/releases/tags/v${VERSION}" --jq '.prerelease' 2>/dev/null || echo true)"
-          if [ "$PRERELEASE" = "true" ]; then
-            npm publish --access public --tag next
-          else
-            npm publish --access public
-          fi
+          # Repairs stage the exact package on quarantine and cannot advance
+          # latest/next until the downloaded exact version is certified.
+          npm publish --access public --tag quarantine
 
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         if: ${{ !cancelled() }}
@@ -134,6 +135,12 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           [ -s release-health.json ] || { echo "no probe record; skipping retry"; exit 0; }
+          if ! jq -e '.registries["github-release"].status == "live"
+                     and .registries["github-release"].manifest_signature_valid == true
+                     and .registries["github-release"].artifact_integrity == "verified"' release-health.json >/dev/null; then
+            echo "signed complete release assets are not verified; refusing crate publication"
+            exit 0
+          fi
           VERSION="${{ steps.version.outputs.version }}"
           TREE_V="$(python3 -c "import tomllib;print(tomllib.load(open('Cargo.toml','rb'))['workspace']['package']['version'])")"
           if [ "$TREE_V" != "$VERSION" ]; then
@@ -161,18 +168,16 @@ jobs:
           if [ "$(jq -r '.registries.docker.status' release-health.json)" = "live" ]; then
             echo "docker live"; exit 0
           fi
-          if [ -z "${DOCKERHUB_TOKEN:-}" ]; then echo "DOCKERHUB_TOKEN not set - cannot retry"; exit 0; fi
-          VERSION="${{ steps.version.outputs.version }}"; MAJOR="${VERSION%%.*}"
-          echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-          # Prereleases tag only the exact version; latest/major stay stable.
-          # Phase 2 (2026-10-15): use the release's prerelease flag, not a '-'
-          # suffix guess (a suffix-less prerelease would stomp latest/major).
-          PRERELEASE="$(gh api "repos/${{ github.repository }}/releases/tags/v${VERSION}" --jq '.prerelease' 2>/dev/null || echo true)"
-          if [ "$PRERELEASE" = "true" ]; then
-            TAGS=(-t "lbailey94/whitemagic:${VERSION}")
-          else
-            TAGS=(-t "lbailey94/whitemagic:${VERSION}" -t "lbailey94/whitemagic:${MAJOR}" -t lbailey94/whitemagic:latest)
+          if ! jq -e '.registries["github-release"].status == "live"
+                     and .registries["github-release"].manifest_signature_valid == true
+                     and .registries["github-release"].artifact_integrity == "verified"' release-health.json >/dev/null; then
+            echo "signed complete release assets are not verified; refusing Docker publication"
+            exit 0
           fi
+          if [ -z "${DOCKERHUB_TOKEN:-}" ]; then echo "DOCKERHUB_TOKEN not set - cannot retry"; exit 0; fi
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+          TAGS=(-t "lbailey94/whitemagic:${VERSION}")
           docker build --build-arg "WM_VERSION=v${VERSION}" "${TAGS[@]}" .
           for tag in "${TAGS[@]}"; do
             [ "$tag" = "-t" ] && continue
@@ -186,6 +191,12 @@ jobs:
           [ -s release-health.json ] || { echo "no probe record; skipping retry"; exit 0; }
           if [ "$(jq -r '.registries["mcp-registry"].status' release-health.json)" = "live" ]; then
             echo "mcp-registry live"; exit 0
+          fi
+          if ! jq -e '.registries["github-release"].status == "live"
+                     and .registries["github-release"].manifest_signature_valid == true
+                     and .registries["github-release"].artifact_integrity == "verified"' release-health.json >/dev/null; then
+            echo "signed complete release assets are not verified; refusing MCP publication"
+            exit 0
           fi
           curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz -C /tmp mcp-publisher
           cd npm/whitemagic-mcp
@@ -215,19 +226,34 @@ jobs:
       # ── Install certification: the published artifacts must run ──
 
       - name: Certify npm install (download funnel + selftest)
-        continue-on-error: true
+        if: always()
         run: |
           [ "$(jq -r '.registries.npm.status' release-health.json)" = "live" ] || exit 0
-          npm install -g "whitemagic-mcp@${{ steps.version.outputs.version }}"
-          whitemagic-mcp selftest --json > npm-selftest.json
+          if ! npm install -g "whitemagic-mcp@${{ steps.version.outputs.version }}" > npm-install.log 2>&1; then
+            tail -40 npm-install.log
+            printf '{"status":"failed","invariants":"fail","reason":"exact-version npm install failed"}\n' > npm-selftest.json
+            exit 1
+          fi
+          if ! whitemagic-mcp selftest --json > npm-selftest.json 2> npm-selftest.stderr; then
+            tail -40 npm-selftest.stderr
+            [ -s npm-selftest.json ] || printf '{"status":"failed","invariants":"fail","reason":"exact-version npm selftest failed"}\n' > npm-selftest.json
+            exit 1
+          fi
+          jq -e '.status == "ok" or .passed == true' npm-selftest.json >/dev/null
 
       - name: Certify Docker image (run + selftest)
-        continue-on-error: true
+        if: always()
         run: |
           [ "$(jq -r '.registries.docker.status' release-health.json)" = "live" ] || exit 0
-          docker run --rm "lbailey94/whitemagic:${{ steps.version.outputs.version }}" selftest --json > docker-selftest.json
+          if ! docker run --rm "lbailey94/whitemagic:${{ steps.version.outputs.version }}" selftest --json > docker-selftest.json 2> docker-selftest.stderr; then
+            tail -40 docker-selftest.stderr
+            [ -s docker-selftest.json ] || printf '{"status":"failed","invariants":"fail","reason":"exact-version Docker selftest failed"}\n' > docker-selftest.json
+            exit 1
+          fi
+          jq -e '.status == "ok" or .passed == true' docker-selftest.json >/dev/null
 
       - name: Merge certifications into the record
+        if: always()
         run: |
           python3 - <<'PY'
           import json, pathlib, re
@@ -289,6 +315,7 @@ jobs:
           jq -c '.install_certification | map_values({status, runtime_selftest, artifact_integrity})' release-health.json
 
       - name: Upload the record to the GitHub Release
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -300,12 +327,13 @@ jobs:
           fi
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: ${{ !cancelled() }}
+        if: ${{ always() && !cancelled() }}
         with:
           name: release-health
           path: release-health*.json
 
       - name: Gate — every surface live, artifact integrity verified, and every install certified
+        if: always()
         run: |
           jq -e '.status == "healthy"' release-health.json >/dev/null \
             || { echo "registries still lagging:"; jq -c '.registries | to_entries[] | select(.value.status != "live") | {key, status: .value.status, manifest_error: .value.manifest_error}' release-health.json; exit 1; }
@@ -319,3 +347,62 @@ jobs:
                  and .install_certification.docker.bound_manifest_sha256 == .registries["github-release"].manifest_sha256' release-health.json >/dev/null \
             || { echo "install certification not passing:"; jq -c '.install_certification | map_values({status, runtime_selftest, artifact_integrity})' release-health.json; exit 1; }
           echo "release v${{ steps.version.outputs.version }} distribution health is healthy; CI/source qualification and performance qualification are not measured by this record"
+
+      - name: Promote certified npm selector
+        if: ${{ success() }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PRERELEASE="$(gh api "repos/${{ github.repository }}/releases/tags/v${VERSION}" --jq '.prerelease' 2>/dev/null || echo true)"
+          SELECTOR="$(python3 "$RUNNER_TEMP/release_channels.py" "$VERSION" "$PRERELEASE")"
+          CURRENT="$(npm view "whitemagic-mcp@${SELECTOR}" version 2>/dev/null || true)"
+          [ -n "$CURRENT" ] || { echo "cannot determine current npm ${SELECTOR}; refusing selector promotion" >&2; exit 1; }
+          DECISION="$(python3 "$RUNNER_TEMP/release_channels.py" "$VERSION" "$PRERELEASE" "${CURRENT:-<none>}")"
+          if [ "$DECISION" = "skip" ]; then
+            echo "npm ${SELECTOR} already points to newer ${CURRENT}; refusing downgrade to ${VERSION}"
+          elif [ "$CURRENT" != "$VERSION" ]; then
+            npm dist-tag add "whitemagic-mcp@${VERSION}" "$SELECTOR"
+          else
+            echo "npm ${SELECTOR} already points to ${VERSION}"
+          fi
+
+      - name: Promote certified stable Docker aliases
+        if: ${{ success() }}
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PRERELEASE="$(gh api "repos/${{ github.repository }}/releases/tags/v${VERSION}" --jq '.prerelease' 2>/dev/null || echo true)"
+          SELECTOR="$(python3 "$RUNNER_TEMP/release_channels.py" "$VERSION" "$PRERELEASE")"
+          [ "$SELECTOR" = "latest" ] || { echo "${VERSION} is preview; no stable Docker aliases to move"; exit 0; }
+          [ -n "${DOCKERHUB_TOKEN:-}" ] || { echo "Docker Hub token unavailable; stable aliases remain unchanged"; exit 1; }
+          echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+          SOURCE="lbailey94/whitemagic:${VERSION}"
+          docker buildx imagetools inspect "$SOURCE"
+          docker buildx imagetools inspect --raw "$SOURCE" > source-manifest.json
+          docker pull lbailey94/whitemagic:latest
+          CURRENT_DOCKER_VERSION="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' lbailey94/whitemagic:latest)"
+          CURRENT_DOCKER_VERSION="${CURRENT_DOCKER_VERSION#v}"
+          [ -n "$CURRENT_DOCKER_VERSION" ] && [ "$CURRENT_DOCKER_VERSION" != "<no value>" ] || {
+            echo "cannot determine the current Docker latest version; refusing selector promotion" >&2; exit 1;
+          }
+          DOCKER_DECISION="$(python3 "$RUNNER_TEMP/release_channels.py" "$VERSION" "$PRERELEASE" "$CURRENT_DOCKER_VERSION")"
+          [ "$DOCKER_DECISION" != "skip" ] || {
+            echo "Docker latest already points to newer ${CURRENT_DOCKER_VERSION}; refusing downgrade to ${VERSION}"; exit 0;
+          }
+          docker buildx imagetools create \
+            --tag lbailey94/whitemagic:9 \
+            --tag lbailey94/whitemagic:latest \
+            "$SOURCE"
+          for alias in 9 latest; do
+            docker buildx imagetools inspect "lbailey94/whitemagic:${alias}"
+            docker buildx imagetools inspect --raw "lbailey94/whitemagic:${alias}" > "${alias}-manifest.json"
+            cmp -s source-manifest.json "${alias}-manifest.json" || {
+              echo "stable Docker alias ${alias} does not preserve the exact version manifest digest" >&2
+              exit 1
+            }
+          done

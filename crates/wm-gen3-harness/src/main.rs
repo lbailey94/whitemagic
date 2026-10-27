@@ -430,9 +430,11 @@ fn handle_route(
             };
             match substrate.remember_authorized(intake_authority, request) {
                 Ok(outcome) => {
-                    let vector_state = substrate
-                        .vector_projection_state(outcome.receipt.record_id)
-                        .ok();
+                    let (vector_state, vector_state_error) =
+                        match substrate.vector_projection_state(outcome.receipt.record_id) {
+                            Ok(state) => (Some(state), None),
+                            Err(error) => (None, Some(error)),
+                        };
                     Some(json!({
                         "status":"success",
                         "record_id":outcome.receipt.record_id,
@@ -444,6 +446,7 @@ fn handle_route(
                         "manifest_digest":hex_bytes(&outcome.receipt.manifest_digest),
                         "replayed":outcome.disposition == CommitDisposition::Replay,
                         "vector_state":vector_state,
+                        "vector_state_error":vector_state_error,
                     }))
                 }
                 Err(error) => Some(json!({"status":"error", "error":error})),
@@ -455,7 +458,18 @@ fn handle_route(
                 .and_then(Value::as_u64)
                 .unwrap_or(64)
                 .clamp(1, 1024) as usize;
-            match substrate.repair_missing_vectors(max_records) {
+            let after_record_id = match args.get("after_record_id") {
+                None | Some(Value::Null) => None,
+                Some(value) => match value.as_u64() {
+                    Some(id) => Some(id),
+                    None => {
+                        return Some(json!({
+                            "status":"error", "error":"after_record_id must be an unsigned integer"
+                        }));
+                    }
+                },
+            };
+            match substrate.repair_missing_vectors_after(max_records, after_record_id) {
                 Ok(report) => Some(json!({
                     "status": "success",
                     "scanned": report.scanned,
@@ -465,6 +479,7 @@ fn handle_route(
                     "skipped_absent_or_erased": report.skipped_absent_or_erased,
                     "model_id": report.model_id,
                     "dimension": report.dimension,
+                    "continuation": report.continuation,
                 })),
                 Err(error) => Some(json!({"status": "error", "error": error})),
             }
