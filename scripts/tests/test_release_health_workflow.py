@@ -17,6 +17,23 @@ WORKFLOW = ROOT / ".github/workflows/release-health.yml"
 
 
 class ReleaseHealthWorkflowTests(unittest.TestCase):
+    def test_release_tail_probes_gen3_crates_and_preserves_npm_stable_selector(self) -> None:
+        release = (ROOT / "scripts/release.sh").read_text()
+        registry = release.split('banner "REGISTRIES"', 1)[1].split(
+            '# The MCP registry search index lags', 1
+        )[0]
+        for crate in (
+            "wm-gen3-core", "wm-gen3-shm", "wm-gen3-vault",
+            "wm-gen3-systemone", "wm-gen3-zeropointfive", "wm-gen3-harness",
+        ):
+            self.assertIn(crate, registry)
+        self.assertIn('https://crates.io/api/v1/crates/$crate', registry)
+        self.assertIn('registry.npmjs.org/whitemagic-mcp', registry)
+        self.assertIn("dist-tags\"].next", registry)
+        self.assertIn("dist-tags\"].latest", registry)
+        self.assertIn('if [ "$npm_latest" = "$VERSION" ]', registry)
+        self.assertNotIn('registry.npmjs.org/whitemagic-mcp/latest', registry)
+
     def test_selector_policy_keeps_gen3_preview_off_latest_even_when_misflagged(self) -> None:
         helper = ROOT / "scripts/release_channels.py"
         cases = (

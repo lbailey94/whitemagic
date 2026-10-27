@@ -286,11 +286,31 @@ probe_version() { # <label> <url> <jq-expr> [tries]
   echo "ERROR: $label reports '${got:-nothing}' (want $VERSION)"; return 1
 }
 if $DRY_RUN; then
-  echo "[dry-run] probe crates.io / npm / Docker Hub until they report $VERSION"
+  echo "[dry-run] probe the six Gen3 crates, npm next, and Docker Hub tag $VERSION"
 else
-  probe_version "crates.io (whitemagic)" "https://crates.io/api/v1/crates/whitemagic" '.crate.max_version' 40
-  probe_version "npm (whitemagic-mcp)" "https://registry.npmjs.org/whitemagic-mcp/latest" '.version' 24
-  probe_version "Docker Hub (tag ${VERSION})" "https://hub.docker.com/v2/repositories/lbailey94/whitemagic/tags/${VERSION}" '.name' 20
+  # Gen3 publishes the six wm-gen3-* packages. The workspace's legacy
+  # whitemagic crate is intentionally pinned to the stable Gen2 line.
+  for crate in wm-gen3-core wm-gen3-shm wm-gen3-vault wm-gen3-systemone \
+    wm-gen3-zeropointfive wm-gen3-harness; do
+    probe_version "crates.io ($crate)" \
+      "https://crates.io/api/v1/crates/$crate" '.crate.max_version' 40
+  done
+
+  # Gen3 is preview-only: verify the intended selector and make sure this
+  # release did not displace the stable Gen2 selector.
+  probe_version "npm (whitemagic-mcp next)" \
+    "https://registry.npmjs.org/whitemagic-mcp" '.["dist-tags"].next' 24
+  npm_latest=$(curl -fsS -m 20 -A "$UA" \
+    "https://registry.npmjs.org/whitemagic-mcp" \
+    | jq -r '.["dist-tags"].latest // ""')
+  if [ "$npm_latest" = "$VERSION" ]; then
+    echo "ERROR: Gen3 $VERSION was promoted to npm latest; stable selector must remain on Gen2"
+    exit 1
+  fi
+  echo "  npm (whitemagic-mcp latest): $npm_latest (Gen2 stable preserved)"
+
+  probe_version "Docker Hub (tag ${VERSION})" \
+    "https://hub.docker.com/v2/repositories/lbailey94/whitemagic/tags/${VERSION}" '.name' 20
 fi
 
 # The MCP registry search index lags the publish; the publish itself is in the
