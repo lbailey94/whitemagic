@@ -1780,6 +1780,34 @@ pub fn execute_hybrid_tool_call(
             handle_valkyrie_pulse(args)
         }
 
+        // ── Gen3 v10.6 Research Synthesis Routes (Beliefs, MemCut, TokenWorth, Obligations, ParetoGate) ──
+        "belief.register" | "belief_register" => handle_belief_register(args, substrate, readonly),
+        "belief.resolve" | "belief_resolve" => handle_belief_resolve(args, substrate, readonly),
+        "belief.list" | "belief_list" | "belief.active" => handle_belief_list(args, substrate),
+        "belief.calibrate" | "belief_calibrate" => handle_belief_calibrate(args, substrate),
+        "belief.cascade" | "belief.cascade_invalidation" => {
+            handle_belief_cascade(args, substrate, readonly)
+        }
+        "memory.erase_certified" | "memory_erase_certified" | "memcut.erase" => {
+            handle_memory_erase_certified(args, substrate, readonly)
+        }
+        "memory.record_outcome" | "memory_record_outcome" | "tokenworth.outcome" => {
+            handle_memory_record_outcome(args, substrate, readonly)
+        }
+        "memory.worth" | "memory_worth" | "tokenworth.inspect" => {
+            handle_memory_worth(args, substrate)
+        }
+        "obligation.register" | "obligation_register" => {
+            handle_obligation_register(args, substrate, readonly)
+        }
+        "obligation.discharge" | "obligation_discharge" => {
+            handle_obligation_discharge(args, substrate, readonly)
+        }
+        "obligation.list" | "obligation_list" | "obligation.pending" => {
+            handle_obligation_list(args, substrate)
+        }
+        "pareto.certify" | "pareto_certify" => handle_pareto_certify(args),
+
         unknown => Err(format!(
             "Unknown tool: '{unknown}'. Supported: memory.create, memory.search, memory.read, memory.list, galaxy.list, galaxy.fork, session.record, session.continuity, session.checkpoint, mandala.status, mandala.triage, mandala.evaluate, mesh_sync, sangha.status, sangha.inbox, sangha.post, sutra.cast, sutra.compile, sutra.canon, sutra.list, wm{SYSTEMONE_TOOL_HINT}{SYSTEM05_TOOL_HINT}{SYSTEM15_TOOL_HINT}"
         )),
@@ -7062,6 +7090,325 @@ fn handle_valkyrie_pulse(args: &Value) -> Result<Value, String> {
     Ok(guard.evaluate_inquiry(inquiry, live_vec.as_deref(), digest))
 }
 
+fn handle_belief_register(
+    args: &Value,
+    substrate: &mut Substrate,
+    readonly: bool,
+) -> Result<Value, String> {
+    if readonly {
+        return Err("store is read-only: belief.register refused".into());
+    }
+    let statement = args
+        .get("statement")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'statement'".to_string())?;
+    let domain_scope = args
+        .get("domain_scope")
+        .or_else(|| args.get("domain"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'domain_scope'".to_string())?;
+    let source_date = args
+        .get("source_date")
+        .and_then(Value::as_str)
+        .unwrap_or("2026-10-27");
+    let predicted_outcome = args
+        .get("predicted_outcome")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'predicted_outcome'".to_string())?;
+    let raw_confidence = args
+        .get("raw_confidence")
+        .or_else(|| args.get("confidence"))
+        .and_then(Value::as_f64)
+        .ok_or_else(|| "Missing required numeric parameter 'raw_confidence'".to_string())?
+        as f32;
+    let falsification_criteria = args
+        .get("falsification_criteria")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'falsification_criteria'".to_string())?;
+    let supporting_evidence_ids: Vec<u64> = args
+        .get("supporting_evidence_ids")
+        .and_then(Value::as_array)
+        .map(|arr| arr.iter().filter_map(Value::as_u64).collect())
+        .unwrap_or_default();
+    let valid_until_epoch = args.get("valid_until_epoch").and_then(Value::as_u64);
+
+    let claim = substrate.register_belief_claim(
+        statement,
+        domain_scope,
+        source_date,
+        predicted_outcome,
+        raw_confidence,
+        falsification_criteria,
+        supporting_evidence_ids,
+        valid_until_epoch,
+    )?;
+    Ok(json!({
+        "status": "success",
+        "claim": claim,
+    }))
+}
+
+fn handle_belief_resolve(
+    args: &Value,
+    substrate: &mut Substrate,
+    readonly: bool,
+) -> Result<Value, String> {
+    if readonly {
+        return Err("store is read-only: belief.resolve refused".into());
+    }
+    let claim_id = args
+        .get("claim_id")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "Missing required parameter 'claim_id'".to_string())?;
+    let validated = args
+        .get("validated")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| "Missing required boolean parameter 'validated'".to_string())?;
+    let event = args
+        .get("event")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'event'".to_string())?;
+    let event_date = args
+        .get("event_date")
+        .and_then(Value::as_str)
+        .unwrap_or("2026-10-27");
+    let evidence_record_id = args
+        .get("evidence_record_id")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "Missing required parameter 'evidence_record_id'".to_string())?;
+
+    let claim = substrate.resolve_belief_claim(
+        claim_id,
+        validated,
+        event,
+        event_date,
+        evidence_record_id,
+    )?;
+    Ok(json!({
+        "status": "success",
+        "claim": claim,
+    }))
+}
+
+fn handle_belief_list(args: &Value, substrate: &Substrate) -> Result<Value, String> {
+    let active_only = args
+        .get("active_only")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let query_epoch = args.get("query_epoch").and_then(Value::as_u64);
+    let domain_filter = args
+        .get("domain_scope")
+        .or_else(|| args.get("domain"))
+        .and_then(Value::as_str);
+    let claims = if active_only {
+        substrate.active_beliefs(query_epoch, domain_filter)
+    } else {
+        substrate
+            .all_beliefs()
+            .into_iter()
+            .filter(|c| domain_filter.is_none_or(|d| c.domain_scope == d))
+            .collect()
+    };
+    Ok(json!({
+        "status": "success",
+        "count": claims.len(),
+        "claims": claims,
+    }))
+}
+
+fn handle_belief_calibrate(args: &Value, substrate: &Substrate) -> Result<Value, String> {
+    let domain_filter = args
+        .get("domain_scope")
+        .or_else(|| args.get("domain"))
+        .and_then(Value::as_str);
+    let report = substrate.calibrate_beliefs(domain_filter);
+    Ok(json!({
+        "status": "success",
+        "calibration": report,
+    }))
+}
+
+fn handle_belief_cascade(
+    args: &Value,
+    substrate: &mut Substrate,
+    readonly: bool,
+) -> Result<Value, String> {
+    if readonly {
+        return Err("store is read-only: belief.cascade_invalidation refused".into());
+    }
+    let root_record_id = args
+        .get("root_record_id")
+        .or_else(|| args.get("record_id"))
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "Missing required parameter 'root_record_id'".to_string())?;
+    let reason = args
+        .get("reason")
+        .and_then(Value::as_str)
+        .unwrap_or("manual_cascade");
+    let report = substrate.cascade_invalidation(root_record_id, reason)?;
+    Ok(json!({
+        "status": "success",
+        "cascade": report,
+    }))
+}
+
+fn handle_memory_erase_certified(
+    args: &Value,
+    substrate: &mut Substrate,
+    readonly: bool,
+) -> Result<Value, String> {
+    if readonly {
+        return Err("store is read-only: memory.erase_certified refused".into());
+    }
+    let record_id = args
+        .get("record_id")
+        .or_else(|| args.get("id"))
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "Missing required numeric parameter 'record_id'".to_string())?;
+    let reason = args
+        .get("reason")
+        .and_then(Value::as_str)
+        .unwrap_or("authorized_erasure");
+    let audit = substrate.erase_record_certified(record_id, reason)?;
+    Ok(json!({
+        "status": "success",
+        "memcut_audit": audit,
+    }))
+}
+
+fn handle_memory_record_outcome(
+    args: &Value,
+    substrate: &mut Substrate,
+    readonly: bool,
+) -> Result<Value, String> {
+    if readonly {
+        return Err("store is read-only: memory.record_outcome refused".into());
+    }
+    let retrieved_ids: Vec<u64> = args
+        .get("retrieved_ids")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "Missing required array parameter 'retrieved_ids'".to_string())?
+        .iter()
+        .filter_map(Value::as_u64)
+        .collect();
+    let outcome_delta = args
+        .get("outcome_delta")
+        .and_then(Value::as_f64)
+        .ok_or_else(|| "Missing required numeric parameter 'outcome_delta'".to_string())?;
+    let broke_prior_decision = args
+        .get("broke_prior_decision")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let updated =
+        substrate.record_memory_outcome(&retrieved_ids, outcome_delta, broke_prior_decision)?;
+    Ok(json!({
+        "status": "success",
+        "updated": updated,
+    }))
+}
+
+fn handle_memory_worth(args: &Value, substrate: &Substrate) -> Result<Value, String> {
+    let record_id = args
+        .get("record_id")
+        .or_else(|| args.get("id"))
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "Missing required numeric parameter 'record_id'".to_string())?;
+    let stats = substrate.memory_worth(record_id);
+    Ok(json!({
+        "status": "success",
+        "worth": stats,
+    }))
+}
+
+fn handle_obligation_register(
+    args: &Value,
+    substrate: &mut Substrate,
+    readonly: bool,
+) -> Result<Value, String> {
+    if readonly {
+        return Err("store is read-only: obligation.register refused".into());
+    }
+    let session_id = args
+        .get("session_id")
+        .and_then(Value::as_str)
+        .unwrap_or("default");
+    let description = args
+        .get("description")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'description'".to_string())?;
+    let trigger_condition = args
+        .get("trigger_condition")
+        .and_then(Value::as_str)
+        .unwrap_or("always");
+    let required_postcondition = args
+        .get("required_postcondition")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'required_postcondition'".to_string())?;
+    let obligation = substrate.register_obligation(
+        session_id,
+        description,
+        trigger_condition,
+        required_postcondition,
+    )?;
+    Ok(json!({
+        "status": "success",
+        "obligation": obligation,
+    }))
+}
+
+fn handle_obligation_discharge(
+    args: &Value,
+    substrate: &mut Substrate,
+    readonly: bool,
+) -> Result<Value, String> {
+    if readonly {
+        return Err("store is read-only: obligation.discharge refused".into());
+    }
+    let obligation_id = args
+        .get("obligation_id")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'obligation_id'".to_string())?;
+    let resolution_receipt = args
+        .get("resolution_receipt")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'resolution_receipt'".to_string())?;
+    let obligation = substrate.discharge_obligation(obligation_id, resolution_receipt)?;
+    Ok(json!({
+        "status": "success",
+        "obligation": obligation,
+    }))
+}
+
+fn handle_obligation_list(args: &Value, substrate: &Substrate) -> Result<Value, String> {
+    let pending_only = args
+        .get("pending_only")
+        .and_then(Value::as_bool)
+        .unwrap_or(true);
+    let trigger_prefix = args.get("trigger_prefix").and_then(Value::as_str);
+    let obligations = if pending_only {
+        substrate.pending_obligations(trigger_prefix)
+    } else {
+        substrate.all_obligations()
+    };
+    Ok(json!({
+        "status": "success",
+        "count": obligations.len(),
+        "obligations": obligations,
+    }))
+}
+
+fn handle_pareto_certify(args: &Value) -> Result<Value, String> {
+    let seed = args
+        .get("seed")
+        .and_then(Value::as_u64)
+        .unwrap_or(20_261_027);
+    let report = wm_gen3_core::cladistics::ParetoGate::certify_verifier_integrity(seed);
+    Ok(json!({
+        "status": "success",
+        "certification": report,
+    }))
+}
+
 fn handle_sutra_compile(args: &Value) -> Result<Value, String> {
     reject_unknown_args("sutra.compile", args)?;
     let query = args
@@ -10480,6 +10827,180 @@ mod routing_shadow_tests {
         } else {
             assert_eq!(result["tier"], line["tripartite_tier"]);
         }
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod v10_6_mcp_bridge_routes_tests {
+    use super::*;
+
+    #[test]
+    fn v10_6_belief_memcut_worth_obligation_and_pareto_routes() {
+        let dir = std::env::temp_dir().join(format!("wm-v10-6-mcp-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("substrate");
+        substrate.set_budget(1_000_000);
+        substrate.set_noise_enabled(false);
+
+        // 1. Create a memory record via MCP
+        let rec = execute_hybrid_tool_call(
+            "memory.create",
+            &json!({"content": "v10.6 bridge test evidence alpha_token_77"}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect("memory.create");
+        let rec_id = rec["record_id"].as_u64().expect("record_id");
+
+        // 2. Register & calibrate a belief claim via wm(route="belief.register")
+        let b_reg = execute_hybrid_tool_call(
+            "wm",
+            &json!({
+                "route": "belief.register",
+                "args": {
+                    "statement": "alpha_token_77 is active",
+                    "domain_scope": "bridge:test",
+                    "predicted_outcome": "token accepted",
+                    "raw_confidence": 0.90,
+                    "falsification_criteria": "token revoked",
+                    "supporting_evidence_ids": [rec_id]
+                }
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect("belief.register");
+        let claim_id = b_reg["claim"]["claim_id"].as_u64().expect("claim_id");
+
+        let b_res = execute_hybrid_tool_call(
+            "belief.resolve",
+            &json!({
+                "claim_id": claim_id,
+                "validated": true,
+                "event": "verified in bridge test",
+                "evidence_record_id": rec_id
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect("belief.resolve");
+        assert_eq!(b_res["status"], "success");
+
+        let b_cal = execute_hybrid_tool_call(
+            "belief.calibrate",
+            &json!({"domain_scope": "bridge:test"}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect("belief.calibrate");
+        assert_eq!(b_cal["calibration"]["resolved_count"], 1);
+        assert_eq!(b_cal["calibration"]["validated_count"], 1);
+
+        // 3. TokenWorth outcome & inspect
+        let worth_out = execute_hybrid_tool_call(
+            "memory.record_outcome",
+            &json!({
+                "retrieved_ids": [rec_id],
+                "outcome_delta": 0.75,
+                "broke_prior_decision": false
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect("memory.record_outcome");
+        assert_eq!(worth_out["status"], "success");
+
+        let worth_get = execute_hybrid_tool_call(
+            "memory.worth",
+            &json!({"record_id": rec_id}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect("memory.worth");
+        assert_eq!(worth_get["worth"]["retrievals"], 1);
+
+        // 4. Prospective obligation register, list, discharge
+        let obl_reg = execute_hybrid_tool_call(
+            "obligation.register",
+            &json!({
+                "session_id": "sess-bridge",
+                "description": "Audit erasure residue",
+                "trigger_condition": "before:release",
+                "required_postcondition": "zero_residue_certified == true"
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect("obligation.register");
+        let obl_id = obl_reg["obligation"]["obligation_id"]
+            .as_str()
+            .expect("obligation_id")
+            .to_string();
+
+        let obl_list = execute_hybrid_tool_call(
+            "obligation.list",
+            &json!({"pending_only": true}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect("obligation.list");
+        assert_eq!(obl_list["count"], 1);
+
+        let obl_dis = execute_hybrid_tool_call(
+            "obligation.discharge",
+            &json!({
+                "obligation_id": obl_id,
+                "resolution_receipt": "receipt:memcut-ok"
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect("obligation.discharge");
+        assert_eq!(obl_dis["status"], "success");
+
+        // 5. MemCut certified erasure & ParetoGate certification
+        let erased = execute_hybrid_tool_call(
+            "memory.erase_certified",
+            &json!({"record_id": rec_id, "reason": "bridge test cleanup"}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect("memory.erase_certified");
+        assert_eq!(erased["memcut_audit"]["zero_residue_certified"], true);
+
+        let pareto = execute_hybrid_tool_call(
+            "pareto.certify",
+            &json!({"seed": 42}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect("pareto.certify");
+        assert_eq!(pareto["certification"]["verifier_certified"], true);
 
         let _ = std::fs::remove_dir_all(&dir);
     }
