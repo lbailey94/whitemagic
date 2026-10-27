@@ -371,7 +371,6 @@ jobs:
         run: |
           cd npm/whitemagic-mcp
           VERSION="${GITHUB_REF_NAME#v}"
-          PRERELEASE="$(gh api "repos/${{ github.repository }}/releases/tags/${GITHUB_REF_NAME}" --jq '.prerelease' 2>/dev/null || echo true)"
           if npm view "whitemagic-mcp@${VERSION}" version >/dev/null 2>&1; then
             echo "npm ${VERSION} already published - release health owns selector promotion"
           else

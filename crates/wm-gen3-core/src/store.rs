@@ -1817,26 +1817,27 @@ impl Store {
 
     pub(crate) fn vector_state(&self, id: u64) -> Result<StoredVectorState, StoreError> {
         let txn = self.env.begin_ro_txn()?;
-        let state: Result<StoredVectorState, StoreError> = match txn
-            .get(self.embeddings, &bytes_u64(id))
-        {
-            Ok(bytes) => {
-                let vector = decode_vector(bytes)?;
-                if vector.len() != crate::projection::DIM || !vector.iter().all(|x| x.is_finite()) {
-                    Ok(StoredVectorState::Legacy)
-                } else {
-                    match txn.get(self.embeddings, &vector_meta_key(id)) {
-                        Ok(metadata) if provenance_matches(metadata, bytes)? => {
+        let state: Result<StoredVectorState, StoreError> =
+            match txn.get(self.embeddings, &bytes_u64(id)) {
+                Ok(bytes) => match decode_vector(bytes) {
+                    Err(_) => Ok(StoredVectorState::Legacy),
+                    Ok(vector)
+                        if vector.len() != crate::projection::DIM
+                            || !vector.iter().all(|x| x.is_finite()) =>
+                    {
+                        Ok(StoredVectorState::Legacy)
+                    }
+                    Ok(_) => match txn.get(self.embeddings, &vector_meta_key(id)) {
+                        Ok(metadata) if provenance_matches(metadata, bytes).unwrap_or(false) => {
                             Ok(StoredVectorState::Current)
                         }
                         Ok(_) | Err(lmdb::Error::NotFound) => Ok(StoredVectorState::Legacy),
                         Err(e) => Err(e.into()),
-                    }
-                }
-            }
-            Err(lmdb::Error::NotFound) => Ok(StoredVectorState::Missing),
-            Err(e) => Err(e.into()),
-        };
+                    },
+                },
+                Err(lmdb::Error::NotFound) => Ok(StoredVectorState::Missing),
+                Err(e) => Err(e.into()),
+            };
         let state = state?;
         if state == StoredVectorState::Current {
             return Ok(state);
@@ -1914,12 +1915,18 @@ impl Store {
             continuation = Some(id);
             let valid = match txn.get(self.embeddings, &key) {
                 Ok(vbytes) => {
-                    let v = decode_vector(vbytes)?;
+                    let Ok(v) = decode_vector(vbytes) else {
+                        missing.push(id);
+                        if scanned >= max_records {
+                            break;
+                        }
+                        continue;
+                    };
                     if v.len() != crate::projection::DIM || !v.iter().all(|x| x.is_finite()) {
                         false
                     } else {
                         match txn.get(self.embeddings, &vector_meta_key(id)) {
-                            Ok(metadata) => provenance_matches(metadata, vbytes)?,
+                            Ok(metadata) => provenance_matches(metadata, vbytes).unwrap_or(false),
                             Err(lmdb::Error::NotFound) => false,
                             Err(e) => return Err(e.into()),
                         }
@@ -1942,12 +1949,16 @@ impl Store {
         let txn = self.env.begin_ro_txn()?;
         match txn.get(self.embeddings, &bytes_u64(id)) {
             Ok(bytes) => {
-                let vector = decode_vector(bytes)?;
+                let Ok(vector) = decode_vector(bytes) else {
+                    return Ok(None);
+                };
                 if vector.len() != crate::projection::DIM || !vector.iter().all(|x| x.is_finite()) {
                     return Ok(None);
                 }
                 match txn.get(self.embeddings, &vector_meta_key(id)) {
-                    Ok(metadata) if provenance_matches(metadata, bytes)? => Ok(Some(vector)),
+                    Ok(metadata) if provenance_matches(metadata, bytes).unwrap_or(false) => {
+                        Ok(Some(vector))
+                    }
                     Ok(_) | Err(lmdb::Error::NotFound) => Ok(None),
                     Err(e) => Err(e.into()),
                 }
@@ -1964,10 +1975,12 @@ impl Store {
         for (key, bytes) in cursor.iter() {
             if key.len() == 8 {
                 let id = u64::from_be_bytes(key.try_into().unwrap_or([0; 8]));
-                let vector = decode_vector(bytes)?;
+                let Ok(vector) = decode_vector(bytes) else {
+                    continue;
+                };
                 if vector.len() == crate::projection::DIM && vector.iter().all(|x| x.is_finite()) {
                     match txn.get(self.embeddings, &vector_meta_key(id)) {
-                        Ok(metadata) if provenance_matches(metadata, bytes)? => {
+                        Ok(metadata) if provenance_matches(metadata, bytes).unwrap_or(false) => {
                             out.push((id, vector))
                         }
                         Ok(_) | Err(lmdb::Error::NotFound) => {}
@@ -2232,12 +2245,16 @@ impl Store {
             for (key, bytes) in cursor.iter() {
                 if key.len() == 8 {
                     let id = u64::from_be_bytes(key.try_into().unwrap_or([0; 8]));
-                    let vector = decode_vector(bytes)?;
+                    let Ok(vector) = decode_vector(bytes) else {
+                        continue;
+                    };
                     if vector.len() == crate::projection::DIM
                         && vector.iter().all(|value| value.is_finite())
                     {
                         match txn.get(self.embeddings, &vector_meta_key(id)) {
-                            Ok(metadata) if provenance_matches(metadata, bytes)? => {
+                            Ok(metadata)
+                                if provenance_matches(metadata, bytes).unwrap_or(false) =>
+                            {
                                 vectors.insert(id, vector);
                             }
                             Ok(_) | Err(lmdb::Error::NotFound) => {}
@@ -2877,7 +2894,7 @@ mod tests {
     }
 
     #[test]
-    fn legacy_raw_vectors_are_unknown_and_never_current() {
+    fn malformed_derived_vectors_are_repairable_and_skipped_by_readers() {
         let dir = TempStore::new("projection-legacy");
         let store = Store::open(&dir.0).unwrap();
         let mut txn = store.env.begin_rw_txn().unwrap();
@@ -2941,16 +2958,19 @@ mod tests {
         txn.commit().unwrap();
         assert_eq!(store.vector_state(1).unwrap(), StoredVectorState::Legacy);
         assert!(!store.has_valid_vector(1).unwrap());
-        assert!(store.iter_vectors().is_err());
+        assert!(store.iter_vectors().unwrap().is_empty());
         assert!(store.get_vector(1).unwrap().is_none());
         assert_eq!(store.vector_state(2).unwrap(), StoredVectorState::Legacy);
         assert!(store.get_vector(2).unwrap().is_none());
-        assert!(store.vector_state(3).is_err());
-        assert!(store.get_vector(3).is_err());
+        assert_eq!(store.vector_state(3).unwrap(), StoredVectorState::Legacy);
+        assert!(store.get_vector(3).unwrap().is_none());
+        let (_, repairable, _) = store.missing_vector_record_ids_after(10, None).unwrap();
+        assert_eq!(repairable, vec![1, 2, 3]);
         drop(store);
         let readonly = Store::open_readonly(&dir.0).unwrap();
         assert!(readonly.get_vector(1).unwrap().is_none());
         assert!(readonly.get_vector(2).unwrap().is_none());
+        assert!(readonly.get_vector(3).unwrap().is_none());
     }
 
     #[test]

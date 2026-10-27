@@ -358,7 +358,11 @@ jobs:
           PRERELEASE="$(gh api "repos/${{ github.repository }}/releases/tags/v${VERSION}" --jq '.prerelease' 2>/dev/null || echo true)"
           SELECTOR="$(python3 "$RUNNER_TEMP/release_channels.py" "$VERSION" "$PRERELEASE")"
           CURRENT="$(npm view "whitemagic-mcp@${SELECTOR}" version 2>/dev/null || true)"
-          if [ "$CURRENT" != "$VERSION" ]; then
+          [ -n "$CURRENT" ] || { echo "cannot determine current npm ${SELECTOR}; refusing selector promotion" >&2; exit 1; }
+          DECISION="$(python3 "$RUNNER_TEMP/release_channels.py" "$VERSION" "$PRERELEASE" "${CURRENT:-<none>}")"
+          if [ "$DECISION" = "skip" ]; then
+            echo "npm ${SELECTOR} already points to newer ${CURRENT}; refusing downgrade to ${VERSION}"
+          elif [ "$CURRENT" != "$VERSION" ]; then
             npm dist-tag add "whitemagic-mcp@${VERSION}" "$SELECTOR"
           else
             echo "npm ${SELECTOR} already points to ${VERSION}"
@@ -380,6 +384,16 @@ jobs:
           SOURCE="lbailey94/whitemagic:${VERSION}"
           docker buildx imagetools inspect "$SOURCE"
           docker buildx imagetools inspect --raw "$SOURCE" > source-manifest.json
+          docker pull lbailey94/whitemagic:latest
+          CURRENT_DOCKER_VERSION="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' lbailey94/whitemagic:latest)"
+          CURRENT_DOCKER_VERSION="${CURRENT_DOCKER_VERSION#v}"
+          [ -n "$CURRENT_DOCKER_VERSION" ] && [ "$CURRENT_DOCKER_VERSION" != "<no value>" ] || {
+            echo "cannot determine the current Docker latest version; refusing selector promotion" >&2; exit 1;
+          }
+          DOCKER_DECISION="$(python3 "$RUNNER_TEMP/release_channels.py" "$VERSION" "$PRERELEASE" "$CURRENT_DOCKER_VERSION")"
+          [ "$DOCKER_DECISION" != "skip" ] || {
+            echo "Docker latest already points to newer ${CURRENT_DOCKER_VERSION}; refusing downgrade to ${VERSION}"; exit 0;
+          }
           docker buildx imagetools create \
             --tag lbailey94/whitemagic:9 \
             --tag lbailey94/whitemagic:latest \

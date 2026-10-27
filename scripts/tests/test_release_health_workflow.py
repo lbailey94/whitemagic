@@ -24,11 +24,15 @@ class ReleaseHealthWorkflowTests(unittest.TestCase):
             ("9.4.0", "true", "next"),
             ("10.6.0", "false", "next"),
             ("10.5.1", "true", "next"),
+            ("10.6.0", "true", "skip", "10.6.1"),
+            ("10.6.0-beta.3", "true", "skip", "10.6.0-beta.4"),
+            ("9.3.5", "false", "skip", "9.3.6"),
         )
-        for version, prerelease, expected in cases:
+        for case in cases:
+            version, prerelease, expected, *current = case
             with self.subTest(version=version, prerelease=prerelease):
                 result = subprocess.run(
-                    [sys.executable, str(helper), version, prerelease],
+                    [sys.executable, str(helper), version, prerelease, *current],
                     text=True, capture_output=True, check=False,
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
@@ -71,10 +75,15 @@ class ReleaseHealthWorkflowTests(unittest.TestCase):
         self.assertLess(gate, docker_alias)
         self.assertIn("npm dist-tag add", health[promote:])
         self.assertIn('"$RUNNER_TEMP/release_channels.py"', health[promote:])
+        self.assertIn('"${CURRENT:-<none>}"', health[promote:])
+        self.assertIn('cannot determine current npm ${SELECTOR}', health[promote:])
+        self.assertIn('refusing downgrade to ${VERSION}', health[promote:])
         docker_step = health[docker_alias:].split("\n      - ", 1)[0]
         self.assertIn("docker buildx imagetools create", docker_step)
         self.assertIn('cmp -s source-manifest.json', docker_step)
-        self.assertNotIn("docker pull ", docker_step)
+        self.assertIn("docker pull lbailey94/whitemagic:latest", docker_step)
+        self.assertIn("CURRENT_DOCKER_VERSION", docker_step)
+        self.assertIn("refusing downgrade to ${VERSION}", docker_step)
         self.assertNotIn("docker tag ", docker_step)
         self.assertNotIn("docker push ", docker_step)
 
@@ -150,6 +159,10 @@ elif [[ "$1 $2 $3" == "buildx imagetools inspect" ]]; then
   printf 'Digest: sha256:fixture\\n'
 elif [[ "$1 $2 $3" == "buildx imagetools create" ]]; then
   echo "$*" >> "$DOCKER_CALLS"
+elif [[ "$1 $2" == "image inspect" ]]; then
+  echo "${DOCKER_CURRENT_VERSION:-9.3.4}"
+elif [[ "$1 $2" == "pull lbailey94/whitemagic:latest" ]]; then
+  :
 elif [[ "$1" == login ]]; then
   cat >/dev/null
 else
@@ -167,7 +180,8 @@ fi
             self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
             recorded = calls.read_text()
             self.assertIn("buildx imagetools create", recorded)
-            self.assertNotRegex(recorded, r"(^|\n)(pull|tag|push) ")
+            self.assertIn("pull lbailey94/whitemagic:latest", recorded)
+            self.assertNotRegex(recorded, r"(^|\n)(tag|push) ")
 
             calls.write_text("")
             env["DOCKER_ALIAS_DRIFT"] = "1"
@@ -175,6 +189,15 @@ fi
                                    text=True, capture_output=True)
             self.assertNotEqual(drift.returncode, 0)
             self.assertIn("does not preserve the exact version manifest digest", drift.stderr)
+
+            calls.write_text("")
+            env["DOCKER_ALIAS_DRIFT"] = "0"
+            env["DOCKER_CURRENT_VERSION"] = "9.3.6"
+            older = subprocess.run(["bash", "-eu", "-c", shell], cwd=root, env=env,
+                                   text=True, capture_output=True)
+            self.assertEqual(older.returncode, 0, older.stderr or older.stdout)
+            self.assertIn("refusing downgrade to 9.3.5", older.stdout)
+            self.assertNotIn("buildx imagetools create", calls.read_text())
 
     def test_source_checker_uses_its_workspace_from_an_unrelated_cwd(self) -> None:
         spec = importlib.util.spec_from_file_location(
@@ -290,7 +313,7 @@ print(json.dumps({'packages':[{'id':ident,'name':name,'publish':None,'dependenci
         self.assertLess(channel_save, fetch)
         self.assertLess(fetch, checkout)
         self.assertEqual(text.count('python3 "$RUNNER_TEMP/release_health.py"'), 2)
-        self.assertEqual(text.count('python3 "$RUNNER_TEMP/release_channels.py"'), 2)
+        self.assertEqual(text.count('python3 "$RUNNER_TEMP/release_channels.py"'), 4)
         self.assertIn('TREE_V=', text[checkout:])
         # A v9 fixture remains tied to v9 metadata by the existing exact tag
         # version assertion, while the saved checker is independent of tag code.
