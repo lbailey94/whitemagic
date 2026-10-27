@@ -5,7 +5,7 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [10.6.1] — 2026-10-27
 
 ### Fixed
 - **Malformed derived-vector recovery** — Bounded vector repair now classifies undecodable vector and provenance rows as stale so they can be rebuilt. Semantic readers skip malformed derived rows without hiding LMDB I/O failures.

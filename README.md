@@ -77,7 +77,7 @@ a receipt signature does *not* establish. Security posture in
 
 ## Status
 
-**WhiteMagic Gen3** (the `wm` 10.6.0 line). Release channel: **open
+**WhiteMagic Gen3** (the `wm` 10.6.1 line). Release channel: **open
 alpha** — public alpha for MCP agents. The version number is a compatibility
 signal; the channel is an evidence claim (beta and stable each require their
 own exit conditions, not a version milestone).
@@ -140,7 +140,7 @@ grew without any website CTA — the memory layer chooses its own doors.
 Verify the installation and see the product work end to end:
 
 ```bash
-wm --version    # wm 10.6.0
+wm --version    # wm 10.6.1
 wm status       # display substrate status, epoch, record counts, and store health
 ```
 
