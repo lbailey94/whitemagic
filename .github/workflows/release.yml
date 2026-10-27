@@ -317,7 +317,10 @@ jobs:
 
   registries:
     name: Publish registries
-    needs: [publish]
+    # Publish only after every signed release target has passed the public
+    # installer and binary selftest. Registry selectors are promoted later,
+    # after package/container certification in Release health.
+    needs: [publish, certify-install]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -371,14 +374,9 @@ jobs:
           if npm view "whitemagic-mcp@${VERSION}" version >/dev/null 2>&1; then
             echo "npm ${VERSION} already published - skipping"
           else
-            # Phase 2 (2026-10-15): use the release's prerelease flag, not a
-            # '-' suffix guess (a suffix-less prerelease would publish latest).
-            PRERELEASE="$(gh api "repos/${{ github.repository }}/releases/tags/${GITHUB_REF_NAME}" --jq '.prerelease' 2>/dev/null || echo true)"
-            if [ "$PRERELEASE" = "true" ]; then
-              npm publish --access public --tag next
-            else
-              npm publish --access public
-            fi
+            # Quarantine every new version. Release health installs this exact
+            # version and moves only the qualified selector after its gate.
+            npm publish --access public --tag quarantine
           fi
 
       - name: Wait for npm propagation (advisory)
@@ -406,18 +404,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ -z "${DOCKERHUB_TOKEN:-}" ]; then echo "DOCKERHUB_TOKEN not set - skipping"; exit 0; fi
-          VERSION="${GITHUB_REF_NAME#v}"; MAJOR="${VERSION%%.*}"
+          VERSION="${GITHUB_REF_NAME#v}"
           echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-          # Prereleases publish only the exact version tag; `latest` and the
-          # major alias stay on the newest stable so `docker run ...:latest`
-          # never silently jumps to an alpha. Phase 2 (2026-10-15): use the
-          # release's prerelease flag, not a '-' suffix guess.
-          PRERELEASE="$(gh api "repos/${{ github.repository }}/releases/tags/${GITHUB_REF_NAME}" --jq '.prerelease' 2>/dev/null || echo true)"
-          if [ "$PRERELEASE" = "true" ]; then
-            TAGS=(-t "lbailey94/whitemagic:${VERSION}")
-          else
-            TAGS=(-t "lbailey94/whitemagic:${VERSION}" -t "lbailey94/whitemagic:${MAJOR}" -t lbailey94/whitemagic:latest)
-          fi
+          # Publish only the immutable version tag. Stable aliases are moved
+          # by Release health after the exact image passes its selftest.
+          TAGS=(-t "lbailey94/whitemagic:${VERSION}")
           # Multi-arch: amd64 uses the x86_64-musl asset, arm64 the
           # aarch64-musl asset (shipped in the same release). If the
           # multi-arch build fails, fall back to the amd64-only path so a

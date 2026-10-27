@@ -17,6 +17,165 @@ WORKFLOW = ROOT / ".github/workflows/release-health.yml"
 
 
 class ReleaseHealthWorkflowTests(unittest.TestCase):
+    def test_selector_policy_keeps_gen3_preview_off_latest_even_when_misflagged(self) -> None:
+        helper = ROOT / "scripts/release_channels.py"
+        cases = (
+            ("9.3.4", "false", "latest"),
+            ("9.4.0", "true", "next"),
+            ("10.6.0", "false", "next"),
+            ("10.5.1", "true", "next"),
+        )
+        for version, prerelease, expected in cases:
+            with self.subTest(version=version, prerelease=prerelease):
+                result = subprocess.run(
+                    [sys.executable, str(helper), version, prerelease],
+                    text=True, capture_output=True, check=False,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.strip(), expected)
+
+    def test_release_publication_is_quarantined_and_waits_for_native_cert(self) -> None:
+        release = (ROOT / ".github/workflows/release.yml").read_text()
+        health = WORKFLOW.read_text()
+        self.assertRegex(
+            release,
+            r"  registries:\n[\s\S]*?\n    needs: \[publish, certify-install\]",
+        )
+        npm_publish = release.split("      - name: Publish npm\n", 1)[1].split("\n      - ", 1)[0]
+        self.assertIn("npm publish --access public --tag quarantine", npm_publish)
+        docker_publish = release.split("      - name: Publish Docker Hub (multi-arch; skips without secrets)\n", 1)[1].split("\n      - ", 1)[0]
+        self.assertIn('TAGS=(-t "lbailey94/whitemagic:${VERSION}")', docker_publish)
+        self.assertNotIn("whitemagic:latest", docker_publish)
+
+        retry = health.split("      - name: Retry npm (if lagging)\n", 1)[1].split(
+            "\n      - ", 1
+        )[0]
+        self.assertLess(retry.index('status == "live"'), retry.index("npm publish"))
+        self.assertIn("manifest_signature_valid == true", retry)
+        self.assertIn('artifact_integrity == "verified"', retry)
+        self.assertIn("npm publish --access public --tag quarantine", retry)
+        self.assertNotRegex(retry, r"npm publish[^\n]*--tag (latest|next)")
+
+        npm_cert = health.split("      - name: Certify npm install (download funnel + selftest)\n", 1)[1].split(
+            "\n      - ", 1
+        )[0]
+        self.assertNotIn("continue-on-error", npm_cert)
+        self.assertIn('npm install -g "whitemagic-mcp@${{ steps.version.outputs.version }}"', npm_cert)
+        self.assertIn("whitemagic-mcp selftest --json", npm_cert)
+        self.assertIn('"status":"failed"', npm_cert)
+
+        gate = health.index("      - name: Gate — every surface live, artifact integrity verified, and every install certified\n")
+        promote = health.index("      - name: Promote certified npm selector\n")
+        docker_alias = health.index("      - name: Promote certified stable Docker aliases\n")
+        self.assertLess(gate, promote)
+        self.assertLess(gate, docker_alias)
+        self.assertIn("npm dist-tag add", health[promote:])
+        self.assertIn('"$RUNNER_TEMP/release_channels.py"', health[promote:])
+        docker_step = health[docker_alias:].split("\n      - ", 1)[0]
+        self.assertIn("docker buildx imagetools create", docker_step)
+        self.assertIn('cmp -s source-manifest.json', docker_step)
+        self.assertNotIn("docker pull ", docker_step)
+        self.assertNotIn("docker tag ", docker_step)
+        self.assertNotIn("docker push ", docker_step)
+
+    def test_incomplete_misflagged_release_cannot_publish_or_move_npm_selectors(self) -> None:
+        text = WORKFLOW.read_text()
+        marker = "      - name: Retry npm (if lagging)\n"
+        section = text.split(marker, 1)[1].split("        run: |\n", 1)[1].split("\n      - ", 1)[0]
+        shell = "\n".join(line[10:] for line in section.splitlines() if line.startswith("          "))
+        shell = shell.replace("${{ steps.version.outputs.version }}", "10.6.0")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            fakebin = root / "bin"
+            fakebin.mkdir()
+            (root / "release-health.json").write_text(
+                '{"version":"10.6.0","release_prerelease":false,'
+                '"registries":{"npm":{"status":"missing"},'
+                '"github-release":{"status":"lagging",'
+                '"manifest_signature_valid":false,"artifact_integrity":"unverified"}}}'
+            )
+            jq = fakebin / "jq"
+            jq.write_text("""#!/usr/bin/env bash
+case "$*" in
+  *'.registries.npm.status'*) echo missing ;;
+  *'manifest_signature_valid == true'*) exit 1 ;;
+  *) exit 2 ;;
+esac
+""")
+            npm = fakebin / "npm"
+            npm.write_text("""#!/usr/bin/env bash
+printf '%s\\n' "$*" >> "$NPM_CALLS"
+""")
+            jq.chmod(0o755)
+            npm.chmod(0o755)
+            (root / "npm/whitemagic-mcp").mkdir(parents=True)
+            calls = root / "npm-calls"
+            env = dict(os.environ, PATH=f"{fakebin}:{os.environ['PATH']}", NPM_CALLS=str(calls))
+            proc = subprocess.run(["bash", "-eu", "-c", shell], cwd=root, env=env,
+                                  text=True, capture_output=True)
+            self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
+            self.assertIn("refusing npm publication", proc.stdout)
+            self.assertFalse(calls.exists(), "incomplete release must not publish or move a selector")
+
+    def test_stable_docker_alias_promotion_preserves_source_manifest_index(self) -> None:
+        text = WORKFLOW.read_text()
+        marker = "      - name: Promote certified stable Docker aliases\n"
+        section = text.split(marker, 1)[1].split("        run: |\n", 1)[1].split("\n      - ", 1)[0]
+        shell = "\n".join(line[10:] for line in section.splitlines() if line.startswith("          "))
+        shell = shell.replace("${{ steps.version.outputs.version }}", "9.3.5")
+        shell = shell.replace("${{ github.repository }}", "lbailey94/whitemagic")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            fakebin = root / "bin"
+            fakebin.mkdir()
+            runner = root / "runner"
+            runner.mkdir()
+            shutil.copy(ROOT / "scripts/release_channels.py", runner / "release_channels.py")
+            source = root / "source-manifest.json"
+            source.write_text('{"schemaVersion":2,"manifests":[{"platform":{"architecture":"amd64","os":"linux"}},{"platform":{"architecture":"arm64","os":"linux"}}]}')
+            calls = root / "docker-calls"
+            gh = fakebin / "gh"
+            gh.write_text("#!/usr/bin/env bash\necho false\n")
+            docker = fakebin / "docker"
+            docker.write_text("""#!/usr/bin/env bash
+printf '%s\\n' "$*" >> "$DOCKER_CALLS"
+if [[ "$1 $2 $3 $4" == "buildx imagetools inspect --raw" ]]; then
+  ref="$5"
+  if [[ "${DOCKER_ALIAS_DRIFT:-0}" == 1 && "$ref" == *:latest ]]; then
+    printf '{"schemaVersion":2,"manifests":[{"platform":{"architecture":"amd64","os":"linux"}}]}\\n'
+  else
+    cat "$DOCKER_SOURCE_MANIFEST"
+  fi
+elif [[ "$1 $2 $3" == "buildx imagetools inspect" ]]; then
+  printf 'Digest: sha256:fixture\\n'
+elif [[ "$1 $2 $3" == "buildx imagetools create" ]]; then
+  echo "$*" >> "$DOCKER_CALLS"
+elif [[ "$1" == login ]]; then
+  cat >/dev/null
+else
+  exit 91
+fi
+""")
+            gh.chmod(0o755)
+            docker.chmod(0o755)
+            env = dict(os.environ, PATH=f"{fakebin}:{os.environ['PATH']}",
+                       RUNNER_TEMP=str(runner), GH_TOKEN="fixture",
+                       DOCKERHUB_USERNAME="fixture", DOCKERHUB_TOKEN="fixture",
+                       DOCKER_CALLS=str(calls), DOCKER_SOURCE_MANIFEST=str(source))
+            proc = subprocess.run(["bash", "-eu", "-c", shell], cwd=root, env=env,
+                                  text=True, capture_output=True)
+            self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
+            recorded = calls.read_text()
+            self.assertIn("buildx imagetools create", recorded)
+            self.assertNotRegex(recorded, r"(^|\n)(pull|tag|push) ")
+
+            calls.write_text("")
+            env["DOCKER_ALIAS_DRIFT"] = "1"
+            drift = subprocess.run(["bash", "-eu", "-c", shell], cwd=root, env=env,
+                                   text=True, capture_output=True)
+            self.assertNotEqual(drift.returncode, 0)
+            self.assertIn("does not preserve the exact version manifest digest", drift.stderr)
+
     def test_source_checker_uses_its_workspace_from_an_unrelated_cwd(self) -> None:
         spec = importlib.util.spec_from_file_location(
             "release_health_outside_checkout", ROOT / "scripts/release_health.py"
@@ -60,6 +219,7 @@ class ReleaseHealthWorkflowTests(unittest.TestCase):
             runner.mkdir()
             shutil.copy(ROOT / "scripts/release_health.py", checkout / "scripts/release_health.py")
             shutil.copy(ROOT / "scripts/crates_publish_order.py", checkout / "scripts/crates_publish_order.py")
+            shutil.copy(ROOT / "scripts/release_channels.py", checkout / "scripts/release_channels.py")
             (checkout / "Cargo.toml").write_text('[workspace.package]\nversion="9.3.4"\n')
             old_probe = "# immutable old-tag probe marker\n"
             fakebin = root / "bin"
@@ -95,6 +255,7 @@ print(json.dumps({'packages':[{'id':ident,'name':name,'publish':None,'dependenci
             self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
             saved = runner / "release_health.py"
             self.assertEqual(saved.read_bytes(), (ROOT / "scripts/release_health.py").read_bytes())
+            self.assertEqual((runner / "release_channels.py").read_bytes(), (ROOT / "scripts/release_channels.py").read_bytes())
             self.assertEqual((checkout / "scripts/release_health.py").read_text(), old_probe)
 
             # Load and execute the exact saved file after tag checkout. The
@@ -122,11 +283,14 @@ print(json.dumps({'packages':[{'id':ident,'name':name,'publish':None,'dependenci
     def test_checker_is_saved_before_tag_checkout_and_used_for_both_probes(self) -> None:
         text = WORKFLOW.read_text()
         save = text.index('cp scripts/release_health.py "$RUNNER_TEMP/release_health.py"')
+        channel_save = text.index('cp scripts/release_channels.py "$RUNNER_TEMP/release_channels.py"')
         fetch = text.index('git fetch --depth=1 origin "refs/tags/v${V}"')
         checkout = text.index('git checkout --detach FETCH_HEAD')
         self.assertLess(save, fetch)
+        self.assertLess(channel_save, fetch)
         self.assertLess(fetch, checkout)
         self.assertEqual(text.count('python3 "$RUNNER_TEMP/release_health.py"'), 2)
+        self.assertEqual(text.count('python3 "$RUNNER_TEMP/release_channels.py"'), 2)
         self.assertIn('TREE_V=', text[checkout:])
         # A v9 fixture remains tied to v9 metadata by the existing exact tag
         # version assertion, while the saved checker is independent of tag code.
