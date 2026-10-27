@@ -5,6 +5,13 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Malformed derived-vector recovery** — Bounded vector repair now classifies undecodable vector and provenance rows as stale so they can be rebuilt. Semantic readers skip malformed derived rows without hiding LMDB I/O failures.
+- **Monotonic release-channel promotion** — Release-health checks now refuse to move npm or Docker selectors backward when a historical version is rechecked, and fail closed when the current selector target cannot be identified.
+- **Gen3 10.6 MCP route exposure** — Wire the new belief, certified erasure, outcome-worth, obligation, and Pareto certification operations through the harness bridge.
+
 ## [10.6.0] — 2026-10-26
 
 ### Added
