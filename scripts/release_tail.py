@@ -42,7 +42,7 @@ def validate_contract(data: Any, version: str, family: str) -> None:
         raise ValueError("contract JSON root must be an object")
     if data.get("kind") != CONTRACT_KIND:
         raise ValueError("contract kind is missing or unexpected")
-    if data.get("format_version") != 1:
+    if type(data.get("format_version")) is not int or data["format_version"] != 1:
         raise ValueError("contract format_version must be 1")
     if data.get("version") != version:
         raise ValueError(f"contract version {data.get('version')!r} != release {version!r}")
@@ -63,11 +63,11 @@ def validate_contract(data: Any, version: str, family: str) -> None:
         raise ValueError("contract tools must each have a named route")
     if len(set(routes)) != len(routes):
         raise ValueError("contract contains duplicate route names")
-    if counts.get("routes") != len(tools):
+    if type(counts.get("routes")) is not int or counts["routes"] != len(tools):
         raise ValueError("contract route count does not match tools array")
     declared = counts.get("declared")
     undeclared = counts.get("undeclared")
-    if not isinstance(declared, int) or not isinstance(undeclared, int):
+    if type(declared) is not int or type(undeclared) is not int:
         raise ValueError("contract declared/undeclared counts are missing")
     if declared < 0 or undeclared < 0 or declared + undeclared != len(tools):
         raise ValueError("contract declared/undeclared counts do not sum to routes")
@@ -158,7 +158,11 @@ def verify_health_record(record: Any, version: str, manifest_sha256: str) -> Non
     family_for_version(version)
     if not isinstance(record, dict):
         raise ValueError("release-health record must be a JSON object")
-    if record.get("kind") != "wm.release-health" or record.get("schema") != 1:
+    if (
+        record.get("kind") != "wm.release-health"
+        or type(record.get("schema")) is not int
+        or record["schema"] != 1
+    ):
         raise ValueError("release-health kind/schema is missing or unsupported")
     if record.get("version") != version:
         raise ValueError(f"health version {record.get('version')!r} != {version!r}")
@@ -200,9 +204,16 @@ def verify_health_record(record: Any, version: str, manifest_sha256: str) -> Non
         if certification.get("runtime_selftest") != "pass":
             raise ValueError(f"{name} runtime self-test did not pass")
         selftest = certification.get("selftest")
-        if not isinstance(selftest, dict) or not (
-            bool(selftest.get("passed")) or selftest.get("status") == "ok"
-        ):
+        if not isinstance(selftest, dict):
+            raise ValueError(f"{name} certification does not contain a passing runtime self-test")
+        # Producers may report either the boolean result or the documented
+        # status-only form. If `passed` is present, require a literal JSON true;
+        # a malformed or false value cannot be rescued by another field.
+        if "passed" in selftest:
+            selftest_passed = selftest["passed"] is True
+        else:
+            selftest_passed = selftest.get("status") == "ok"
+        if not selftest_passed:
             raise ValueError(f"{name} certification does not contain a passing runtime self-test")
 
 
