@@ -146,6 +146,7 @@ wm-leases.json
 
 # Internal development and staging scripts (public surface: install.sh + install.ps1 + smoke test + release)
 /scripts/*
+!/scripts/release_tail.py
 !/scripts/install.sh
 !/scripts/install.ps1
 !/scripts/build_deb.sh
