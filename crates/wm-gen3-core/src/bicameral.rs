@@ -632,8 +632,60 @@ impl GeneseedVault {
         v17.tier = SkeletonTier::Heavy;
         v17.rolling_utility = 0.88;
 
+        // ── Phase 2: Active Mesh Defense & Cognitive Tarpit Skeletons ──
+        let mut v18 = ActionSkeleton::new(
+            "skel-defend-tarpit",
+            "DefendTarpit",
+            vec![
+                "inspect_ingress_ip".into(),
+                "evaluate_threat_score".into(),
+                "bind_cognitive_tarpit".into(),
+                "throttle_connection_stream".into(),
+                "log_adversary_fingerprint".into(),
+            ],
+            vec!["tarpit_listener_active".into(), "valid_ip_format".into()],
+            15,
+        );
+        v18.tier = SkeletonTier::Vanguard;
+        v18.rolling_utility = 0.94;
+
+        let mut v19 = ActionSkeleton::new(
+            "skel-envoy-rate-limit",
+            "EnvoyRateLimit",
+            vec![
+                "measure_route_rps".into(),
+                "compare_token_bucket".into(),
+                "adjust_dynamic_quota".into(),
+                "emit_x429_backpressure".into(),
+            ],
+            vec!["rate_limiter_active".into(), "target_route_valid".into()],
+            10,
+        );
+        v19.tier = SkeletonTier::Vanguard;
+        v19.rolling_utility = 0.92;
+
+        let mut v20 = ActionSkeleton::new(
+            "skel-sentinel-isolate",
+            "SentinelIsolate",
+            vec![
+                "verify_tamper_signature".into(),
+                "freeze_workspace_processes".into(),
+                "snapshot_epistemic_state".into(),
+                "move_to_quarantine_airlock".into(),
+                "dispatch_sangha_alert".into(),
+            ],
+            vec![
+                "quarantine_path_accessible".into(),
+                "tamper_detected".into(),
+            ],
+            85,
+        );
+        v20.tier = SkeletonTier::Standard;
+        v20.rolling_utility = 0.89;
+
         let canonical = [
-            v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17,
+            v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19,
+            v20,
         ];
         for c in canonical {
             if !self.skeletons.iter().any(|s| s.id == c.id) {
@@ -714,10 +766,14 @@ impl GeneseedVault {
     /// Fast lookup by keyword or requirement.
     #[must_use]
     pub fn find_for_action(&self, action_hint: &str) -> Option<&ActionSkeleton> {
+        let hint = action_hint.to_lowercase();
         self.skeletons.iter().find(|s| {
             !s.deprecated
-                && (s.name.to_lowercase().contains(&action_hint.to_lowercase())
-                    || s.action_steps.iter().any(|step| step.contains(action_hint)))
+                && (s.id.to_lowercase().contains(&hint)
+                    || s.name.to_lowercase().contains(&hint)
+                    || s.action_steps
+                        .iter()
+                        .any(|step| step.to_lowercase().contains(&hint)))
         })
     }
 
@@ -3037,7 +3093,7 @@ pub mod tests {
     #[test]
     fn test_geneseed_vault_fork_and_recombination() {
         let mut vault = GeneseedVault::new();
-        assert_eq!(vault.skeletons.len(), 17);
+        assert_eq!(vault.skeletons.len(), 20);
 
         // 1. Fork skel-verify-commit -> skel-verify-commit-v2
         let mutated_steps = vec![
@@ -3252,7 +3308,7 @@ pub mod tests {
     #[test]
     fn test_vault_hebbian_coactivation_and_recombination() {
         let mut vault = GeneseedVault::new();
-        assert_eq!(vault.skeletons.len(), 17);
+        assert_eq!(vault.skeletons.len(), 20);
 
         // Co-activate skel-verify-commit and skel-fast-lookup
         let result =
@@ -3267,6 +3323,43 @@ pub mod tests {
         let dup =
             vault.record_coactivation_and_maybe_recombine("skel-verify-commit", "skel-fast-lookup");
         assert!(dup.is_none());
+    }
+
+    #[test]
+    fn test_geneseed_vault_defensive_skeletons() {
+        let vault = GeneseedVault::new();
+        let tarpit = vault
+            .find_for_action("tarpit")
+            .expect("defend-tarpit skeleton present");
+        assert_eq!(tarpit.id, "skel-defend-tarpit");
+        assert_eq!(tarpit.tier, SkeletonTier::Vanguard);
+        assert!(
+            tarpit
+                .action_steps
+                .contains(&"bind_cognitive_tarpit".to_string())
+        );
+
+        let rate_limit = vault
+            .find_for_action("rate-limit")
+            .expect("envoy-rate-limit skeleton present");
+        assert_eq!(rate_limit.id, "skel-envoy-rate-limit");
+        assert_eq!(rate_limit.tier, SkeletonTier::Vanguard);
+        assert!(
+            rate_limit
+                .action_steps
+                .contains(&"emit_x429_backpressure".to_string())
+        );
+
+        let isolate = vault
+            .find_for_action("isolate")
+            .expect("sentinel-isolate skeleton present");
+        assert_eq!(isolate.id, "skel-sentinel-isolate");
+        assert_eq!(isolate.tier, SkeletonTier::Standard);
+        assert!(
+            isolate
+                .action_steps
+                .contains(&"move_to_quarantine_airlock".to_string())
+        );
     }
 
     #[test]

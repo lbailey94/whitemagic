@@ -169,6 +169,78 @@ impl ActionSkeleton {
         self
     }
 
+    /// Mint an AST action skeleton for dynamically binding a hostile subnet to the Citadel cognitive tarpit (`skel-defend-tarpit`).
+    #[must_use]
+    pub fn defend_tarpit(task_id: Uuid, hostile_cidr: &str) -> Self {
+        let clean_subnet = hostile_cidr.replace(['.', '/', ':'], "_");
+        let delta = AstDelta {
+            scope_path: "module:citadel_tarpit".into(),
+            target_symbol: format!("throttle_{clean_subnet}"),
+            action_type: AstActionType::AddFunction,
+            new_imports: vec!["from citadel import ActiveDefenseTarpit".into()],
+            signature_delta: format!("def throttle_{clean_subnet}(client_socket) -> None:"),
+            pre_invariants: vec!["ActiveDefenseTarpit".into()],
+            post_invariants: vec!["tarpit_bound = True".into()],
+        };
+        Self::new(
+            task_id,
+            "security/citadel_defense.py",
+            SkeletonLanguage::Python,
+            vec![delta],
+        )
+        .with_reversibility(ReversibilityClass::Reversible {
+            compensating_action: format!("unbind_subnet('{hostile_cidr}')"),
+        })
+    }
+
+    /// Mint an AST action skeleton for rate limiting an API route under heavy scan (`skel-envoy-rate-limit`).
+    #[must_use]
+    pub fn envoy_rate_limit(task_id: Uuid, route_pattern: &str, _rps: u32) -> Self {
+        let clean_route = route_pattern
+            .replace('/', "_")
+            .trim_start_matches('_')
+            .to_string();
+        let delta = AstDelta {
+            scope_path: "router:ingress_limiter".into(),
+            target_symbol: format!("limit_{clean_route}"),
+            action_type: AstActionType::AddFunction,
+            new_imports: vec!["use wm_gen3_core::mesh::TokenBucket;".into()],
+            signature_delta: format!("pub fn limit_{clean_route}(rps: u32) -> bool"),
+            pre_invariants: vec!["pub fn limit_".into()],
+            post_invariants: vec!["rps_enforced".into()],
+        };
+        Self::new(
+            task_id,
+            "crates/wm-gen3-core/src/mesh.rs",
+            SkeletonLanguage::Rust,
+            vec![delta],
+        )
+        .with_reversibility(ReversibilityClass::Idempotent)
+    }
+
+    /// Mint an AST action skeleton for isolating a compromised workspace into quarantine (`skel-sentinel-isolate`).
+    #[must_use]
+    pub fn sentinel_isolate(task_id: Uuid, workspace_path: &str) -> Self {
+        let delta = AstDelta {
+            scope_path: "sentinel:airlock".into(),
+            target_symbol: "quarantine_workspace".into(),
+            action_type: AstActionType::AddFunction,
+            new_imports: vec!["from sentinel.airlock import isolate_path".into()],
+            signature_delta: "def execute_quarantine(target_dir: str) -> bool:".into(),
+            pre_invariants: vec!["isolate_path".into()],
+            post_invariants: vec!["quarantine_locked = True".into()],
+        };
+        Self::new(
+            task_id,
+            "scripts/vps_sentinel.py",
+            SkeletonLanguage::Python,
+            vec![delta],
+        )
+        .with_reversibility(ReversibilityClass::Compensable {
+            mitigation_plan: format!("restore_from_backup('{workspace_path}')"),
+        })
+    }
+
     /// Evaluate whether this individual action step must be escalated (`STEPGATE` + `SafeActBench`).
     #[must_use]
     pub fn evaluate_stepgate(&self, observed_confidence: f64) -> StepGateEscalationDecision {
@@ -341,5 +413,33 @@ class WhiteboardHandler(SimpleHTTPRequestHandler):
         let result = skeleton.validate_speculative(Some(existing_source));
         assert!(!result.is_valid);
         assert_eq!(result.conflicts.len(), 2);
+    }
+
+    #[test]
+    fn test_defensive_action_skeletons() {
+        let task_id = Uuid::new_v4();
+
+        // 1. Defend Tarpit
+        let tarpit_skel = ActionSkeleton::defend_tarpit(task_id, "192.168.1.0/24");
+        assert_eq!(tarpit_skel.language, SkeletonLanguage::Python);
+        assert!(tarpit_skel.reversibility.is_automatically_reversible());
+        let tarpit_valid =
+            tarpit_skel.validate_speculative(Some("from citadel import ActiveDefenseTarpit\n"));
+        assert!(tarpit_valid.is_valid);
+
+        // 2. Envoy Rate Limit
+        let envoy_skel = ActionSkeleton::envoy_rate_limit(task_id, "api/v1/auth", 100);
+        assert_eq!(envoy_skel.language, SkeletonLanguage::Rust);
+        assert_eq!(envoy_skel.reversibility, ReversibilityClass::Idempotent);
+        let envoy_valid = envoy_skel.validate_speculative(Some("pub fn limit_init() {}\n"));
+        assert!(envoy_valid.is_valid);
+
+        // 3. Sentinel Isolate
+        let isolate_skel = ActionSkeleton::sentinel_isolate(task_id, "/tmp/compromised_repo");
+        assert_eq!(isolate_skel.language, SkeletonLanguage::Python);
+        assert!(!isolate_skel.reversibility.is_automatically_reversible());
+        let isolate_valid =
+            isolate_skel.validate_speculative(Some("from sentinel.airlock import isolate_path\n"));
+        assert!(isolate_valid.is_valid);
     }
 }
