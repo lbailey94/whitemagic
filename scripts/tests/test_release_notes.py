@@ -70,6 +70,10 @@ class ReleaseNotesTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         out = result.stdout
         self.assertIn("--version v10.6.1", out)
+        self.assertIn("whitemagic-mcp@10.6.1", out)
+        self.assertIn("cargo install whitemagic --version 10.6.1", out)
+        self.assertIn("lbailey94/whitemagic:v10.6.1", out)
+        self.assertNotIn("lbailey94/whitemagic:9", out)
         self.assertIn('wm --store "$HOME/.local/share/whitemagic/gen3" grimoire --plan', out)
         self.assertIn('wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile cyberbrain', out)
         for unsupported in ("wm connect", "wm setup", "wm quickstart", "wm doctor", "--profile curated", "grimoire --write"):
