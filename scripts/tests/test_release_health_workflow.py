@@ -17,22 +17,102 @@ WORKFLOW = ROOT / ".github/workflows/release-health.yml"
 
 
 class ReleaseHealthWorkflowTests(unittest.TestCase):
-    def test_release_tail_probes_gen3_crates_and_preserves_npm_stable_selector(self) -> None:
-        release = (ROOT / "scripts/release.sh").read_text()
-        registry = release.split('banner "REGISTRIES"', 1)[1].split(
-            '# The MCP registry search index lags', 1
-        )[0]
-        for crate in (
-            "wm-gen3-core", "wm-gen3-shm", "wm-gen3-vault",
-            "wm-gen3-systemone", "wm-gen3-zeropointfive", "wm-gen3-harness",
-        ):
-            self.assertIn(crate, registry)
-        self.assertIn('https://crates.io/api/v1/crates/$crate', registry)
-        self.assertIn('registry.npmjs.org/whitemagic-mcp', registry)
-        self.assertIn("dist-tags\"].next", registry)
-        self.assertIn("dist-tags\"].latest", registry)
-        self.assertIn('if [ "$npm_latest" = "$VERSION" ]', registry)
-        self.assertNotIn('registry.npmjs.org/whitemagic-mcp/latest', registry)
+    def test_registry_probe_behavior_with_mocked_http_responses(self) -> None:
+        release_script = (ROOT / "scripts/release.sh").read_text()
+        self.assertIn("bash scripts/release_registry_probes.sh \"$VERSION\"", release_script)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fakebin = root / "bin"
+            fakebin.mkdir()
+            calls = root / "curl-calls.txt"
+            curl = fakebin / "curl"
+            curl.write_text("""#!/usr/bin/env bash
+for arg in "$@"; do url="$arg"; done
+printf '%s\\n' "$url" >> "$CURL_CALLS"
+case "$url" in
+  https://crates.io/api/v1/crates/*/*)
+    version="${url##*/}"
+    printf '{"version":{"num":"%s"}}\\n' "$version"
+    ;;
+  https://registry.npmjs.org/whitemagic-mcp)
+    printf '{"dist-tags":{"next":"%s","latest":"%s"}}\\n' \\
+      "$MOCK_NPM_NEXT" "$MOCK_NPM_LATEST"
+    ;;
+  https://hub.docker.com/v2/repositories/lbailey94/whitemagic/tags/*)
+    printf '{"name":"%s"}\\n' "${url##*/}"
+    ;;
+  *) exit 22 ;;
+esac
+""")
+            curl.chmod(0o755)
+            env = dict(
+                os.environ,
+                PATH=f"{fakebin}:{os.environ['PATH']}",
+                CURL_CALLS=str(calls),
+                WM_RELEASE_PROBE_TRIES="1",
+                WM_RELEASE_PROBE_DELAY="0",
+                MOCK_NPM_NEXT="10.6.1",
+                MOCK_NPM_LATEST="9.3.4",
+            )
+            helper = ROOT / "scripts/release_registry_probes.sh"
+            success = subprocess.run(
+                ["bash", str(helper), "10.6.1"], cwd=ROOT, env=env,
+                text=True, capture_output=True,
+            )
+            self.assertEqual(success.returncode, 0, success.stderr or success.stdout)
+            requested = calls.read_text().splitlines()
+            for crate in (
+                "wm-gen3-core", "wm-gen3-shm", "wm-gen3-vault",
+                "wm-gen3-systemone", "wm-gen3-zeropointfive", "wm-gen3-harness",
+            ):
+                self.assertIn(f"https://crates.io/api/v1/crates/{crate}/10.6.1", requested)
+            self.assertIn("stable Gen2 preserved", success.stdout)
+
+            # Gen2 release tails keep their legacy single-crate/latest path,
+            # and accept a later stable patch already promoted to latest.
+            calls.write_text("")
+            env["MOCK_NPM_LATEST"] = "9.3.5"
+            env["MOCK_NPM_NEXT"] = "10.6.1"
+            gen2 = subprocess.run(
+                ["bash", str(helper), "9.3.4"], cwd=ROOT, env=env,
+                text=True, capture_output=True,
+            )
+            self.assertEqual(gen2.returncode, 0, gen2.stderr or gen2.stdout)
+            self.assertIn(
+                "https://crates.io/api/v1/crates/whitemagic/9.3.4",
+                calls.read_text().splitlines(),
+            )
+            self.assertIn("newer stable; no downgrade", gen2.stdout)
+            self.assertFalse(any("wm-gen3-" in url for url in calls.read_text().splitlines()))
+
+            # A later Gen3 release already on next is accepted without moving
+            # the selector backward; stable latest must still be a Gen2 9.x.
+            calls.write_text("")
+            env["MOCK_NPM_LATEST"] = "9.3.4"
+            env["MOCK_NPM_NEXT"] = "10.6.2"
+            newer = subprocess.run(
+                ["bash", str(helper), "10.6.1"], cwd=ROOT, env=env,
+                text=True, capture_output=True,
+            )
+            self.assertEqual(newer.returncode, 0, newer.stderr or newer.stdout)
+            self.assertIn("newer than release; no downgrade", newer.stdout)
+            self.assertEqual(
+                calls.read_text().splitlines().count(
+                    "https://registry.npmjs.org/whitemagic-mcp"
+                ),
+                1,
+                "a newer next selector should be accepted without another promotion probe",
+            )
+
+            for invalid_latest in ("10.6.0", "", "9.4.0-beta.1"):
+                with self.subTest(latest=invalid_latest):
+                    env["MOCK_NPM_LATEST"] = invalid_latest
+                    bad_stable = subprocess.run(
+                        ["bash", str(helper), "10.6.1"], cwd=ROOT, env=env,
+                        text=True, capture_output=True,
+                    )
+                    self.assertNotEqual(bad_stable.returncode, 0)
+                    self.assertIn("stable Gen2 9.x.y", bad_stable.stderr)
 
     def test_selector_policy_keeps_gen3_preview_off_latest_even_when_misflagged(self) -> None:
         helper = ROOT / "scripts/release_channels.py"
