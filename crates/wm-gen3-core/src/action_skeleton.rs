@@ -196,7 +196,10 @@ impl ActionSkeleton {
     /// Mint an AST action skeleton for rate limiting an API route under heavy scan (`skel-envoy-rate-limit`).
     #[must_use]
     pub fn envoy_rate_limit(task_id: Uuid, route_pattern: &str, _rps: u32) -> Self {
-        let clean_route = route_pattern.replace('/', "_").trim_start_matches('_').to_string();
+        let clean_route = route_pattern
+            .replace('/', "_")
+            .trim_start_matches('_')
+            .to_string();
         let delta = AstDelta {
             scope_path: "router:ingress_limiter".into(),
             target_symbol: format!("limit_{clean_route}"),
@@ -420,7 +423,8 @@ class WhiteboardHandler(SimpleHTTPRequestHandler):
         let tarpit_skel = ActionSkeleton::defend_tarpit(task_id, "192.168.1.0/24");
         assert_eq!(tarpit_skel.language, SkeletonLanguage::Python);
         assert!(tarpit_skel.reversibility.is_automatically_reversible());
-        let tarpit_valid = tarpit_skel.validate_speculative(Some("from citadel import ActiveDefenseTarpit\n"));
+        let tarpit_valid =
+            tarpit_skel.validate_speculative(Some("from citadel import ActiveDefenseTarpit\n"));
         assert!(tarpit_valid.is_valid);
 
         // 2. Envoy Rate Limit
@@ -434,7 +438,8 @@ class WhiteboardHandler(SimpleHTTPRequestHandler):
         let isolate_skel = ActionSkeleton::sentinel_isolate(task_id, "/tmp/compromised_repo");
         assert_eq!(isolate_skel.language, SkeletonLanguage::Python);
         assert!(!isolate_skel.reversibility.is_automatically_reversible());
-        let isolate_valid = isolate_skel.validate_speculative(Some("from sentinel.airlock import isolate_path\n"));
+        let isolate_valid =
+            isolate_skel.validate_speculative(Some("from sentinel.airlock import isolate_path\n"));
         assert!(isolate_valid.is_valid);
     }
 }

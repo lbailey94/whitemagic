@@ -674,7 +674,10 @@ impl GeneseedVault {
                 "move_to_quarantine_airlock".into(),
                 "dispatch_sangha_alert".into(),
             ],
-            vec!["quarantine_path_accessible".into(), "tamper_detected".into()],
+            vec![
+                "quarantine_path_accessible".into(),
+                "tamper_detected".into(),
+            ],
             85,
         );
         v20.tier = SkeletonTier::Standard;
@@ -768,7 +771,9 @@ impl GeneseedVault {
             !s.deprecated
                 && (s.id.to_lowercase().contains(&hint)
                     || s.name.to_lowercase().contains(&hint)
-                    || s.action_steps.iter().any(|step| step.to_lowercase().contains(&hint)))
+                    || s.action_steps
+                        .iter()
+                        .any(|step| step.to_lowercase().contains(&hint)))
         })
     }
 
@@ -3323,20 +3328,38 @@ pub mod tests {
     #[test]
     fn test_geneseed_vault_defensive_skeletons() {
         let vault = GeneseedVault::new();
-        let tarpit = vault.find_for_action("tarpit").expect("defend-tarpit skeleton present");
+        let tarpit = vault
+            .find_for_action("tarpit")
+            .expect("defend-tarpit skeleton present");
         assert_eq!(tarpit.id, "skel-defend-tarpit");
         assert_eq!(tarpit.tier, SkeletonTier::Vanguard);
-        assert!(tarpit.action_steps.contains(&"bind_cognitive_tarpit".to_string()));
+        assert!(
+            tarpit
+                .action_steps
+                .contains(&"bind_cognitive_tarpit".to_string())
+        );
 
-        let rate_limit = vault.find_for_action("rate-limit").expect("envoy-rate-limit skeleton present");
+        let rate_limit = vault
+            .find_for_action("rate-limit")
+            .expect("envoy-rate-limit skeleton present");
         assert_eq!(rate_limit.id, "skel-envoy-rate-limit");
         assert_eq!(rate_limit.tier, SkeletonTier::Vanguard);
-        assert!(rate_limit.action_steps.contains(&"emit_x429_backpressure".to_string()));
+        assert!(
+            rate_limit
+                .action_steps
+                .contains(&"emit_x429_backpressure".to_string())
+        );
 
-        let isolate = vault.find_for_action("isolate").expect("sentinel-isolate skeleton present");
+        let isolate = vault
+            .find_for_action("isolate")
+            .expect("sentinel-isolate skeleton present");
         assert_eq!(isolate.id, "skel-sentinel-isolate");
         assert_eq!(isolate.tier, SkeletonTier::Standard);
-        assert!(isolate.action_steps.contains(&"move_to_quarantine_airlock".to_string()));
+        assert!(
+            isolate
+                .action_steps
+                .contains(&"move_to_quarantine_airlock".to_string())
+        );
     }
 
     #[test]
