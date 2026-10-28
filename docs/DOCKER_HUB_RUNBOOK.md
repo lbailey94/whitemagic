@@ -15,7 +15,7 @@ verifies the public result. Keep release channels and volume paths explicit.
 > - Current release: v10.6.1 — https://github.com/lbailey94/whitemagic/releases/tag/v10.6.1
 > - Stable Gen2 release: v9.3.4 (published 2026-10-01) — https://github.com/lbailey94/whitemagic/releases/tag/v9.3.4
 >
-> Store data in the mounted generation-specific volume. The optional hosted evaluation lane is separate from the local container store.
+> Store your data in the mounted generation-specific volume. The optional hosted evaluation lane is separate from the local container store.
 
 ## Verified channel and storage facts
 
