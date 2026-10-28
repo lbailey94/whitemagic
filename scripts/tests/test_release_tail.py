@@ -130,6 +130,30 @@ class ReleaseTailTests(unittest.TestCase):
             self.assertEqual(gen2_contract.read_text(), "sealed Gen2 schema\n")
             self.assertEqual(catalog.read_text(), "sealed Gen2 catalog\n")
 
+    def test_contract_integer_fields_reject_json_booleans(self):
+        cases = (
+            ("format_version", None, True),
+            ("routes", "routes", True),
+            ("declared", "declared", True),
+            ("undeclared", "undeclared", False),
+        )
+        for case, nested, value in cases:
+            with self.subTest(case=case):
+                payload = manifest("10.6.1", "gen3")
+                if case == "format_version":
+                    payload[case] = value
+                elif case == "routes":
+                    payload["tools"] = payload["tools"][:1]
+                    payload["counts"] = {"routes": value, "declared": 1, "undeclared": 0}
+                elif case == "declared":
+                    payload["counts"][nested] = value
+                    payload["counts"]["undeclared"] = 0
+                else:
+                    payload["counts"][nested] = value
+                    payload["counts"]["declared"] = 1
+                with self.assertRaises(ValueError):
+                    validate_contract(payload, "10.6.1", "gen3")
+
     def test_bad_or_cross_family_manifest_cannot_replace_existing_output(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -313,7 +337,7 @@ class ReleaseTailTests(unittest.TestCase):
         broken["install_certification"]["docker"]["bound_manifest_sha256"] = "b" * 64
         with self.assertRaisesRegex(ValueError, "docker certification"):
             verify_health_record(broken, "10.6.1", MANIFEST_SHA)
-        for field, value in (("tag", "v10.6.0"), ("kind", "other"), ("schema", 2)):
+        for field, value in (("tag", "v10.6.0"), ("kind", "other"), ("schema", 2), ("schema", True)):
             broken = health_record()
             broken[field] = value
             with self.subTest(field=field), self.assertRaises(ValueError):
@@ -326,6 +350,23 @@ class ReleaseTailTests(unittest.TestCase):
         broken["install_certification"]["npm"]["selftest"] = {"status": "failed"}
         with self.assertRaisesRegex(ValueError, "passing runtime self-test"):
             verify_health_record(broken, "10.6.1", MANIFEST_SHA)
+
+    def test_selftest_passed_field_requires_literal_true_and_status_only_ok_is_supported(self):
+        accepted = health_record()
+        accepted["install_certification"]["docker"]["selftest"] = {"passed": True}
+        verify_health_record(accepted, "10.6.1", MANIFEST_SHA)
+
+        for selftest in (
+            {"passed": "false", "status": "failed"},
+            {"passed": 1, "status": "failed"},
+            {"passed": False, "status": "ok"},
+            {"passed": "false", "status": "ok"},
+        ):
+            with self.subTest(selftest=selftest):
+                broken = health_record()
+                broken["install_certification"]["npm"]["selftest"] = selftest
+                with self.assertRaisesRegex(ValueError, "passing runtime self-test"):
+                    verify_health_record(broken, "10.6.1", MANIFEST_SHA)
 
 
 if __name__ == "__main__":
