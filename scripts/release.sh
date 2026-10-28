@@ -7,7 +7,8 @@
 # Example:
 #   scripts/release.sh 9.1.9
 #   scripts/release.sh 9.1.9 --dry-run
-#   scripts/release.sh 9.1.9 --tail-only   # rehearsal against a published release
+#   scripts/release.sh 9.1.9 --tail-only   # live post-release reconciliation
+#   scripts/release.sh 9.1.9 --tail-only --dry-run   # local preview, no network/writes
 #
 # Division of labor (9.1.8 lesson): the tag-triggered `release.yml` workflow
 # owns the five channels — it builds the 5-platform binaries, signs the
@@ -17,10 +18,12 @@
 #
 #   bump → release commit → push → CI gate → signed tag → [release.yml] →
 #   assets + checksum + registries + release-health verification
-#   → contract manifest → site sync → Hub README.
+#   → generation-specific contract manifest → applicable site path → Hub README.
 #
-# The tail stages (contract, site, Hub) are idempotent and verify-by-default:
-# `--tail-only` runs them against an already-published version as a rehearsal.
+# The tail stages (contract, site, Hub) are live reconciliation steps.
+# `--tail-only` can commit/push generated docs, sync the applicable site, and
+# dispatch the Hub description workflow. Combine it with `--dry-run` for a
+# local preview that does not fetch, query, launch, write, commit, push, or dispatch.
 #
 # The pre-9.1.9 script also built binaries and published registries locally;
 # that duplicated the workflow (double-publish risk) and was retired. The
@@ -52,6 +55,9 @@ done
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 UA="whitemagic-release/1.0 (lbailey94@protonmail.com)"
+RELEASE_FAMILY="$(python3 scripts/release_tail.py family "$VERSION")" \
+  || { echo "ERROR: unsupported release family for $VERSION" >&2; exit 1; }
+TAG_COMMIT=""
 
 banner() { echo; echo "━━━━ $* ━━━"; }
 
@@ -82,7 +88,11 @@ runtime_manifest() { # <output-file> — read RELEASED_BIN's capability manifest
 banner "PREFLIGHT"
 [ -z "$(git status --porcelain)" ] || { echo "ERROR: dirty tree — commit or stash first"; exit 1; }
 [ "$(git branch --show-current)" = "main" ] || { echo "ERROR: run from main"; exit 1; }
-git fetch origin main --quiet
+if $DRY_RUN; then
+  echo "dry-run: skipping git fetch (using only cached origin/main refs)"
+else
+  git fetch origin main --quiet
+fi
 [ -z "$(git rev-list HEAD..origin/main)" ] || { echo "ERROR: local main is behind origin — pull first"; exit 1; }
 CUR=$(grep -m1 '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
 echo "workspace: $CUR → $VERSION"
@@ -102,16 +112,18 @@ echo "preflight ok"
 if $TAIL_ONLY; then
   banner "TAIL-ONLY — post-release stages for an already-published v$VERSION"
   echo "skipping: version bump, CI gate, signed tag, Release workflow."
-  echo "running: assets, registries, release health, contract manifest, site sync, Hub README."
-  # The tag stages are skipped, so derive the two anchors they would set:
-  # the tag's creation time (floor for the release-health lookup) and the
-  # tag-triggered Release run id (for advisory hints). 2026-09-23: tail-only
-  # crashed here with RUN_ID unbound under set -u.
-  TAG_PUSH_AT=$(git for-each-ref --format='%(taggerdate:unix)' "refs/tags/v$VERSION" 2>/dev/null || true)
-  [ -n "${TAG_PUSH_AT:-}" ] || TAG_PUSH_AT=$(date +%s)
-  RUN_ID=$(gh run list --workflow Release --limit 10 \
-    --json databaseId,headBranch \
-    --jq ".[] | select(.headBranch == \"v$VERSION\") | .databaseId" 2>/dev/null | head -n1 || true)
+  echo "running live reconciliation: assets, registries, exact-source health,"
+  echo "  generation-specific contract, applicable site path, and Hub README."
+  if $DRY_RUN; then
+    echo "dry-run: no tag/run lookup, network request, binary launch, file write, commit, push, or workflow dispatch."
+  else
+    TAG_COMMIT="$(git rev-parse "refs/tags/v$VERSION^{commit}" 2>/dev/null || true)"
+    [ -n "$TAG_COMMIT" ] || {
+      echo "ERROR: local tag v$VERSION is required to bind tail checks to its source commit." >&2
+      echo "       Fetch the exact tag without retagging it, then rerun." >&2
+      exit 1
+    }
+  fi
 else
 
 # ── version bump ─────────────────────────────────────────────────────────
@@ -209,7 +221,6 @@ else
   if [ "$tag_ok" = "0" ]; then
     git tag -a "v$VERSION" -m "WhiteMagic v$VERSION"
   fi
-  TAG_PUSH_AT=$(date +%s)
   git push origin "v$VERSION"
 fi
 
@@ -220,17 +231,19 @@ if $DRY_RUN; then
   echo "[dry-run]   binaries + cosign bundles + SBOMs + signed manifest, then its"
   echo "[dry-run]   registries job: crates.io → npm → Docker Hub → MCP registry"
 else
+  TAG_COMMIT="$(git rev-parse "refs/tags/v$VERSION^{commit}")"
   RUN_ID=""
   for _ in $(seq 1 30); do
-    RUN_ID=$(gh run list --workflow Release --limit 10 \
-      --json databaseId,headBranch \
-      --jq ".[] | select(.headBranch == \"v$VERSION\") | .databaseId" | head -n1)
+    RUNS=$(gh run list --workflow Release --commit "$TAG_COMMIT" --limit 20 \
+      --json databaseId,headBranch,headSha,event,status,conclusion,createdAt 2>/dev/null || echo '[]')
+    RUN_ID=$(printf '%s' "$RUNS" | python3 scripts/release_tail.py select-release \
+      --version "$VERSION" --source-sha "$TAG_COMMIT" 2>/dev/null || true)
     [ -n "$RUN_ID" ] && break
     sleep 10
   done
   if [ -z "$RUN_ID" ]; then
-    echo "ERROR: no Release workflow run found for v$VERSION after 5 minutes."
-    echo "       (tag pushed? Actions outage?) Inspect: gh run list --workflow Release"
+    echo "ERROR: no Release run matches tag v$VERSION at $TAG_COMMIT after 5 minutes."
+    echo "       Inspect: gh run list --workflow Release --commit $TAG_COMMIT"
     exit 1
   fi
   echo "watching Release run $RUN_ID ..."
@@ -308,38 +321,54 @@ fi
 # ── release health (canonical channel reconciliation) ────────────────────
 banner "RELEASE HEALTH"
 if $DRY_RUN; then
-  echo "[dry-run] wait for the tag-triggered Release health run; fail loudly if red"
+  echo "[dry-run] select newest matching workflow_run health for source $TAG_COMMIT, then require success"
+  echo "[dry-run] verify the v$VERSION record against its exact signed manifest and install certifications"
 else
   HRUN=""
   for _ in $(seq 1 30); do
-    HRUN=$(gh run list --workflow release-health.yml --limit 5 \
-      --json databaseId,createdAt \
-      --jq "[.[] | select((.createdAt | fromdateiso8601) >= ($TAG_PUSH_AT - 120))] | .[0].databaseId // empty" \
-      2>/dev/null || true)
+    RUNS=$(gh run list --workflow release-health.yml --commit "$TAG_COMMIT" --limit 20 \
+      --json databaseId,headSha,event,status,conclusion,createdAt 2>/dev/null || echo '[]')
+    HRUN=$(printf '%s' "$RUNS" | python3 scripts/release_tail.py select-health \
+      --version "$VERSION" --source-sha "$TAG_COMMIT" 2>/dev/null || true)
     [ -n "$HRUN" ] && break
     sleep 10
   done
-  if [ -n "$HRUN" ]; then
-    gh run watch "$HRUN" --exit-status \
-      && echo "release-health: green ($HRUN)" \
-      || { echo "ERROR: release-health failed ($HRUN) — inspect gh run view $HRUN"; exit 1; }
-  else
-    echo "WARN: no release-health run appeared for v$VERSION yet — the scheduled run will reconcile."
-  fi
+  [ -n "$HRUN" ] || {
+    echo "ERROR: no workflow_run health event matches v$VERSION source $TAG_COMMIT." >&2
+    echo "       Scheduled/manual checks are not accepted for this release hook." >&2
+    exit 1
+  }
+  echo "watching release-health run $HRUN ..."
+  gh run watch "$HRUN" --exit-status \
+    || { echo "ERROR: release-health workflow FAILED ($HRUN)." >&2; \
+         echo "       Inspect: gh run view $HRUN --log-failed" >&2; exit 1; }
+  mkdir -p "$TMP/health"
+  gh run download "$HRUN" --name release-health --dir "$TMP/health" >/dev/null
+  MANIFEST="$TMP/release-manifest.json"
+  gh release download "v$VERSION" -p 'release-manifest.json' -D "$TMP" >/dev/null
+  MANIFEST_SHA="$(sha256sum "$MANIFEST" | cut -d' ' -f1)"
+  jq -e --arg version "$VERSION" \
+    '.schema == 1 and .version == $version and (.targets | type == "object" and length > 0)' \
+    "$MANIFEST" >/dev/null || {
+    echo "ERROR: downloaded signed manifest kind/schema/version/targets do not match v$VERSION" >&2; exit 1;
+  }
+  python3 scripts/release_tail.py verify-health --version "$VERSION" \
+    --manifest-sha256 "$MANIFEST_SHA" --record "$TMP/health/release-health.json"
+  echo "release-health: healthy ($HRUN), bound to v$VERSION manifest $MANIFEST_SHA and source $TAG_COMMIT"
 fi
 
 # ── contract manifest (regenerated from the released binary) ─────────────
 banner "CONTRACT MANIFEST"
 if $DRY_RUN; then
-  echo "[dry-run] wm contract --out docs/contract/route-schema-manifest.json"
-  echo "[dry-run]   from the released binary; commit + push only when it changed"
+  python3 scripts/release_tail.py contract --version "$VERSION" \
+    --repo-root "$REPO_ROOT" --dry-run
 elif [ -n "$RELEASED_BIN" ] && [ -x "$RELEASED_BIN" ]; then
-  CONTRACT_TMP="$(mktemp)"
-  if "$RELEASED_BIN" contract --out "$CONTRACT_TMP" >/dev/null && [ -s "$CONTRACT_TMP" ]; then
-    cp "$CONTRACT_TMP" docs/contract/route-schema-manifest.json
-    rm -f "$CONTRACT_TMP"
-    if [ -n "$(git status --porcelain docs/contract/route-schema-manifest.json)" ]; then
-      git add docs/contract/route-schema-manifest.json
+  CONTRACT_PATH="$(python3 scripts/release_tail.py contract --version "$VERSION" \
+    --binary "$RELEASED_BIN" --repo-root "$REPO_ROOT" \
+    | sed -n 's/^.*manifest written: //p')"
+  if [ -n "$CONTRACT_PATH" ]; then
+    if [ -n "$(git status --porcelain -- "$CONTRACT_PATH")" ]; then
+      git add -- "$CONTRACT_PATH"
       git commit -m "chore(contract): regenerate route schema manifest at $VERSION"
       git push origin main
       echo "contract manifest: regenerated and pushed"
@@ -347,8 +376,7 @@ elif [ -n "$RELEASED_BIN" ] && [ -x "$RELEASED_BIN" ]; then
       echo "contract manifest: unchanged"
     fi
   else
-    rm -f "$CONTRACT_TMP"
-    echo "WARN: contract regeneration failed — run it manually from the released binary"
+    echo "WARN: contract regeneration failed — validate the released binary output manually"
   fi
 else
   echo "WARN: released binary unavailable on this host — regenerate the contract manifest manually"
@@ -356,9 +384,15 @@ fi
 
 # ── site sync (facts, gates, push master) ────────────────────────────────
 banner "SITE SYNC"
-SITE_DIR="${WM_SITE_DIR:-$HOME/Desktop/WHITEMAGIC/whitemagic-site}"
+SITE_DIR="${WM_SITE_DIR:-$HOME/Desktop/front burner/WHITEMAGIC/whitemagic-site}"
 if $SKIP_SITE; then
   echo "site sync skipped (--skip-site); defer until the rendered site preview is reviewed"
+elif [ "$RELEASE_FAMILY" = "gen3" ]; then
+  echo "Gen3 site sync skipped: this tail's runtime-count and autopush checks are Gen2-specific."
+  echo "Current site checkout: $SITE_DIR"
+  echo "Manual refresh: cd \"$SITE_DIR\" && npm run sync-facts:refresh && npm run check-facts"
+  echo "  && npm run check-build-truth && npm run check-surfaces && npx tsc --noEmit && npm run build"
+  echo "Review the site diff and rendered preview before its normal deployment."
 elif $DRY_RUN; then
   echo "[dry-run] in $SITE_DIR: verify capability counts vs the released binary,"
   echo "[dry-run]   verify the public installer copy matches scripts/install.sh,"

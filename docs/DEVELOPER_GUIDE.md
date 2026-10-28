@@ -1,11 +1,8 @@
 # Gen3 developer guide
 
-Current guide for the `wm` 10.2 alpha line (Gen3 substrate). It replaces the
-stale v9.2-era developer notes: commands, paths and knobs below are taken from
-the code and the CI workflow at `main` `2a923b4` (10.2.0-alpha.5), not from the
-old `justfile` (which still describes the v5 tree and must not be trusted).
-Version numbers live in the release surfaces (`Cargo.toml` workspace version,
-`scripts/version_truth.py`), never in this guide.
+Current guide for the Gen3 `wm` line. Commands, paths, and release behavior
+come from this checkout; version numbers live in the release surfaces
+(`Cargo.toml` workspace version and `scripts/version_truth.py`), not this guide.
 
 Related documents: [`INDEX.md`](INDEX.md) (map of `docs/`),
 [`STORE_LAYOUT.md`](STORE_LAYOUT.md) (on-disk store), [`CHARTER.md`](CHARTER.md)
@@ -123,6 +120,22 @@ explains why no code path may silently point at the real WMv9 tree.
 
 - `scripts/release.sh <version>` orchestrates: version bump → release commit →
   push → wait for CI green → signed tag → verify channels → site/hub tails.
+- The release tail separates version families: v9 uses the Gen2 `contract
+  --out` path, while v10 captures and validates `contract --json` into
+  `docs/gen3/route-schema-manifest.json`. Gen3 does not write the removed Gen2
+  schema or v9 route catalog, and it skips the legacy Gen2 site-count/autopush
+  lane. For a Gen3 website refresh, set `WM_SITE_DIR` to the active site
+  checkout and run its release-facts checks and rendered preview separately.
+- `--tail-only` is a live reconciliation: it can write/commit/push contract
+  output, run the applicable site sync, and dispatch the Hub-description
+  workflow. Use `--tail-only --dry-run` for a local preview; dry-run skips
+  fetches, GitHub/network calls, binary launches, file writes, commits, pushes,
+  and workflow dispatch.
+- Release-health selection is tied to the exact tag source: a successful
+  Release run for `vX.Y.Z` and its source commit, followed by a successful
+  `workflow_run` health event for that same commit. The health JSON must match
+  the version, signed manifest digest, and installer certifications. Scheduled
+  or manually dispatched health runs do not satisfy this post-release hook.
 - `.github/workflows/release.yml` (tag-triggered) owns the channels: builds
   x86_64/aarch64 Linux + aarch64 macOS + Windows, signs the manifest (Sigstore),
   emits SBOMs, creates the GitHub Release, certifies `install.sh` against the

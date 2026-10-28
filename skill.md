@@ -11,8 +11,11 @@ Local-first memory and session continuity for coding agents, exposed over MCP. A
 ```bash
 curl -fsSL https://www.whitemagic.dev/install.sh?ref=gen3-skill | sh
 wm --version         # expect: wm 10.6.1 (Gen3 line)
-wm grimoire          # guided first-run: environment check + client wiring preview
-                     #   --json for a machine-readable report; --write to write client configs
+wm --store "$HOME/.local/share/whitemagic/gen3" grimoire --plan
+                     # environment/store check + client-config target preview
+                     # may initialize/seed this store; does not edit client configs
+wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile cyberbrain
+                     # MCP stdio server using the separate Gen3 store
 wm selftest --json   # install invariant (throwaway store) + host_status/host_health
 wm selftest --strict # exit 1 only when the host verdict is critical
 wm ingest --file notes.jsonl --default-source notes:stream   # JSONL stream ('-' = stdin)
@@ -21,7 +24,8 @@ wm ingest --file notes.jsonl --default-source notes:stream   # JSONL stream ('-'
 
 The v9-only commands (`doctor`, `connect`, `setup`, `quickstart`, `backup`,
 `restore`, `update`, `seal`, `verify`, `trust`, `anchor`) belong to the `wm9`
-binary line, not Gen3 `wm`; `wm grimoire --write` covers client wiring here.
+binary line, not Gen3 `wm`. Gen3 `grimoire --plan` reports client config targets
+without writing them; add the `serve` command shown below to the client config.
 Building from source instead: `cargo build --release` in this repository, then install `target/release/wm` onto your `PATH`.
 
 ## Wire your MCP client
@@ -33,7 +37,7 @@ Claude Desktop, Cursor, Codex, Gemini CLI, opencode — any MCP client:
   "mcpServers": {
     "whitemagic": {
       "command": "wm",
-      "args": ["serve", "--profile", "cyberbrain"]
+      "args": ["--store", "/absolute/path/to/whitemagic/gen3", "serve", "--profile", "cyberbrain"]
     }
   }
 }

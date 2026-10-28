@@ -277,8 +277,21 @@ echo "Verify installation:"
 echo "  wm --version"
 echo ""
 echo "Get started (in this order):"
-echo "  1. wm grimoire                        # guided first-run check"
-echo "  2. wm connect                         # dry run; add --write to apply"
+case "$VERSION" in
+    v10.*|10.*)
+        echo "  1. \"${INSTALL_DIR}/wm\" --store \"\$HOME/.local/share/whitemagic/gen3\" grimoire --plan"
+        echo "     # checks/initializes this isolated store; previews clients without editing their configs"
+        echo "  2. \"${INSTALL_DIR}/wm\" --store \"\$HOME/.local/share/whitemagic/gen3\" serve --profile cyberbrain"
+        echo "     # add this command to your MCP client's configuration (stdio)"
+        ;;
+    v9.*|9.*)
+        echo "  1. \"${INSTALL_DIR}/wm\" connect             # preview detected client changes"
+        echo "  2. Review the preview, then run: \"${INSTALL_DIR}/wm\" connect --write"
+        ;;
+    *)
+        echo "  \"${INSTALL_DIR}/wm\" --help              # check commands supported by this release"
+        ;;
+esac
 echo ""
 echo "Fleet Agora & Coordination:"
 echo "  sangha brief                          # one-shot Agora session start"
@@ -288,11 +301,26 @@ echo "  wm cpr verify <receipt.json>          # Causal Provenance Receipt verifi
 echo "  wm mandala verify-pass                # Mandala capability pass verifier"
 echo ""
 echo "Optional:"
-echo "  wm quickstart                         # 30-second continuity demo (throwaway store)"
+case "$VERSION" in
+    v9.*|9.*)
+        echo "  \"${INSTALL_DIR}/wm\" quickstart          # 30-second continuity demo"
+        ;;
+    *)
+        echo "  \"${INSTALL_DIR}/wm\" selftest --strict   # invariant + host-health check"
+        ;;
+esac
 echo ""
 echo "Troubleshooting:"
-echo "  wm doctor                             # diagnostics when something is wrong"
-echo "  wm serve --profile curated            # dispatch-only MCP server"
+case "$VERSION" in
+    v9.*|9.*)
+        echo "  \"${INSTALL_DIR}/wm\" doctor              # Gen2 diagnostics"
+        echo "  \"${INSTALL_DIR}/wm\" serve --profile curated"
+        ;;
+    *)
+        echo "  \"${INSTALL_DIR}/wm\" status              # inspect the selected store"
+        echo "  \"${INSTALL_DIR}/wm\" selftest --strict   # check host and runtime invariants"
+        ;;
+esac
 echo ""
 # Self-wire the shell profile so `wm` works in new terminals — a fresh
 # stranger should never see "wm: not found" right after installing. One

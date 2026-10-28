@@ -15,6 +15,7 @@ Map of `docs/` for the WhiteMagic Gen3 line. The product contract is in
 | [`DERIVED_CACHE_POLICY.md`](DERIVED_CACHE_POLICY.md) | derived embedding cache and per-record projection vectors |
 | [`BENCHMARK_AND_VERIFICATION_PROTOCOL.md`](BENCHMARK_AND_VERIFICATION_PROTOCOL.md) | how benchmark/verification evidence is produced |
 | [`CLOSURE_TESTS.md`](CLOSURE_TESTS.md) | Closure 1 / Closure 2 test contract |
+| [`gen3/README.md`](gen3/README.md) | Gen3-only generated route/schema manifest location; kept separate from historical Gen2 contract files |
 
 ## Develop & Architecture
 

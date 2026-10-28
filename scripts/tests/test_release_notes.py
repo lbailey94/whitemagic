@@ -11,6 +11,16 @@ SCRIPT = REPO_ROOT / "scripts" / "release_notes.py"
 
 CHANGELOG = """# Changelog
 
+## [10.6.1] — 2026-10-27
+
+### Changed
+- Gen3 release note fixture.
+
+## [9.3.4] — 2026-10-01
+
+### Changed
+- Gen2 release note fixture.
+
 ## [9.2.9] — 2026-09-30
 
 ### Fixed
@@ -52,7 +62,29 @@ class ReleaseNotesTest(unittest.TestCase):
         self.assertIn("install.sh | sh", out)
         self.assertIn("install-gated", out)
         self.assertIn("macOS arm64", out)
-        self.assertIn("wm grimoire", out, "release body names the activation path")
+        self.assertIn("wm connect` previews", out)
+        self.assertIn("wm connect --write", out)
+
+    def test_gen3_release_notes_use_only_supported_commands_and_pin_install(self):
+        result = self.run_script("--version", "v10.6.1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        out = result.stdout
+        self.assertIn("--version v10.6.1", out)
+        self.assertIn("whitemagic-mcp@10.6.1", out)
+        self.assertIn("cargo install whitemagic --version 10.6.1", out)
+        self.assertIn("lbailey94/whitemagic:10.6.1", out)
+        self.assertNotIn("lbailey94/whitemagic:9", out)
+        self.assertIn('wm --store "$HOME/.local/share/whitemagic/gen3" grimoire --plan', out)
+        self.assertIn('wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile cyberbrain', out)
+        for unsupported in ("wm connect", "wm setup", "wm quickstart", "wm doctor", "--profile curated", "grimoire --write"):
+            self.assertNotIn(unsupported, out)
+
+    def test_gen2_release_notes_keep_connect_preview_then_write(self):
+        result = self.run_script("--version", "v9.3.4")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        out = result.stdout
+        self.assertIn("--version v9.3.4", out)
+        self.assertLess(out.index("wm connect` previews"), out.index("wm connect --write`"))
 
     def test_missing_version_is_a_clean_error(self):
         result = self.run_script("--version", "9.9.9")

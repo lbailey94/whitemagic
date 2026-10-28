@@ -19,12 +19,7 @@ import re
 import sys
 from pathlib import Path
 
-INSTALL = """curl -fsSL https://www.whitemagic.dev/install.sh | sh"""
-
-CHANNELS = (
-    "Or: `npx whitemagic-mcp serve` (npm) · `cargo install whitemagic` "
-    "(crates.io) · `docker run -i lbailey94/whitemagic:9 serve` (Docker Hub)."
-)
+INSTALL = """curl -fsSL https://www.whitemagic.dev/install.sh | sh -s -- --version v{version}"""
 
 PLATFORMS_STABLE = (
     "Linux x86-64, Linux arm64, macOS arm64 + x86_64, and Windows x86_64 are "
@@ -67,6 +62,36 @@ def extract_section(changelog: str, version: str) -> str | None:
 
 def render(version: str, section: str) -> str:
     platforms = PLATFORMS_V10_ALPHA if version.startswith("10.") else PLATFORMS_STABLE
+    install = INSTALL.format(version=version)
+    if version.startswith("10."):
+        channels = (
+            f'Or: `npx -y whitemagic-mcp@{version} --store /absolute/path/to/gen3 '
+            'serve --profile cyberbrain` (npm) · '
+            f'`cargo install whitemagic --version {version}` (crates.io) · '
+            f'`docker run -i --rm -v whitemagic-gen3:/data lbailey94/whitemagic:{version} '
+            '--store /data serve --profile cyberbrain` (Docker Hub).'
+        )
+    else:
+        channels = (
+            f'Or: `npx -y whitemagic-mcp@{version} serve --profile curated` (npm) · '
+            f'`cargo install whitemagic --version {version}` (crates.io) · '
+            f'`docker run -i lbailey94/whitemagic:{version} serve --profile curated` (Docker Hub).'
+        )
+    if version.startswith("10."):
+        activation = (
+            'After installing, `wm --store "$HOME/.local/share/whitemagic/gen3" '
+            "grimoire --plan` checks the environment and previews detected client "
+            "config targets. It may initialize the selected store, but it does not "
+            "write client configs. Add `wm --store "
+            '\"$HOME/.local/share/whitemagic/gen3\" serve --profile cyberbrain` '
+            "to your MCP client configuration."
+        )
+    else:
+        activation = (
+            "After installing, `wm connect` previews detected MCP client changes. "
+            "Review them, then run `wm connect --write` to apply. "
+            "`wm quickstart` is the optional two-process continuity demo."
+        )
     return f"""# WhiteMagic {version}
 
 Local-first memory and continuity for MCP agents. Full history:
@@ -75,10 +100,10 @@ Local-first memory and continuity for MCP agents. Full history:
 ## Install
 
 ```bash
-{INSTALL}
+{install}
 ```
 
-{CHANNELS}
+{channels}
 
 ## Platforms
 
@@ -92,9 +117,7 @@ Local-first memory and continuity for MCP agents. Full history:
 
 Release assets are checksummed: verify with `sha256sum -c` (Linux/macOS) or
 the matching `.sha256` file, then move the binary to `~/.local/bin/wm`.
-After installing: `wm grimoire` proves the environment, `wm connect --write`
-wires your MCP clients, and `wm quickstart` is the optional two-process
-continuity demo.
+{activation}
 """
 
 

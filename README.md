@@ -17,7 +17,7 @@ next session — without sending your memory store to any hosted service.
   "mcpServers": {
     "whitemagic": {
       "command": "wm",
-      "args": ["serve", "--profile", "cyberbrain"]
+      "args": ["--store", "/absolute/path/to/whitemagic/gen3", "serve", "--profile", "cyberbrain"]
     }
   }
 }
@@ -144,10 +144,13 @@ wm --version    # wm 10.6.1
 wm status       # display substrate status, epoch, record counts, and store health
 ```
 
-`wm grimoire` proves the environment and previews client wiring; add `--write`
-to write detected MCP client configurations (`--json` for a machine-readable
-report). `wm selftest` runs the full invariant check (a throwaway store plus
-host health); see [`docs/SELFTEST_AND_HOST_HEALTH.md`](docs/SELFTEST_AND_HOST_HEALTH.md).
+`wm grimoire --plan` reports detected client configuration targets without
+changing those files. It may initialize the selected store and seed its starter
+guide. Grimoire does not write client configurations; copy the MCP server
+command below into your client's configuration. `--json` prints a machine-
+readable report. `wm selftest` runs the full invariant check (a throwaway store
+plus host health); see
+[`docs/SELFTEST_AND_HOST_HEALTH.md`](docs/SELFTEST_AND_HOST_HEALTH.md).
 
 ## Everyday commands
 
@@ -157,7 +160,7 @@ wm selftest                     # install invariant + host health (--json, --str
 wm remember "decision text"     # record a memory (--galaxy, --source, --kind)
 wm recall "query"               # search memories (--limit, --historical, --scope)
 wm session list                 # sessions: checkpoint | record | continuity | list
-wm serve                        # MCP stdio server (--profile cyberbrain is the default)
+wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile cyberbrain
 ```
 
 The v9-only commands (`doctor`, `connect`, `setup`, `quickstart`, `backup`,
@@ -166,26 +169,30 @@ binary line, not the Gen3 `wm` documented here.
 
 ## Connect an MCP client
 
-Point any MCP client at:
+Use this command for an MCP client. The explicit store keeps Gen3 data separate
+from the stable Gen2 store:
 
 ```bash
-wm serve                          # cyberbrain profile (default)
-wm serve --profile full           # full curated catalog
+wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile cyberbrain
+wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile full
 ```
+
+In the JSON configuration above, replace `/absolute/path/to/whitemagic/gen3`
+with the expanded path, for example the output of
+`printf '%s\n' "$HOME/.local/share/whitemagic/gen3"`.
 
 The server communicates over stdio. Two profiles exist:
 
-- **`cyberbrain` (default)** — 12 lean MCP tools: `memory_recall`,
+- **`cyberbrain` (default)** — 18 lean MCP tools, including `memory_recall`,
   `memory_remember`, `memory_get`, `memory_stats`, the `wm` meta-tool
   (explicit `route=` dispatch to the catalog), `session_checkpoint`,
   `session_continuity`, `session_record`, `session_list`, `galaxy_list`,
   `galaxy_fork`, `mesh_sync`.
-- **`full`** — 40 curated routes covering memory CRUD, search, sessions,
+- **`full`** — 61 curated routes covering memory CRUD, search, sessions,
   receipts, galaxies, mandala, gnosis, sangha, and mesh; optional features add
   gated routes (`decision.shortlist`, `decision.deliberate`,
-  `decision.outcome`, `systemone.decide`) when compiled in. A default build
-  reports 43 routes via `wm contract --json` (the route count is whatever the
-  running binary registered — that manifest is the authority).
+  `decision.outcome`, `systemone.decide`) when compiled in. The route count is
+  whatever the running binary registered; `wm contract --json` is the authority.
 
 Explicit routing is the dependable contract:
 
