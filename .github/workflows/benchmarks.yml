@@ -11,15 +11,16 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+permissions:
+  contents: read
+
 jobs:
   benchmark:
     name: PEB-0 release evidence
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    # The release upload remains tag-only below; keep the existing permission
-    # because softprops/action-gh-release needs contents: write on tag runs.
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -82,11 +83,24 @@ jobs:
             benchmark-results/
           if-no-files-found: warn
 
+  publish-benchmark-evidence:
+    name: Attach release benchmark evidence
+    needs: [benchmark]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download benchmark evidence from this run
+        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4
+        with:
+          name: benchmark-results
+          path: benchmark-release-artifacts
+
       - name: Attach benchmark evidence to release tag
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@5113cdc90fd4d541c801c55356214017bf5ae34b # v3
         with:
-          files: benchmark_results.txt
+          files: benchmark-release-artifacts/benchmark_results.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -107,10 +121,12 @@ jobs:
 
       - name: Run PR head PEB-0 tests in release mode
         shell: bash
+        env:
+          EXPECTED_REVISION: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           mkdir -p benchmark-comparison
-          expected_revision="${{ github.event.pull_request.head.sha }}"
+          expected_revision="$EXPECTED_REVISION"
           actual_revision="$(git rev-parse HEAD)"
           test "$actual_revision" = "$expected_revision"
           {
@@ -149,10 +165,12 @@ jobs:
       - name: Run exact base PEB-0 tests in release mode
         working-directory: base
         shell: bash
+        env:
+          EXPECTED_REVISION: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
           mkdir -p ../benchmark-comparison
-          expected_revision="${{ github.event.pull_request.base.sha }}"
+          expected_revision="$EXPECTED_REVISION"
           actual_revision="$(git rev-parse HEAD)"
           test "$actual_revision" = "$expected_revision"
           {
