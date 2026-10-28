@@ -68,14 +68,14 @@ def render(version: str, section: str) -> str:
             f'Or: `npx -y whitemagic-mcp@{version} --store /absolute/path/to/gen3 '
             'serve --profile cyberbrain` (npm) · '
             f'`cargo install whitemagic --version {version}` (crates.io) · '
-            f'`docker run -i --rm -v whitemagic-gen3:/data lbailey94/whitemagic:v{version} '
+            f'`docker run -i --rm -v whitemagic-gen3:/data lbailey94/whitemagic:{version} '
             '--store /data serve --profile cyberbrain` (Docker Hub).'
         )
     else:
         channels = (
             f'Or: `npx -y whitemagic-mcp@{version} serve --profile curated` (npm) · '
             f'`cargo install whitemagic --version {version}` (crates.io) · '
-            f'`docker run -i lbailey94/whitemagic:v{version} serve --profile curated` (Docker Hub).'
+            f'`docker run -i lbailey94/whitemagic:{version} serve --profile curated` (Docker Hub).'
         )
     if version.startswith("10."):
         activation = (
