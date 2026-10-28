@@ -276,21 +276,10 @@ fi
 
 # ── registries verification (published by the workflow) ──────────────────
 banner "REGISTRIES"
-probe_version() { # <label> <url> <jq-expr> [tries]
-  local label="$1" url="$2" expr="$3" tries="${4:-40}" got="" i
-  for i in $(seq 1 "$tries"); do
-    got=$(curl -fsS -m 20 -A "$UA" "$url" 2>/dev/null | jq -r "$expr" 2>/dev/null || true)
-    if [ "$got" = "$VERSION" ]; then echo "  $label: $got"; return 0; fi
-    if [ "$i" -lt "$tries" ]; then sleep 15; fi
-  done
-  echo "ERROR: $label reports '${got:-nothing}' (want $VERSION)"; return 1
-}
 if $DRY_RUN; then
-  echo "[dry-run] probe crates.io / npm / Docker Hub until they report $VERSION"
+  bash scripts/release_registry_probes.sh "$VERSION" --dry-run
 else
-  probe_version "crates.io (whitemagic)" "https://crates.io/api/v1/crates/whitemagic" '.crate.max_version' 40
-  probe_version "npm (whitemagic-mcp)" "https://registry.npmjs.org/whitemagic-mcp/latest" '.version' 24
-  probe_version "Docker Hub (tag ${VERSION})" "https://hub.docker.com/v2/repositories/lbailey94/whitemagic/tags/${VERSION}" '.name' 20
+  bash scripts/release_registry_probes.sh "$VERSION"
 fi
 
 # The MCP registry search index lags the publish; the publish itself is in the
