@@ -335,11 +335,7 @@ impl McpBackend {
                         }
                     })
                 };
-                json!({
-                    "jsonrpc": "2.0",
-                    "id": id,
-                    "result": result
-                })
+                json_rpc_result(id, result)
             }
             ("tools/list", Self::Legacy { profile, .. }) => {
                 let result = if modern {
@@ -356,7 +352,7 @@ impl McpBackend {
                         "_meta": { "profile": profile_name(*profile), "legacy": true, "readonly": true }
                     })
                 };
-                json!({ "jsonrpc": "2.0", "id": id, "result": result })
+                json_rpc_result(id, result)
             }
             (
                 "tools/call",
@@ -450,6 +446,16 @@ fn profile_name(profile: McpProfile) -> &'static str {
         McpProfile::Cyberbrain => "cyberbrain",
         McpProfile::Full => "full",
     }
+}
+
+fn json_rpc_result(id: Value, result: Value) -> Value {
+    // Move the already-constructed result into its envelope. Passing a Value
+    // through json! serializes it again and duplicates large tool catalogs.
+    let mut response = serde_json::Map::new();
+    response.insert("jsonrpc".into(), Value::String("2.0".into()));
+    response.insert("id".into(), id);
+    response.insert("result".into(), result);
+    Value::Object(response)
 }
 
 fn json_rpc_error(id: Value, code: i64, message: impl Into<String>, data: Option<Value>) -> Value {
