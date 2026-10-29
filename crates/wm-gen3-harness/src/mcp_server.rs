@@ -41,6 +41,16 @@ const CLIENT_INFO_META: &str = "io.modelcontextprotocol/clientInfo";
 
 const MAX_HTTP_HEAD: usize = 32 * 1024;
 const MAX_HTTP_BODY: usize = 4 * 1024 * 1024;
+const HTTP_SINGLETON_HEADERS: &[&str] = &[
+    "authorization",
+    "content-length",
+    "host",
+    "mcp-method",
+    "mcp-name",
+    "mcp-protocol-version",
+    "origin",
+    "transfer-encoding",
+];
 const MAX_CONNECTIONS: usize = 64;
 const SSE_KEEPALIVE: Duration = Duration::from_secs(15);
 const IO_TIMEOUT: Duration = Duration::from_secs(30);
@@ -1253,20 +1263,25 @@ fn read_head(stream: &mut TcpStream) -> io::Result<Option<RequestHead>> {
     let mut headers = HashMap::new();
     for line in lines {
         if let Some((key, value)) = line.split_once(':') {
-            headers.insert(key.trim().to_ascii_lowercase(), value.trim().to_string());
+            let key = key.trim().to_ascii_lowercase();
+            if HTTP_SINGLETON_HEADERS.contains(&key.as_str()) && headers.contains_key(&key) {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("duplicate singleton HTTP header: {key}"),
+                ));
+            }
+            headers.insert(key, value.trim().to_string());
         }
     }
     Ok(Some((method, target, headers)))
 }
 
 fn read_body(stream: &mut TcpStream, headers: &HashMap<String, String>) -> io::Result<Vec<u8>> {
-    if let Some(te) = headers.get("transfer-encoding") {
-        if te.to_ascii_lowercase().contains("chunked") {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "chunked transfer-encoding not supported",
-            ));
-        }
+    if headers.contains_key("transfer-encoding") {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "transfer-encoding is not supported",
+        ));
     }
     let length = headers
         .get("content-length")
@@ -1618,6 +1633,19 @@ mod tests {
         );
         assert_eq!(error["error"]["data"]["requested"], json!("2099-01-01"));
 
+        for bad_id in [
+            json!(true),
+            json!(1.5),
+            json!({"bad": true}),
+            json!(9_007_199_254_740_992_u64),
+        ] {
+            let mut invalid_id = modern_request(36, "tools/list", json!({}));
+            invalid_id["id"] = bad_id;
+            let response = backend.handle(&invalid_id).unwrap();
+            assert_eq!(response["id"], Value::Null);
+            assert_eq!(response["error"]["code"], json!(-32600));
+        }
+
         let modern_batch = json!([
             modern_request(34, "tools/list", json!({})),
             modern_request(35, "tools/list", json!({}))
@@ -1746,6 +1774,101 @@ mod tests {
             active: AtomicUsize::new(0),
             auth_token,
         })
+    }
+
+    fn raw_http_exchange(ctx: Arc<ServerCtx>, request: &[u8]) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+        let addr = listener.local_addr().expect("addr");
+        let server_ctx = Arc::clone(&ctx);
+        let handle = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().expect("accept");
+            handle_conn(stream, &server_ctx, NetworkTransport::Http).expect("handle raw request");
+        });
+        let mut client = TcpStream::connect(addr).expect("connect");
+        client.write_all(request).expect("write raw request");
+        let mut response = String::new();
+        client.read_to_string(&mut response).expect("read response");
+        handle.join().expect("server thread");
+        response
+    }
+
+    fn response_json(response: &str) -> Value {
+        let (_, body) = response
+            .split_once("\r\n\r\n")
+            .expect("HTTP body separator");
+        serde_json::from_str(body).expect("JSON response body")
+    }
+
+    fn backend_epoch(backend: &McpBackend) -> u64 {
+        match backend {
+            McpBackend::Gen3 { substrate, .. } => substrate
+                .lock()
+                .expect("substrate lock")
+                .store()
+                .epoch()
+                .expect("store epoch"),
+            McpBackend::Legacy { .. } => unreachable!("test requires Gen3 store"),
+        }
+    }
+
+    #[test]
+    fn duplicate_singleton_headers_are_rejected_before_tool_dispatch() {
+        let (backend, store) = test_backend("duplicate-headers");
+        let ctx = test_ctx(backend, None);
+        let body = modern_request(
+            700,
+            "tools/call",
+            json!({
+                "name": "memory_remember",
+                "arguments": { "content": "duplicate header must not dispatch" }
+            }),
+        )
+        .to_string();
+        let before = backend_epoch(&ctx.backend);
+        for extra_headers in [
+            "Mcp-Method: tools/list\r\nMCP-METHOD: tools/call\r\nMcp-Name: memory_remember\r\n",
+            "Mcp-Method: tools/call\r\nMcp-Name: memory_remember\r\nOrigin: https://attacker.example\r\noRiGiN: http://localhost\r\n",
+        ] {
+            let request = format!(
+                "POST /mcp HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nMCP-Protocol-Version: {MODERN_PROTOCOL_VERSION}\r\nContent-Length: {}\r\n{extra_headers}\r\n{body}",
+                body.len()
+            );
+            let response = raw_http_exchange(Arc::clone(&ctx), request.as_bytes());
+            assert!(
+                response.starts_with("HTTP/1.1 400 Bad Request"),
+                "{response}"
+            );
+            assert_eq!(response_json(&response)["error"]["code"], json!(-32600));
+            assert_eq!(
+                backend_epoch(&ctx.backend),
+                before,
+                "duplicate headers must not dispatch"
+            );
+        }
+
+        let legacy_body = r#"{"jsonrpc":"2.0","id":701,"method":"ping"}"#;
+        let legacy_request = format!(
+            "POST /mcp HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{legacy_body}",
+            legacy_body.len()
+        );
+        let legacy_response = raw_http_exchange(Arc::clone(&ctx), legacy_request.as_bytes());
+        assert!(
+            legacy_response.starts_with("HTTP/1.1 200 OK"),
+            "{legacy_response}"
+        );
+        assert_eq!(response_json(&legacy_response)["id"], json!(701));
+
+        let transfer_encoding_request = format!(
+            "POST /mcp HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\nTransfer-Encoding: gzip\r\n\r\n{legacy_body}",
+            legacy_body.len()
+        );
+        let transfer_response = raw_http_exchange(ctx, transfer_encoding_request.as_bytes());
+        assert!(
+            transfer_response.starts_with("HTTP/1.1 400 Bad Request"),
+            "{transfer_response}"
+        );
+        drop(ctx);
+        std::fs::remove_dir_all(store).expect("remove duplicate header fixture");
     }
 
     #[test]

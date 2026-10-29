@@ -27,7 +27,7 @@ CAPS = {
 }
 
 
-def modern(method: str, params: dict[str, Any] | None = None, ident: int = 1) -> dict[str, Any]:
+def modern(method: str, params: dict[str, Any] | None = None, ident: Any = 1) -> dict[str, Any]:
     args = dict(params or {})
     args["_meta"] = dict(CAPS)
     return {"jsonrpc": "2.0", "id": ident, "method": method, "params": args}
@@ -35,11 +35,16 @@ def modern(method: str, params: dict[str, Any] | None = None, ident: int = 1) ->
 
 def assert_rpc(response: dict[str, Any], ident: int, *, error: int | None = None) -> None:
     assert response.get("jsonrpc") == "2.0", response
-    assert response.get("id") == ident, response
+    assert type(response.get("id")) is type(ident) and response.get("id") == ident, response
     if error is None:
         assert "result" in response and "error" not in response, response
     else:
         assert response.get("error", {}).get("code") == error, response
+
+
+def assert_invalid_request_id(response: dict[str, Any]) -> None:
+    assert type(response.get("id")) is type(None), response
+    assert response.get("error", {}).get("code") == -32600, response
 
 
 class StdioServer:
@@ -145,6 +150,20 @@ class HttpServer:
         value = payload if isinstance(payload, dict) else json.loads(payload) if payload else None
         return status, response_headers, value, elapsed
 
+    def raw_request(self, request: bytes) -> tuple[int, dict[str, Any] | None]:
+        with socket.create_connection(("127.0.0.1", self.port), timeout=15) as conn:
+            conn.sendall(request)
+            chunks = []
+            while True:
+                chunk = conn.recv(65536)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+        response = b"".join(chunks)
+        head, payload = response.split(b"\r\n\r\n", 1)
+        status = int(head.split(b"\r\n", 1)[0].split()[1])
+        return status, json.loads(payload) if payload else None
+
     def close(self) -> None:
         self.proc.terminate()
         try:
@@ -169,7 +188,8 @@ def summarize(samples: list[float]) -> dict[str, float]:
     }
 
 
-def probe_stdio(binary: Path, store: Path, profile: str, warmup: int, count: int) -> dict[str, Any]:
+def probe_stdio(binary: Path, store: Path, profile: str, warmup: int, count: int,
+                legacy_only: bool = False) -> dict[str, Any]:
     server = StdioServer(binary, store, profile)
     try:
         legacy_init, _ = server.call({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "mcp-compat-probe", "version": "1"}}})
@@ -179,37 +199,42 @@ def probe_stdio(binary: Path, store: Path, profile: str, warmup: int, count: int
         assert_rpc(legacy_list, 2)
         assert "resultType" not in legacy_list["result"], legacy_list
 
-        discover, _ = server.call(modern("server/discover", ident=3))
-        assert_rpc(discover, 3)
-        assert VERSION in discover["result"]["supportedVersions"], discover
-        no_caps = modern("ping", ident=4)
-        del no_caps["params"]["_meta"]["io.modelcontextprotocol/clientCapabilities"]
-        malformed, _ = server.call(no_caps)
-        assert_rpc(malformed, 4, error=-32602)
-        bad_version = modern("tools/list", ident=5)
-        bad_version["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"] = "2099-01-01"
-        unsupported, _ = server.call(bad_version)
-        assert_rpc(unsupported, 5, error=-32022)
-        invalid_id = modern("tools/call", {"name": "memory.count", "arguments": {}}, ident={"bad": True})
-        bad_id_response, _ = server.call(invalid_id)
-        assert bad_id_response.get("id") is None and bad_id_response.get("error", {}).get("code") == -32600, bad_id_response
-        modern_batch = [modern("tools/list", ident=40), modern("tools/list", ident=41)]
-        batch_response, _ = server.call(modern_batch)
-        assert batch_response.get("id") is None and batch_response.get("error", {}).get("code") == -32600, batch_response
+        if not legacy_only:
+            discover, _ = server.call(modern("server/discover", ident=3))
+            assert_rpc(discover, 3)
+            assert VERSION in discover["result"]["supportedVersions"], discover
+            no_caps = modern("tools/list", ident=4)
+            del no_caps["params"]["_meta"]["io.modelcontextprotocol/clientCapabilities"]
+            malformed, _ = server.call(no_caps)
+            assert_rpc(malformed, 4, error=-32602)
+            bad_version = modern("tools/list", ident=5)
+            bad_version["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"] = "2099-01-01"
+            unsupported, _ = server.call(bad_version)
+            assert_rpc(unsupported, 5, error=-32022)
+            for bad_id in (True, 1.5, {"bad": True}, 9_007_199_254_740_992):
+                invalid_id = modern("tools/call", {"name": "memory_remember", "arguments": {"content": "invalid ID must not dispatch"}}, ident=bad_id)
+                bad_id_response, _ = server.call(invalid_id)
+                assert_invalid_request_id(bad_id_response)
+            modern_batch = [modern("tools/list", ident=40), modern("tools/list", ident=41)]
+            batch_response, _ = server.call(modern_batch)
+            assert_invalid_request_id(batch_response)
 
-        # Cancellation is a notification with no response. The next response
-        # must belong to the ping request, proving the stream remains aligned.
-        cancel = {"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": 999}}
-        aligned = server.notification_then_ping(cancel, modern("tools/list", ident=6))
-        assert_rpc(aligned, 6)
+            # Cancellation is a notification with no response. The next response
+            # must belong to the ping request, proving the stream remains aligned.
+            cancel = {"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": 999}}
+            aligned = server.notification_then_ping(cancel, modern("tools/list", ident=6))
+            assert_rpc(aligned, 6)
 
-        samples: dict[str, list[float]] = {"legacy": [], "modern": []}
+        samples: dict[str, list[float]] = {"legacy": []}
+        if not legacy_only:
+            samples["modern"] = []
         for _ in range(warmup):
             server.call({"jsonrpc": "2.0", "id": 7, "method": "tools/list"})
-            server.call(modern("tools/list", ident=8))
+            if not legacy_only:
+                server.call(modern("tools/list", ident=8))
         for index in range(count):
             # Alternate order to reduce monotonic thermal/order bias.
-            order = ("legacy", "modern") if index % 2 == 0 else ("modern", "legacy")
+            order = ("legacy",) if legacy_only else (("legacy", "modern") if index % 2 == 0 else ("modern", "legacy"))
             for era in order:
                 request = {"jsonrpc": "2.0", "id": 9, "method": "tools/list"} if era == "legacy" else modern("tools/list", ident=10)
                 response, elapsed = server.call(request)
@@ -220,7 +245,8 @@ def probe_stdio(binary: Path, store: Path, profile: str, warmup: int, count: int
         server.close()
 
 
-def probe_http(binary: Path, store: Path, profile: str, warmup: int, count: int) -> dict[str, Any]:
+def probe_http(binary: Path, store: Path, profile: str, warmup: int, count: int,
+               legacy_only: bool = False) -> dict[str, Any]:
     server = HttpServer(binary, store, profile)
     try:
         legacy = {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
@@ -238,60 +264,100 @@ def probe_http(binary: Path, store: Path, profile: str, warmup: int, count: int)
         })
         assert status == 200 and response["result"]["protocolVersion"] == "2024-11-05", (status, response)
 
-        modern_list = modern("tools/list", ident=2)
-        status, _, response, _ = server.rpc(modern_list)
-        assert status == 200 and response["id"] == 2, (status, response)
-        assert response["result"]["resultType"] == "complete", response
-        call = modern("tools/call", {"name": "memory_stats", "arguments": {}}, 3)
-        status, _, response, _ = server.rpc(call, name="=?base64?bWVtb3J5X3N0YXRz?=")
-        assert status == 200 and response["result"]["resultType"] == "complete", (status, response)
+        if not legacy_only:
+            modern_list = modern("tools/list", ident=2)
+            status, _, response, _ = server.rpc(modern_list)
+            assert status == 200 and response["id"] == 2, (status, response)
+            assert response["result"]["resultType"] == "complete", response
+            call = modern("tools/call", {"name": "memory_stats", "arguments": {}}, 3)
+            status, _, response, _ = server.rpc(call, name="=?base64?bWVtb3J5X3N0YXRz?=")
+            assert status == 200 and response["result"]["resultType"] == "complete", (status, response)
+            for bad_id in (True, 1.5, {"bad": True}, 9_007_199_254_740_992):
+                invalid = modern("tools/call", {"name": "memory_remember", "arguments": {"content": "invalid ID must not dispatch"}}, ident=bad_id)
+                status, _, response = server.request("POST", "/mcp", json.dumps(invalid).encode(), {
+                    "Content-Type": "application/json", "MCP-Protocol-Version": VERSION,
+                    "Mcp-Method": "tools/call", "Mcp-Name": "memory_remember",
+                })
+                assert status == 200, (status, response)
+                assert_invalid_request_id(response)
 
-        mismatched = modern("tools/list", ident=4)
-        status, _, response, _ = server.rpc(mismatched, method_header="tools/call")
-        assert status == 400 and response["error"]["code"] == -32020, (status, response)
-        missing_version_headers = {
-            "Content-Type": "application/json", "Mcp-Method": "tools/list",
-        }
-        status, _, payload = server.request("POST", "/mcp", json.dumps(modern("tools/list", ident=13)).encode(), missing_version_headers)
-        assert status == 400 and payload["error"]["code"] == -32020, (status, payload)
-        missing_method_header = {
-            "Content-Type": "application/json", "MCP-Protocol-Version": VERSION,
-        }
-        status, _, payload = server.request("POST", "/mcp", json.dumps(modern("tools/list", ident=14)).encode(), missing_method_header)
-        assert status == 400 and payload["error"]["code"] == -32020, (status, payload)
-        batch = [modern("tools/list", ident=15), modern("tools/list", ident=16)]
-        status, _, payload = server.request("POST", "/mcp", json.dumps(batch).encode(), {"Content-Type": "application/json"})
-        assert status == 400 and payload["error"]["code"] == -32600, (status, payload)
-        missing_name = modern("tools/call", {"name": "memory.count", "arguments": {}}, 5)
-        status, _, response, _ = server.rpc(missing_name)
-        assert status == 400 and response["error"]["code"] == -32020, (status, response)
-        unsupported = modern("tools/list", ident=6)
-        status, _, response, _ = server.rpc(unsupported, version="2099-01-01")
-        assert status == 400 and response["error"]["code"] == -32020, (status, response)
-        unsupported["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"] = "2099-01-01"
-        status, _, response, _ = server.rpc(unsupported, version="2099-01-01")
-        assert status == 400 and response["error"]["code"] == -32022, (status, response)
-        notification = modern("notifications/cancelled", {"requestId": 123})
-        notification.pop("id")
-        status, _, response = server.request("POST", "/mcp", json.dumps(notification).encode(), {
-            "Content-Type": "application/json", "MCP-Protocol-Version": VERSION,
-            "Mcp-Method": "notifications/cancelled",
-        })
-        assert status == 400 and response["error"]["code"] == -32600, (status, response)
-        bad_origin = server.request("POST", "/mcp", json.dumps(modern("tools/list", ident=7)).encode(), {
-            "Content-Type": "application/json", "MCP-Protocol-Version": VERSION,
-            "Mcp-Method": "tools/list", "Origin": "https://attacker.example",
-        })
-        assert bad_origin[0] == 403, bad_origin
+            mismatched = modern("tools/list", ident=4)
+            status, _, response, _ = server.rpc(mismatched, method_header="tools/call")
+            assert status == 400 and response["error"]["code"] == -32020, (status, response)
+            missing_version_headers = {
+                "Content-Type": "application/json", "Mcp-Method": "tools/list",
+            }
+            status, _, payload = server.request("POST", "/mcp", json.dumps(modern("tools/list", ident=13)).encode(), missing_version_headers)
+            assert status == 400 and payload["error"]["code"] == -32020, (status, payload)
+            missing_method_header = {
+                "Content-Type": "application/json", "MCP-Protocol-Version": VERSION,
+            }
+            status, _, payload = server.request("POST", "/mcp", json.dumps(modern("tools/list", ident=14)).encode(), missing_method_header)
+            assert status == 400 and payload["error"]["code"] == -32020, (status, payload)
+            batch = [modern("tools/list", ident=15), modern("tools/list", ident=16)]
+            status, _, payload = server.request("POST", "/mcp", json.dumps(batch).encode(), {"Content-Type": "application/json"})
+            assert status == 400 and payload["error"]["code"] == -32600, (status, payload)
+            missing_name = modern("tools/call", {"name": "memory.count", "arguments": {}}, 5)
+            status, _, response, _ = server.rpc(missing_name)
+            assert status == 400 and response["error"]["code"] == -32020, (status, response)
+            unsupported = modern("tools/list", ident=6)
+            status, _, response, _ = server.rpc(unsupported, version="2099-01-01")
+            assert status == 400 and response["error"]["code"] == -32020, (status, response)
+            unsupported["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"] = "2099-01-01"
+            status, _, response, _ = server.rpc(unsupported, version="2099-01-01")
+            assert status == 400 and response["error"]["code"] == -32022, (status, response)
+            notification = modern("notifications/cancelled", {"requestId": 123})
+            notification.pop("id")
+            status, _, response = server.request("POST", "/mcp", json.dumps(notification).encode(), {
+                "Content-Type": "application/json", "MCP-Protocol-Version": VERSION,
+                "Mcp-Method": "notifications/cancelled",
+            })
+            assert status == 400 and response["error"]["code"] == -32600, (status, response)
+            bad_origin = server.request("POST", "/mcp", json.dumps(modern("tools/list", ident=7)).encode(), {
+                "Content-Type": "application/json", "MCP-Protocol-Version": VERSION,
+                "Mcp-Method": "tools/list", "Origin": "https://attacker.example",
+            })
+            assert bad_origin[0] == 403, bad_origin
 
-        samples: dict[str, list[float]] = {"legacy": [], "modern": []}
+            def current_stats() -> tuple[int, int]:
+                stats = modern("tools/call", {"name": "memory_stats", "arguments": {}}, 70)
+                status, _, result, _ = server.rpc(stats, name="memory_stats")
+                assert status == 200 and result["result"]["isError"] is False, result
+                body = json.loads(result["result"]["content"][0]["text"])
+                return body["record_count"], body["epoch"]
+
+            before_stats = current_stats()
+            mutating = modern("tools/call", {
+                "name": "memory_remember",
+                "arguments": {"content": "conflicting singleton headers must not execute"},
+            }, 71)
+            raw_body = json.dumps(mutating, separators=(",", ":")).encode()
+            prefix = (
+                b"POST /mcp HTTP/1.1\r\nHost: 127.0.0.1\r\n"
+                b"Content-Type: application/json\r\n"
+                + f"MCP-Protocol-Version: {VERSION}\r\n".encode()
+                + f"Content-Length: {len(raw_body)}\r\n".encode()
+            )
+            for conflicting in (
+                b"Mcp-Method: tools/list\r\nMCP-METHOD: tools/call\r\nMcp-Name: memory_remember\r\n",
+                b"Mcp-Method: tools/call\r\nMcp-Name: memory_remember\r\nOrigin: https://attacker.example\r\noRiGiN: http://localhost\r\n",
+            ):
+                raw_request = prefix + conflicting + b"\r\n" + raw_body
+                status, response = server.raw_request(raw_request)
+                assert status == 400 and response["error"]["code"] == -32600, (status, response)
+                assert current_stats() == before_stats, "rejected duplicate headers must not execute tools"
+
+        samples: dict[str, list[float]] = {"legacy": []}
+        if not legacy_only:
+            samples["modern"] = []
         for _ in range(warmup):
             server.request("POST", "/mcp", json.dumps({"jsonrpc": "2.0", "id": 8, "method": "tools/list"}).encode(), {
                 "Content-Type": "application/json", "MCP-Protocol-Version": "2024-11-05",
             })
-            server.rpc(modern("tools/list", ident=9))
+            if not legacy_only:
+                server.rpc(modern("tools/list", ident=9))
         for index in range(count):
-            order = ("legacy", "modern") if index % 2 == 0 else ("modern", "legacy")
+            order = ("legacy",) if legacy_only else (("legacy", "modern") if index % 2 == 0 else ("modern", "legacy"))
             for era in order:
                 if era == "legacy":
                     request = {"jsonrpc": "2.0", "id": 10, "method": "tools/list"}
@@ -302,7 +368,7 @@ def probe_http(binary: Path, store: Path, profile: str, warmup: int, count: int)
                     elapsed = (time.perf_counter_ns() - start) / 1_000_000
                 else:
                     status, _, response, elapsed = server.rpc(modern("tools/list", ident=11))
-                assert status == 200 and response["id"] in (10, 11), (status, response)
+                assert status == 200 and type(response["id"]) is int and response["id"] in (10, 11), (status, response)
                 samples[era].append(elapsed)
         return {era: {"raw_ms": values, **summarize(values)} for era, values in samples.items()}
     finally:
@@ -316,6 +382,7 @@ def main() -> None:
     parser.add_argument("--store-root", type=Path, required=True, help="existing parent for isolated temporary stores")
     parser.add_argument("--warmup", type=int, default=5)
     parser.add_argument("--samples", type=int, default=50)
+    parser.add_argument("--legacy-only", action="store_true", help="collect legacy cohorts only for baseline comparison")
     parser.add_argument("--out", type=Path, required=True, help="private JSON report path")
     args = parser.parse_args()
     binary = args.binary.resolve(strict=True)
@@ -328,13 +395,14 @@ def main() -> None:
     report: dict[str, Any] = {
         "binary": str(binary), "profile": args.profile, "protocol_version": VERSION,
         "warmup": args.warmup, "sample_count_per_era_transport": args.samples,
+        "legacy_only": args.legacy_only,
         "fixture": "custom JSON-RPC contract fixture; not an official SDK",
         "transports": {},
     }
     with tempfile.TemporaryDirectory(prefix="mcp-compat-", dir=store_root) as isolated:
         root = Path(isolated)
-        report["transports"]["stdio"] = probe_stdio(binary, root / "stdio-store", args.profile, args.warmup, args.samples)
-        report["transports"]["streamable_http"] = probe_http(binary, root / "http-store", args.profile, args.warmup, args.samples)
+        report["transports"]["stdio"] = probe_stdio(binary, root / "stdio-store", args.profile, args.warmup, args.samples, args.legacy_only)
+        report["transports"]["streamable_http"] = probe_http(binary, root / "http-store", args.profile, args.warmup, args.samples, args.legacy_only)
     args.out.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps({"out": str(args.out.resolve()), "transports": {
         name: {era: summarize(data["raw_ms"]) for era, data in modes.items()}
