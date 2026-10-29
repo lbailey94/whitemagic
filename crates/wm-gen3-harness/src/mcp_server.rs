@@ -180,9 +180,13 @@ impl McpBackend {
         }
         let method = request.get("method").and_then(Value::as_str).unwrap_or("");
         let modern = has_modern_metadata(request) || method == "server/discover";
+        // JSON-RPC notifications never receive responses, including modern
+        // notifications. HTTP applies its transport-specific rejection before
+        // reaching this shared dispatcher.
+        if request.get("id").is_none() && request.get("method").and_then(Value::as_str).is_some() {
+            return None;
+        }
         let Some(id) = request.get("id").cloned() else {
-            // Modern methods require a JSON-RPC request ID. Legacy notifications
-            // remain no-response messages per JSON-RPC 2.0.
             return modern
                 .then(|| json_rpc_error(Value::Null, -32600, "invalid JSON-RPC request", None));
         };
@@ -859,6 +863,14 @@ fn dispatch_legacy_sse_json(backend: &McpBackend, body: &[u8]) -> Option<String>
         )
     });
     if has_modern {
+        if parsed
+            .as_ref()
+            .is_some_and(|value| value.is_object() && value.get("id").is_none())
+        {
+            // Notifications are one-way messages on the legacy SSE transport
+            // too; do not turn them into an error event.
+            return None;
+        }
         let id = parsed
             .as_ref()
             .and_then(|value| value.get("id"))
@@ -1555,6 +1567,38 @@ mod tests {
             "io.modelcontextprotocol/clientCapabilities": {}
         });
         json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params })
+    }
+
+    #[test]
+    fn modern_notifications_are_suppressed_and_sse_requests_are_rejected() {
+        let (backend, store) = test_backend("modern-notifications");
+
+        let mut cancellation =
+            modern_request(1, "notifications/cancelled", json!({ "requestId": 9001 }));
+        cancellation.as_object_mut().unwrap().remove("id");
+        assert!(backend.handle(&cancellation).is_none());
+
+        let mut discover_notification = modern_request(2, "server/discover", json!({}));
+        discover_notification.as_object_mut().unwrap().remove("id");
+        assert!(backend.handle(&discover_notification).is_none());
+
+        let request = modern_request(3, "tools/list", json!({}));
+        let response = backend.handle(&request).expect("request response");
+        assert_eq!(response["id"], json!(3));
+
+        assert!(
+            dispatch_legacy_sse_json(&backend, &serde_json::to_vec(&cancellation).unwrap())
+                .is_none()
+        );
+        let sse_request =
+            dispatch_legacy_sse_json(&backend, &serde_json::to_vec(&request).unwrap())
+                .expect("modern request should be rejected on legacy SSE");
+        let sse_error: Value = serde_json::from_str(&sse_request).unwrap();
+        assert_eq!(sse_error["id"], json!(3));
+        assert_eq!(sse_error["error"]["code"], json!(-32601));
+
+        drop(backend);
+        std::fs::remove_dir_all(store).expect("remove notification fixture");
     }
 
     fn modern_headers(method: &str, name: Option<&str>) -> HashMap<String, String> {

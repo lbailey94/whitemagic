@@ -9,8 +9,14 @@ stateless: each request carries its protocol version and client capabilities in
 This is a bounded compatibility candidate, not a full MCP conformance claim.
 The maintained fixture uses raw JSON-RPC, not an official MCP SDK; no SDK is
 pinned in this checkout. The stdio loop handles one message per line and
-rejects modern batches. Long-running stream cancellation, request-scoped SSE,
-and modern subscriptions are not implemented by this candidate.
+rejects modern batches. JSON-RPC notifications, including modern notifications
+and no-ID messages whose method is `server/discover`, receive no response. The
+stdio handler currently ignores cancellation notifications; it does not stop an
+in-progress tool call. The MCP specification says servers SHOULD stop cancelled
+work, while allowing cancellation to be ignored when a request is unknown,
+already complete, or cannot be cancelled. Long-running stream cancellation,
+request-scoped SSE, and modern subscriptions are not implemented by this
+candidate.
 
 The modern path advertises `2026-07-28` and the legacy `2024-11-05` version
 through `server/discover`, exposes the `tools` capability, returns complete

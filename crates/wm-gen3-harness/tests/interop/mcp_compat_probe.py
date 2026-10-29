@@ -69,19 +69,23 @@ class StdioServer:
             raise RuntimeError(f"stdio MCP process exited with {self.proc.poll()}")
         return json.loads(line), (time.perf_counter_ns() - start) / 1_000_000
 
-    def notification_then_ping(self, notification: dict[str, Any], ping: dict[str, Any]) -> dict[str, Any]:
+    def notifications_then_request(
+        self, notifications: list[dict[str, Any]], request: dict[str, Any]
+    ) -> dict[str, Any]:
         assert self.proc.stdin and self.proc.stdout
-        self.proc.stdin.write(json.dumps(notification, separators=(",", ":")) + "\n")
-        self.proc.stdin.write(json.dumps(ping, separators=(",", ":")) + "\n")
+        for notification in notifications:
+            self.proc.stdin.write(json.dumps(notification, separators=(",", ":")) + "\n")
+        self.proc.stdin.write(json.dumps(request, separators=(",", ":")) + "\n")
         self.proc.stdin.flush()
         ready, _, _ = select.select([self.proc.stdout], [], [], 15.0)
         if not ready:
-            raise TimeoutError("stdio response after notification timed out")
+            raise TimeoutError("stdio response after notifications timed out")
         line = self.proc.stdout.readline()
         if not line:
-            raise RuntimeError("stdio server exited after notification")
+            raise RuntimeError("stdio server exited after notifications")
         response = json.loads(line)
-        assert response.get("id") == ping["id"], response
+        assert type(response.get("id")) is type(request["id"])
+        assert response.get("id") == request["id"], response
         return response
 
     def close(self) -> None:
@@ -219,10 +223,15 @@ def probe_stdio(binary: Path, store: Path, profile: str, warmup: int, count: int
             batch_response, _ = server.call(modern_batch)
             assert_invalid_request_id(batch_response)
 
-            # Cancellation is a notification with no response. The next response
-            # must belong to the ping request, proving the stream remains aligned.
+            # Notifications and a no-ID discovery method produce no response.
+            # The next response must belong to the known-ID request.
             cancel = {"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": 999}}
-            aligned = server.notification_then_ping(cancel, modern("tools/list", ident=6))
+            cancel["params"]["_meta"] = dict(CAPS)
+            discover_notification = modern("server/discover", ident=7)
+            discover_notification.pop("id")
+            aligned = server.notifications_then_request(
+                [cancel, discover_notification], modern("tools/list", ident=6)
+            )
             assert_rpc(aligned, 6)
 
         samples: dict[str, list[float]] = {"legacy": []}
