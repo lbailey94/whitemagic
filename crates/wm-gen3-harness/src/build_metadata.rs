@@ -42,7 +42,11 @@ impl BuildMetadata {
 /// Collect a full commit, its committed tree, and checkout state for the
 /// harness workspace. Git failures yield explicit unknown values.
 pub fn collect(workspace: &Path) -> BuildMetadata {
-    let watch_paths = git_watch_paths(workspace);
+    let workspace_is_repo_root = git_root_matches(workspace);
+    let watch_paths = git_watch_paths_for_root(workspace, workspace_is_repo_root);
+    if !workspace_is_repo_root {
+        return BuildMetadata::unknown(watch_paths);
+    }
     let Some(revision) = git_output(workspace, &["rev-parse", "--verify", "HEAD"]) else {
         return BuildMetadata::unknown(watch_paths);
     };
@@ -82,9 +86,8 @@ pub fn collect(workspace: &Path) -> BuildMetadata {
     }
 }
 
-/// Inputs Cargo should watch so branch movement and workspace code changes
-/// refresh the compile-time identity on the next build.
-pub fn git_watch_paths(workspace: &Path) -> Vec<PathBuf> {
+/// Inputs Cargo watches for workspace source and Git identity changes.
+fn git_watch_paths_for_root(workspace: &Path, workspace_is_repo_root: bool) -> Vec<PathBuf> {
     let mut paths = BUILD_INPUT_PATHS
         .iter()
         .map(|input| workspace.join(input))
@@ -92,6 +95,12 @@ pub fn git_watch_paths(workspace: &Path) -> Vec<PathBuf> {
     let dot_git = workspace.join(".git");
     if !dot_git.is_dir() {
         paths.push(dot_git);
+    }
+
+    if !workspace_is_repo_root {
+        paths.sort();
+        paths.dedup();
+        return paths;
     }
 
     let git_dir = git_output(workspace, &["rev-parse", "--absolute-git-dir"]).map(PathBuf::from);
@@ -144,9 +153,23 @@ fn git_output_bytes(workspace: &Path, args: &[&str]) -> Option<Vec<u8>> {
         .arg("-C")
         .arg(workspace)
         .args(args)
+        .env("GIT_OPTIONAL_LOCKS", "0")
         .output()
         .ok()?;
     output.status.success().then_some(output.stdout)
+}
+
+fn git_root_matches(workspace: &Path) -> bool {
+    let Some(git_root) = git_output(workspace, &["rev-parse", "--show-toplevel"]) else {
+        return false;
+    };
+    let (Ok(workspace), Ok(git_root)) = (
+        workspace.canonicalize(),
+        PathBuf::from(git_root).canonicalize(),
+    ) else {
+        return false;
+    };
+    workspace == git_root
 }
 
 fn git_status(workspace: &Path, include_ignored: bool) -> Option<Vec<u8>> {
@@ -224,6 +247,31 @@ mod tests {
         assert_eq!(metadata.revision, "unknown");
         assert_eq!(metadata.commit_tree, "unknown");
         assert_eq!(metadata.worktree, "unknown");
+    }
+
+    #[test]
+    fn source_archive_inside_an_unrelated_parent_repo_is_unknown() {
+        let parent = TempRepo::new("foreign-parent");
+        parent.git(&["init", "--initial-branch=main"]);
+        parent.git(&["config", "user.email", "test@example.invalid"]);
+        parent.git(&["config", "user.name", "Build Metadata Test"]);
+        fs::write(parent.0.join("README.md"), "foreign repository\n")
+            .expect("write foreign repository fixture");
+        parent.git(&["add", "README.md"]);
+        parent.git(&["commit", "-m", "foreign parent"]);
+
+        let source = parent.0.join("source-archive");
+        fs::create_dir_all(&source).expect("create nested source archive");
+        let metadata = collect(&source);
+        assert_eq!(metadata.revision, "unknown");
+        assert_eq!(metadata.commit_tree, "unknown");
+        assert_eq!(metadata.worktree, "unknown");
+        assert!(
+            !metadata
+                .watch_paths
+                .iter()
+                .any(|path| path == &parent.0.join(".git/HEAD"))
+        );
     }
 
     #[test]

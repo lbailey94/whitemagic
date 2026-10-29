@@ -7,9 +7,10 @@ executable. Use `wm build-info --json` for machine-readable output.
 The build script probes Git locally when Cargo detects a change in workspace
 source inputs or the relevant Git HEAD/ref/index metadata. This adds a small
 number of local Git subprocesses to an invalidated harness build; unchanged
-compiler inputs keep Cargo's normal build cache. Runtime `wm build-info` reads
-only compile-time metadata and the executable itself. It does not open the
-store, access the network or write files.
+compiler inputs keep Cargo's normal build cache. Git metadata commands set
+`GIT_OPTIONAL_LOCKS=0`, preventing optional index refresh writes. Runtime `wm
+build-info` reads only compile-time metadata and the executable itself. It does
+not open the store, access the network or write files.
 
 Checkout state covers tracked and non-ignored untracked files under `crates/`,
 `vendor/`, the workspace Cargo manifests/lockfile, `.cargo/`, toolchain file,
