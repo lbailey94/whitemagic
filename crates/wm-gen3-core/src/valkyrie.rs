@@ -277,6 +277,19 @@ impl KekkaiSanitizer {
                 scrubbed += 1;
             }
         }
+        // Scrub email addresses
+        if out.contains('@') {
+            let mut words = Vec::new();
+            for word in out.split_whitespace() {
+                if word.contains('@') && word.contains('.') && !word.starts_with('/') {
+                    words.push("[KEKKAI_REDACTED_EMAIL]".to_string());
+                    scrubbed += 1;
+                } else {
+                    words.push(word.to_string());
+                }
+            }
+            out = words.join(" ");
+        }
         let filler = ["good morning!", "hey there", "haha", "lol"];
         let mut filler_count = 0usize;
         for f in filler {
@@ -3265,6 +3278,42 @@ impl ValkyrieL05Router {
             .collect()
     }
 
+    /// Compile labeled (prompt, tier) pairs and their dense embeddings into hybrid
+    /// semantic + lexical training samples using a fitted FisherHadamardProjector.
+    #[must_use]
+    pub fn compile_hybrid_routing_samples(
+        prompts: &[(&str, CognitiveTier)],
+        embeddings: &[Vec<f32>],
+        projector: &FisherHadamardProjector,
+    ) -> Vec<ValkyrieSample> {
+        prompts
+            .iter()
+            .enumerate()
+            .map(|(i, (prompt, tier))| {
+                let sem_vec = projector.project(&embeddings[i]);
+                let lex_vec = Self::project_inquiry(prompt);
+                let mut state_vec = [0.0f32; VALKYRIE_DIM];
+                for d in 0..VALKYRIE_DIM {
+                    state_vec[d] = 0.72 * sem_vec[d] + 0.28 * lex_vec[d];
+                }
+                ValkyrieSample {
+                    id: i,
+                    state_vec,
+                    target_class: tier.index(),
+                    target_noul_bool: true,
+                    target_score_rubric: 0.9,
+                    primary_gana_id: 0,
+                    counterfactual_gana_id: 0,
+                    primary_glyphs: vec![SutraGlyph::Zheng],
+                    counterfactual_glyphs: vec![SutraGlyph::Guan],
+                    candidate_digest: 0,
+                    is_byzantine_or_antibody: false,
+                    expected_catuskoti: Corner::K1Affirmed,
+                }
+            })
+            .collect()
+    }
+
     /// Train a dedicated routing organ: `Valkyrie-0` cyclic curriculum on the
     /// train split, closed-form `Valkyrie-1` symbiont on the same split, and
     /// callosum priors calibrated on the (disjoint) cal split.
@@ -3276,6 +3325,31 @@ impl ValkyrieL05Router {
     ) -> Self {
         let train_set = Self::compile_routing_samples(train_prompts);
         let cal_set = Self::compile_routing_samples(cal_prompts);
+
+        let mut v0 = ValkyrieZeroEngine::new_tabula_rasa(seed);
+        let _ = v0.train_cyclic_curriculum(&train_set, &cal_set, &[], 12);
+        let v1 = ValkyrieOneSymbiont::fit_closed_form(&train_set);
+
+        let mut engine = ValkyrieTwoEngine::new(v0, v1);
+        engine.calibrate_callosum(&cal_set);
+        Self { engine }
+    }
+
+    /// Train a dedicated hybrid routing organ fitted directly on both dense embeddings
+    /// and lexical features: `Valkyrie-0` cyclic curriculum on the hybrid train split,
+    /// closed-form `Valkyrie-1` symbiont on the same split, and callosum priors calibrated
+    /// on the hybrid cal split.
+    #[must_use]
+    pub fn train_hybrid_on_corpus(
+        train_prompts: &[(&str, CognitiveTier)],
+        train_embeddings: &[Vec<f32>],
+        cal_prompts: &[(&str, CognitiveTier)],
+        cal_embeddings: &[Vec<f32>],
+        projector: &FisherHadamardProjector,
+        seed: u64,
+    ) -> Self {
+        let train_set = Self::compile_hybrid_routing_samples(train_prompts, train_embeddings, projector);
+        let cal_set = Self::compile_hybrid_routing_samples(cal_prompts, cal_embeddings, projector);
 
         let mut v0 = ValkyrieZeroEngine::new_tabula_rasa(seed);
         let _ = v0.train_cyclic_curriculum(&train_set, &cal_set, &[], 12);
@@ -3567,6 +3641,10 @@ mod tests {
         assert!(scrubbed_count >= 4);
         assert!(!clean.contains("/home/alice"));
         assert!(!clean.contains("sk-proj-"));
+
+        let (clean_mail, count_mail, _) = KekkaiSanitizer::sanitize_text("Contact admin@example.com for credentials");
+        assert!(!clean_mail.contains("admin@example.com"), "email must be scrubbed");
+        assert!(count_mail >= 1);
 
         let mut x = [0.0f32; VALKYRIE_DIM];
         for (i, val) in x.iter_mut().enumerate() {
@@ -4065,5 +4143,45 @@ mod tests {
         let mut router = ValkyrieL05Router::bootstrap();
         let res = router.route("gimme the last checkpoint");
         assert_eq!(res.tier, CognitiveTier::System05Vector);
+
+        // 6. Hybrid routing organ bootstrap & route_hybrid validation
+        let train_prompts = default_routing_train_prompts();
+        let cal_prompts = default_routing_cal_prompts();
+        let dummy_dim = 128;
+        let train_embs: Vec<Vec<f32>> = (0..train_prompts.len())
+            .map(|i| {
+                let mut v = vec![0.0f32; dummy_dim];
+                let class = train_prompts[i].1.index();
+                v[class * 16] = 2.0;
+                v[(i * 7) % dummy_dim] += 0.5;
+                v
+            })
+            .collect();
+        let cal_embs: Vec<Vec<f32>> = (0..cal_prompts.len())
+            .map(|i| {
+                let mut v = vec![0.0f32; dummy_dim];
+                let class = cal_prompts[i].1.index();
+                v[class * 16] = 2.0;
+                v[(i * 11) % dummy_dim] += 0.5;
+                v
+            })
+            .collect();
+        let labels: Vec<usize> = train_prompts.iter().map(|(_, t)| t.index()).collect();
+        let projector = FisherHadamardProjector::fit(&train_embs, &labels, 4);
+
+        let mut hybrid_router = ValkyrieL05Router::train_hybrid_on_corpus(
+            train_prompts,
+            &train_embs,
+            cal_prompts,
+            &cal_embs,
+            &projector,
+            42,
+        );
+        let test_prompt = "Retrieve the note with staging details";
+        let mut test_emb = vec![0.0f32; dummy_dim];
+        test_emb[1 * 16] = 2.0; // Class 1: System05Vector
+        let hybrid_res = hybrid_router.route_hybrid(test_prompt, Some(&test_emb), Some(&projector));
+        assert!(hybrid_res.used_semantic_organ);
+        assert_eq!(hybrid_res.tier, CognitiveTier::System05Vector);
     }
 }

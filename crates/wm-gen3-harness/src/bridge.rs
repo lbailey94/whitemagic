@@ -6898,18 +6898,6 @@ fn shadow_route_l05(
     decision: &wm_gen3_core::tripartite_router::RoutingDecision,
     store_path: &Path,
 ) -> Value {
-    static L05_ORGAN: OnceLock<
-        Result<std::sync::Mutex<wm_gen3_core::valkyrie::ValkyrieL05Router>, String>,
-    > = OnceLock::new();
-    let organ = L05_ORGAN.get_or_init(|| {
-        std::panic::catch_unwind(wm_gen3_core::valkyrie::ValkyrieL05Router::bootstrap)
-            .map(std::sync::Mutex::new)
-            .map_err(|_| "L0.5 router bootstrap panicked".to_string())
-    });
-    let Ok(organ) = organ else {
-        return json!({"available": false});
-    };
-
     static MODEL2VEC: OnceLock<Result<wm_gen3_zeropointfive::System05, String>> = OnceLock::new();
     let m2v = MODEL2VEC.get_or_init(|| {
         wm_gen3_zeropointfive::System05::resolve_model_dir(None)
@@ -6934,6 +6922,39 @@ fn shadow_route_l05(
         }
         None
     });
+
+    static L05_ORGAN: OnceLock<
+        Result<std::sync::Mutex<wm_gen3_core::valkyrie::ValkyrieL05Router>, String>,
+    > = OnceLock::new();
+    let organ = L05_ORGAN.get_or_init(|| {
+        std::panic::catch_unwind(|| {
+            if let (Ok(m2v_organ), Some(proj)) = (m2v.as_ref(), projector.as_ref()) {
+                let train_pairs = wm_gen3_core::valkyrie::default_routing_train_prompts();
+                let cal_pairs = wm_gen3_core::valkyrie::default_routing_cal_prompts();
+                let train_texts: Vec<String> = train_pairs.iter().map(|(p, _)| (*p).to_string()).collect();
+                let cal_texts: Vec<String> = cal_pairs.iter().map(|(p, _)| (*p).to_string()).collect();
+                if let (Ok(train_embs), Ok(cal_embs)) = (
+                    m2v_organ.encode_batch(&train_texts),
+                    m2v_organ.encode_batch(&cal_texts),
+                ) {
+                    return wm_gen3_core::valkyrie::ValkyrieL05Router::train_hybrid_on_corpus(
+                        train_pairs,
+                        &train_embs,
+                        cal_pairs,
+                        &cal_embs,
+                        proj,
+                        42,
+                    );
+                }
+            }
+            wm_gen3_core::valkyrie::ValkyrieL05Router::bootstrap()
+        })
+        .map(std::sync::Mutex::new)
+        .map_err(|_| "L0.5 router bootstrap panicked".to_string())
+    });
+    let Ok(organ) = organ else {
+        return json!({"available": false});
+    };
 
     let live_vec: Option<Vec<f32>> = m2v
         .as_ref()
