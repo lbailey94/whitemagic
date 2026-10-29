@@ -379,8 +379,8 @@ fn test_spawn_sandboxed_command_via_wm_sandbox() {
     // Run all environment-sensitive cases in child test processes so they cannot
     // race with other tests that read HOME or WM_SANDBOX_DISABLE.
     if std::env::var_os("WM_TEST_SANDBOX_CHILD").is_some() {
-        let (ws_path, _outside) = create_temp_subdirs("wm_test_spawn_sandbox_child");
-        let marker = ws_path.join("unconfined-child-ran");
+        let (ws_path, outside) = create_temp_subdirs("wm_test_spawn_sandbox_child");
+        let marker = outside.join("unconfined-child-ran");
         let claim = WorkspaceClaim {
             claim_id: "claim-spawn-test".to_string(),
             tenant_id: "tenant-lucas".to_string(),
@@ -473,17 +473,20 @@ fn test_spawn_sandboxed_command_via_wm_sandbox() {
     // This fixture checks argument construction and forwarding only. It does not
     // provide kernel confinement; that requires a separate wrapper/kernel control.
     assert!(run_child(&home, false, false).success());
-    assert!(Command::new(&test_exe)
-        .arg("--exact")
-        .arg("test_spawn_sandboxed_command_via_wm_sandbox")
-        .arg("--nocapture")
-        .env("HOME", &home)
-        .env("WM_TEST_SANDBOX_CHILD", "1")
-        .env("WM_TEST_CHILD_STATUS", "1")
-        .env_remove("WM_SANDBOX_DISABLE")
-        .status()
-        .expect("run isolated child-status process")
-        .success());
+    assert!(
+        Command::new(&test_exe)
+            .arg("--exact")
+            .arg("test_spawn_sandboxed_command_via_wm_sandbox")
+            .arg("--nocapture")
+            .env("HOME", &home)
+            .env("WM_TEST_SANDBOX_CHILD", "1")
+            .env("WM_TEST_CHILD_STATUS", "1")
+            .env_remove("WM_TEST_EXPECT_REFUSAL")
+            .env_remove("WM_SANDBOX_DISABLE")
+            .status()
+            .expect("run isolated child-status process")
+            .success()
+    );
 
     // An absent wrapper and an explicit disable request both refuse before the
     // requested child can create its marker.
