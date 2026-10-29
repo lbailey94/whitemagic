@@ -514,18 +514,17 @@ fn validate_modern_request(request: &Value) -> Result<(), (i64, String, Option<V
     let Some(params) = request.get("params").and_then(Value::as_object) else {
         return Err((-32602, "request params must be an object".into(), None));
     };
-    if method == "tools/call" {
-        if !params.get("name").is_some_and(Value::is_string)
+    if method == "tools/call"
+        && (!params.get("name").is_some_and(Value::is_string)
             || params
                 .get("arguments")
-                .is_some_and(|arguments| !arguments.is_object())
-        {
-            return Err((
-                -32602,
-                "tools/call requires a string name and object arguments".into(),
-                None,
-            ));
-        }
+                .is_some_and(|arguments| !arguments.is_object()))
+    {
+        return Err((
+            -32602,
+            "tools/call requires a string name and object arguments".into(),
+            None,
+        ));
     }
     if method == "tools/list"
         && params
@@ -1862,7 +1861,8 @@ mod tests {
             "POST /mcp HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\nTransfer-Encoding: gzip\r\n\r\n{legacy_body}",
             legacy_body.len()
         );
-        let transfer_response = raw_http_exchange(ctx, transfer_encoding_request.as_bytes());
+        let transfer_response =
+            raw_http_exchange(Arc::clone(&ctx), transfer_encoding_request.as_bytes());
         assert!(
             transfer_response.starts_with("HTTP/1.1 400 Bad Request"),
             "{transfer_response}"
