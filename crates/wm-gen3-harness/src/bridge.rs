@@ -534,7 +534,7 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
     ("sutra.canon", &[]),
     ("sutra.list", &[]),
     ("sutra.hexagram", &["query", "mutate_line"]),
-    ("sutra.route", &["inquiry", "utility"]),
+    ("sutra.route", &["inquiry", "utility", "context"]),
     ("legion.summon", &["edict", "clones", "peer", "archetype"]),
     ("chohan.settle", &["payload", "proof", "bid"]),
     ("valkyrie.pulse", &["inquiry", "digest", "benchmark"]),
@@ -6895,6 +6895,7 @@ fn cognitive_tier_name(tier: wm_gen3_core::tripartite_router::CognitiveTier) -> 
 /// waits on or inherits shadow faults.
 fn shadow_route_l05(
     inquiry: &str,
+    context: Option<&str>,
     decision: &wm_gen3_core::tripartite_router::RoutingDecision,
     store_path: &Path,
 ) -> Value {
@@ -6959,7 +6960,14 @@ fn shadow_route_l05(
     let live_vec: Option<Vec<f32>> = m2v
         .as_ref()
         .ok()
-        .and_then(|organ| organ.encode_single(inquiry).ok());
+        .and_then(|organ| {
+            if let Some(ctx) = context {
+                let enriched = format!("[Context: {ctx}] {inquiry}");
+                organ.encode_single(&enriched).ok()
+            } else {
+                organ.encode_single(inquiry).ok()
+            }
+        });
     let used_hybrid = live_vec.is_some() && projector.is_some();
 
     let start = std::time::Instant::now();
@@ -6974,6 +6982,7 @@ fn shadow_route_l05(
     let entry = json!({
         "ts": now_epoch_secs(),
         "inquiry": inquiry.chars().take(160).collect::<String>(),
+        "context": context.map(|c| c.chars().take(160).collect::<String>()),
         "tripartite_tier": cognitive_tier_name(decision.tier),
         "tripartite_confidence": decision.confidence,
         "l05_tier": cognitive_tier_name(result.tier),
@@ -7014,6 +7023,11 @@ fn handle_sutra_route(args: &Value, store_path: &Path) -> Result<Value, String> 
     if inquiry.is_empty() {
         return Err("Parameter 'inquiry' cannot be empty".to_string());
     }
+    let context = args
+        .get("context")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|c| !c.is_empty());
     let _utility = args
         .get("utility")
         .and_then(Value::as_f64)
@@ -7022,7 +7036,7 @@ fn handle_sutra_route(args: &Value, store_path: &Path) -> Result<Value, String> 
     let start = std::time::Instant::now();
     let decision = wm_gen3_core::tripartite_router::TripartiteRouter::route(inquiry, None);
     let latency_us = start.elapsed().as_micros();
-    let shadow = shadow_route_l05(inquiry, &decision, store_path);
+    let shadow = shadow_route_l05(inquiry, context, &decision, store_path);
 
     // Shadow-by-default contract: keep Tripartite as primary unless explicit promotion
     // (`WM_PROMOTE_VALKYRIE_L05=1`) is enabled.
