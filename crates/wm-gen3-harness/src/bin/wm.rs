@@ -44,6 +44,8 @@ use wm_gen3_harness::bridge::{
 };
 use wm_gen3_harness::host_guard::{self, Action, HostGuardState, Policy, SystemRunner};
 use wm_gen3_harness::mcp_server::{McpBackend, NetworkTransport, serve_network};
+#[path = "../build_identity.rs"]
+mod build_identity;
 
 /// Build version — WhiteMagic Gen3 v10.
 const WM_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -66,6 +68,12 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Show compile provenance and the SHA-256 of this running executable without opening a store
+    BuildInfo {
+        /// Print the identity as JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Run guided first-run onboarding pass, surface the starter guide galaxy, and verify setup
     Grimoire {
         /// Output report as JSON for agent consumption
@@ -1367,11 +1375,44 @@ fn verify_continuity_receipt05(
     Ok(receipt)
 }
 
+fn print_build_identity(json: bool) {
+    let identity = build_identity::BuildIdentity::current();
+    if json {
+        match serde_json::to_string_pretty(&identity) {
+            Ok(output) => println!("{output}"),
+            Err(error) => {
+                eprintln!("failed to serialize build identity: {error}");
+                std::process::exit(1);
+            }
+        }
+    } else {
+        println!("Package version:       {}", identity.package_version);
+        println!("Target:                 {}", identity.target);
+        println!("Git revision:           {}", identity.revision);
+        println!("Committed tree:         {}", identity.commit_tree);
+        println!("Workspace inputs:       {}", identity.worktree);
+        match (
+            &identity.executable_sha256,
+            &identity.executable_sha256_error,
+        ) {
+            (Some(hash), _) => println!("Executable SHA-256:     {hash}"),
+            (None, Some(error)) => println!("Executable SHA-256:     unknown ({error})"),
+            (None, None) => println!("Executable SHA-256:     unknown"),
+        }
+        println!("Identity scope:         {}", identity.identity_scope);
+    }
+}
+
 fn main() {
     let cli = Cli::parse();
+    if let Commands::BuildInfo { json } = &cli.command {
+        print_build_identity(*json);
+        return;
+    }
     let store_path = resolve_store_path(cli.store.as_ref());
 
     match cli.command {
+        Commands::BuildInfo { json } => print_build_identity(json),
         Commands::Grimoire { json, plan } => {
             if let Err(e) = wm_gen3_harness::grimoire::run_grimoire(&store_path, json, plan) {
                 eprintln!("Grimoire run failed: {e}");

@@ -4,6 +4,7 @@
 #![recursion_limit = "512"]
 
 pub mod bridge;
+mod build_metadata;
 pub mod host_guard;
 pub mod host_health;
 pub mod mcp_server;

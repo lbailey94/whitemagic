@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "WhiteMagic Gen3 — stdio JSON-RPC adapter (plumbing only; experiment harness)"
+build = "build.rs"
 
 [lib]
 name = "wm_gen3_harness"
