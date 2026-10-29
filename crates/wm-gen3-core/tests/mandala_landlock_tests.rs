@@ -4,6 +4,8 @@
 use ed25519_dalek::SigningKey;
 use std::fs;
 use std::net::TcpListener;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 use wm_gen3_core::mandala::{
@@ -372,36 +374,128 @@ fn test_landlock_inherited_shm_fd() {
 }
 
 #[test]
+#[cfg(unix)]
 fn test_spawn_sandboxed_command_via_wm_sandbox() {
-    let (ws_path, _outside) = create_temp_subdirs("wm_test_spawn_sandbox");
-    let claim = WorkspaceClaim {
-        claim_id: "claim-spawn-test".to_string(),
-        tenant_id: "tenant-lucas".to_string(),
-        agent_id: "agent-sandboxed".to_string(),
-        workspace_root: ws_path.clone(),
-        read_only_paths: vec![PathBuf::from("/usr"), PathBuf::from("/lib")],
-        read_write_paths: vec![ws_path.clone()],
-        network_allowed: false,
-        kekkai_phase: KekkaiPhase::Hoi,
-        resource_limits: Some(SandboxResourceLimits {
-            max_memory_mb: 256,
-            max_cpu_seconds: 5,
-            max_open_files: 32,
-        }),
-        inherited_shm_fd: None,
-        created_at: 1_700_000_000,
-        expires_at: 1_700_003_600,
-        signature: None,
+    // Run all environment-sensitive cases in child test processes so they cannot
+    // race with other tests that read HOME or WM_SANDBOX_DISABLE.
+    if std::env::var_os("WM_TEST_SANDBOX_CHILD").is_some() {
+        let (ws_path, _outside) = create_temp_subdirs("wm_test_spawn_sandbox_child");
+        let marker = ws_path.join("unconfined-child-ran");
+        let claim = WorkspaceClaim {
+            claim_id: "claim-spawn-test".to_string(),
+            tenant_id: "tenant-lucas".to_string(),
+            agent_id: "agent-sandboxed".to_string(),
+            workspace_root: ws_path.clone(),
+            read_only_paths: vec![PathBuf::from("/usr"), PathBuf::from("/lib")],
+            read_write_paths: vec![ws_path.clone()],
+            network_allowed: false,
+            kekkai_phase: KekkaiPhase::Hoi,
+            resource_limits: Some(SandboxResourceLimits {
+                max_memory_mb: 256,
+                max_cpu_seconds: 5,
+                max_open_files: 32,
+            }),
+            inherited_shm_fd: None,
+            created_at: 1_700_000_000,
+            expires_at: 1_700_003_600,
+            signature: None,
+        };
+
+        if std::env::var_os("WM_TEST_EXPECT_REFUSAL").is_some() {
+            let result = LandlockSandbox::spawn_sandboxed_command(
+                &claim,
+                "/usr/bin/touch",
+                &[marker.to_str().unwrap()],
+            );
+            assert!(result.is_err(), "missing/disabled wrapper must refuse");
+            assert!(!marker.exists(), "refusal must happen before child spawn");
+        } else {
+            if std::env::var_os("WM_TEST_CHILD_STATUS").is_some() {
+                let result =
+                    LandlockSandbox::spawn_sandboxed_command(&claim, "sh", &["-c", "exit 23"])
+                        .expect("wrapper launch should return the child exit status");
+                assert_eq!(result.status.code(), Some(23));
+                return;
+            }
+
+            let result = LandlockSandbox::spawn_sandboxed_command(
+                &claim,
+                "echo",
+                &["argument-forwarded-through-wrapper", "argument with spaces"],
+            )
+            .expect("controlled wrapper fixture should launch");
+            assert!(result.status.success());
+            let output = String::from_utf8_lossy(&result.stdout);
+            assert!(output.contains("--rw"));
+            assert!(output.contains("--ro"));
+            assert!(output.contains("--"));
+            assert!(output.contains("argument-forwarded-through-wrapper"));
+            assert!(output.contains("argument with spaces"));
+        }
+        return;
+    }
+
+    let base = std::env::temp_dir().join(format!("wm_test_spawn_sandbox_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&base);
+    let home = base.join("home");
+    let wrapper_dir = home.join(".local/bin");
+    fs::create_dir_all(&wrapper_dir).expect("create wrapper fixture directory");
+    let wrapper = wrapper_dir.join("wm-sandbox");
+    fs::write(
+        &wrapper,
+        "#!/bin/sh\nprintf 'arg:%s\\n' \"$@\"\nwhile [ \"$1\" != \"--\" ]; do shift; done\nshift\nexec \"$@\"\n",
+    )
+    .expect("write wrapper fixture");
+    fs::set_permissions(&wrapper, fs::Permissions::from_mode(0o755))
+        .expect("make fixture executable");
+
+    let test_exe = std::env::current_exe().expect("locate test executable");
+    let run_child = |child_home: &std::path::Path, refusal: bool, disabled: bool| {
+        let mut child = Command::new(&test_exe);
+        child
+            .arg("--exact")
+            .arg("test_spawn_sandboxed_command_via_wm_sandbox")
+            .arg("--nocapture")
+            .env("HOME", child_home)
+            .env("WM_TEST_SANDBOX_CHILD", "1")
+            .env_remove("WM_TEST_EXPECT_REFUSAL")
+            .env_remove("WM_TEST_CHILD_STATUS")
+            .env_remove("WM_SANDBOX_DISABLE");
+        if refusal {
+            child.env("WM_TEST_EXPECT_REFUSAL", "1");
+        }
+        if disabled {
+            child.env("WM_SANDBOX_DISABLE", "1");
+        }
+        child.status().expect("run isolated sandbox test process")
     };
 
-    let out = LandlockSandbox::spawn_sandboxed_command(&claim, "echo", &["mandala-sandboxed-ok"]);
-    assert!(
-        out.is_ok(),
-        "Sandboxed spawn should succeed: {:?}",
-        out.err()
-    );
-    let res = out.unwrap();
-    assert!(res.status.success());
-    let stdout = String::from_utf8_lossy(&res.stdout);
-    assert!(stdout.contains("mandala-sandboxed-ok"));
+    // This fixture checks argument construction and forwarding only. It does not
+    // provide kernel confinement; that requires a separate wrapper/kernel control.
+    assert!(run_child(&home, false, false).success());
+    assert!(Command::new(&test_exe)
+        .arg("--exact")
+        .arg("test_spawn_sandboxed_command_via_wm_sandbox")
+        .arg("--nocapture")
+        .env("HOME", &home)
+        .env("WM_TEST_SANDBOX_CHILD", "1")
+        .env("WM_TEST_CHILD_STATUS", "1")
+        .env_remove("WM_SANDBOX_DISABLE")
+        .status()
+        .expect("run isolated child-status process")
+        .success());
+
+    // An absent wrapper and an explicit disable request both refuse before the
+    // requested child can create its marker.
+    let missing_home = base.join("missing-home");
+    fs::create_dir_all(&missing_home).expect("create empty HOME");
+    assert!(run_child(&missing_home, true, false).success());
+    assert!(run_child(&home, true, true).success());
+
+    // An existing but non-executable wrapper also fails closed; there is no
+    // direct-command fallback on an exec-permission error.
+    fs::set_permissions(&wrapper, fs::Permissions::from_mode(0o644))
+        .expect("remove executable permission from fixture");
+    assert!(run_child(&home, true, false).success());
+    let _ = fs::remove_dir_all(base);
 }

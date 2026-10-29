@@ -1383,8 +1383,9 @@ impl LandlockSandbox {
         }
     }
 
-    /// Spawns an external command confined under the standalone `wm-sandbox` binary envelope
-    /// (enforcing Landlock ABI 8, rootless cgroup v2 limits, signal scoping, and zero egress).
+    /// Spawns an external command through the standalone `wm-sandbox` wrapper.
+    /// The wrapper is responsible for applying its configured confinement; this
+    /// method refuses when sandboxing is disabled or the wrapper cannot be started.
     pub fn spawn_sandboxed_command(
         claim: &WorkspaceClaim,
         cmd: &str,
@@ -1393,53 +1394,66 @@ impl LandlockSandbox {
         let sandbox_bin = std::env::var_os("HOME")
             .map(|h| PathBuf::from(h).join(".local/bin/wm-sandbox"))
             .unwrap_or_else(|| PathBuf::from("wm-sandbox"));
-        let mut command = if sandbox_bin.exists()
-            && std::env::var("WM_SANDBOX_DISABLE").unwrap_or_default() != "1"
-        {
-            let mut c = std::process::Command::new(&sandbox_bin);
+        let sandbox_disabled =
+            std::env::var_os("WM_SANDBOX_DISABLE").is_some_and(|value| value == "1");
+        Self::spawn_sandboxed_command_with_wrapper(claim, cmd, args, &sandbox_bin, sandbox_disabled)
+    }
 
-            let mut rw: Vec<String> = vec![
-                "/tmp".to_string(),
-                claim.workspace_root.to_string_lossy().to_string(),
-            ];
-            for p in &claim.read_write_paths {
-                rw.push(p.to_string_lossy().to_string());
-            }
-            c.arg("--rw").arg(rw.join(":"));
+    fn spawn_sandboxed_command_with_wrapper(
+        claim: &WorkspaceClaim,
+        cmd: &str,
+        args: &[&str],
+        sandbox_bin: &Path,
+        sandbox_disabled: bool,
+    ) -> Result<std::process::Output, MandalaError> {
+        if sandbox_disabled {
+            return Err(MandalaError::PersistenceFailure(
+                "Sandboxed command refused because WM_SANDBOX_DISABLE=1".into(),
+            ));
+        }
 
-            let mut ro: Vec<String> = vec![
-                "/usr".into(),
-                "/lib".into(),
-                "/lib64".into(),
-                "/bin".into(),
-                "/etc".into(),
-            ];
-            for p in &claim.read_only_paths {
-                ro.push(p.to_string_lossy().to_string());
-            }
-            c.arg("--ro").arg(ro.join(":"));
+        let mut command = std::process::Command::new(sandbox_bin);
 
-            if claim.network_allowed {
-                c.arg("--net");
-            }
+        let mut rw: Vec<String> = vec![
+            "/tmp".to_string(),
+            claim.workspace_root.to_string_lossy().to_string(),
+        ];
+        for p in &claim.read_write_paths {
+            rw.push(p.to_string_lossy().to_string());
+        }
+        command.arg("--rw").arg(rw.join(":"));
 
-            if let Some(ref limits) = claim.resource_limits {
-                c.arg("--mem").arg(format!("{}M", limits.max_memory_mb));
-                c.arg("--pids")
-                    .arg(format!("{}", limits.max_open_files.min(64)));
-            }
+        let mut ro: Vec<String> = vec![
+            "/usr".into(),
+            "/lib".into(),
+            "/lib64".into(),
+            "/bin".into(),
+            "/etc".into(),
+        ];
+        for p in &claim.read_only_paths {
+            ro.push(p.to_string_lossy().to_string());
+        }
+        command.arg("--ro").arg(ro.join(":"));
 
-            c.arg("--").arg(cmd);
-            c.args(args);
-            c
-        } else {
-            let mut c = std::process::Command::new(cmd);
-            c.args(args);
-            c
-        };
+        if claim.network_allowed {
+            command.arg("--net");
+        }
 
+        if let Some(ref limits) = claim.resource_limits {
+            command
+                .arg("--mem")
+                .arg(format!("{}M", limits.max_memory_mb));
+            command
+                .arg("--pids")
+                .arg(format!("{}", limits.max_open_files.min(64)));
+        }
+
+        command.arg("--").arg(cmd).args(args);
         command.output().map_err(|e| {
-            MandalaError::PersistenceFailure(format!("Failed to execute sandboxed command: {e}"))
+            MandalaError::PersistenceFailure(format!(
+                "Failed to execute required sandbox wrapper {}: {e}",
+                sandbox_bin.display()
+            ))
         })
     }
 
