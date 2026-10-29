@@ -157,16 +157,20 @@ class HttpServer:
     def raw_request(self, request: bytes) -> tuple[int, dict[str, Any] | None]:
         with socket.create_connection(("127.0.0.1", self.port), timeout=15) as conn:
             conn.sendall(request)
-            chunks = []
-            while True:
-                chunk = conn.recv(65536)
-                if not chunk:
-                    break
-                chunks.append(chunk)
-        response = b"".join(chunks)
-        head, payload = response.split(b"\r\n\r\n", 1)
-        status = int(head.split(b"\r\n", 1)[0].split()[1])
-        return status, json.loads(payload) if payload else None
+            response = http.client.HTTPResponse(conn)
+            response.begin()
+            content_length = response.getheader("Content-Length")
+            if content_length is None:
+                raise RuntimeError("raw HTTP response is missing Content-Length")
+            expected = int(content_length)
+            if not 0 <= expected <= 4 * 1024 * 1024:
+                raise RuntimeError(f"invalid raw HTTP response Content-Length: {expected}")
+            payload = response.read(expected)
+            if len(payload) != expected:
+                raise RuntimeError(
+                    f"truncated raw HTTP response body: got {len(payload)} of {expected} bytes"
+                )
+            return response.status, json.loads(payload) if payload else None
 
     def close(self) -> None:
         self.proc.terminate()

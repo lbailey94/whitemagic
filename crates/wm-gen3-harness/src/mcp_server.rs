@@ -1449,6 +1449,7 @@ fn query_param(query: &str, key: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::BufRead;
 
     #[test]
     fn network_dispatch_refuses_duplicate_malformed_and_oversized_raw_input() {
@@ -1829,8 +1830,40 @@ mod tests {
         });
         let mut client = TcpStream::connect(addr).expect("connect");
         client.write_all(request).expect("write raw request");
-        let mut response = String::new();
-        client.read_to_string(&mut response).expect("read response");
+        let mut reader = io::BufReader::new(client);
+        let mut response_head = Vec::new();
+        loop {
+            let mut line = Vec::new();
+            let bytes = reader
+                .read_until(b'\n', &mut line)
+                .expect("read response header line");
+            assert!(bytes > 0, "response ended before complete headers");
+            response_head.extend_from_slice(&line);
+            assert!(
+                response_head.len() <= MAX_HTTP_HEAD,
+                "response headers too large"
+            );
+            if line == b"\r\n" {
+                break;
+            }
+        }
+        let response_head_text = std::str::from_utf8(&response_head).expect("HTTP headers UTF-8");
+        let content_length = response_head_text
+            .lines()
+            .find_map(|line| {
+                let (name, value) = line.split_once(':')?;
+                name.eq_ignore_ascii_case("content-length")
+                    .then(|| value.trim().parse::<usize>().expect("valid Content-Length"))
+            })
+            .expect("Content-Length response header");
+        assert!(content_length <= MAX_HTTP_BODY, "response body too large");
+        let mut response_body = vec![0; content_length];
+        reader
+            .read_exact(&mut response_body)
+            .expect("read complete response body");
+        let mut response = response_head;
+        response.extend_from_slice(&response_body);
+        let response = String::from_utf8(response).expect("HTTP response UTF-8");
         handle.join().expect("server thread");
         response
     }
