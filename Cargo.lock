@@ -5237,6 +5237,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "wm-sandbox"
+version = "10.6.1"
+dependencies = [
+ "libc",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "writeable"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

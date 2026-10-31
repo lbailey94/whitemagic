@@ -1,0 +1,20 @@
+[package]
+name = "wm-sandbox"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "WhiteMagic Gen3 — Zero-Dependency Linux Landlock ABI 8 + cgroup v2 + Egress Proxy Sandboxing Engine"
+
+[dependencies]
+libc = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[[bin]]
+name = "wm-sandbox"
+path = "src/bin/wm_sandbox.rs"
+
+[lints.rust]
+unsafe_code = "allow"
