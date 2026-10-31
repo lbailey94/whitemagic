@@ -32,7 +32,7 @@
 //! projection gates (`set_projection_gated`/`set_projection_gate_count`).
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::time::Instant;
 use uuid::Uuid;
@@ -667,6 +667,7 @@ pub struct Substrate {
     store: Store,
     evidence: EvidenceStore,
     journal: Option<Journal>,
+    journal_path: Option<PathBuf>,
     view: ConstitutionView,
     policy: Policy,
     budget: u32,
@@ -764,9 +765,15 @@ impl Substrate {
         if !marker_current && !readonly {
             let _ = store.set_identity_index_marker(identity_index_version());
         }
-        let journal = match journal_path {
-            Some(p) => Some(Journal::open(p).map_err(|e| e.to_string())?),
-            None => None,
+        let (journal, journal_path_buf) = if readonly {
+            (None, journal_path.map(|p| p.to_path_buf()))
+        } else {
+            let j = match journal_path {
+                Some(p) => Some(Journal::open(p).map_err(|e| e.to_string())?),
+                None => None,
+            };
+            let jp = journal_path.map(|p| p.to_path_buf());
+            (j, jp)
         };
         let uuid_path = store_path.join("uuid_index.jsonl");
         let mut uuid_to_id = HashMap::new();
@@ -795,6 +802,7 @@ impl Substrate {
             store,
             evidence,
             journal,
+            journal_path: journal_path_buf,
             view,
             policy: Policy::default(),
             budget,
@@ -1226,7 +1234,9 @@ impl Substrate {
 
     #[must_use]
     pub fn journal_path(&self) -> Option<&Path> {
-        self.journal.as_ref().map(|j| j.path())
+        self.journal_path
+            .as_deref()
+            .or_else(|| self.journal.as_ref().map(|j| j.path()))
     }
 
     #[must_use]
@@ -1260,6 +1270,9 @@ impl Substrate {
     }
 
     fn j(&mut self, typ: &str, fields: serde_json::Map<String, serde_json::Value>) {
+        if self.store.is_readonly() {
+            return;
+        }
         if let Some(journal) = self.journal.as_mut()
             && let Err(e) = journal.event(typ, fields)
         {
@@ -1819,6 +1832,8 @@ impl Substrate {
         let started = Instant::now();
         let tokens = field::tokenize(&q.query);
         let query_hash = sha256_hex(q.query.as_bytes());
+        let is_hist_query = q.include_historical || crate::engram::is_historical_query(&q.query);
+        let temporal_anchor = crate::engram::extract_temporal_anchor(&q.query);
         if tokens.is_empty() {
             let mut f = serde_json::Map::new();
             f.insert("query_sha256".into(), query_hash.into());
@@ -1863,6 +1878,26 @@ impl Substrate {
                 for id in ids {
                     *counts.entry(id).or_default() += 1;
                     *lex_matched_idf.entry(id).or_default() += weight;
+                }
+            }
+        }
+
+        // Multi-head N-gram grounding (WM-Engram Tier -1)
+        for w in tokens.windows(2) {
+            if let (Ok(ids1), Ok(ids2)) = (self.store.postings(&w[0]), self.store.postings(&w[1])) {
+                let set2: HashSet<u64> = ids2.into_iter().collect();
+                for id in ids1 {
+                    if set2.contains(&id) {
+                        *lex_matched_idf.entry(id).or_default() += 0.25;
+                    }
+                }
+            }
+        }
+        if let Some(ref date_str) = temporal_anchor {
+            if let Ok(ids) = self.store.postings(date_str) {
+                for id in ids {
+                    *counts.entry(id).or_default() += 1;
+                    *lex_matched_idf.entry(id).or_default() += 1.5;
                 }
             }
         }
@@ -2130,16 +2165,33 @@ impl Substrate {
             } else {
                 0.0
             };
+            let record_opt = self.store.get_record(id).ok().flatten();
+            let record_content = record_opt.as_ref().map(|r| r.content()).unwrap_or("");
+            let is_temporal_match = temporal_anchor
+                .as_ref()
+                .map_or(false, |d| record_content.contains(d.as_str()));
+            let lower_content = record_content.to_lowercase();
+            let is_content_superseded = lower_content.contains("superseded")
+                || lower_content.contains("deprecated")
+                || lower_content.contains("obsolete");
+            let is_content_current = lower_content.contains("current approved")
+                || lower_content.contains("current active")
+                || lower_content.contains("approved value")
+                || lower_content.contains("active value");
+
             let mut key = support * (1.0 + self.policy.recency_weight * recency);
-            if sup.is_some() && !q.include_historical {
+            if is_temporal_match {
+                key += 1.5;
+            }
+            if (sup.is_some() || is_content_superseded) && !is_hist_query {
                 key *= 1.0 - self.policy.supersede_penalty;
             }
             // Structural strata (P2D §4): 0 current · 1 unresolved · 2 superseded.
-            let stratum: u8 = if q.include_historical {
-                1
-            } else if superseded_by.contains_key(&id) {
+            let stratum: u8 = if is_hist_query {
+                if is_temporal_match { 0 } else { 1 }
+            } else if superseded_by.contains_key(&id) || is_content_superseded {
                 2
-            } else if sources.contains(&id) {
+            } else if sources.contains(&id) || is_content_current {
                 0
             } else {
                 1
@@ -2178,12 +2230,13 @@ impl Substrate {
 
         match self.arbitration {
             Arbitration::PenaltyMultiplier => scored.sort_by(|a, b| {
-                b.0.partial_cmp(&a.0)
-                    .unwrap_or(std::cmp::Ordering::Equal)
+                a.5.cmp(&b.5)
+                    .then_with(|| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal))
                     .then(b.3.cmp(&a.3))
             }),
             Arbitration::Structural => scored.sort_by(|a, b| {
                 a.5.cmp(&b.5)
+                    .then_with(|| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal))
                     .then(b.6.partial_cmp(&a.6).unwrap_or(std::cmp::Ordering::Equal))
                     .then(b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal))
                     .then(b.7.cmp(&a.7))
@@ -2762,7 +2815,7 @@ impl Substrate {
             "tiers" => tiers,
             "relations" => serde_json::json!({ "relations": relations }),
             "journal" => serde_json::json!({
-                "configured": self.journal.is_some(),
+                "configured": self.journal.is_some() || self.journal_path.is_some(),
                 "ok": self.journal_ok,
                 "violations": self.violations,
             }),
@@ -2774,7 +2827,7 @@ impl Substrate {
             _ => serde_json::json!({
                 "tiers": tiers,
                 "relations": relations,
-                "journal": { "configured": self.journal.is_some(), "ok": self.journal_ok, "violations": self.violations },
+                "journal": { "configured": self.journal.is_some() || self.journal_path.is_some(), "ok": self.journal_ok, "violations": self.violations },
                 "projection": {
                     "enabled": self.projection.is_some(),
                     "gated": self.projection_gated,
@@ -5431,6 +5484,42 @@ mod tests {
         assert_eq!(hits.len(), 1, "read path works read-only");
         let refused = ro.remember_batch(&[item("delta epsilon")]);
         assert!(refused[0].is_err(), "writes must be refused: {refused:?}");
+    }
+
+    #[test]
+    fn readonly_substrate_recall_and_inspect_zero_journal_mutation() {
+        let path = temp_store("ro-nomut");
+        let journal_path = path.with_extension("journal.jsonl");
+        {
+            let mut s = Substrate::open(&path, Some(&journal_path), default_view()).expect("open");
+            s.remember_batch(&[item("alpha beta gamma")]);
+        }
+        let initial_hash =
+            crate::journal::sha256_file(&journal_path).expect("hash initial journal");
+        let initial_len = std::fs::metadata(&journal_path).expect("meta").len();
+
+        let mut ro =
+            Substrate::open_readonly(&path, Some(&journal_path), default_view()).expect("ro open");
+        assert!(ro.store().is_readonly());
+        // Run multiple queries and inspect operations
+        for _ in 0..10 {
+            let hits = ro.recall_expect(&q("alpha"));
+            assert_eq!(hits.len(), 1);
+            let _ = ro.inspect("tiers");
+            let _ = ro.inspect("journal");
+        }
+        drop(ro);
+
+        let final_hash = crate::journal::sha256_file(&journal_path).expect("hash final journal");
+        let final_len = std::fs::metadata(&journal_path).expect("meta").len();
+        assert_eq!(
+            initial_len, final_len,
+            "journal length must not change in read-only mode"
+        );
+        assert_eq!(
+            initial_hash, final_hash,
+            "journal SHA-256 must be byte-for-byte identical"
+        );
     }
 
     #[test]

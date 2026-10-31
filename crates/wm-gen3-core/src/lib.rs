@@ -40,6 +40,7 @@ pub mod contract;
 pub mod covenant;
 pub mod dream;
 pub mod dsl;
+pub mod engram;
 pub mod evidence;
 pub mod factory;
 pub mod field;
@@ -67,6 +68,7 @@ pub mod recipe;
 pub mod relativity;
 pub mod sentinel;
 pub mod spectroscopy;
+pub mod spine;
 pub mod stigmergy;
 pub mod store;
 pub mod sutra;
@@ -86,6 +88,10 @@ pub use pray_combinatorics::{
     CelestialQuadrant, CompiledPraySeal, GANA_CATALOG, GANA_COUNT, GANA_HEXAGRAM_SEALS,
     GanaMansion, PrayChain, PrayCombinatorialEngine, PrayStage, STAGE_PURE_PRAY_CHAINS,
     TOTAL_4GLYPH_CODONS,
+};
+pub use spine::{
+    KernelSpine, PipelinePlan, SealedSpineReceipt, SpineStage, SpineVerdict, StagedArtifacts,
+    StandardKernelSpine,
 };
 pub use sutra::{CompoundSutra, SutraGlyph, SutraKekkaiProfile, SutraParseError};
 pub use tripartite_router::{CognitiveTier, RoutingDecision, TripartiteRouter};

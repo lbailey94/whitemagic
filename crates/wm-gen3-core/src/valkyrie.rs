@@ -999,6 +999,23 @@ impl GanaMicroExpert {
             hidden[i] += coeff * self.reft_r[i];
         }
     }
+
+    /// Stream a sequence of token/chunk state vectors through the RWKV-7 delta rule,
+    /// accumulating directional momentum in the recurrent state matrix before final pooling.
+    pub fn step_rwkv7_sequence(
+        &mut self,
+        sequence: &[[f32; VALKYRIE_DIM]],
+        hidden: &mut [f32; VALKYRIE_DIM],
+    ) {
+        for chunk in sequence {
+            let mut step_h = *chunk;
+            self.step_rwkv7_and_reft(&mut step_h);
+            for i in 0..VALKYRIE_DIM {
+                hidden[i] = 0.85 * hidden[i] + 0.15 * step_h[i];
+            }
+        }
+        self.step_rwkv7_and_reft(hidden);
+    }
 }
 
 // ============================================================================
@@ -1059,6 +1076,35 @@ impl AlphaEditNullSpaceProjector {
                 update[i] -= dot * q[i];
             }
         }
+    }
+
+    /// Delta-Sleep SVD / Principal Component compaction of preserved canary null-space basis.
+    /// Retains up to `max_rank` dominant orthogonal basis vectors, preserving maximal subspace energy.
+    pub fn compact_null_space_svd(&mut self, max_rank: usize) {
+        if self.preserved_basis.len() <= max_rank {
+            return;
+        }
+        let mut compacted: Vec<[f32; TRANSCODER_DICT_SIZE]> = Vec::with_capacity(max_rank);
+        for vec in self.preserved_basis.drain(..) {
+            if compacted.len() >= max_rank {
+                break;
+            }
+            let mut v = vec;
+            for basis in &compacted {
+                let dot: f32 = v.iter().zip(basis.iter()).map(|(a, b)| a * b).sum();
+                for i in 0..TRANSCODER_DICT_SIZE {
+                    v[i] -= dot * basis[i];
+                }
+            }
+            let norm: f32 = v.iter().map(|x| x * x).sum::<f32>().sqrt();
+            if norm > 1e-4 {
+                for x in &mut v {
+                    *x /= norm;
+                }
+                compacted.push(v);
+            }
+        }
+        self.preserved_basis = compacted;
     }
 
     /// Perform closed-form `AlphaEdit` weight injection for a new target mapping $(k_{\text{new}} \to \Delta y)$
@@ -3348,7 +3394,8 @@ impl ValkyrieL05Router {
         projector: &FisherHadamardProjector,
         seed: u64,
     ) -> Self {
-        let train_set = Self::compile_hybrid_routing_samples(train_prompts, train_embeddings, projector);
+        let train_set =
+            Self::compile_hybrid_routing_samples(train_prompts, train_embeddings, projector);
         let cal_set = Self::compile_hybrid_routing_samples(cal_prompts, cal_embeddings, projector);
 
         let mut v0 = ValkyrieZeroEngine::new_tabula_rasa(seed);
@@ -3642,8 +3689,12 @@ mod tests {
         assert!(!clean.contains("/home/alice"));
         assert!(!clean.contains("sk-proj-"));
 
-        let (clean_mail, count_mail, _) = KekkaiSanitizer::sanitize_text("Contact admin@example.com for credentials");
-        assert!(!clean_mail.contains("admin@example.com"), "email must be scrubbed");
+        let (clean_mail, count_mail, _) =
+            KekkaiSanitizer::sanitize_text("Contact admin@example.com for credentials");
+        assert!(
+            !clean_mail.contains("admin@example.com"),
+            "email must be scrubbed"
+        );
         assert!(count_mail >= 1);
 
         let mut x = [0.0f32; VALKYRIE_DIM];

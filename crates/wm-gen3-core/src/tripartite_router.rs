@@ -64,6 +64,63 @@ pub struct RoutingDecision {
     pub catuskoti: Option<Corner>,
 }
 
+#[inline]
+fn has_word(text: &str, word: &str) -> bool {
+    text.split(|c: char| !c.is_alphanumeric() && c != '_' && c != '-')
+        .any(|w| w.eq_ignore_ascii_case(word))
+}
+
+fn match_system0_explicit(trimmed: &str) -> Option<(SutraGlyph, char)> {
+    // 1. Raw alchemical glyph seals (unambiguous, never in natural prose)
+    for glyph in SutraGlyph::ALL {
+        let a = glyph.alchemical_char();
+        if trimmed.contains(a) {
+            return Some((glyph, a));
+        }
+    }
+
+    // 2. Exact single character or sigiled/bracketed logoglyph (e.g. "行", "§行", "[行]", "`行`")
+    let clean = trimmed.trim_matches(|c: char| {
+        c == '§' || c == '[' || c == ']' || c == '`' || c == '(' || c == ')' || c == '{' || c == '}'
+    });
+    if clean.chars().count() == 1 {
+        let c = clean.chars().next().unwrap();
+        for glyph in SutraGlyph::ALL {
+            if glyph.as_char() == c {
+                return Some((glyph, c));
+            }
+        }
+    }
+
+    // 3. Explicit "sutra:<name>" or "#sutra:<name>" or "sutra:<glyph>"
+    if let Some(rest) = trimmed
+        .strip_prefix("sutra:")
+        .or_else(|| trimmed.strip_prefix("#sutra:"))
+    {
+        let sub = rest.trim();
+        if let Some(glyph) = SutraGlyph::from_token(sub) {
+            return Some((glyph, glyph.as_char()));
+        }
+    }
+
+    // 4. Pure codon pipeline (e.g. "行 觀 證", "行; 觀")
+    let glyph_candidates: Vec<char> = clean
+        .chars()
+        .filter(|c| !c.is_whitespace() && *c != ';' && *c != '·' && *c != '-' && *c != '>')
+        .collect();
+    if !glyph_candidates.is_empty() && glyph_candidates.len() <= 4 {
+        let all_glyphs = glyph_candidates
+            .iter()
+            .all(|&c| SutraGlyph::from_char(c).is_some());
+        if all_glyphs {
+            let first_glyph = SutraGlyph::from_char(glyph_candidates[0]).unwrap();
+            return Some((first_glyph, glyph_candidates[0]));
+        }
+    }
+
+    None
+}
+
 pub struct TripartiteRouter;
 
 impl TripartiteRouter {
@@ -74,25 +131,20 @@ impl TripartiteRouter {
         let trimmed = prompt.trim();
 
         // 1. System 0: Direct Logoglyphic Canon Detection (<1 µs)
-        for glyph in SutraGlyph::ALL {
-            let c = glyph.as_char();
-            let a = glyph.alchemical_char();
-            if trimmed.contains(c) || trimmed.contains(a) {
-                let matched = if trimmed.contains(c) { c } else { a };
-                return RoutingDecision {
-                    tier: CognitiveTier::System0Sutra,
-                    selected_glyph: Some(matched),
-                    skeleton_id: Some(glyph.bound_skeleton_id().to_string()),
-                    confidence: 0.99,
-                    rationale: format!(
-                        "Exact canonical logoglyph '{}' ({}) matched; dispatching System 0 organelle reflex",
-                        matched,
-                        glyph.taoist_seal()
-                    ),
-                    routing_latency_ns: t0.elapsed().as_nanos() as u64,
-                    catuskoti: Some(Corner::K1Affirmed),
-                };
-            }
+        if let Some((glyph, matched)) = match_system0_explicit(trimmed) {
+            return RoutingDecision {
+                tier: CognitiveTier::System0Sutra,
+                selected_glyph: Some(matched),
+                skeleton_id: Some(glyph.bound_skeleton_id().to_string()),
+                confidence: 0.99,
+                rationale: format!(
+                    "Exact canonical logoglyph '{}' ({}) matched; dispatching System 0 organelle reflex",
+                    matched,
+                    glyph.taoist_seal()
+                ),
+                routing_latency_ns: t0.elapsed().as_nanos() as u64,
+                catuskoti: Some(Corner::K1Affirmed),
+            };
         }
 
         // 2. Direct 64-Hexagram Macro-Action Recognition
@@ -118,24 +170,35 @@ impl TripartiteRouter {
 
         // 3. Catuṣkoṭi K3 Dialectical Tension Detection & Keyword Matching
         let lower = trimmed.to_lowercase();
+        let word_count = trimmed.split_whitespace().count();
+        let is_interrogative = trimmed.contains('?')
+            || trimmed.starts_with("why ")
+            || trimmed.starts_with("how ")
+            || trimmed.starts_with("what ")
+            || trimmed.starts_with("can you")
+            || trimmed.starts_with("could you");
 
         // Detect potential thesis / antithesis pairs
-        let wants_exec = lower.contains("execute")
-            || lower.contains("commit")
-            || lower.contains("dispatch")
-            || lower.contains("run");
-        let wants_sim = lower.contains("simulate")
-            || lower.contains("shadow")
-            || lower.contains("dry-run")
-            || lower.contains("dryrun");
-        let wants_verify = lower.contains("verify")
-            || lower.contains("test")
-            || lower.contains("proof")
-            || lower.contains("check");
-        let wants_fuzz = lower.contains("fuzz")
-            || lower.contains("redteam")
-            || lower.contains("discriminate")
-            || lower.contains("adversarial");
+        let wants_exec = has_word(&lower, "execute")
+            || has_word(&lower, "commit")
+            || has_word(&lower, "dispatch")
+            || has_word(&lower, "ship")
+            || (has_word(&lower, "run")
+                && !has_word(&lower, "dry-run")
+                && !has_word(&lower, "dryrun"));
+        let wants_sim = has_word(&lower, "simulate")
+            || has_word(&lower, "shadow")
+            || has_word(&lower, "dry-run")
+            || has_word(&lower, "dryrun");
+        let wants_verify = has_word(&lower, "verify")
+            || has_word(&lower, "test")
+            || has_word(&lower, "proof")
+            || (has_word(&lower, "check") && !has_word(&lower, "checkpoint"))
+            || has_word(&lower, "audit");
+        let wants_fuzz = has_word(&lower, "fuzz")
+            || has_word(&lower, "redteam")
+            || has_word(&lower, "discriminate")
+            || has_word(&lower, "adversarial");
 
         if (wants_exec && wants_sim) || (wants_verify && wants_fuzz) {
             // K3 Dialectical tension: Both thesis and antithesis are affirmed
@@ -155,47 +218,73 @@ impl TripartiteRouter {
             };
         }
 
-        let keyword_match = if wants_verify {
-            Some(SutraGlyph::Zheng)
-        } else if wants_exec {
-            Some(SutraGlyph::Xing)
-        } else if lower.contains("survey")
-            || lower.contains("inspect")
-            || lower.contains("lookup")
-            || lower.contains("status")
-        {
-            Some(SutraGlyph::Guan)
-        } else if lower.contains("probe") || lower.contains("telemetry") {
-            Some(SutraGlyph::Cha)
-        } else if wants_fuzz {
-            Some(SutraGlyph::Bian)
-        } else if wants_sim {
-            Some(SutraGlyph::Ni)
-        } else if lower.contains("clean") || lower.contains("prune") || lower.contains("compact") {
-            Some(SutraGlyph::Qing)
-        } else if lower.contains("dream") || lower.contains("sleep") || lower.contains("quiesce") {
-            Some(SutraGlyph::Xi)
-        } else if lower.contains("sync")
-            || lower.contains("resonate")
-            || lower.contains("mesh")
-            || lower.contains("peer")
-        {
-            Some(SutraGlyph::Ying)
-        } else if lower.contains("sandbox") || lower.contains("kekkai") || lower.contains("confine")
-        {
-            Some(SutraGlyph::Jie)
-        } else if lower.contains("synthesize") || lower.contains("unify") {
-            Some(SutraGlyph::He)
-        } else if lower.contains("decompose") || lower.contains("decouple") {
-            Some(SutraGlyph::Fen)
-        } else if lower.contains("diff") || lower.contains("illuminate") {
-            Some(SutraGlyph::Zhao)
-        } else if lower.contains("clarify") || lower.contains("settle") {
-            Some(SutraGlyph::Cheng)
-        } else if lower.contains("fork") || lower.contains("sprout") {
-            Some(SutraGlyph::Ya)
-        } else if lower.contains("transmute") || lower.contains("dissolve") {
-            Some(SutraGlyph::Hua)
+        // Explicit snapshot/quiescence intent
+        if has_word(&lower, "checkpoint") {
+            return RoutingDecision {
+                tier: CognitiveTier::System0Sutra,
+                selected_glyph: Some(SutraGlyph::Xi.as_char()),
+                skeleton_id: Some(SutraGlyph::Xi.bound_skeleton_id().to_string()),
+                confidence: 0.95,
+                rationale: "Explicit snapshot/quiescence intent matched to Xi (息)".to_string(),
+                routing_latency_ns: t0.elapsed().as_nanos() as u64,
+                catuskoti: Some(Corner::K1Affirmed),
+            };
+        }
+
+        let is_short_directive = !is_interrogative && word_count <= 8;
+        let keyword_match = if is_short_directive {
+            if wants_verify {
+                Some(SutraGlyph::Zheng)
+            } else if wants_exec {
+                Some(SutraGlyph::Xing)
+            } else if has_word(&lower, "survey")
+                || has_word(&lower, "inspect")
+                || has_word(&lower, "lookup")
+                || has_word(&lower, "status")
+            {
+                Some(SutraGlyph::Guan)
+            } else if has_word(&lower, "probe") || has_word(&lower, "telemetry") {
+                Some(SutraGlyph::Cha)
+            } else if wants_fuzz {
+                Some(SutraGlyph::Bian)
+            } else if wants_sim {
+                Some(SutraGlyph::Ni)
+            } else if has_word(&lower, "clean")
+                || has_word(&lower, "prune")
+                || has_word(&lower, "compact")
+            {
+                Some(SutraGlyph::Qing)
+            } else if has_word(&lower, "dream")
+                || has_word(&lower, "sleep")
+                || has_word(&lower, "quiesce")
+            {
+                Some(SutraGlyph::Xi)
+            } else if has_word(&lower, "sync")
+                || has_word(&lower, "resonate")
+                || has_word(&lower, "mesh")
+                || has_word(&lower, "peer")
+            {
+                Some(SutraGlyph::Ying)
+            } else if has_word(&lower, "sandbox")
+                || has_word(&lower, "kekkai")
+                || has_word(&lower, "confine")
+            {
+                Some(SutraGlyph::Jie)
+            } else if has_word(&lower, "synthesize") || has_word(&lower, "unify") {
+                Some(SutraGlyph::He)
+            } else if has_word(&lower, "decompose") || has_word(&lower, "decouple") {
+                Some(SutraGlyph::Fen)
+            } else if has_word(&lower, "diff") || has_word(&lower, "illuminate") {
+                Some(SutraGlyph::Zhao)
+            } else if has_word(&lower, "clarify") || has_word(&lower, "settle") {
+                Some(SutraGlyph::Cheng)
+            } else if has_word(&lower, "fork") || has_word(&lower, "sprout") {
+                Some(SutraGlyph::Ya)
+            } else if has_word(&lower, "transmute") || has_word(&lower, "dissolve") {
+                Some(SutraGlyph::Hua)
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -366,5 +455,55 @@ mod tests {
             Some("skel-adversarial-redteam")
         );
         assert_eq!(dec_fuzz.catuskoti, Some(Corner::K3DialecticalContradiction));
+    }
+
+    #[test]
+    fn test_tripartite_router_strict_delimitation_and_no_false_positives() {
+        // Explicit sigiled / bracketed / alchemical glyphs match System 0
+        assert_eq!(
+            TripartiteRouter::route("§行", None).tier,
+            CognitiveTier::System0Sutra
+        );
+        assert_eq!(
+            TripartiteRouter::route("[行]", None).tier,
+            CognitiveTier::System0Sutra
+        );
+        assert_eq!(
+            TripartiteRouter::route("`行`", None).tier,
+            CognitiveTier::System0Sutra
+        );
+        assert_eq!(
+            TripartiteRouter::route("🜂", None).tier,
+            CognitiveTier::System0Sutra
+        );
+        assert_eq!(
+            TripartiteRouter::route("sutra:xing", None).tier,
+            CognitiveTier::System0Sutra
+        );
+
+        // Natural language prose containing Hanzi characters must NOT be hijacked into System 0
+        let chinese_prose = "我们在进行分布式系统测试和架构研究";
+        assert_ne!(
+            TripartiteRouter::route(chinese_prose, None).tier,
+            CognitiveTier::System0Sutra
+        );
+
+        // Substring collision prevention: "prune" must not trigger "run"
+        let prune_cmd = "prune old logs";
+        let dec_prune = TripartiteRouter::route(prune_cmd, None);
+        assert_eq!(dec_prune.tier, CognitiveTier::System0Sutra);
+        assert_eq!(dec_prune.selected_glyph, Some('清')); // Qing = clean / prune
+
+        // Explicit "checkpoint" routes to Xi (quiescence / snapshot)
+        let ckpt_cmd = "trigger session checkpoint";
+        let dec_ckpt = TripartiteRouter::route(ckpt_cmd, None);
+        assert_eq!(dec_ckpt.tier, CognitiveTier::System0Sutra);
+        assert_eq!(dec_ckpt.selected_glyph, Some('息'));
+
+        // Conversational query with "check" must NOT hijack to System 0
+        let convo_query =
+            "Can you check why the memory crystals are not syncing across nodes in the cluster?";
+        let dec_convo = TripartiteRouter::route(convo_query, None);
+        assert_ne!(dec_convo.tier, CognitiveTier::System0Sutra);
     }
 }

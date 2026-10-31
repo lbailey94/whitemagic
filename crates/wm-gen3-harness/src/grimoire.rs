@@ -156,9 +156,13 @@ pub fn run_grimoire_with_home(
     let arch = std::env::consts::ARCH;
     let cores = std::thread::available_parallelism().map_or(1, std::num::NonZero::get);
     let mem = read_meminfo_gb().unwrap_or(4);
-    let avx = has_avx2();
+    let simd_desc = if arch == "aarch64" {
+        "NEON: true".to_string()
+    } else {
+        format!("AVX2: {}", has_avx2())
+    };
 
-    let host_detail = format!("{os} {arch} · {cores} cores · {mem} GB RAM · AVX2: {avx}");
+    let host_detail = format!("{os} {arch} · {cores} cores · {mem} GB RAM · {simd_desc}");
     steps.push(GrimoireStep {
         name: "host",
         status: StepStatus::Ok,

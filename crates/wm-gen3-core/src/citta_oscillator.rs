@@ -1356,13 +1356,52 @@ impl CitadelAntibodyBloom2048 {
     }
 
     /// Ingest a live `wm.citadel-antibody-sync/1.0` JSON bundle exported by `citadel_antibody_sync.py`.
+    /// When cryptographic fields `signature_hex` and `public_key_hex` are present,
+    /// verifies the Ed25519 signature over canonical little-endian digest bytes before admission,
+    /// rejecting Byzantine or tampered antibody feeds.
     pub fn ingest_live_sync_bundle_json(&mut self, json_str: &str) -> Result<usize, String> {
         #[derive(Deserialize)]
         struct LiveBundle {
             antibody_digests_u64: Vec<u64>,
+            #[serde(default)]
+            signature_hex: Option<String>,
+            #[serde(default)]
+            public_key_hex: Option<String>,
         }
         let parsed: LiveBundle =
             serde_json::from_str(json_str).map_err(|e| format!("invalid antibody bundle: {e}"))?;
+
+        if let (Some(sig_hex), Some(pk_hex)) = (&parsed.signature_hex, &parsed.public_key_hex) {
+            use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+            if sig_hex.len() != 128 || pk_hex.len() != 64 {
+                return Err("invalid Ed25519 key/signature dimensions".into());
+            }
+            let sig_bytes = (0..sig_hex.len())
+                .step_by(2)
+                .map(|i| u8::from_str_radix(&sig_hex[i..i + 2], 16))
+                .collect::<Result<Vec<u8>, _>>()
+                .map_err(|e| format!("invalid signature hex: {e}"))?;
+            let pk_bytes = (0..pk_hex.len())
+                .step_by(2)
+                .map(|i| u8::from_str_radix(&pk_hex[i..i + 2], 16))
+                .collect::<Result<Vec<u8>, _>>()
+                .map_err(|e| format!("invalid public key hex: {e}"))?;
+
+            let mut pk_arr = [0u8; 32];
+            pk_arr.copy_from_slice(&pk_bytes);
+            let vk = VerifyingKey::from_bytes(&pk_arr)
+                .map_err(|e| format!("invalid Ed25519 verifying key: {e}"))?;
+            let sig = Signature::from_slice(&sig_bytes)
+                .map_err(|e| format!("invalid Ed25519 signature: {e}"))?;
+
+            let mut msg = Vec::with_capacity(parsed.antibody_digests_u64.len() * 8);
+            for d in &parsed.antibody_digests_u64 {
+                msg.extend_from_slice(&d.to_le_bytes());
+            }
+            vk.verify(&msg, &sig)
+                .map_err(|_| "Citadel antibody bundle Ed25519 signature verification failed (tamper detected)".to_string())?;
+        }
+
         let count = parsed.antibody_digests_u64.len();
         for d in parsed.antibody_digests_u64 {
             self.insert_digest(d);

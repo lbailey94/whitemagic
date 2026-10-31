@@ -83,11 +83,14 @@ enum Commands {
         #[arg(long)]
         plan: bool,
     },
-    /// Initialize and provision a local WhiteMagic substrate store with the starter guide galaxy
+    /// Initialize and provision a local WhiteMagic substrate store
     Init {
         /// Force re-seeding of the starter guide galaxy even if store already exists
         #[arg(long)]
         force: bool,
+        /// Initialize an empty store without seeding the starter guide galaxy
+        #[arg(long, aliases = ["no-starter-pack"])]
+        bare: bool,
     },
     /// Display system status, epoch, record counts, and store health
     Status {
@@ -1419,7 +1422,7 @@ fn main() {
                 std::process::exit(1);
             }
         }
-        Commands::Init { force } => {
+        Commands::Init { force, bare } => {
             println!(
                 "Initializing WhiteMagic substrate at: {}",
                 store_path.display()
@@ -1442,7 +1445,9 @@ fn main() {
                 };
 
             let count = substrate.store().record_count().unwrap_or(0);
-            if count == 0 || force {
+            if bare {
+                println!("✓ Initialized bare WhiteMagic substrate (0 starter records seeded).");
+            } else if count == 0 || force {
                 match wm_gen3_harness::starter_galaxy::seed_starter_guide_force(&mut substrate) {
                     Ok(seeded) => println!(
                         "✓ Initialized and seeded starter guide galaxy ({} records committed).",

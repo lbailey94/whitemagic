@@ -280,6 +280,25 @@ fn profile_label(profile: McpProfile) -> &'static str {
 fn canonical_route(name: &str) -> Option<&'static str> {
     Some(match name {
         "wm" | "whitemagic" => "wm",
+        // Q34 18 Hanzi Logoglyphic Routes
+        "记" => "memory.create",
+        "忆" => "memory.search",
+        "读" => "memory.read",
+        "列" => "memory.list",
+        "查" => "inspect",
+        "清" => "sweep",
+        "息" => "session.checkpoint",
+        "纪" => "session.record",
+        "续" => "session.continuity",
+        "阵" | "同" => "mesh_sync",
+        "证" => "sutra.canon",
+        "投" => "sutra.cast",
+        "编" => "sutra.compile",
+        "导" => "sutra.route",
+        "卦" => "sutra.hexagram",
+        "心" => "mandala.status",
+        "审" => "mandala.triage",
+        "评" => "mandala.evaluate",
         "memory.create" | "memory_create" | "memory_remember" | "remember" => "memory.create",
         "memory.search" | "memory_search" | "memory_recall" | "recall" | "memory.hybrid_recall" => {
             "memory.search"
@@ -1814,6 +1833,62 @@ pub fn execute_hybrid_tool_call(
     }
 }
 
+fn resolve_q34_route(r: &str) -> Option<&'static str> {
+    match r {
+        "记" | "remember" | "memory.create" | "memory_create" => Some("memory.create"),
+        "忆" | "recall" | "memory.search" | "memory_search" => Some("memory.search"),
+        "读" | "read" | "memory.read" | "memory_read" => Some("memory.read"),
+        "列" | "list" | "memory.list" | "memory_list" => Some("memory.list"),
+        "查" | "inspect" => Some("inspect"),
+        "清" | "clean" | "sweep" => Some("sweep"),
+        "息" | "checkpoint" | "session.checkpoint" => Some("session.checkpoint"),
+        "纪" | "record" | "session.record" => Some("session.record"),
+        "续" | "continuity" | "session.continuity" => Some("session.continuity"),
+        "阵" | "同" | "mesh" | "mesh_sync" => Some("mesh_sync"),
+        "证" | "canon" | "sutra.canon" => Some("sutra.canon"),
+        "投" | "cast" | "sutra.cast" => Some("sutra.cast"),
+        "编" | "compile" | "sutra.compile" => Some("sutra.compile"),
+        "导" | "route" | "sutra.route" => Some("sutra.route"),
+        "卦" | "hexagram" | "sutra.hexagram" => Some("sutra.hexagram"),
+        "心" | "status" | "mandala.status" => Some("mandala.status"),
+        "审" | "triage" | "mandala.triage" => Some("mandala.triage"),
+        "评" | "evaluate" | "mandala.evaluate" => Some("mandala.evaluate"),
+        _ => None,
+    }
+}
+
+fn normalize_q34_args(target_route: &str, raw: &Value) -> Value {
+    let Some(obj) = raw.as_object() else {
+        return raw.clone();
+    };
+    let mut normalized = serde_json::Map::new();
+    for (k, v) in obj {
+        let mapped_k = match k.as_str() {
+            "文" => {
+                if target_route == "memory.search" || target_route == "sutra.compile" {
+                    "query"
+                } else if target_route == "mandala.triage" {
+                    "inquiry"
+                } else {
+                    "content"
+                }
+            }
+            "问" => "inquiry",
+            "令" => "command",
+            "域" => "galaxy",
+            "源" => "source",
+            "类" => "kind",
+            "限" => "limit",
+            "阈" => "min_score",
+            "码" => "codon",
+            "标" => "tags",
+            other => other,
+        };
+        normalized.insert(mapped_k.to_string(), v.clone());
+    }
+    Value::Object(normalized)
+}
+
 /// Handle the `wm` meta-tool invocation with NLU thought routing, explicit route, or legacy action.
 fn handle_wm_router(
     args: &Value,
@@ -1822,6 +1897,16 @@ fn handle_wm_router(
     readonly: bool,
     profile: McpProfile,
 ) -> Result<Value, String> {
+    // 0. Native Q34 JSON Envelope Dispatch (e.g. {"r": "记", "a": {"文": "..."}})
+    if let Some(r_str) = args.get("r").and_then(Value::as_str) {
+        if let Some(target) = resolve_q34_route(r_str) {
+            let inner_args = args.get("a").unwrap_or(args);
+            let pass_args = normalize_q34_args(target, inner_args);
+            return execute_hybrid_tool_call(
+                target, &pass_args, substrate, store_path, readonly, profile,
+            );
+        }
+    }
     // 1. Explicit Route Dispatch (e.g. route="memory.create", args={...})
     if let Some(route) = args.get("route").and_then(Value::as_str) {
         if !route.is_empty() {
@@ -6932,8 +7017,10 @@ fn shadow_route_l05(
             if let (Ok(m2v_organ), Some(proj)) = (m2v.as_ref(), projector.as_ref()) {
                 let train_pairs = wm_gen3_core::valkyrie::default_routing_train_prompts();
                 let cal_pairs = wm_gen3_core::valkyrie::default_routing_cal_prompts();
-                let train_texts: Vec<String> = train_pairs.iter().map(|(p, _)| (*p).to_string()).collect();
-                let cal_texts: Vec<String> = cal_pairs.iter().map(|(p, _)| (*p).to_string()).collect();
+                let train_texts: Vec<String> =
+                    train_pairs.iter().map(|(p, _)| (*p).to_string()).collect();
+                let cal_texts: Vec<String> =
+                    cal_pairs.iter().map(|(p, _)| (*p).to_string()).collect();
                 if let (Ok(train_embs), Ok(cal_embs)) = (
                     m2v_organ.encode_batch(&train_texts),
                     m2v_organ.encode_batch(&cal_texts),
@@ -6957,17 +7044,14 @@ fn shadow_route_l05(
         return json!({"available": false});
     };
 
-    let live_vec: Option<Vec<f32>> = m2v
-        .as_ref()
-        .ok()
-        .and_then(|organ| {
-            if let Some(ctx) = context {
-                let enriched = format!("[Context: {ctx}] {inquiry}");
-                organ.encode_single(&enriched).ok()
-            } else {
-                organ.encode_single(inquiry).ok()
-            }
-        });
+    let live_vec: Option<Vec<f32>> = m2v.as_ref().ok().and_then(|organ| {
+        if let Some(ctx) = context {
+            let enriched = format!("[Context: {ctx}] {inquiry}");
+            organ.encode_single(&enriched).ok()
+        } else {
+            organ.encode_single(inquiry).ok()
+        }
+    });
     let used_hybrid = live_vec.is_some() && projector.is_some();
 
     let start = std::time::Instant::now();
@@ -11036,6 +11120,41 @@ mod v10_6_mcp_bridge_routes_tests {
         )
         .expect("pareto.certify");
         assert_eq!(pareto["certification"]["verifier_certified"], true);
+
+        // 6. Native Q34 JSON Envelope Dispatch ({"r": "记", "a": {"文": "..."}} and {"r": "忆", "a": {"文": "..."}})
+        let q34_remember = execute_hybrid_tool_call(
+            "wm",
+            &json!({
+                "r": "记",
+                "a": {
+                    "文": "q34 memory crystal",
+                    "域": "test",
+                    "源": "bridge:q34"
+                }
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Full,
+        )
+        .expect("q34 remember");
+        assert_eq!(q34_remember["status"], "success");
+
+        let q34_recall = execute_hybrid_tool_call(
+            "wm",
+            &json!({
+                "r": "忆",
+                "a": {
+                    "文": "q34 memory crystal"
+                }
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Full,
+        )
+        .expect("q34 recall");
+        assert!(q34_recall["count"].as_u64().unwrap_or(0) >= 1);
 
         let _ = std::fs::remove_dir_all(&dir);
     }
