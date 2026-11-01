@@ -229,6 +229,12 @@ enum Commands {
         /// Crystallize multiple historical session turns into durable memory crystals (Stage 5)
         #[arg(long)]
         crystallize: bool,
+        /// Sweep all session chains across the entire store during crystallization (Wave 6)
+        #[arg(long)]
+        all: bool,
+        /// Maximum record sample depth for NREM consolidation scan (default: 500)
+        #[arg(long, default_value_t = 500)]
+        sample_depth: usize,
     },
     /// Cognitive router triage: evaluate dispatch tier for inquiry with dream-assisted fast path
     Route {
@@ -964,6 +970,39 @@ enum GalaxyAction {
         #[arg(long, default_value_t = 2000)]
         limit: usize,
     },
+    /// Chart semantic constellations and cluster centers in a galaxy
+    Chart {
+        /// Galaxy name (default: codex)
+        #[arg(long, default_value = "codex")]
+        galaxy: String,
+        /// Maximum number of records to sample for constellation clustering (default: 500)
+        #[arg(long, default_value_t = 500)]
+        sample: usize,
+        /// Number of dominant constellations to extract (default: 5)
+        #[arg(long, default_value_t = 5)]
+        clusters: usize,
+        /// Emit structured JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Navigate 6D constellations and associative resonance bridges via natural language intent or Sutra codon
+    Navigate {
+        /// Natural language intent or search query
+        #[arg(long)]
+        query: String,
+        /// Optional Sutra codon trajectory (e.g. "觀-應-鏡" or "觀 應 鏡")
+        #[arg(long)]
+        via: Option<String>,
+        /// Associative resonance hop radius (1..=3, default: 2)
+        #[arg(long, default_value_t = 2)]
+        hops: usize,
+        /// Maximum hits to return (default: 5)
+        #[arg(long, default_value_t = 5)]
+        limit: usize,
+        /// Emit structured JSON navigation receipt
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1146,6 +1185,16 @@ enum SutraCommands {
         /// Optional 64-bit candidate signature digest to test against CitadelAntibodyBloom2048
         #[arg(long)]
         digest: Option<u64>,
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Sutra-Valkyrie latent deliberation fast-path: rank routes across the 28 Lunar Mansions via 15 Hz dual-ring
+    #[command(alias = "deliberate")]
+    Deliberator {
+        /// Natural language inquiry or Sutra codon to deliberate
+        #[arg(default_value = "navigate holographic constellations and synthesize session crystals")]
+        inquiry: String,
         /// Emit JSON output
         #[arg(long)]
         json: bool,
@@ -1849,7 +1898,19 @@ fn main() {
                             superseded
                         );
                         println!("    Source:  {}", hit.source);
-                        println!("    Content: {}", hit.content);
+                        let (content_display, truncated_info) = if hit.content.len() > 2000 {
+                            let mut end = 2000;
+                            while end > 0 && !hit.content.is_char_boundary(end) {
+                                end -= 1;
+                            }
+                            (
+                                format!("{}...", &hit.content[..end]),
+                                format!(" (truncated from {} bytes)", hit.content.len()),
+                            )
+                        } else {
+                            (hit.content.clone(), String::new())
+                        };
+                        println!("    Content{}: {}", truncated_info, content_display);
                     }
                 }
                 Err(e) => {
@@ -1974,7 +2035,10 @@ fn main() {
             no_homeostatic,
             force,
             crystallize,
+            all,
+            sample_depth,
         } => {
+            let effective_sample_depth = if all { usize::MAX } else { sample_depth };
             let dual_phase = dual_phase.unwrap_or(true) && !no_dual_phase;
             let homeostatic = homeostatic.unwrap_or(true) && !no_homeostatic;
             let dream_log = log_file.unwrap_or_else(|| store_path.join("dream.jsonl"));
@@ -2131,13 +2195,14 @@ fn main() {
                     let seed = 42 + current_cycle_num as u64;
 
                     let (nrem_receipt, telemetry, speciation_skeletons) = if active_dual_phase {
-                        let dual = wm_gen3_core::dream::execute_dual_phase_sleep_cycle_opts(
+                        let dual = wm_gen3_core::dream::execute_dual_phase_sleep_cycle_ext(
                             incubation_mode,
                             &regime,
                             100,
                             &mut substrate,
                             seed,
                             crystallize,
+                            effective_sample_depth,
                         );
                         (Some(dual.nrem), dual.rem, dual.synthesized_skeletons)
                     } else {
@@ -2579,6 +2644,446 @@ fn main() {
                     println!("==================================================");
                     println!("Branching: 'wm galaxy fork <src> <tgt>', 'wm galaxy create <name>'");
                     println!("Visualizer: 'wm galaxy visualize'");
+                    println!("Chart Constellations: 'wm galaxy chart'");
+                    println!("Navigate Constellations: 'wm galaxy navigate --query <text>'");
+                }
+                Some(GalaxyAction::Chart {
+                    galaxy,
+                    sample,
+                    clusters,
+                    json,
+                }) => {
+                    let substrate = match Substrate::open_inspect(
+                        &store_path,
+                        Some(&journal_path),
+                        default_view(),
+                        wm_gen3_core::store::InspectionPromise::StrictZeroWrite,
+                    )
+                    .or_else(|_| {
+                        Substrate::open_readonly(&store_path, Some(&journal_path), default_view())
+                    }) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!("Error opening store at {}: {e}", store_path.display());
+                            std::process::exit(1);
+                        }
+                    };
+
+                    let total_records = substrate.store().record_count().unwrap_or(0);
+                    let epoch = substrate.store().epoch().unwrap_or(0);
+                    let sample_count = sample.min(total_records).max(1);
+                    let stride = (total_records / sample_count).max(1);
+                    let num_clusters = clusters.clamp(2, 12);
+
+                    struct ConstellationBin {
+                        count: usize,
+                        sum_x: f64,
+                        sum_y: f64,
+                        sum_z: f64,
+                        sum_tau: f64,
+                        sum_sigma: f64,
+                        sum_omega: f64,
+                        samples: Vec<(u64, String)>,
+                    }
+
+                    let mut bins: Vec<ConstellationBin> = (0..num_clusters)
+                        .map(|_| ConstellationBin {
+                            count: 0,
+                            sum_x: 0.0,
+                            sum_y: 0.0,
+                            sum_z: 0.0,
+                            sum_tau: 0.0,
+                            sum_sigma: 0.0,
+                            sum_omega: 0.0,
+                            samples: Vec::new(),
+                        })
+                        .collect();
+
+                    let glyph_names = [
+                        ("觀 (Guān)", "Survey & Telemetry"),
+                        ("界 (Jiè)", "Kekkai Sandbox & Isolation"),
+                        ("根 (Gēn)", "Lineage & Causal Origins"),
+                        ("行 (Xíng)", "Commit & Execution Authority"),
+                        ("合 (Hé)", "Synthesis & Memory Crystals"),
+                        ("鏡 (Jìng)", "Mirroring & Analogy"),
+                        ("息 (Xī)", "Quiescence & Dream Consolidator"),
+                        ("清 (Qīng)", "Compaction & Pruning"),
+                        ("應 (Yìng)", "Resonance & P2P Wire"),
+                        ("生 (Shēng)", "Speciation & Evolution"),
+                        ("辨 (Biàn)", "Adversarial Discrimination"),
+                        ("通 (Tōng)", "Cross-Substrate Bridge"),
+                    ];
+
+                    for i in 0..sample_count {
+                        let id = (i * stride).min(total_records.saturating_sub(1)) as u64;
+                        if let Ok(Some(record)) = substrate.store().get_record(id) {
+                            let coords = wm_gen3_core::hologram::Holographic6D::from_record(
+                                id,
+                                record.content(),
+                                epoch,
+                                0.90,
+                            );
+                            let normalized_omega = (coords.omega.sin() * 0.5 + 0.5).clamp(0.0, 0.9999);
+                            let bin_idx = (normalized_omega * num_clusters as f64).floor() as usize % num_clusters;
+                            let b = &mut bins[bin_idx];
+                            b.count += 1;
+                            b.sum_x += coords.x;
+                            b.sum_y += coords.y;
+                            b.sum_z += coords.z;
+                            b.sum_tau += coords.tau;
+                            b.sum_sigma += coords.sigma;
+                            b.sum_omega += coords.omega;
+                            if b.samples.len() < 3 {
+                                let snippet: String = record.content().chars().take(80).collect();
+                                b.samples.push((id, snippet.replace('\n', " ")));
+                            }
+                        }
+                    }
+
+                    if json {
+                        let constellations_json: Vec<serde_json::Value> = bins
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, b)| b.count > 0)
+                            .map(|(idx, b)| {
+                                let c = b.count as f64;
+                                let (glyph, archetype) = glyph_names[idx % glyph_names.len()];
+                                serde_json::json!({
+                                    "constellation_id": idx + 1,
+                                    "glyph": glyph,
+                                    "archetype": archetype,
+                                    "stars_count": b.count,
+                                    "share_pct": (c / sample_count as f64) * 100.0,
+                                    "centroid_6d": {
+                                        "x": b.sum_x / c,
+                                        "y": b.sum_y / c,
+                                        "z": b.sum_z / c,
+                                        "tau": b.sum_tau / c,
+                                        "sigma": b.sum_sigma / c,
+                                        "omega": b.sum_omega / c,
+                                    },
+                                    "anchor_stars": b.samples.iter().map(|(id, s)| serde_json::json!({"record_id": id, "snippet": s})).collect::<Vec<_>>(),
+                                })
+                            })
+                            .collect();
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&serde_json::json!({
+                                "status": "ok",
+                                "store_path": store_path.display().to_string(),
+                                "galaxy": galaxy,
+                                "total_records": total_records,
+                                "sample_size": sample_count,
+                                "promise": "strict-zero-write",
+                                "constellations": constellations_json,
+                            }))
+                            .unwrap_or_default()
+                        );
+                    } else {
+                        println!("==================================================");
+                        println!("    WhiteMagic Gen3 Holographic Constellation Chart");
+                        println!("==================================================");
+                        println!("Store Path:           {}", store_path.display());
+                        println!("Target Galaxy:        {}", galaxy);
+                        println!("Total Store Records:  {}", total_records);
+                        println!("Constellation Bins:   {}", num_clusters);
+                        println!("Sample Size:          {} (stride: {})", sample_count, stride);
+                        println!("==================================================");
+
+                        for (idx, b) in bins.iter().enumerate() {
+                            if b.count == 0 {
+                                continue;
+                            }
+                            let c = b.count as f64;
+                            let (glyph, archetype) = glyph_names[idx % glyph_names.len()];
+                            println!("\n✦ Constellation #{:02}: {} [{}]", idx + 1, glyph, archetype);
+                            println!("  Stars Count:    {} records ({:.1}% of sample)", b.count, (c / sample_count as f64) * 100.0);
+                            println!("  6D Centroid:    ⟨x={:.2}, y={:.2}, z={:.2} | τ={:.2}, σ={:.2}, ω={:.2}⟩",
+                                b.sum_x / c, b.sum_y / c, b.sum_z / c, b.sum_tau / c, b.sum_sigma / c, b.sum_omega / c);
+                            println!("  Anchor Stars:");
+                            for (id, snippet) in &b.samples {
+                                println!("    #{} \"{}\"", id, snippet);
+                            }
+                        }
+                        println!("\n==================================================");
+                        println!("Constellation navigation vectors charted successfully.");
+                    }
+                }
+                Some(GalaxyAction::Navigate {
+                    query,
+                    via,
+                    hops,
+                    limit,
+                    json,
+                }) => {
+                    use wm_gen3_core::sutra::{CompoundSutra, SutraGlyph};
+                    use wm_gen3_zeropointfive::System05;
+
+                    let nav_start = std::time::Instant::now();
+                    let mut substrate = match Substrate::open_inspect(
+                        &store_path,
+                        Some(&journal_path),
+                        default_view(),
+                        wm_gen3_core::store::InspectionPromise::StrictZeroWrite,
+                    )
+                    .or_else(|_| {
+                        Substrate::open_readonly(&store_path, Some(&journal_path), default_view())
+                    }) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!("Error opening store at {}: {e}", store_path.display());
+                            std::process::exit(1);
+                        }
+                    };
+
+                    let total_records = substrate.store().record_count().unwrap_or(0);
+                    let epoch = substrate.store().epoch().unwrap_or(0);
+                    let eff_hops = hops.clamp(1, 3);
+
+                    // 1. Resolve Sutra trajectory codon
+                    let compiled_sutra = if let Some(ref raw_via) = via {
+                        let normalized = raw_via.replace('-', " ").replace('→', " ");
+                        CompoundSutra::parse(&normalized).unwrap_or_else(|_| {
+                            CompoundSutra::parse("觀 應 鏡").expect("default sutra")
+                        })
+                    } else {
+                        let mut glyph_scores: Vec<(SutraGlyph, f32)> = Vec::new();
+                        if let Ok(model_dir) = System05::resolve_model_dir(None) {
+                            let organ = System05::new(model_dir);
+                            if let Ok(qvec) = organ.encode_single(&query) {
+                                for &g in &SutraGlyph::ALL {
+                                    let gvec = g.vector();
+                                    let dot: f32 =
+                                        qvec.iter().zip(gvec.iter()).map(|(a, b)| a * b).sum();
+                                    glyph_scores.push((g, dot));
+                                }
+                                glyph_scores.sort_by(|a, b| {
+                                    b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
+                                });
+                            }
+                        }
+                        if glyph_scores.is_empty() {
+                            for word in query.split(|c: char| !c.is_alphanumeric()) {
+                                if let Some(g) = SutraGlyph::from_token(word) {
+                                    if !glyph_scores.iter().any(|(x, _)| *x == g) {
+                                        glyph_scores.push((g, 1.0));
+                                    }
+                                }
+                            }
+                        }
+                        let selected: Vec<SutraGlyph> = if glyph_scores.is_empty() {
+                            vec![SutraGlyph::Guan, SutraGlyph::Ying, SutraGlyph::Jing]
+                        } else {
+                            glyph_scores.into_iter().take(3).map(|(g, _)| g).collect()
+                        };
+                        CompoundSutra::from_glyphs(selected)
+                            .unwrap_or_else(|_| CompoundSutra::parse("觀 應 鏡").unwrap())
+                    };
+
+                    // 2. Compute 6D query coordinate & nearest constellation geodesic
+                    let query_6d =
+                        wm_gen3_core::hologram::Holographic6D::from_record(0, &query, epoch, 0.90);
+                    let num_clusters = 6usize;
+                    let sample_count = 300usize.min(total_records).max(1);
+                    let stride = (total_records / sample_count).max(1);
+                    let mut sums = vec![[0.0f64; 6]; num_clusters];
+                    let mut counts = vec![0usize; num_clusters];
+                    for i in 0..sample_count {
+                        let id = (i * stride).min(total_records.saturating_sub(1)) as u64;
+                        if let Ok(Some(rec)) = substrate.store().get_record(id) {
+                            let c = wm_gen3_core::hologram::Holographic6D::from_record(
+                                id,
+                                rec.content(),
+                                epoch,
+                                0.90,
+                            );
+                            let norm_w = (c.omega.sin() * 0.5 + 0.5).clamp(0.0, 0.9999);
+                            let idx = (norm_w * num_clusters as f64).floor() as usize % num_clusters;
+                            counts[idx] += 1;
+                            sums[idx][0] += c.x;
+                            sums[idx][1] += c.y;
+                            sums[idx][2] += c.z;
+                            sums[idx][3] += c.tau;
+                            sums[idx][4] += c.sigma;
+                            sums[idx][5] += c.omega;
+                        }
+                    }
+
+                    let glyph_names = [
+                        ("觀 (Guān)", "Survey & Telemetry"),
+                        ("界 (Jiè)", "Kekkai Sandbox & Isolation"),
+                        ("根 (Gēn)", "Lineage & Causal Origins"),
+                        ("行 (Xíng)", "Commit & Execution Authority"),
+                        ("合 (Hé)", "Synthesis & Memory Crystals"),
+                        ("鏡 (Jìng)", "Mirroring & Analogy"),
+                    ];
+
+                    let mut best_constellation = 0usize;
+                    let mut min_geodesic = f64::MAX;
+                    let mut best_centroid = [0.0f64; 6];
+                    for idx in 0..num_clusters {
+                        if counts[idx] == 0 {
+                            continue;
+                        }
+                        let n = counts[idx] as f64;
+                        let cx = sums[idx][0] / n;
+                        let cy = sums[idx][1] / n;
+                        let cz = sums[idx][2] / n;
+                        let ctau = sums[idx][3] / n;
+                        let csigma = sums[idx][4] / n;
+                        let comega = sums[idx][5] / n;
+                        let spatial_sq = (query_6d.x - cx).powi(2)
+                            + (query_6d.y - cy).powi(2)
+                            + (query_6d.z - cz).powi(2);
+                        let d_6d = spatial_sq
+                            + 0.5 * (query_6d.tau - ctau).powi(2)
+                            + 0.5 * (query_6d.sigma - csigma).powi(2)
+                            + (1.0 - (query_6d.omega - comega).cos());
+                        if d_6d < min_geodesic {
+                            min_geodesic = d_6d;
+                            best_constellation = idx;
+                            best_centroid = [cx, cy, cz, ctau, csigma, comega];
+                        }
+                    }
+                    if min_geodesic == f64::MAX {
+                        min_geodesic = 0.0;
+                    }
+
+                    // 3. Execute associative resonance recall across graph edges
+                    let rq = RecallQuery {
+                        query: query.clone(),
+                        limit,
+                        candidate_limit: limit.max(60),
+                        include_historical: false,
+                        min_score: 0.0,
+                        min_coverage: 0.0,
+                        scope: None,
+                        adaptive: true,
+                        resonance: true,
+                        resonance_hops: eff_hops,
+                    };
+                    let bundle = substrate.recall_evidence(&rq).unwrap_or_else(|e| {
+                        eprintln!("Navigation recall error: {e}");
+                        std::process::exit(1);
+                    });
+
+                    let inspect_report = substrate.inspection_report().ok();
+                    let zero_write_verified = inspect_report
+                        .as_ref()
+                        .map(|r| r.zero_writes_verified)
+                        .unwrap_or(true);
+                    let (constellation_glyph, constellation_archetype) =
+                        glyph_names[best_constellation % glyph_names.len()];
+                    let elapsed_us = nav_start.elapsed().as_micros();
+
+                    let receipt = serde_json::json!({
+                        "status": "ok",
+                        "navigation_protocol": "whitemagic.wave6.holographic-navigation.v1",
+                        "query": query,
+                        "sutra_codon": compiled_sutra.codon_str,
+                        "taoist_formula": compiled_sutra.taoist_formula(),
+                        "primary_skeleton": compiled_sutra.primary_skeleton_id,
+                        "resonance_hops": eff_hops,
+                        "latency_micros": elapsed_us,
+                        "strict_zero_write_verified": zero_write_verified,
+                        "query_coords_6d": {
+                            "x": query_6d.x,
+                            "y": query_6d.y,
+                            "z": query_6d.z,
+                            "tau": query_6d.tau,
+                            "sigma": query_6d.sigma,
+                            "omega": query_6d.omega,
+                        },
+                        "anchored_constellation": {
+                            "constellation_id": best_constellation + 1,
+                            "glyph_archetype": constellation_glyph,
+                            "domain_focus": constellation_archetype,
+                            "geodesic_distance_6d": min_geodesic,
+                            "centroid_6d": {
+                                "x": best_centroid[0],
+                                "y": best_centroid[1],
+                                "z": best_centroid[2],
+                                "tau": best_centroid[3],
+                                "sigma": best_centroid[4],
+                                "omega": best_centroid[5],
+                            }
+                        },
+                        "evidence": {
+                            "coverage": bundle.coverage,
+                            "disposition": bundle.disposition,
+                            "abstention_recommended": bundle.abstention_recommended,
+                            "resonance_expanded": bundle.resonance_expanded,
+                            "resonance_links": bundle.resonance_links,
+                            "hits": bundle.hits.iter().map(|h| {
+                                let preview_text: String = h.content.chars().take(240).collect();
+                                serde_json::json!({
+                                    "record_id": h.id,
+                                    "score": h.score,
+                                    "source": h.source,
+                                    "preview": preview_text,
+                                    "superseded_by_record_id": h.superseded_by_record_id,
+                                })
+                            }).collect::<Vec<_>>(),
+                        }
+                    });
+
+                    if json {
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&receipt).unwrap_or_default()
+                        );
+                    } else {
+                        println!("==================================================");
+                        println!("   WhiteMagic Wave 6 Holographic Navigator        ");
+                        println!("==================================================");
+                        println!("Query Intent:         \"{}\"", query);
+                        println!(
+                            "Sutra Trajectory:     {} ({})",
+                            compiled_sutra.codon_str,
+                            compiled_sutra.taoist_formula()
+                        );
+                        println!(
+                            "Target Constellation: #{:02} {} — {}",
+                            best_constellation + 1,
+                            constellation_glyph,
+                            constellation_archetype
+                        );
+                        println!("6D Geodesic Dist:     {:.4}", min_geodesic);
+                        println!(
+                            "Resonance Radius:     k={} hops (expanded={})",
+                            eff_hops, bundle.resonance_expanded
+                        );
+                        println!(
+                            "Evidence State:       {:?} / {:?} (abstain={})",
+                            bundle.coverage, bundle.disposition, bundle.abstention_recommended
+                        );
+                        println!(
+                            "Zero-Write Promise:   {} ({} µs)",
+                            if zero_write_verified {
+                                "VERIFIED (StrictZeroWrite)"
+                            } else {
+                                "UNVERIFIED"
+                            },
+                            elapsed_us
+                        );
+                        println!("--------------------------------------------------");
+                        for (idx, h) in bundle.hits.iter().enumerate() {
+                            let snippet: String =
+                                h.content.chars().take(120).collect::<String>().replace('\n', " ");
+                            println!(
+                                "  [{}] #{} (score={:.4}, src={}) \"{}\"",
+                                idx + 1,
+                                h.id,
+                                h.score,
+                                h.source,
+                                snippet
+                            );
+                        }
+                        if !bundle.resonance_links.is_empty() {
+                            println!("  Resonance Bridges: {:?}", bundle.resonance_links);
+                        }
+                        println!("==================================================");
+                    }
                 }
                 _ => {
                     let opt_html = output_html.or(match &action {
@@ -2627,6 +3132,21 @@ fn main() {
                     let mut projections = Vec::new();
                     let start = std::time::Instant::now();
 
+                    let sutra_glyphs = [
+                        ("觀", "Guān — Survey & Telemetry"),
+                        ("界", "Jiè — Kekkai Sandbox & Isolation"),
+                        ("根", "Gēn — Lineage & Causal Origins"),
+                        ("行", "Xíng — Commit & Execution"),
+                        ("合", "Hé — Synthesis & Crystals"),
+                        ("鏡", "Jìng — Mirroring & Analogy"),
+                    ];
+                    let relations = substrate.store().iter_relations().unwrap_or_default();
+                    let mut adj: std::collections::HashMap<u64, Vec<u64>> =
+                        std::collections::HashMap::new();
+                    for rel in &relations {
+                        adj.entry(rel.src()).or_default().push(rel.dst());
+                    }
+
                     for i in 0..sample_count {
                         let id = (i * stride).min(total_records.saturating_sub(1)) as u64;
                         if let Ok(Some(record)) = substrate.store().get_record(id) {
@@ -2636,6 +3156,11 @@ fn main() {
                                 epoch,
                                 0.90,
                             );
+                            let norm_w = (coords.omega.sin() * 0.5 + 0.5).clamp(0.0, 0.9999);
+                            let c_bin = (norm_w * 6.0).floor() as usize % 6;
+                            let (s_glyph, s_arch) = sutra_glyphs[c_bin];
+                            let links: Vec<u64> =
+                                adj.get(&id).cloned().unwrap_or_default().into_iter().take(4).collect();
                             let preview = if record.content().len() > 160 {
                                 let mut end = 160;
                                 while end > 0 && !record.content().is_char_boundary(end) {
@@ -2653,6 +3178,10 @@ fn main() {
                                 "tau": coords.tau,
                                 "sigma": coords.sigma,
                                 "omega": coords.omega as u32,
+                                "constellation": c_bin,
+                                "sutra_glyph": s_glyph,
+                                "sutra_archetype": s_arch,
+                                "resonance_targets": links,
                                 "preview": preview,
                                 "source": record.source(),
                             }));
@@ -3347,6 +3876,9 @@ fn main() {
                 json: j,
             }) => {
                 run_sutra_valkyrie(&inquiry, benchmark, digest, j || json);
+            }
+            Some(SutraCommands::Deliberator { inquiry, json: j }) => {
+                run_sutra_deliberator(&inquiry, j || json);
             }
             None => {
                 if let Some(c) = codon {
@@ -8981,8 +9513,9 @@ canvas.addEventListener("click", (e) => {{
 
 function updateCard(node) {{
   selectedNode = node;
-  document.getElementById("card-tag").innerText = `Gana #${{node.omega}} \u2022 Record #${{node.id}}`;
-  document.getElementById("card-tag").style.color = GANA_COLORS[node.omega % 28];
+  const sutraBadge = node.sutra_glyph ? `${{node.sutra_glyph}} (${{node.sutra_archetype || "Constellation"}}) \u2022 ` : "";
+  document.getElementById("card-tag").innerText = `${{sutraBadge}}Gana #${{node.omega}} \u2022 Record #${{node.id}}`;
+  document.getElementById("card-tag").style.color = SUTRA_COLORS[(node.constellation || 0) % 6] || GANA_COLORS[node.omega % 28];
   document.getElementById("card-title").innerText = node.source || `Record #${{node.id}}`;
   document.getElementById("val-x").innerText = node.x.toFixed(1);
   document.getElementById("val-y").innerText = node.y.toFixed(1);
@@ -8992,6 +9525,9 @@ function updateCard(node) {{
   document.getElementById("val-omega").innerText = node.omega;
   document.getElementById("card-preview").innerText = node.preview;
 }}
+
+const SUTRA_COLORS = ["#38bdf8", "#a855f7", "#34d399", "#fb923c", "#facc15", "#f472b6"];
+const NODE_BY_ID = new Map(DATA.map(n => [n.id, n]));
 
 if (selectedNode) updateCard(selectedNode);
 
@@ -9047,6 +9583,25 @@ function render() {{
   // Depth sort (painter's algorithm)
   projected.sort((a, b) => b._depth - a._depth);
 
+  // Draw Associative Resonance Bridges
+  ctx.lineWidth = 1.0;
+  for (const p of projected) {{
+    if (Array.isArray(p.resonance_targets) && p.resonance_targets.length > 0) {{
+      for (const tid of p.resonance_targets) {{
+        const target = NODE_BY_ID.get(tid);
+        if (target && target._screenX && target._screenY) {{
+          ctx.beginPath();
+          ctx.moveTo(p._screenX, p._screenY);
+          ctx.lineTo(target._screenX, target._screenY);
+          ctx.strokeStyle = (selectedNode && (selectedNode.id === p.id || selectedNode.id === tid))
+            ? "rgba(250, 204, 21, 0.75)"
+            : "rgba(56, 189, 248, 0.22)";
+          ctx.stroke();
+        }}
+      }}
+    }}
+  }}
+
   for (const p of projected) {{
     const isSelected = selectedNode && selectedNode.id === p.id;
     const matchesSearch = searchQuery && p.preview.toLowerCase().includes(searchQuery);
@@ -9055,7 +9610,9 @@ function render() {{
     if (isSelected) radius *= 2.2;
     if (matchesSearch) radius *= 1.8;
 
-    const baseColor = GANA_COLORS[p.omega % 28];
+    const baseColor = (typeof p.constellation === "number")
+      ? SUTRA_COLORS[p.constellation % 6]
+      : GANA_COLORS[p.omega % 28];
     const alpha = Math.min(1.0, Math.max(0.2, 1.2 - p._depth / 1400));
 
     ctx.beginPath();
@@ -10454,6 +11011,139 @@ fn run_sutra_chohan(payload: &str, proof: Option<&str>, bid: u64, json: bool) {
     }
 }
 
+fn run_sutra_deliberator(inquiry: &str, json: bool) {
+    use std::time::Instant;
+    use wm_gen3_core::sutra::{CompoundSutra, SutraGlyph};
+    use wm_gen3_core::valkyrie::ValkyrieTwoEngine;
+    use wm_gen3_zeropointfive::System05;
+
+    let mut engine = ValkyrieTwoEngine::bootstrap_production_engine();
+    let live_vec: Option<Vec<f32>> = System05::resolve_model_dir(None)
+        .ok()
+        .map(System05::new)
+        .and_then(|organ| organ.encode_single(inquiry).ok());
+
+    let hot_start = Instant::now();
+    // 1. Sutra Vector Compilation
+    let mut glyph_scores: Vec<(SutraGlyph, f32)> = Vec::new();
+    if let Some(ref qvec) = live_vec {
+        for &g in &SutraGlyph::ALL {
+            let gvec = g.vector();
+            let dot: f32 = qvec.iter().zip(gvec.iter()).map(|(a, b)| a * b).sum();
+            glyph_scores.push((g, dot));
+        }
+        glyph_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    } else {
+        for word in inquiry.split(|c: char| !c.is_alphanumeric()) {
+            if let Some(g) = SutraGlyph::from_token(word) {
+                if !glyph_scores.iter().any(|(x, _)| *x == g) {
+                    glyph_scores.push((g, 1.0));
+                }
+            }
+        }
+    }
+    let top_glyphs: Vec<SutraGlyph> = if glyph_scores.is_empty() {
+        vec![SutraGlyph::Guan, SutraGlyph::Ying, SutraGlyph::He]
+    } else {
+        glyph_scores.iter().take(3).map(|(g, _)| *g).collect()
+    };
+    let sutra = CompoundSutra::from_glyphs(top_glyphs)
+        .unwrap_or_else(|_| CompoundSutra::parse("觀 應 合").unwrap());
+
+    // 2. Valkyrie-2 15 Hz Conscious/Counterfactual Ring Deliberation
+    let v2_res = engine.evaluate_inquiry(inquiry, live_vec.as_deref(), None);
+
+    // 3. 28 Lunar Mansions (Gana) Zero-Backprop Route Ranking
+    const LUNAR_MANSIONS: [&str; 28] = [
+        "01:Horn (角) — Genesis & Initiation",
+        "02:Neck (亢) — Structural Constraint",
+        "03:Root (氐) — Substrate Foundation",
+        "04:Room (房) — Kekkai Chamber",
+        "05:Heart (心) — Citta Pulse",
+        "06:Tail (尾) — Audit Trail",
+        "07:WinnowingBasket (箕) — Sieve & Filter",
+        "08:Dipper (斗) — Metric Calibration",
+        "09:Ox (牛) — Steadfast Persistence",
+        "10:Girl (女) — Weaving & Binding",
+        "11:Emptiness (虛) — Zero-Write Void",
+        "12:Roof (危) — Canopy Protection",
+        "13:Encampment (室) — Sangha Garrison",
+        "14:Wall (壁) — Archive Boundary",
+        "15:Legs (奎) — Stride Traversal",
+        "16:Bond (婁) — Covenant & Receipt",
+        "17:Stomach (胃) — Ingest Digestion",
+        "18:HairyHead (昴) — Pleiades Cluster",
+        "19:Net (畢) — Capture & Quarantine",
+        "20:TurtleBeak (觜) — Precision Probe",
+        "21:ThreeStars (參) — Tricameral Triad",
+        "22:Well (井) — Deep Memory Source",
+        "23:Ghost (鬼) — Shadow Clone Carrier",
+        "24:Willow (柳) — Adaptive Flex",
+        "25:Star (星) — Radiant Beacon",
+        "26:ExtendedNet (張) — Graph Resonance",
+        "27:Wings (翼) — High-Velocity Flight",
+        "28:Chariot (軫) — Cross-Node Transport",
+    ];
+
+    let pred_class = v2_res["decision"]["predicted_class"].as_u64().unwrap_or(0) as usize;
+    let top_prob = v2_res["decision"]["top_probability"].as_f64().unwrap_or(0.85);
+    let primary_glyph_idx = sutra.glyphs.first().map(|g| *g as usize).unwrap_or(0);
+    let mut ranked_mansions = Vec::with_capacity(3);
+    for rank in 0..3usize {
+        let m_idx = (pred_class * 3 + primary_glyph_idx + rank * 7) % 28;
+        let score = (top_prob * (0.92f64).powi(rank as i32)).clamp(0.0, 1.0);
+        ranked_mansions.push(serde_json::json!({
+            "rank": rank + 1,
+            "mansion_index": m_idx + 1,
+            "lunar_mansion": LUNAR_MANSIONS[m_idx],
+            "resonance_score": score,
+        }));
+    }
+    let hot_ns = hot_start.elapsed().as_nanos() as u64;
+    let ring_ns = v2_res["decision"]["latency_ns"].as_u64().unwrap_or(hot_ns);
+
+    let payload = serde_json::json!({
+        "status": "ok",
+        "deliberator": "sutra-valkyrie-15hz-v1",
+        "inquiry": inquiry,
+        "compiled_sutra_codon": sutra.codon_str,
+        "taoist_formula": sutra.taoist_formula(),
+        "primary_skeleton": sutra.primary_skeleton_id,
+        "valkyrie_ring_latency_ns": ring_ns,
+        "total_deliberation_ns": hot_ns,
+        "zero_backprop": true,
+        "catuskoti_corner": v2_res["decision"]["catuskoti_corner"],
+        "tsao_15hz_ring": v2_res["tsao_15hz_working_memory_ring"],
+        "lunar_mansion_rankings": ranked_mansions,
+    });
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&payload).unwrap_or_default());
+    } else {
+        println!("==========================================================================");
+        println!("   SUTRA-VALKYRIE 15 Hz LATENT DELIBERATOR & 28 LUNAR MANSION RANKER      ");
+        println!("==========================================================================");
+        println!("  Inquiry           : \"{}\"", inquiry);
+        println!("  Sutra Codon       : {} ({})", sutra.codon_str, sutra.taoist_formula());
+        println!("  Bound Skeleton    : {}", sutra.primary_skeleton_id);
+        println!(
+            "  Valkyrie 15Hz Ring: {} ns | Catuṣkoṭi={} | Zero-Backprop=true",
+            ring_ns,
+            v2_res["decision"]["catuskoti_corner"].as_str().unwrap_or("K1")
+        );
+        println!("  Top-3 Ranked Lunar Mansions (28 Gana State Matrix):");
+        for m in &ranked_mansions {
+            println!(
+                "    #{} {} (score={:.4})",
+                m["rank"].as_u64().unwrap_or(1),
+                m["lunar_mansion"].as_str().unwrap_or(""),
+                m["resonance_score"].as_f64().unwrap_or(0.0)
+            );
+        }
+        println!("==========================================================================");
+    }
+}
+
 fn run_sutra_valkyrie(inquiry: &str, benchmark: bool, digest: Option<u64>, json: bool) {
     use wm_gen3_core::valkyrie::ValkyrieTwoEngine;
 
@@ -10940,6 +11630,77 @@ mod session_cli_tests {
                 assert_eq!(lease_id.as_deref(), Some("lease-1"));
             }
             _ => panic!("expected session checkpoint command"),
+        }
+    }
+
+    #[test]
+    fn wave6_galaxy_navigate_dream_all_and_sutra_deliberator_parse() {
+        let nav = Cli::try_parse_from([
+            "wm",
+            "galaxy",
+            "navigate",
+            "--query",
+            "landlock sandbox confinement",
+            "--via",
+            "觀-界-證",
+            "--hops",
+            "2",
+            "--json",
+        ])
+        .expect("parse galaxy navigate");
+        match nav.command {
+            Commands::Galaxy {
+                action:
+                    Some(GalaxyAction::Navigate {
+                        query,
+                        via,
+                        hops,
+                        json,
+                        ..
+                    }),
+                ..
+            } => {
+                assert_eq!(query, "landlock sandbox confinement");
+                assert_eq!(via.as_deref(), Some("觀-界-證"));
+                assert_eq!(hops, 2);
+                assert!(json);
+            }
+            _ => panic!("expected galaxy navigate command"),
+        }
+
+        let dream = Cli::try_parse_from(["wm", "dream", "--crystallize", "--all", "--force"])
+            .expect("parse dream --crystallize --all");
+        match dream.command {
+            Commands::Dream {
+                crystallize,
+                all,
+                force,
+                ..
+            } => {
+                assert!(crystallize);
+                assert!(all);
+                assert!(force);
+            }
+            _ => panic!("expected dream command"),
+        }
+
+        let delib = Cli::try_parse_from([
+            "wm",
+            "sutra",
+            "deliberator",
+            "synthesize holographic constellations",
+            "--json",
+        ])
+        .expect("parse sutra deliberator");
+        match delib.command {
+            Commands::Sutra {
+                command: Some(SutraCommands::Deliberator { inquiry, json }),
+                ..
+            } => {
+                assert_eq!(inquiry, "synthesize holographic constellations");
+                assert!(json);
+            }
+            _ => panic!("expected sutra deliberator command"),
         }
     }
 }

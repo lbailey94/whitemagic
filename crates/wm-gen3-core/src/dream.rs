@@ -758,6 +758,8 @@ pub fn execute_nrem_compaction_phase_opts(
         std::collections::HashMap::new();
     let mut session_records: std::collections::HashMap<String, Vec<u64>> =
         std::collections::HashMap::new();
+    let mut existing_crystals: std::collections::HashMap<String, u64> =
+        std::collections::HashMap::new();
     let mut superseded_count = 0usize;
     let mut contradiction_count = 0usize;
     let mut original_bytes = 0usize;
@@ -769,7 +771,13 @@ pub fn execute_nrem_compaction_phase_opts(
             let content = rec.content();
             original_bytes += content.len();
 
-            if src.starts_with("session:") {
+            if let Some(c_sid) = src.strip_prefix("crystal:") {
+                let s_id = c_sid.split(':').next().unwrap_or("default").to_string();
+                existing_crystals
+                    .entry(s_id)
+                    .and_modify(|max_id| *max_id = (*max_id).max(id))
+                    .or_insert(id);
+            } else if src.starts_with("session:") {
                 let parts: Vec<&str> = src.split(':').collect();
                 let s_id = parts.get(1).copied().unwrap_or("default").to_string();
                 let count = session_counts.entry(s_id.clone()).or_insert(0);
@@ -791,12 +799,21 @@ pub fn execute_nrem_compaction_phase_opts(
         }
     }
 
+    let min_turns_for_crystal = if sample_depth > 10_000 { 3 } else { 2 };
     let mut crystallized_ids = Vec::new();
     if crystallize && !substrate.store().is_strict_zero_write() {
-        for (s_id, records) in &session_records {
-            if records.len() > 1 {
+        let mut sorted_sessions: Vec<(&String, &Vec<u64>)> = session_records.iter().collect();
+        sorted_sessions.sort_by(|a, b| a.0.cmp(b.0));
+        for (s_id, records) in sorted_sessions {
+            if records.len() >= min_turns_for_crystal {
                 // records[0] is the newest in the scan (reverse ID order)
                 let head_id = records[0];
+                if existing_crystals
+                    .get(s_id)
+                    .is_some_and(|&crystal_id| crystal_id > head_id)
+                {
+                    continue;
+                }
                 let older_records = &records[1..];
                 let head_content = substrate
                     .store()
@@ -950,13 +967,26 @@ pub fn execute_dual_phase_sleep_cycle_opts(
     seed: u64,
     crystallize: bool,
 ) -> DualPhaseSleepTelemetry {
+    execute_dual_phase_sleep_cycle_ext(mode, regime, budget_steps, substrate, seed, crystallize, 100)
+}
+
+/// Executes a dual-phase sleep cycle with an explicit sample depth for NREM consolidation.
+pub fn execute_dual_phase_sleep_cycle_ext(
+    mode: IncubationMode,
+    regime: &RegimeVector,
+    budget_steps: usize,
+    substrate: &mut Substrate,
+    seed: u64,
+    crystallize: bool,
+    sample_depth: usize,
+) -> DualPhaseSleepTelemetry {
     let start = Instant::now();
 
     // Phase 1: NREM Compaction
     let nrem_receipt = if mode == IncubationMode::BaselineIdle {
         NremCompactionReceipt::default()
     } else {
-        execute_nrem_compaction_phase_opts(substrate, 100, crystallize)
+        execute_nrem_compaction_phase_opts(substrate, sample_depth, crystallize)
     };
 
     // Phase 2: REM Incubation & Insight Synthesis
