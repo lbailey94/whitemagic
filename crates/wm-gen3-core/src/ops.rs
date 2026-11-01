@@ -476,6 +476,10 @@ pub struct RecallQuery {
     /// When true and initial coverage is partial, at most one bounded expansion
     /// pass is executed within candidate and byte limits.
     pub adaptive: bool,
+    /// Opt-in calibrated associative resonance across relation edges (Wave 5).
+    pub resonance: bool,
+    /// Maximum hop radius for associative resonance traversal (default: 2, max: 3).
+    pub resonance_hops: usize,
 }
 
 impl Default for RecallQuery {
@@ -489,6 +493,8 @@ impl Default for RecallQuery {
             min_coverage: 0.0,
             scope: None,
             adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         }
     }
 }
@@ -544,6 +550,8 @@ pub struct EvidenceBundle {
     pub evidence_record_ids: Vec<u64>,
     pub source_links: Vec<String>,
     pub revision_links: Vec<(u64, u64)>,
+    #[serde(default)]
+    pub resonance_links: Vec<(u64, u64, f32)>,
     pub observed_snapshot_epoch: u64,
     pub candidate_count: usize,
     pub examined_count: usize,
@@ -551,6 +559,8 @@ pub struct EvidenceBundle {
     pub uncovered_facets: Vec<String>,
     pub abstention_recommended: bool,
     pub adaptive_expanded: bool,
+    #[serde(default)]
+    pub resonance_expanded: bool,
 }
 
 pub use crate::store::InspectionPromise;
@@ -3162,6 +3172,7 @@ impl Substrate {
                 evidence_record_ids: Vec::new(),
                 source_links: Vec::new(),
                 revision_links: Vec::new(),
+                resonance_links: Vec::new(),
                 observed_snapshot_epoch: n as u64,
                 candidate_count: 0,
                 examined_count: 0,
@@ -3169,6 +3180,7 @@ impl Substrate {
                 uncovered_facets: Vec::new(),
                 abstention_recommended: true,
                 adaptive_expanded: false,
+                resonance_expanded: false,
             });
         }
 
@@ -3230,6 +3242,131 @@ impl Substrate {
                     adaptive_expanded = true;
                 }
             }
+        }
+
+        // Calibrated Associative Resonance across typed graph edges (Stage 5):
+        let mut resonance_expanded = false;
+        let mut resonance_links: Vec<(u64, u64, f32)> = Vec::new();
+        let relations_view = self.store.relations_view();
+
+        if q.resonance && !hits.is_empty() {
+            let max_hops = q.resonance_hops.clamp(1, 3);
+            let mut visited_ids: std::collections::HashSet<u64> = hits.iter().map(|h| h.id).collect();
+            let mut frontier: Vec<(u64, f32)> = hits.iter().take(5).map(|h| (h.id, h.score)).collect();
+            let mut resonant_candidates: Vec<Hit> = Vec::new();
+
+            for _hop in 0..max_hops {
+                let mut next_frontier = Vec::new();
+                for (curr_id, curr_score) in frontier {
+                    if let Some(neighbors) = relations_view.graph_edges.get(&curr_id) {
+                        for &(neighbor_id, edge_weight) in neighbors {
+                            resonance_links.push((curr_id, neighbor_id, edge_weight));
+                            if visited_ids.insert(neighbor_id) {
+                                if let Ok(Some(rec)) = self.store.get_record(neighbor_id) {
+                                    let decayed_score = curr_score * edge_weight.clamp(0.1, 1.0) * 0.85;
+                                    if decayed_score >= q.min_score {
+                                        next_frontier.push((neighbor_id, decayed_score));
+                                        let hit = Hit {
+                                            id: neighbor_id,
+                                            content: rec.content().to_string(),
+                                            source: rec.source().to_string(),
+                                            score: decayed_score,
+                                            rank: 0,
+                                            superseded_by: relations_view.superseded_by.get(&neighbor_id).copied(),
+                                            superseded_by_record_id: relations_view.superseded_by_record_id.get(&neighbor_id).copied(),
+                                            superseded_by_relation_id: None,
+                                        };
+                                        resonant_candidates.push(hit);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if next_frontier.is_empty() {
+                    break;
+                }
+                frontier = next_frontier;
+            }
+
+            if !resonant_candidates.is_empty() {
+                for cand in resonant_candidates {
+                    let cand_tokens: std::collections::HashSet<String> = field::tokenize(&cand.content).into_iter().collect();
+                    let covers_uncovered = uncovered_facets.iter().any(|f| cand_tokens.contains(f) || cand.content.to_lowercase().contains(f));
+                    if covers_uncovered || hits.len() < q.limit {
+                        hits.push(cand);
+                    }
+                }
+                hits.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+                for (idx, h) in hits.iter_mut().enumerate() {
+                    h.rank = idx + 1;
+                }
+            }
+            if !resonance_links.is_empty() {
+                resonance_expanded = true;
+            }
+        }
+
+        // Active Invalidation & Supersession Resolution (Stage 5):
+        // If an older hit was superseded, pull in or promote the authoritative active replacement record.
+        let mut superseding_ids = Vec::new();
+        for h in &hits {
+            if let Some(newer_id) = h.superseded_by_record_id {
+                if !superseding_ids.contains(&newer_id) {
+                    superseding_ids.push(newer_id);
+                }
+            }
+        }
+
+        let mut has_superseding = false;
+        for newer_id in superseding_ids {
+            has_superseding = true;
+            if let Some(pos) = hits.iter().position(|h| h.id == newer_id) {
+                let mut promoted = hits.remove(pos);
+                promoted.score = 1.0;
+                hits.insert(0, promoted);
+            } else if let Ok(Some(newer_rec)) = self.store.get_record(newer_id) {
+                hits.insert(0, Hit {
+                    id: newer_id,
+                    content: newer_rec.content().to_string(),
+                    source: newer_rec.source().to_string(),
+                    score: 1.0,
+                    rank: 0,
+                    superseded_by: None,
+                    superseded_by_record_id: None,
+                    superseded_by_relation_id: None,
+                });
+            }
+        }
+        if has_superseding {
+            for (idx, h) in hits.iter_mut().enumerate() {
+                h.rank = idx + 1;
+            }
+        }
+
+        // Re-evaluate coverage and token facets after resonance and supersession insertions
+        if resonance_expanded || has_superseding {
+            let mut res_words = std::collections::HashSet::new();
+            let mut res_stems = std::collections::HashSet::new();
+            let mut res_content = String::new();
+            for h in &hits {
+                res_content.push_str(&h.content);
+                res_content.push(' ');
+                res_content.push_str(&h.source);
+                res_content.push(' ');
+                for w in field::tokenize(&h.content) {
+                    res_stems.insert(crate::field::normalize_stem(&w));
+                    res_words.insert(w);
+                }
+            }
+            let mut res_uncovered = Vec::new();
+            for f in &query_facets {
+                if !crate::field::is_facet_covered(f, &res_stems, &res_words, &res_content) {
+                    res_uncovered.push(f.clone());
+                }
+            }
+            aggregated_content = res_content;
+            uncovered_facets = res_uncovered;
         }
 
         // Enforce hard output-byte ceiling (64 KB)
@@ -3388,6 +3525,7 @@ impl Substrate {
             evidence_record_ids,
             source_links,
             revision_links,
+            resonance_links,
             observed_snapshot_epoch: n as u64,
             candidate_count,
             examined_count,
@@ -3395,6 +3533,7 @@ impl Substrate {
             uncovered_facets,
             abstention_recommended,
             adaptive_expanded,
+            resonance_expanded,
         };
 
         let mut f = serde_json::Map::new();
@@ -3874,7 +4013,6 @@ impl Substrate {
     }
 
     /// Authorized relation commitment (Associates, Causal, or Supersedes).
-    #[cfg(any(test, feature = "operator", feature = "reference-models"))]
     pub fn add_relation(
         &mut self,
         kind: field::RelationKind,
@@ -6034,6 +6172,8 @@ mod tests {
             min_coverage: 0.0,
             scope: None,
             adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         }
     }
 
@@ -7523,6 +7663,8 @@ mod p2d_tests {
             min_coverage: 0.0,
             scope: None,
             adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         };
         let hits = s.recall_expect(&q);
         assert_eq!(hits.len(), 3);
@@ -7566,6 +7708,8 @@ mod p2e_tests {
             min_coverage: 0.0,
             scope: None,
             adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         }
     }
 
@@ -7663,6 +7807,8 @@ mod gated_tests {
             min_coverage: 0.0,
             scope: None,
             adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         }
     }
 
@@ -7916,6 +8062,8 @@ mod scorer_determinism_tests {
             min_coverage: 0.0,
             scope: None,
             adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         }
     }
 
@@ -8476,6 +8624,8 @@ mod cache_boundary_tests {
             min_coverage: 0.0,
             scope: None,
             adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         });
         assert!(!hits.is_empty());
         assert_eq!(substrate.store.embedding_cache_len().unwrap(), 0);
@@ -8595,6 +8745,8 @@ mod cache_boundary_tests {
             min_coverage: 0.0,
             scope: None,
             adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         });
         assert_eq!(hits_before.len(), 1);
         assert_eq!(hits_before[0].id, 0);
@@ -8614,6 +8766,8 @@ mod cache_boundary_tests {
             min_coverage: 0.0,
             scope: None,
             adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         });
         assert_eq!(hits_after.len(), 2);
         assert_eq!(hits_after[0].id, 0);
@@ -8708,6 +8862,8 @@ mod cache_boundary_tests {
                 min_coverage: 0.0,
                 scope: None,
                 adaptive: false,
+                resonance: false,
+                resonance_hops: 2,
             });
             assert!(
                 hits.iter()
@@ -9387,6 +9543,8 @@ mod cache_boundary_tests {
             min_coverage: 0.0,
             scope: None,
             adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         });
         assert!(!hits.is_empty(), "read-only projection recall must answer");
 
@@ -9407,6 +9565,8 @@ mod cache_boundary_tests {
             min_coverage: 0.0,
             scope: None,
             adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         }
     }
 
@@ -10144,6 +10304,149 @@ mod cache_boundary_tests {
             journal_len_after > journal_len_before,
             "journal must contain appended audit events in ContentOnly mode"
         );
+
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave5_dream_crystallization_synthesizes_semantic_crystal() {
+        let path = temp_store("w5-dream-crystallization");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.set_intake_authority(crate::evidence::RatifiedChannel::stub("test-dream"));
+
+        // Inject 3 session turns into a session chain
+        let s_id = "session-test-alpha";
+        substrate.remember_batch(&[
+            RememberItem {
+                content: "Session turn 1: Operator initiated architectural discussion.".into(),
+                source: format!("session:{s_id}:turn-1"),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Session turn 2: Evaluated LMDB zero-copy storage mechanics.".into(),
+                source: format!("session:{s_id}:turn-2"),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Session turn 3: Finalized Stage 5 cognitive synthesis design.".into(),
+                source: format!("session:{s_id}:turn-3"),
+                kind: ImportKind::Reported,
+            },
+        ]);
+
+        let receipt = crate::dream::execute_nrem_compaction_phase_opts(&mut substrate, 100, true);
+        assert_eq!(receipt.session_chains_scanned, 1);
+        assert_eq!(receipt.compacted_summaries_minted, 1);
+        assert_eq!(receipt.crystallized_record_ids.len(), 1);
+
+        let crystal_id = receipt.crystallized_record_ids[0];
+        let crystal_rec = substrate.store().get_record(crystal_id).unwrap().unwrap();
+        assert_eq!(crystal_rec.source(), format!("crystal:{s_id}"));
+        assert!(crystal_rec.content().contains("memory_crystal"));
+
+        // Historical query without historical flag should retrieve the crystal as head
+        let bundle = substrate
+            .recall_evidence(&RecallQuery {
+                query: "Stage 5 cognitive synthesis".into(),
+                limit: 5,
+                candidate_limit: 10,
+                include_historical: false,
+                ..RecallQuery::default()
+            })
+            .expect("recall_evidence");
+        assert!(!bundle.hits.is_empty());
+        assert_eq!(bundle.disposition, EvidenceDisposition::Resolved);
+
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave5_associative_resonance_surfaces_linked_context() {
+        let path = temp_store("w5-associative-resonance");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.set_intake_authority(crate::evidence::RatifiedChannel::stub("test-resonance"));
+
+        let ids = substrate.remember_batch(&[
+            RememberItem {
+                content: "Concept Alpha: Deterministic kernel boundary via Linux Landlock LSM.".into(),
+                source: "source:concept-alpha".into(),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Concept Beta: Cryptographic provenance receipts under IETF SCITT.".into(),
+                source: "source:concept-beta".into(),
+                kind: ImportKind::Reported,
+            },
+        ]);
+        let id_a = *ids[0].as_ref().unwrap();
+        let id_b = *ids[1].as_ref().unwrap();
+
+        // Establish an Associative relation between A and B
+        substrate
+            .add_relation(field::RelationKind::Associates, id_a, id_b, 0.95)
+            .expect("add_relation");
+
+        // Recall querying only "Linux Landlock" with resonance = true
+        let bundle = substrate
+            .recall_evidence(&RecallQuery {
+                query: "Linux Landlock".into(),
+                limit: 10,
+                candidate_limit: 20,
+                resonance: true,
+                resonance_hops: 2,
+                ..RecallQuery::default()
+            })
+            .expect("recall_evidence with resonance");
+
+        assert!(bundle.resonance_expanded, "resonance must expand the candidate pool");
+        assert!(!bundle.resonance_links.is_empty(), "must record resonance links");
+        // Record B should be surfaced in hits via resonance
+        assert!(bundle.hits.iter().any(|h| h.id == id_b), "Concept Beta must be surfaced by associative resonance");
+
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave5_causal_invalidation_surfaces_superseding_directive() {
+        let path = temp_store("w5-causal-invalidation");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.set_intake_authority(crate::evidence::RatifiedChannel::stub("test-invalidation"));
+
+        let ids = substrate.remember_batch(&[
+            RememberItem {
+                content: "Preliminary exploration of Corrigibility R2 grant proposal tracks.".into(),
+                source: "grants:draft".into(),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Absolute Directive: Zero Rationalist / Corrigibility funding. Skip all LessWrong adjacent tracks.".into(),
+                source: "directive:operator".into(),
+                kind: ImportKind::Reported,
+            },
+        ]);
+        let old_id = *ids[0].as_ref().unwrap();
+        let directive_id = *ids[1].as_ref().unwrap();
+
+        // Directive supersedes the preliminary draft
+        substrate
+            .add_relation(field::RelationKind::Supersedes, directive_id, old_id, 1.0)
+            .expect("supersedes relation");
+
+        // Querying "Corrigibility grant proposal" must surface the superseding directive as top authoritative resolution
+        let bundle = substrate
+            .recall_evidence(&RecallQuery {
+                query: "Corrigibility grant proposal".into(),
+                limit: 5,
+                candidate_limit: 10,
+                include_historical: true,
+                ..RecallQuery::default()
+            })
+            .expect("recall_evidence");
+
+        assert_eq!(bundle.disposition, EvidenceDisposition::Resolved);
+        assert!(!bundle.hits.is_empty());
+        assert_eq!(bundle.hits[0].id, directive_id, "Superseding directive must be top hit");
+        assert!(bundle.revision_links.contains(&(old_id, directive_id)), "Revision link must record supersession");
 
         let _ = std::fs::remove_dir_all(&path);
     }

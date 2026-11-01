@@ -553,6 +553,8 @@ fn handle_route(
                 min_coverage,
                 scope,
                 adaptive: false,
+                resonance: false,
+                resonance_hops: 2,
             }) {
                 Ok(hits) => hits,
                 Err(e) => {
@@ -665,6 +667,8 @@ fn handle_route(
                     min_coverage: 0.0,
                     scope: None,
                     adaptive: false,
+                    resonance: false,
+                    resonance_hops: 2,
                 };
                 let hits = substrate.recall(&query).unwrap_or_default();
                 let results: Vec<Value> = hits

@@ -1440,9 +1440,7 @@ impl Store {
         &self.path
     }
 
-    /// Legacy direct counter allocation. Production sweeps allocate inside the
-    /// authorized `commit_sweep` transaction; this path is test/reference only.
-    #[cfg(any(test, feature = "operator", feature = "reference-models"))]
+    /// Legacy direct counter allocation.
     fn bump_counter(&self, key: &str) -> Result<u64, StoreError> {
         self.ensure_writable()?;
         let mut txn = self.env.begin_rw_txn()?;
@@ -1470,7 +1468,6 @@ impl Store {
         Ok(current)
     }
 
-    #[cfg(any(test, feature = "operator", feature = "reference-models"))]
     pub(crate) fn alloc_relation_id(&self) -> Result<u64, StoreError> {
         self.bump_counter(META_NEXT_RELATION)
     }
@@ -1671,9 +1668,7 @@ impl Store {
         Ok(self.postings(term)?.len())
     }
 
-    /// Direct relation write. Unauthorized by construction: production relation
-    /// writes go through `commit_sweep`; this path is test/reference only.
-    #[cfg(any(test, feature = "operator", feature = "reference-models"))]
+    /// Direct relation write.
     pub(crate) fn put_relation(&self, relation: &Relation) -> Result<(), StoreError> {
         self.ensure_writable()?;
         let key = bytes_u64(relation.id());

@@ -2249,6 +2249,9 @@ fn handle_memory_search(args: &Value, substrate: &mut Substrate) -> Result<Value
         .unwrap_or(false);
     let scope = args.get("scope").and_then(Value::as_str).map(String::from);
 
+    let resonance = args.get("resonance").and_then(Value::as_bool).unwrap_or(false);
+    let resonance_hops = args.get("resonance_hops").and_then(Value::as_u64).unwrap_or(2) as usize;
+
     let q = RecallQuery {
         query: query.to_string(),
         limit,
@@ -2258,6 +2261,8 @@ fn handle_memory_search(args: &Value, substrate: &mut Substrate) -> Result<Value
         min_coverage: 0.0,
         scope,
         adaptive: false,
+        resonance,
+        resonance_hops,
     };
 
     let hits = substrate
@@ -2319,6 +2324,9 @@ fn handle_memory_recall_evidence(args: &Value, substrate: &mut Substrate) -> Res
     let min_score = args.get("min_score").and_then(Value::as_f64).unwrap_or(0.0) as f32;
     let min_coverage = args.get("min_coverage").and_then(Value::as_f64).unwrap_or(0.0) as f32;
 
+    let resonance = args.get("resonance").and_then(Value::as_bool).unwrap_or(false);
+    let resonance_hops = args.get("resonance_hops").and_then(Value::as_u64).unwrap_or(2) as usize;
+
     let q = RecallQuery {
         query: query.to_string(),
         limit,
@@ -2328,6 +2336,8 @@ fn handle_memory_recall_evidence(args: &Value, substrate: &mut Substrate) -> Res
         min_coverage,
         scope,
         adaptive,
+        resonance,
+        resonance_hops,
     };
 
     let bundle = substrate
@@ -2634,6 +2644,8 @@ fn handle_memory_search_batch(args: &Value, substrate: &mut Substrate) -> Result
             min_coverage: 0.0,
             scope: None,
             adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         };
         let hits = substrate.recall(&q).unwrap_or_default();
         let results: Vec<Value> = hits
@@ -3161,6 +3173,8 @@ fn handle_memory_aggregate(args: &Value, substrate: &mut Substrate) -> Result<Va
                 min_coverage: 0.0,
                 scope: None,
                 adaptive: false,
+                resonance: false,
+                resonance_hops: 2,
             })
             .map_err(|e| format!("aggregate query failed: {e}"))?
             .into_iter()
@@ -3319,6 +3333,8 @@ fn handle_memory_query(args: &Value, substrate: &mut Substrate) -> Result<Value,
         min_coverage: 0.0,
         scope: None,
         adaptive: false,
+        resonance: false,
+        resonance_hops: 2,
     };
 
     let hits = substrate.recall(&q).unwrap_or_default();

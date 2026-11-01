@@ -150,6 +150,12 @@ enum Commands {
         /// Opt-in bounded adaptive expansion (Stage 3)
         #[arg(long)]
         adaptive: bool,
+        /// Opt-in calibrated associative resonance across graph edges (Stage 5)
+        #[arg(long)]
+        resonance: bool,
+        /// Maximum hop radius for associative resonance traversal (default: 2)
+        #[arg(long, default_value_t = 2)]
+        resonance_hops: usize,
         /// Explicit inspection promise: content-only, no-audit, strict-zero-write (Stage 4)
         #[arg(long)]
         inspect_promise: Option<String>,
@@ -220,6 +226,9 @@ enum Commands {
         /// Force dream incubation regardless of thermal or battery stress
         #[arg(long)]
         force: bool,
+        /// Crystallize multiple historical session turns into durable memory crystals (Stage 5)
+        #[arg(long)]
+        crystallize: bool,
     },
     /// Cognitive router triage: evaluate dispatch tier for inquiry with dream-assisted fast path
     Route {
@@ -1725,6 +1734,8 @@ fn main() {
             projection,
             evidence,
             adaptive,
+            resonance,
+            resonance_hops,
             inspect_promise,
         } => {
             let journal_path = store_path.join("journal.jsonl");
@@ -1797,6 +1808,8 @@ fn main() {
                 min_coverage: 0.0,
                 scope,
                 adaptive,
+                resonance,
+                resonance_hops,
             };
 
             if evidence {
@@ -1878,6 +1891,8 @@ fn main() {
                     min_coverage: v.get("min_coverage").and_then(serde_json::Value::as_f64).unwrap_or(0.0) as f32,
                     scope: v.get("scope").and_then(serde_json::Value::as_str).map(String::from).or(scope),
                     adaptive: v.get("adaptive").and_then(serde_json::Value::as_bool).unwrap_or(adaptive),
+                    resonance: v.get("resonance").and_then(serde_json::Value::as_bool).unwrap_or(false),
+                    resonance_hops: v.get("resonance_hops").and_then(serde_json::Value::as_u64).unwrap_or(2) as usize,
                 }
             } else {
                 RecallQuery {
@@ -1889,6 +1904,8 @@ fn main() {
                     min_coverage: 0.0,
                     scope,
                     adaptive,
+                    resonance: false,
+                    resonance_hops: 2,
                 }
             };
 
@@ -1956,6 +1973,7 @@ fn main() {
             homeostatic,
             no_homeostatic,
             force,
+            crystallize,
         } => {
             let dual_phase = dual_phase.unwrap_or(true) && !no_dual_phase;
             let homeostatic = homeostatic.unwrap_or(true) && !no_homeostatic;
@@ -2113,12 +2131,13 @@ fn main() {
                     let seed = 42 + current_cycle_num as u64;
 
                     let (nrem_receipt, telemetry, speciation_skeletons) = if active_dual_phase {
-                        let dual = wm_gen3_core::dream::execute_dual_phase_sleep_cycle(
+                        let dual = wm_gen3_core::dream::execute_dual_phase_sleep_cycle_opts(
                             incubation_mode,
                             &regime,
                             100,
                             &mut substrate,
                             seed,
+                            crystallize,
                         );
                         (Some(dual.nrem), dual.rem, dual.synthesized_skeletons)
                     } else {
@@ -2181,10 +2200,11 @@ fn main() {
 
                     if let Some(ref nrem) = nrem_receipt {
                         println!(
-                            "  [Phase 1: NREM Compaction] Chains: {:3} | Superseded: {:2} | Contradictions: {:2} | Compaction: {:.2}x ({:.2}ms)",
+                            "  [Phase 1: NREM Compaction] Chains: {:3} | Superseded: {:2} | Contradictions: {:2} | Crystals: {:2} | Compaction: {:.2}x ({:.2}ms)",
                             nrem.session_chains_scanned,
                             nrem.superseded_entries_pruned,
                             nrem.contradictions_resolved,
+                            nrem.crystallized_record_ids.len(),
                             nrem.token_compaction_ratio,
                             nrem.duration_us / 1000.0,
                         );
