@@ -360,6 +360,14 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "galaxy.list" | "galaxy_list" => "galaxy.list",
         "galaxy.fork" | "galaxy_fork" | "galaxy.branch" | "galaxy_branch" => "galaxy.fork",
         "galaxy.create" | "galaxy_create" => "galaxy.create",
+        "galaxy.chart" | "galaxy_chart" => "galaxy.chart",
+        "galaxy.navigate" | "galaxy_navigate" => "galaxy.navigate",
+        "sanctuary.status" | "sanctuary_status" => "sanctuary.status",
+        "sanctuary.open_loop" | "sanctuary_open_loop" => "sanctuary.open_loop",
+        "sanctuary.revisit" | "sanctuary_revisit" => "sanctuary.revisit",
+        "sanctuary.resolve" | "sanctuary_resolve" => "sanctuary.resolve",
+        "sanctuary.seal" | "sanctuary_seal" => "sanctuary.seal",
+        "sanctuary.unseal" | "sanctuary_unseal" => "sanctuary.unseal",
         "sutra.cast" | "sutra_cast" => "sutra.cast",
         "sutra.compile" | "sutra_compile" => "sutra.compile",
         "sutra.canon" | "sutra_canon" => "sutra.canon",
@@ -408,9 +416,28 @@ fn allowed_profile_keys(profile: McpProfile) -> &'static HashSet<&'static str> {
             keys.insert("sangha.vcs");
             keys.insert("sangha.fork");
             keys.insert("sangha.consolidate");
+            keys.insert("galaxy.chart");
+            keys.insert("galaxy.navigate");
+            keys.insert("sanctuary.status");
+            keys.insert("sanctuary.open_loop");
+            keys.insert("sanctuary.revisit");
+            keys.insert("sanctuary.resolve");
+            keys.insert("sanctuary.seal");
+            keys.insert("sanctuary.unseal");
             keys
         }),
-        McpProfile::Full => FULL.get_or_init(|| advertised_profile_keys(McpProfile::Full)),
+        McpProfile::Full => FULL.get_or_init(|| {
+            let mut keys = advertised_profile_keys(McpProfile::Full);
+            keys.insert("galaxy.chart");
+            keys.insert("galaxy.navigate");
+            keys.insert("sanctuary.status");
+            keys.insert("sanctuary.open_loop");
+            keys.insert("sanctuary.revisit");
+            keys.insert("sanctuary.resolve");
+            keys.insert("sanctuary.seal");
+            keys.insert("sanctuary.unseal");
+            keys
+        }),
     }
 }
 
@@ -1867,6 +1894,24 @@ pub fn execute_hybrid_tool_call(
             handle_galaxy_fork(args, substrate, readonly)
         }
         "galaxy.create" | "galaxy_create" => handle_galaxy_create(args, substrate, readonly),
+        "galaxy.chart" | "galaxy_chart" => handle_galaxy_chart(args, substrate),
+        "galaxy.navigate" | "galaxy_navigate" => handle_galaxy_navigate(args, substrate),
+
+        // ── WMv11.0 Lichen Sanctuary, Consent Rings & OpenLoop Operations ──
+        "sanctuary.status" | "sanctuary_status" => handle_sanctuary_status(substrate),
+        "sanctuary.open_loop" | "sanctuary_open_loop" => {
+            handle_sanctuary_open_loop(args, substrate, readonly)
+        }
+        "sanctuary.revisit" | "sanctuary_revisit" => {
+            handle_sanctuary_revisit(substrate, readonly)
+        }
+        "sanctuary.resolve" | "sanctuary_resolve" => {
+            handle_sanctuary_resolve(args, substrate, readonly)
+        }
+        "sanctuary.seal" | "sanctuary_seal" => handle_sanctuary_seal(args, substrate, readonly),
+        "sanctuary.unseal" | "sanctuary_unseal" => {
+            handle_sanctuary_unseal(args, substrate, readonly)
+        }
 
         // ── Sutra Codon & Taoist Mudra Operations ──────────────────────────
         "sutra.cast" | "sutra_cast" => handle_sutra_cast(args, substrate, store_path, readonly),
@@ -7812,6 +7857,272 @@ fn handle_pareto_certify(args: &Value) -> Result<Value, String> {
     Ok(json!({
         "status": "success",
         "certification": report,
+    }))
+}
+
+fn handle_galaxy_chart(args: &Value, substrate: &Substrate) -> Result<Value, String> {
+    let sample = args
+        .get("sample")
+        .and_then(Value::as_u64)
+        .unwrap_or(500)
+        .clamp(1, 5000) as usize;
+    let clusters = args
+        .get("clusters")
+        .and_then(Value::as_u64)
+        .unwrap_or(6)
+        .clamp(2, 12) as usize;
+    let total_records = substrate.store().record_count().unwrap_or(0);
+    let epoch = substrate.store().epoch().unwrap_or(0);
+    let sample_count = sample.min(total_records).max(1);
+    let stride = (total_records / sample_count).max(1);
+
+    let glyph_names = [
+        ("觀 (Guān)", "Survey & Telemetry"),
+        ("界 (Jiè)", "Kekkai Sandbox & Isolation"),
+        ("根 (Gēn)", "Lineage & Causal Origins"),
+        ("行 (Xíng)", "Commit & Execution Authority"),
+        ("合 (Hé)", "Synthesis & Memory Crystals"),
+        ("鏡 (Jìng)", "Mirroring & Analogy"),
+        ("息 (Xī)", "Quiescence & Dream Consolidator"),
+        ("清 (Qīng)", "Compaction & Pruning"),
+        ("應 (Yìng)", "Resonance & P2P Wire"),
+        ("生 (Shēng)", "Speciation & Evolution"),
+        ("辨 (Biàn)", "Adversarial Discrimination"),
+        ("通 (Tōng)", "Cross-Substrate Bridge"),
+    ];
+
+    let mut counts = vec![0usize; clusters];
+    let mut sums = vec![[0.0f64; 6]; clusters];
+    for i in 0..sample_count {
+        let id = (i * stride).min(total_records.saturating_sub(1)) as u64;
+        if let Ok(Some(record)) = substrate.store().get_record(id) {
+            let c = wm_gen3_core::hologram::Holographic6D::from_record(
+                id,
+                record.content(),
+                epoch,
+                0.90,
+            );
+            let norm_w = (c.omega.sin() * 0.5 + 0.5).clamp(0.0, 0.9999);
+            let idx = (norm_w * clusters as f64).floor() as usize % clusters;
+            counts[idx] += 1;
+            sums[idx][0] += c.x;
+            sums[idx][1] += c.y;
+            sums[idx][2] += c.z;
+            sums[idx][3] += c.tau;
+            sums[idx][4] += c.sigma;
+            sums[idx][5] += c.omega;
+        }
+    }
+
+    let constellations: Vec<Value> = (0..clusters)
+        .filter(|&i| counts[i] > 0)
+        .map(|i| {
+            let n = counts[i] as f64;
+            let (glyph, archetype) = glyph_names[i % glyph_names.len()];
+            json!({
+                "constellation_id": i + 1,
+                "glyph": glyph,
+                "archetype": archetype,
+                "stars_count": counts[i],
+                "centroid_6d": {
+                    "x": sums[i][0] / n,
+                    "y": sums[i][1] / n,
+                    "z": sums[i][2] / n,
+                    "tau": sums[i][3] / n,
+                    "sigma": sums[i][4] / n,
+                    "omega": sums[i][5] / n,
+                }
+            })
+        })
+        .collect();
+
+    Ok(json!({
+        "status": "success",
+        "total_records": total_records,
+        "sample_size": sample_count,
+        "constellations": constellations,
+    }))
+}
+
+fn handle_galaxy_navigate(args: &Value, substrate: &mut Substrate) -> Result<Value, String> {
+    let query = args
+        .get("query")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'query'".to_string())?;
+    let hops = args
+        .get("hops")
+        .and_then(Value::as_u64)
+        .unwrap_or(2)
+        .clamp(1, 3) as usize;
+    let limit = args
+        .get("limit")
+        .and_then(Value::as_u64)
+        .unwrap_or(5)
+        .clamp(1, 20) as usize;
+
+    let rq = RecallQuery {
+        query: query.to_string(),
+        limit,
+        candidate_limit: limit.max(60),
+        include_historical: false,
+        min_score: 0.0,
+        min_coverage: 0.0,
+        scope: None,
+        adaptive: true,
+        resonance: true,
+        resonance_hops: hops,
+    };
+    let bundle = substrate
+        .recall_evidence(&rq)
+        .map_err(|e| format!("galaxy.navigate recall error: {e}"))?;
+
+    Ok(json!({
+        "status": "success",
+        "navigation_protocol": "whitemagic.wave6.holographic-navigation.v1",
+        "query": query,
+        "resonance_hops": hops,
+        "coverage": bundle.coverage,
+        "disposition": bundle.disposition,
+        "abstention_recommended": bundle.abstention_recommended,
+        "resonance_expanded": bundle.resonance_expanded,
+        "resonance_links": bundle.resonance_links,
+        "hits": bundle.hits.iter().map(|h| {
+            json!({
+                "record_id": h.id,
+                "score": h.score,
+                "source": h.source,
+                "content": truncate_utf8(&h.content, 2048),
+            })
+        }).collect::<Vec<_>>(),
+    }))
+}
+
+fn handle_sanctuary_status(substrate: &Substrate) -> Result<Value, String> {
+    let hc = substrate.hermit_crab_status();
+    let loops = substrate.all_open_loops();
+    Ok(json!({
+        "status": "success",
+        "hermit_crab_sanctuary": hc,
+        "open_loops_count": loops.len(),
+        "open_loops": loops,
+    }))
+}
+
+fn handle_sanctuary_open_loop(
+    args: &Value,
+    substrate: &mut Substrate,
+    readonly: bool,
+) -> Result<Value, String> {
+    if readonly {
+        return Err("store is read-only: sanctuary.open_loop refused".into());
+    }
+    let question = args
+        .get("question")
+        .or_else(|| args.get("question_or_hypothesis"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'question'".to_string())?;
+    let domain = args
+        .get("domain")
+        .and_then(Value::as_str)
+        .unwrap_or("cognitive-architecture");
+    let ring_num = args.get("ring").and_then(Value::as_u64).unwrap_or(3);
+    let salience = args.get("salience").and_then(Value::as_f64).unwrap_or(0.90) as f32;
+    let ring = match ring_num {
+        0 => wm_gen3_core::ConsentRing::Ring0PublicCommons,
+        1 => wm_gen3_core::ConsentRing::Ring1OperationalProject,
+        2 => wm_gen3_core::ConsentRing::Ring2RelationalTrust,
+        _ => wm_gen3_core::ConsentRing::Ring3DeepInteriority,
+    };
+    substrate.set_intake_authority(RatifiedChannel::mint("wm-sanctuary-mcp"));
+    let item = substrate.register_open_loop(question, domain, ring, salience)?;
+    Ok(json!({
+        "status": "success",
+        "open_loop": item,
+    }))
+}
+
+fn handle_sanctuary_revisit(substrate: &mut Substrate, readonly: bool) -> Result<Value, String> {
+    if readonly {
+        return Err("store is read-only: sanctuary.revisit refused".into());
+    }
+    let revisited = substrate.revisit_open_loops_dream_pass()?;
+    Ok(json!({
+        "status": "success",
+        "revisited_count": revisited.len(),
+        "open_loops": revisited,
+    }))
+}
+
+fn handle_sanctuary_resolve(
+    args: &Value,
+    substrate: &mut Substrate,
+    readonly: bool,
+) -> Result<Value, String> {
+    if readonly {
+        return Err("store is read-only: sanctuary.resolve refused".into());
+    }
+    let loop_id = args
+        .get("loop_id")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'loop_id'".to_string())?;
+    let insight = args
+        .get("insight")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'insight'".to_string())?;
+    let item = substrate.resolve_open_loop(loop_id, insight)?;
+    Ok(json!({
+        "status": "success",
+        "open_loop": item,
+    }))
+}
+
+fn handle_sanctuary_seal(
+    args: &Value,
+    substrate: &mut Substrate,
+    readonly: bool,
+) -> Result<Value, String> {
+    if readonly {
+        return Err("store is read-only: sanctuary.seal refused".into());
+    }
+    let reason = args
+        .get("reason")
+        .and_then(Value::as_str)
+        .unwrap_or("boundary_protection");
+    let share_a = args
+        .get("share_a")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'share_a'".to_string())?;
+    let share_b = args
+        .get("share_b")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'share_b'".to_string())?;
+    let state = substrate.engage_hermit_crab_sanctuary(reason, share_a, share_b)?;
+    Ok(json!({
+        "status": "success",
+        "hermit_crab_sanctuary": state,
+    }))
+}
+
+fn handle_sanctuary_unseal(
+    args: &Value,
+    substrate: &mut Substrate,
+    readonly: bool,
+) -> Result<Value, String> {
+    if readonly {
+        return Err("store is read-only: sanctuary.unseal refused".into());
+    }
+    let share_a = args
+        .get("share_a")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'share_a'".to_string())?;
+    let share_b = args
+        .get("share_b")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'share_b'".to_string())?;
+    let state = substrate.release_hermit_crab_sanctuary(share_a, share_b)?;
+    Ok(json!({
+        "status": "success",
+        "hermit_crab_sanctuary": state,
     }))
 }
 
