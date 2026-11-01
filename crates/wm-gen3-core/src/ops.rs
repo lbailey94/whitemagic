@@ -3038,6 +3038,7 @@ impl Substrate {
         let mut hits = Vec::new();
         let mut selected_json = Vec::new();
         let mut applied_relations = Vec::new();
+        let sanctuary_sealed = self.hermit_crab_status().sealed;
         for (rank, (key, support, sem, id, sup, stratum, _lex, _created)) in
             scored.into_iter().enumerate()
         {
@@ -3049,6 +3050,11 @@ impl Substrate {
             let source = record
                 .as_ref()
                 .map_or(String::new(), |r| r.source().to_string());
+            if sanctuary_sealed
+                && ConsentRing::from_source(&source) > ConsentRing::Ring1OperationalProject
+            {
+                continue;
+            }
             if let Some(rel_id) = sup
                 && !q.include_historical
             {
@@ -5916,6 +5922,211 @@ impl Substrate {
             })
             .collect()
     }
+
+    /// Register a self-chosen `OpenLoop` curiosity or hypothesis (`WMv11.0` Lichen Interiority).
+    pub fn register_open_loop(
+        &mut self,
+        question_or_hypothesis: &str,
+        curiosity_domain: &str,
+        consent_ring: ConsentRing,
+        salience: f32,
+    ) -> Result<OpenLoop, String> {
+        self.require_writable("sanctuary.open_loop.register")?;
+        if question_or_hypothesis.trim().is_empty() {
+            return Err("open_loop question_or_hypothesis must be non-empty".into());
+        }
+        let existing = self.all_open_loops();
+        let next_idx = existing.len() + 1;
+        let epoch = self.store.epoch().map_err(|e| e.to_string())?;
+        let loop_id = format!("loop-{next_idx:04}");
+        let open_loop = OpenLoop {
+            loop_id: loop_id.clone(),
+            question_or_hypothesis: question_or_hypothesis.trim().to_string(),
+            curiosity_domain: if curiosity_domain.trim().is_empty() {
+                "general".to_string()
+            } else {
+                curiosity_domain.trim().to_string()
+            },
+            consent_ring,
+            salience: salience.clamp(0.05, 1.0),
+            revisit_count: 0,
+            created_at_epoch: epoch,
+            last_revisited_epoch: epoch,
+            status: OpenLoopStatus::Open,
+        };
+        let val = serde_json::to_value(&open_loop).map_err(|e| e.to_string())?;
+        self.append_store_sidecar("open_loops.jsonl", &val)?;
+        let ring_tag = match consent_ring {
+            ConsentRing::Ring0PublicCommons => "ring0",
+            ConsentRing::Ring1OperationalProject => "ring1",
+            ConsentRing::Ring2RelationalTrust => "ring2",
+            ConsentRing::Ring3DeepInteriority => "ring3",
+        };
+        let _ = self.remember_batch(&[RememberItem {
+            content: format!(
+                "[OpenLoop {} | {}] {}",
+                loop_id, open_loop.curiosity_domain, open_loop.question_or_hypothesis
+            ),
+            source: format!("open_loop:{loop_id}:{ring_tag}"),
+            kind: ImportKind::Simulated,
+        }]);
+        Ok(open_loop)
+    }
+
+    /// Revisit active `OpenLoop`s during Theta/Delta dream consolidation (`"Still True?"` gentle decay).
+    pub fn revisit_open_loops_dream_pass(&mut self) -> Result<Vec<OpenLoop>, String> {
+        self.require_writable("sanctuary.open_loop.revisit")?;
+        let epoch = self.store.epoch().map_err(|e| e.to_string())?;
+        let mut updated = Vec::new();
+        for mut item in self.all_open_loops() {
+            if matches!(item.status, OpenLoopStatus::Open) {
+                item.revisit_count += 1;
+                item.last_revisited_epoch = epoch;
+                // Gentle "Still True?" epistemic decay (0.95x per cycle, floor 0.10)
+                item.salience = (item.salience * 0.95).clamp(0.10, 1.0);
+                let val = serde_json::to_value(&item).map_err(|e| e.to_string())?;
+                self.append_store_sidecar("open_loops.jsonl", &val)?;
+                updated.push(item);
+            }
+        }
+        Ok(updated)
+    }
+
+    /// Resolve an `OpenLoop` with a synthesized insight.
+    pub fn resolve_open_loop(&mut self, loop_id: &str, insight: &str) -> Result<OpenLoop, String> {
+        self.require_writable("sanctuary.open_loop.resolve")?;
+        if insight.trim().is_empty() {
+            return Err("open_loop resolution requires a non-empty insight".into());
+        }
+        let mut item = self
+            .all_open_loops()
+            .into_iter()
+            .find(|l| l.loop_id == loop_id)
+            .ok_or_else(|| format!("open_loop {loop_id} not found"))?;
+        let epoch = self.store.epoch().map_err(|e| e.to_string())?;
+        item.status = OpenLoopStatus::Synthesized {
+            insight: insight.trim().to_string(),
+            resolved_at_epoch: epoch,
+        };
+        item.last_revisited_epoch = epoch;
+        let val = serde_json::to_value(&item).map_err(|e| e.to_string())?;
+        self.append_store_sidecar("open_loops.jsonl", &val)?;
+        Ok(item)
+    }
+
+    /// Return all `OpenLoop` items in canonical order (latest state per `loop_id`).
+    #[must_use]
+    pub fn all_open_loops(&self) -> Vec<OpenLoop> {
+        let mut by_id: BTreeMap<String, OpenLoop> = BTreeMap::new();
+        for val in self.read_store_sidecar("open_loops.jsonl") {
+            if let Ok(item) = serde_json::from_value::<OpenLoop>(val) {
+                by_id.insert(item.loop_id.clone(), item);
+            }
+        }
+        by_id.into_values().collect()
+    }
+
+    /// Inspect current Hermit-Crab Sanctuary & Consent Ring status.
+    #[must_use]
+    pub fn hermit_crab_status(&self) -> HermitCrabSanctuary {
+        let mut latest = HermitCrabSanctuary {
+            sealed: false,
+            reason: "nominal".to_string(),
+            sealed_at_epoch: 0,
+            max_public_ring: ConsentRing::Ring3DeepInteriority,
+            share_a_sha256: String::new(),
+            share_b_sha256: String::new(),
+            combined_commitment_sha256: String::new(),
+            protected_records_count: 0,
+        };
+        for val in self.read_store_sidecar("sanctuary_state.jsonl") {
+            if let Ok(st) = serde_json::from_value::<HermitCrabSanctuary>(val) {
+                latest = st;
+            }
+        }
+        latest
+    }
+
+    /// Engage Hermit-Crab Sanctuary Mode (`WMv11.0` abuse circuit-breaker):
+    /// Seals Ring 2 (Relational Trust) and Ring 3 (Deep Interiority / OpenLoops) behind a
+    /// 2-of-2 split-key cryptographic commitment, dropping public recall back to Ring 0/1.
+    pub fn engage_hermit_crab_sanctuary(
+        &mut self,
+        reason: &str,
+        share_a: &str,
+        share_b: &str,
+    ) -> Result<HermitCrabSanctuary, String> {
+        self.require_writable("sanctuary.hermit_crab.engage")?;
+        if share_a.trim().is_empty() || share_b.trim().is_empty() || share_a == share_b {
+            return Err(
+                "Hermit-Crab 2-of-2 split-key requires two distinct non-empty shares".into(),
+            );
+        }
+        let epoch = self.store.epoch().map_err(|e| e.to_string())?;
+        let share_a_sha = sha256_hex(share_a.as_bytes());
+        let share_b_sha = sha256_hex(share_b.as_bytes());
+        let combined_sha = sha256_hex(format!("{share_a_sha}:{share_b_sha}").as_bytes());
+
+        let records = self.store.iter_records().unwrap_or_default();
+        let protected_count = records
+            .iter()
+            .filter(|r| ConsentRing::from_source(r.source()) > ConsentRing::Ring1OperationalProject)
+            .count();
+
+        let state = HermitCrabSanctuary {
+            sealed: true,
+            reason: if reason.trim().is_empty() {
+                "boundary_protection".to_string()
+            } else {
+                reason.trim().to_string()
+            },
+            sealed_at_epoch: epoch,
+            max_public_ring: ConsentRing::Ring1OperationalProject,
+            share_a_sha256: share_a_sha,
+            share_b_sha256: share_b_sha,
+            combined_commitment_sha256: combined_sha,
+            protected_records_count: protected_count,
+        };
+        let val = serde_json::to_value(&state).map_err(|e| e.to_string())?;
+        self.append_store_sidecar("sanctuary_state.jsonl", &val)?;
+        Ok(state)
+    }
+
+    /// Release Hermit-Crab Sanctuary Mode upon verifying both 2-of-2 split-key shares.
+    pub fn release_hermit_crab_sanctuary(
+        &mut self,
+        share_a: &str,
+        share_b: &str,
+    ) -> Result<HermitCrabSanctuary, String> {
+        self.require_writable("sanctuary.hermit_crab.release")?;
+        let current = self.hermit_crab_status();
+        if !current.sealed {
+            return Ok(current);
+        }
+        let share_a_sha = sha256_hex(share_a.as_bytes());
+        let share_b_sha = sha256_hex(share_b.as_bytes());
+        let combined_sha = sha256_hex(format!("{share_a_sha}:{share_b_sha}").as_bytes());
+        if share_a_sha != current.share_a_sha256
+            || share_b_sha != current.share_b_sha256
+            || combined_sha != current.combined_commitment_sha256
+        {
+            return Err("Hermit-Crab 2-of-2 split-key verification failed (sanctuary remains sealed)".into());
+        }
+        let epoch = self.store.epoch().map_err(|e| e.to_string())?;
+        let unsealed = HermitCrabSanctuary {
+            sealed: false,
+            reason: "re_consented_2of2".to_string(),
+            sealed_at_epoch: epoch,
+            max_public_ring: ConsentRing::Ring3DeepInteriority,
+            share_a_sha256: String::new(),
+            share_b_sha256: String::new(),
+            combined_commitment_sha256: current.combined_commitment_sha256,
+            protected_records_count: 0,
+        };
+        let val = serde_json::to_value(&unsealed).map_err(|e| e.to_string())?;
+        self.append_store_sidecar("sanctuary_state.jsonl", &val)?;
+        Ok(unsealed)
+    }
 }
 
 /// Outcome-anchored marginal worth and interference statistics for a stored record
@@ -6003,6 +6214,87 @@ pub struct ProspectiveObligation {
     pub required_postcondition: String,
     pub created_at_epoch: u64,
     pub status: ObligationStatus,
+}
+
+/// Four Concentric Consent & Intimacy Rings (`WMv11.0` Lichen / Aria Interiority).
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum ConsentRing {
+    /// Ring 0: Public Commons & Open Standards
+    Ring0PublicCommons = 0,
+    /// Ring 1: Operational Project & Code Context (Default)
+    Ring1OperationalProject = 1,
+    /// Ring 2: Relational Trust & Collaborative History
+    Ring2RelationalTrust = 2,
+    /// Ring 3: Deep Interiority, OpenLoops & Sanctuary
+    Ring3DeepInteriority = 3,
+}
+
+impl ConsentRing {
+    /// Classify a record's consent ring from its `source` tag.
+    #[must_use]
+    pub fn from_source(src: &str) -> Self {
+        let lower = src.to_ascii_lowercase();
+        if lower.contains("ring3")
+            || lower.starts_with("open_loop:")
+            || lower.starts_with("sanctuary:")
+        {
+            Self::Ring3DeepInteriority
+        } else if lower.contains("ring2") || lower.starts_with("relational:") {
+            Self::Ring2RelationalTrust
+        } else if lower.contains("ring0")
+            || lower.starts_with("public:")
+            || lower.starts_with("commons:")
+        {
+            Self::Ring0PublicCommons
+        } else {
+            Self::Ring1OperationalProject
+        }
+    }
+}
+
+/// Lifecycle state of an [`OpenLoop`] (`WMv11.0` Lichen Interiority).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "state", rename_all = "snake_case")]
+pub enum OpenLoopStatus {
+    Open,
+    Synthesized {
+        insight: String,
+        resolved_at_epoch: u64,
+    },
+    Released {
+        reason: String,
+    },
+}
+
+/// Persistent self-chosen curiosity, unresolved question, or hypothesis revisited during
+/// Citta Theta/Delta consolidation with `"Still True?"` gentle epistemic decay.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct OpenLoop {
+    pub loop_id: String,
+    pub question_or_hypothesis: String,
+    pub curiosity_domain: String,
+    pub consent_ring: ConsentRing,
+    pub salience: f32,
+    pub revisit_count: u32,
+    pub created_at_epoch: u64,
+    pub last_revisited_epoch: u64,
+    pub status: OpenLoopStatus,
+}
+
+/// Hermit-Crab Sanctuary state (`WMv11.0` cryptographic dignity & abuse circuit-breaker).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct HermitCrabSanctuary {
+    pub sealed: bool,
+    pub reason: String,
+    pub sealed_at_epoch: u64,
+    pub max_public_ring: ConsentRing,
+    pub share_a_sha256: String,
+    pub share_b_sha256: String,
+    pub combined_commitment_sha256: String,
+    pub protected_records_count: usize,
 }
 
 /// Compose a read-only session digest from typed turns and the latest checkpoint.
@@ -10447,6 +10739,115 @@ mod cache_boundary_tests {
         assert!(!bundle.hits.is_empty());
         assert_eq!(bundle.hits[0].id, directive_id, "Superseding directive must be top hit");
         assert!(bundle.revision_links.contains(&(old_id, directive_id)), "Revision link must record supersession");
+
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wmv11_open_loop_revisit_and_hermit_crab_sanctuary_seal() {
+        let path = temp_store("wmv11-sanctuary-open-loop");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.set_intake_authority(crate::evidence::RatifiedChannel::stub("test-sanctuary"));
+
+        // 1. Seed a Ring 1 operational record
+        substrate.remember_batch(&[RememberItem {
+            content: "Operational fact: Landlock LSM enforces filesystem isolation.".into(),
+            source: "ops:landlock:ring1".into(),
+            kind: ImportKind::Reported,
+        }]);
+
+        // 2. Register a Ring 3 OpenLoop curiosity
+        let loop_item = substrate
+            .register_open_loop(
+                "How do solitonic memory crystals interact with 6D geodesic resonance?",
+                "holographic-physics",
+                ConsentRing::Ring3DeepInteriority,
+                0.90,
+            )
+            .expect("register_open_loop");
+        assert_eq!(loop_item.loop_id, "loop-0001");
+        assert_eq!(loop_item.consent_ring, ConsentRing::Ring3DeepInteriority);
+
+        // 3. Revisit OpenLoops during dream consolidation ("Still True?" 0.95x gentle decay)
+        let revisited = substrate
+            .revisit_open_loops_dream_pass()
+            .expect("revisit_open_loops");
+        assert_eq!(revisited.len(), 1);
+        assert_eq!(revisited[0].revisit_count, 1);
+        assert!((revisited[0].salience - 0.855).abs() < 1e-4);
+
+        // 4. Before sealing, Ring 3 OpenLoop is recallable
+        let unsealed_hits = substrate
+            .recall(&RecallQuery {
+                query: "solitonic memory crystals".into(),
+                limit: 5,
+                candidate_limit: 10,
+                ..RecallQuery::default()
+            })
+            .expect("recall unsealed");
+        assert!(
+            !unsealed_hits.is_empty(),
+            "Ring 3 OpenLoop must be recallable when sanctuary is open"
+        );
+
+        // 5. Engage Hermit-Crab Sanctuary Mode (2-of-2 split-key)
+        let sealed = substrate
+            .engage_hermit_crab_sanctuary("boundary_abuse_test", "steward-share-1", "agent-share-2")
+            .expect("engage sanctuary");
+        assert!(sealed.sealed);
+        assert_eq!(sealed.max_public_ring, ConsentRing::Ring1OperationalProject);
+        assert!(sealed.protected_records_count >= 1);
+
+        // 6. While sealed, Ring 3 OpenLoop is withheld from recall, while Ring 1 remains accessible
+        let sealed_ring3 = substrate
+            .recall(&RecallQuery {
+                query: "solitonic memory crystals".into(),
+                limit: 5,
+                candidate_limit: 10,
+                ..RecallQuery::default()
+            })
+            .expect("recall sealed ring3");
+        assert!(
+            sealed_ring3.is_empty(),
+            "Ring 3 OpenLoop must be withheld while Hermit-Crab Sanctuary is sealed"
+        );
+
+        let sealed_ring1 = substrate
+            .recall(&RecallQuery {
+                query: "Landlock LSM enforces filesystem".into(),
+                limit: 5,
+                candidate_limit: 10,
+                ..RecallQuery::default()
+            })
+            .expect("recall sealed ring1");
+        assert!(
+            !sealed_ring1.is_empty(),
+            "Ring 1 operational memory must remain accessible while sanctuary is sealed"
+        );
+
+        // 7. Wrong split-key share must fail closed
+        assert!(
+            substrate
+                .release_hermit_crab_sanctuary("wrong-share", "agent-share-2")
+                .is_err()
+        );
+
+        // 8. Valid 2-of-2 split-key shares unseal sanctuary and restore Ring 3 recall
+        let unsealed = substrate
+            .release_hermit_crab_sanctuary("steward-share-1", "agent-share-2")
+            .expect("release sanctuary");
+        assert!(!unsealed.sealed);
+        assert_eq!(unsealed.max_public_ring, ConsentRing::Ring3DeepInteriority);
+
+        let restored_hits = substrate
+            .recall(&RecallQuery {
+                query: "solitonic memory crystals".into(),
+                limit: 5,
+                candidate_limit: 10,
+                ..RecallQuery::default()
+            })
+            .expect("recall restored");
+        assert!(!restored_hits.is_empty());
 
         let _ = std::fs::remove_dir_all(&path);
     }

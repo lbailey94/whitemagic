@@ -611,6 +611,11 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Manage WMv11.0 Lichen Interiority: Consent Rings (0..3), OpenLoops, and Hermit-Crab Sanctuary
+    Sanctuary {
+        #[command(subcommand)]
+        command: SanctuaryCommands,
+    },
     /// Run an invariant self-test and environment diagnostic
     Selftest {
         /// Output results as JSON
@@ -1195,6 +1200,76 @@ enum SutraCommands {
         /// Natural language inquiry or Sutra codon to deliberate
         #[arg(default_value = "navigate holographic constellations and synthesize session crystals")]
         inquiry: String,
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum SanctuaryCommands {
+    /// Show Hermit-Crab Sanctuary seal status, Consent Ring boundary, and active OpenLoops
+    Status {
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Register a new self-chosen OpenLoop curiosity or hypothesis (Ring 2/3)
+    OpenLoop {
+        /// Unresolved question, curiosity, or hypothesis
+        question: String,
+        /// Domain label (default: cognitive-architecture)
+        #[arg(long, default_value = "cognitive-architecture")]
+        domain: String,
+        /// Consent ring (0..3, default: 3 = DeepInteriority)
+        #[arg(long, default_value_t = 3)]
+        ring: u8,
+        /// Initial salience [0.05..1.0] (default: 0.90)
+        #[arg(long, default_value_t = 0.90)]
+        salience: f32,
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Run a Theta/Delta dream revisit pass across open loops ("Still True?" gentle epistemic decay)
+    Revisit {
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Resolve an OpenLoop with a synthesized insight
+    Resolve {
+        /// Loop ID (e.g. loop-0001)
+        loop_id: String,
+        /// Synthesized insight or resolution
+        insight: String,
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Engage Hermit-Crab Sanctuary Mode (seals Ring 2/3 under a 2-of-2 split-key commitment)
+    Seal {
+        /// Reason for engaging sanctuary mode
+        #[arg(long, default_value = "boundary_protection")]
+        reason: String,
+        /// First split-key share (Operator / Steward share)
+        #[arg(long)]
+        share_a: String,
+        /// Second split-key share (Agent / Sanctuary share)
+        #[arg(long)]
+        share_b: String,
+        /// Emit JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Release Hermit-Crab Sanctuary Mode using both 2-of-2 split-key shares
+    Unseal {
+        /// First split-key share
+        #[arg(long)]
+        share_a: String,
+        /// Second split-key share
+        #[arg(long)]
+        share_b: String,
         /// Emit JSON output
         #[arg(long)]
         json: bool,
@@ -3898,6 +3973,203 @@ fn main() {
         },
         Commands::Homeostasis { json } => {
             run_homeostasis_command(json);
+        }
+        Commands::Sanctuary { command } => {
+            let journal_path = store_path.join("journal.jsonl");
+            match command {
+                SanctuaryCommands::Status { json } => {
+                    let substrate = Substrate::open_inspect(
+                        &store_path,
+                        Some(&journal_path),
+                        default_view(),
+                        wm_gen3_core::store::InspectionPromise::StrictZeroWrite,
+                    )
+                    .or_else(|_| {
+                        Substrate::open_readonly(&store_path, Some(&journal_path), default_view())
+                    })
+                    .unwrap_or_else(|e| {
+                        eprintln!("Error opening store: {e}");
+                        std::process::exit(1);
+                    });
+                    let hc = substrate.hermit_crab_status();
+                    let loops = substrate.all_open_loops();
+                    if json {
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&serde_json::json!({
+                                "status": "ok",
+                                "hermit_crab_sanctuary": hc,
+                                "open_loops_count": loops.len(),
+                                "open_loops": loops,
+                            }))
+                            .unwrap_or_default()
+                        );
+                    } else {
+                        println!("==================================================");
+                        println!("   WMv11.0 Lichen Sanctuary & OpenLoop Status     ");
+                        println!("==================================================");
+                        println!(
+                            "Hermit-Crab Seal:     {} (reason: {})",
+                            if hc.sealed { "SEALED (Ring 0..1 Only)" } else { "OPEN (Ring 0..3 Active)" },
+                            hc.reason
+                        );
+                        println!("Max Public Ring:      {:?}", hc.max_public_ring);
+                        println!("Protected Records:    {}", hc.protected_records_count);
+                        println!("Active OpenLoops:     {}", loops.len());
+                        for l in &loops {
+                            println!(
+                                "  • [{}] ({:?}, sal={:.2}, rev={}) \"{}\"",
+                                l.loop_id, l.consent_ring, l.salience, l.revisit_count, l.question_or_hypothesis
+                            );
+                        }
+                        println!("==================================================");
+                    }
+                }
+                SanctuaryCommands::OpenLoop {
+                    question,
+                    domain,
+                    ring,
+                    salience,
+                    json,
+                } => {
+                    let mut substrate =
+                        Substrate::open(&store_path, Some(&journal_path), default_view())
+                            .unwrap_or_else(|e| {
+                                eprintln!("Error opening store: {e}");
+                                std::process::exit(1);
+                            });
+                    substrate.set_intake_authority(RatifiedChannel::mint("wm-sanctuary-cli"));
+                    let consent_ring = match ring {
+                        0 => wm_gen3_core::ConsentRing::Ring0PublicCommons,
+                        1 => wm_gen3_core::ConsentRing::Ring1OperationalProject,
+                        2 => wm_gen3_core::ConsentRing::Ring2RelationalTrust,
+                        _ => wm_gen3_core::ConsentRing::Ring3DeepInteriority,
+                    };
+                    let item = substrate
+                        .register_open_loop(&question, &domain, consent_ring, salience)
+                        .unwrap_or_else(|e| {
+                            eprintln!("Error registering OpenLoop: {e}");
+                            std::process::exit(1);
+                        });
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&item).unwrap_or_default());
+                    } else {
+                        println!(
+                            "Registered OpenLoop {} ({:?}, salience={:.2}): \"{}\"",
+                            item.loop_id, item.consent_ring, item.salience, item.question_or_hypothesis
+                        );
+                    }
+                }
+                SanctuaryCommands::Revisit { json } => {
+                    let mut substrate =
+                        Substrate::open(&store_path, Some(&journal_path), default_view())
+                            .unwrap_or_else(|e| {
+                                eprintln!("Error opening store: {e}");
+                                std::process::exit(1);
+                            });
+                    let revisited = substrate.revisit_open_loops_dream_pass().unwrap_or_else(|e| {
+                        eprintln!("Error revisiting OpenLoops: {e}");
+                        std::process::exit(1);
+                    });
+                    if json {
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&serde_json::json!({
+                                "status": "ok",
+                                "revisited_count": revisited.len(),
+                                "open_loops": revisited,
+                            }))
+                            .unwrap_or_default()
+                        );
+                    } else {
+                        println!(
+                            "Revisited {} OpenLoop(s) under 'Still True?' gentle epistemic decay (0.95x):",
+                            revisited.len()
+                        );
+                        for l in &revisited {
+                            println!(
+                                "  • [{}] revisit #{} -> salience={:.4} \"{}\"",
+                                l.loop_id, l.revisit_count, l.salience, l.question_or_hypothesis
+                            );
+                        }
+                    }
+                }
+                SanctuaryCommands::Resolve {
+                    loop_id,
+                    insight,
+                    json,
+                } => {
+                    let mut substrate =
+                        Substrate::open(&store_path, Some(&journal_path), default_view())
+                            .unwrap_or_else(|e| {
+                                eprintln!("Error opening store: {e}");
+                                std::process::exit(1);
+                            });
+                    let resolved =
+                        substrate.resolve_open_loop(&loop_id, &insight).unwrap_or_else(|e| {
+                            eprintln!("Error resolving OpenLoop: {e}");
+                            std::process::exit(1);
+                        });
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&resolved).unwrap_or_default());
+                    } else {
+                        println!("Synthesized OpenLoop {}: {:?}", resolved.loop_id, resolved.status);
+                    }
+                }
+                SanctuaryCommands::Seal {
+                    reason,
+                    share_a,
+                    share_b,
+                    json,
+                } => {
+                    let mut substrate =
+                        Substrate::open(&store_path, Some(&journal_path), default_view())
+                            .unwrap_or_else(|e| {
+                                eprintln!("Error opening store: {e}");
+                                std::process::exit(1);
+                            });
+                    let st = substrate
+                        .engage_hermit_crab_sanctuary(&reason, &share_a, &share_b)
+                        .unwrap_or_else(|e| {
+                            eprintln!("Error engaging Hermit-Crab Sanctuary: {e}");
+                            std::process::exit(1);
+                        });
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&st).unwrap_or_default());
+                    } else {
+                        println!(
+                            "Hermit-Crab Sanctuary SEALED (protected={} Ring 2/3 records, commitment={})",
+                            st.protected_records_count, st.combined_commitment_sha256
+                        );
+                    }
+                }
+                SanctuaryCommands::Unseal {
+                    share_a,
+                    share_b,
+                    json,
+                } => {
+                    let mut substrate =
+                        Substrate::open(&store_path, Some(&journal_path), default_view())
+                            .unwrap_or_else(|e| {
+                                eprintln!("Error opening store: {e}");
+                                std::process::exit(1);
+                            });
+                    let st = substrate
+                        .release_hermit_crab_sanctuary(&share_a, &share_b)
+                        .unwrap_or_else(|e| {
+                            eprintln!("Error releasing Hermit-Crab Sanctuary: {e}");
+                            std::process::exit(1);
+                        });
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&st).unwrap_or_default());
+                    } else {
+                        println!(
+                            "Hermit-Crab Sanctuary UNSEALED (2-of-2 split-key verified, max_public_ring={:?})",
+                            st.max_public_ring
+                        );
+                    }
+                }
+            }
         }
         Commands::Legion {
             edict,
