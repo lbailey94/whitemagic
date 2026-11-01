@@ -144,6 +144,36 @@ enum Commands {
         /// Enable dense projection during recall (or set WM_GEN3_PROJECTION=1)
         #[arg(long)]
         projection: bool,
+        /// Output rich evidence bundle and diagnostics (Stage 3)
+        #[arg(long)]
+        evidence: bool,
+        /// Opt-in bounded adaptive expansion (Stage 3)
+        #[arg(long)]
+        adaptive: bool,
+    },
+    /// Recall memories with complete evidence bundle and diagnostics (Stage 3)
+    EvidenceRecall {
+        /// Raw JSON request payload
+        #[arg(long)]
+        request_json: Option<String>,
+        /// Query string (if not using request_json)
+        #[arg(long)]
+        query: Option<String>,
+        /// Maximum number of results to return (default: 10)
+        #[arg(long, default_value_t = 10)]
+        limit: usize,
+        /// Candidate search pool size (default: 100)
+        #[arg(long, default_value_t = 100)]
+        candidate_limit: usize,
+        /// Include superseded and archived records
+        #[arg(long)]
+        historical: bool,
+        /// Optional recall scope view filter
+        #[arg(long)]
+        scope: Option<String>,
+        /// Opt-in bounded adaptive expansion
+        #[arg(long)]
+        adaptive: bool,
     },
     /// Consult the local System Two generative model (opt-in, loopback by default)
     System2 {
@@ -1684,6 +1714,8 @@ fn main() {
             historical,
             scope,
             projection,
+            evidence,
+            adaptive,
         } => {
             let journal_path = store_path.join("journal.jsonl");
             let mut substrate =
@@ -1740,7 +1772,21 @@ fn main() {
                 min_score: 0.0,
                 min_coverage: 0.0,
                 scope,
+                adaptive,
             };
+
+            if evidence {
+                match substrate.recall_evidence(&q) {
+                    Ok(bundle) => {
+                        println!("{}", serde_json::to_string_pretty(&bundle).unwrap());
+                    }
+                    Err(e) => {
+                        eprintln!("Recall evidence error: {e}");
+                        std::process::exit(1);
+                    }
+                }
+                return;
+            }
 
             match substrate.recall(&q) {
                 Ok(hits) => {
@@ -1771,6 +1817,63 @@ fn main() {
                 }
                 Err(e) => {
                     eprintln!("Recall error: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        Commands::EvidenceRecall {
+            request_json,
+            query,
+            limit,
+            candidate_limit,
+            historical,
+            scope,
+            adaptive,
+        } => {
+            let journal_path = store_path.join("journal.jsonl");
+            let mut substrate =
+                match Substrate::open_readonly(&store_path, Some(&journal_path), default_view()) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("Error opening store at {}: {e}", store_path.display());
+                        std::process::exit(1);
+                    }
+                };
+
+            let q = if let Some(raw) = request_json {
+                let v: serde_json::Value = serde_json::from_str(&raw).unwrap_or_else(|e| {
+                    eprintln!("Invalid request_json: {e}");
+                    std::process::exit(1);
+                });
+                RecallQuery {
+                    query: v.get("query").and_then(serde_json::Value::as_str).unwrap_or("").to_string(),
+                    limit: v.get("limit").and_then(serde_json::Value::as_u64).unwrap_or(limit as u64) as usize,
+                    candidate_limit: v.get("candidate_limit").and_then(serde_json::Value::as_u64).unwrap_or(candidate_limit as u64) as usize,
+                    include_historical: v.get("historical").and_then(serde_json::Value::as_bool).unwrap_or(historical),
+                    min_score: v.get("min_score").and_then(serde_json::Value::as_f64).unwrap_or(0.0) as f32,
+                    min_coverage: v.get("min_coverage").and_then(serde_json::Value::as_f64).unwrap_or(0.0) as f32,
+                    scope: v.get("scope").and_then(serde_json::Value::as_str).map(String::from).or(scope),
+                    adaptive: v.get("adaptive").and_then(serde_json::Value::as_bool).unwrap_or(adaptive),
+                }
+            } else {
+                RecallQuery {
+                    query: query.unwrap_or_default(),
+                    limit,
+                    candidate_limit,
+                    include_historical: historical,
+                    min_score: 0.0,
+                    min_coverage: 0.0,
+                    scope,
+                    adaptive,
+                }
+            };
+
+            match substrate.recall_evidence(&q) {
+                Ok(bundle) => {
+                    println!("{}", serde_json::to_string_pretty(&bundle).unwrap());
+                }
+                Err(e) => {
+                    eprintln!("Evidence recall error: {e}");
                     std::process::exit(1);
                 }
             }

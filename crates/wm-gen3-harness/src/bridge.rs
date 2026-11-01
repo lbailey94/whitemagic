@@ -304,6 +304,9 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "memory.search" | "memory_search" | "memory_recall" | "recall" | "memory.hybrid_recall" => {
             "memory.search"
         }
+        "memory.recall_evidence" | "memory_recall_evidence" | "recall_evidence" => {
+            "memory.recall_evidence"
+        }
         "memory.read" | "memory_read" | "memory.get" | "memory_get" | "get" => "memory.read",
         "memory.list" | "memory_list" => "memory.list",
         "memory.count" => "memory.count",
@@ -1765,6 +1768,9 @@ pub fn execute_hybrid_tool_call(
         "memory.search" | "memory_search" | "memory_recall" | "recall" | "memory.hybrid_recall" => {
             handle_memory_search(args, substrate)
         }
+        "memory.recall_evidence" | "memory_recall_evidence" | "recall_evidence" => {
+            handle_memory_recall_evidence(args, substrate)
+        }
         "memory.read" | "memory_read" | "memory.get" | "memory_get" | "get" => {
             handle_memory_read(args, substrate)
         }
@@ -2220,6 +2226,9 @@ fn handle_memory_create(
 }
 
 fn handle_memory_search(args: &Value, substrate: &mut Substrate) -> Result<Value, String> {
+    if args.get("evidence").and_then(Value::as_bool).unwrap_or(false) {
+        return handle_memory_recall_evidence(args, substrate);
+    }
     let query = args
         .get("query")
         .and_then(Value::as_str)
@@ -2244,6 +2253,7 @@ fn handle_memory_search(args: &Value, substrate: &mut Substrate) -> Result<Value
         min_score: 0.0,
         min_coverage: 0.0,
         scope,
+        adaptive: false,
     };
 
     let hits = substrate
@@ -2278,6 +2288,83 @@ fn handle_memory_search(args: &Value, substrate: &mut Substrate) -> Result<Value
         "query": query,
         "count": results.len(),
         "results": results
+    }))
+}
+
+fn handle_memory_recall_evidence(args: &Value, substrate: &mut Substrate) -> Result<Value, String> {
+    let query = args
+        .get("query")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Missing required parameter 'query'".to_string())?
+        .trim();
+    if query.is_empty() {
+        return Err("Parameter 'query' cannot be empty".to_string());
+    }
+
+    let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(10) as usize;
+    let candidate_limit = args.get("candidate_limit").and_then(Value::as_u64).unwrap_or(40) as usize;
+    let historical = args
+        .get("historical")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let adaptive = args
+        .get("adaptive")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let scope = args.get("scope").and_then(Value::as_str).map(String::from);
+    let min_score = args.get("min_score").and_then(Value::as_f64).unwrap_or(0.0) as f32;
+    let min_coverage = args.get("min_coverage").and_then(Value::as_f64).unwrap_or(0.0) as f32;
+
+    let q = RecallQuery {
+        query: query.to_string(),
+        limit,
+        candidate_limit,
+        include_historical: historical,
+        min_score,
+        min_coverage,
+        scope,
+        adaptive,
+    };
+
+    let bundle = substrate
+        .recall_evidence(&q)
+        .map_err(|e| format!("Recall evidence failed: {e}"))?;
+
+    let hits_with_uuid: Vec<Value> = bundle.hits.iter().map(|hit| {
+        let uuid = substrate
+            .lookup_uuid_by_id(hit.id)
+            .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &hit.id.to_be_bytes()));
+        json!({
+            "id": uuid.to_string(),
+            "record_id": hit.id,
+            "uuid": uuid.to_string(),
+            "content": hit.content,
+            "score": hit.score,
+            "rank": hit.rank,
+            "source": hit.source,
+            "superseded_by": hit.superseded_by,
+            "superseded_by_record_id": hit.superseded_by_record_id,
+            "superseded_by_relation_id": hit.superseded_by_relation_id
+        })
+    }).collect();
+
+    Ok(json!({
+        "status": "success",
+        "query": query,
+        "coverage": bundle.coverage,
+        "disposition": bundle.disposition,
+        "stop_reason": bundle.stop_reason,
+        "abstention_recommended": bundle.abstention_recommended,
+        "adaptive_expanded": bundle.adaptive_expanded,
+        "candidate_count": bundle.candidate_count,
+        "examined_count": bundle.examined_count,
+        "total_content_bytes": bundle.total_content_bytes,
+        "observed_snapshot_epoch": bundle.observed_snapshot_epoch,
+        "uncovered_facets": bundle.uncovered_facets,
+        "evidence_record_ids": bundle.evidence_record_ids,
+        "source_links": bundle.source_links,
+        "revision_links": bundle.revision_links,
+        "hits": hits_with_uuid
     }))
 }
 
@@ -2542,6 +2629,7 @@ fn handle_memory_search_batch(args: &Value, substrate: &mut Substrate) -> Result
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
         };
         let hits = substrate.recall(&q).unwrap_or_default();
         let results: Vec<Value> = hits
@@ -3068,6 +3156,7 @@ fn handle_memory_aggregate(args: &Value, substrate: &mut Substrate) -> Result<Va
                 min_score: 0.0,
                 min_coverage: 0.0,
                 scope: None,
+                adaptive: false,
             })
             .map_err(|e| format!("aggregate query failed: {e}"))?
             .into_iter()
@@ -3225,6 +3314,7 @@ fn handle_memory_query(args: &Value, substrate: &mut Substrate) -> Result<Value,
         min_score: 0.0,
         min_coverage: 0.0,
         scope: None,
+        adaptive: false,
     };
 
     let hits = substrate.recall(&q).unwrap_or_default();

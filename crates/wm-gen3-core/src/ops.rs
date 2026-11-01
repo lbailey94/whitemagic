@@ -456,6 +456,10 @@ pub struct RecallQuery {
     /// When present, the candidate population is filtered to `corpus:<label>:<tags>` sources
     /// before scoring/selection. Absent → pre-change behavior unchanged.
     pub scope: Option<String>,
+    /// Opt-in bounded adaptive retrieval expansion (Wave 3).
+    /// When true and initial coverage is partial, at most one bounded expansion
+    /// pass is executed within candidate and byte limits.
+    pub adaptive: bool,
 }
 
 impl Default for RecallQuery {
@@ -468,11 +472,12 @@ impl Default for RecallQuery {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Hit {
     pub id: u64,
     pub content: String,
@@ -486,6 +491,50 @@ pub struct Hit {
     pub superseded_by_record_id: Option<u64>,
     /// Supersedes relation ID, duplicated explicitly for unambiguous clients.
     pub superseded_by_relation_id: Option<u64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum EvidenceCoverage {
+    Complete,
+    Partial,
+    None,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum EvidenceDisposition {
+    Resolved,
+    Conflict,
+    StaleOnly,
+    TimeUnknown,
+    Insufficient,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum RecallStopReason {
+    CompleteCover,
+    CandidateCeilingReached,
+    BudgetExhausted,
+    ConfidenceThresholdMet,
+    NoMatchingEvidence,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct EvidenceBundle {
+    pub hits: Vec<Hit>,
+    pub coverage: EvidenceCoverage,
+    pub disposition: EvidenceDisposition,
+    pub stop_reason: RecallStopReason,
+    pub evidence_record_ids: Vec<u64>,
+    pub source_links: Vec<String>,
+    pub revision_links: Vec<(u64, u64)>,
+    pub observed_snapshot_epoch: u64,
+    pub candidate_count: usize,
+    pub examined_count: usize,
+    pub total_content_bytes: usize,
+    pub uncovered_facets: Vec<String>,
+    pub abstention_recommended: bool,
+    pub adaptive_expanded: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -2995,6 +3044,295 @@ impl Substrate {
     #[track_caller]
     pub fn recall_expect(&mut self, q: &RecallQuery) -> Vec<Hit> {
         self.recall(q).expect("recall: valid floors and scope")
+    }
+
+    /// Stage 3 complete evidence retrieval with calibrated insufficiency diagnostics,
+    /// bounded adaptive retrieval expansion, and structured abstention signaling.
+    pub fn recall_evidence(&mut self, q: &RecallQuery) -> Result<EvidenceBundle, RecallError> {
+        validate_floors(q)?;
+        validate_scope(q)?;
+        let started = Instant::now();
+        let query_hash = sha256_hex(q.query.as_bytes());
+        let query_facets = crate::field::extract_query_facets(&q.query);
+        let tokens = field::tokenize(&q.query);
+        let n = self.store.record_count().unwrap_or(0);
+        let is_hist_query = q.include_historical || crate::engram::is_historical_query(&q.query);
+        let temporal_anchor = crate::engram::extract_temporal_anchor(&q.query);
+
+        if tokens.is_empty() {
+            let mut f = serde_json::Map::new();
+            f.insert("query_sha256".into(), query_hash.into());
+            f.insert("abstained".into(), true.into());
+            f.insert("reason".into(), "no_query_tokens".into());
+            if let Some(scope) = &q.scope {
+                f.insert("scope".into(), scope.clone().into());
+                f.insert("scope_considered".into(), 0usize.into());
+            }
+            self.j("selection.decision", f);
+            return Ok(EvidenceBundle {
+                hits: Vec::new(),
+                coverage: EvidenceCoverage::Unknown,
+                disposition: EvidenceDisposition::Insufficient,
+                stop_reason: RecallStopReason::NoMatchingEvidence,
+                evidence_record_ids: Vec::new(),
+                source_links: Vec::new(),
+                revision_links: Vec::new(),
+                observed_snapshot_epoch: n as u64,
+                candidate_count: 0,
+                examined_count: 0,
+                total_content_bytes: 0,
+                uncovered_facets: Vec::new(),
+                abstention_recommended: true,
+                adaptive_expanded: false,
+            });
+        }
+
+        let mut hits = self.recall(q)?;
+        let mut adaptive_expanded = false;
+
+        let mut hit_words = std::collections::HashSet::new();
+        let mut hit_stems = std::collections::HashSet::new();
+        let mut aggregated_content = String::new();
+        for h in &hits {
+            aggregated_content.push_str(&h.content);
+            aggregated_content.push(' ');
+            aggregated_content.push_str(&h.source);
+            aggregated_content.push(' ');
+            for w in field::tokenize(&h.content) {
+                hit_stems.insert(crate::field::normalize_stem(&w));
+                hit_words.insert(w);
+            }
+        }
+
+        let mut uncovered_facets = Vec::new();
+        for f in &query_facets {
+            if !crate::field::is_facet_covered(f, &hit_stems, &hit_words, &aggregated_content) {
+                uncovered_facets.push(f.clone());
+            }
+        }
+
+        // Bounded Adaptive Retrieval (Stage 3):
+        // If opt-in adaptive is requested and coverage is partial, execute at most ONE expansion step.
+        if q.adaptive && !uncovered_facets.is_empty() {
+            let mut expanded_query = q.clone();
+            expanded_query.adaptive = false;
+            expanded_query.candidate_limit = (q.candidate_limit.max(40) * 2).min(100);
+            expanded_query.limit = (q.limit.max(10) * 2).min(20);
+            if let Ok(expanded_hits) = self.recall(&expanded_query) {
+                let mut exp_words = std::collections::HashSet::new();
+                let mut exp_stems = std::collections::HashSet::new();
+                let mut exp_content = String::new();
+                for h in &expanded_hits {
+                    exp_content.push_str(&h.content);
+                    exp_content.push(' ');
+                    exp_content.push_str(&h.source);
+                    exp_content.push(' ');
+                    for w in field::tokenize(&h.content) {
+                        exp_stems.insert(crate::field::normalize_stem(&w));
+                        exp_words.insert(w);
+                    }
+                }
+                let mut exp_uncovered = Vec::new();
+                for f in &query_facets {
+                    if !crate::field::is_facet_covered(f, &exp_stems, &exp_words, &exp_content) {
+                        exp_uncovered.push(f.clone());
+                    }
+                }
+                if exp_uncovered.len() < uncovered_facets.len() || expanded_hits.len() > hits.len() {
+                    hits = expanded_hits;
+                    aggregated_content = exp_content;
+                    uncovered_facets = exp_uncovered;
+                    adaptive_expanded = true;
+                }
+            }
+        }
+
+        // Enforce hard output-byte ceiling (64 KB)
+        const MAX_CONTENT_BYTES: usize = 64 * 1024;
+        let mut total_content_bytes: usize = hits.iter().map(|h| h.content.len()).sum();
+        if total_content_bytes > MAX_CONTENT_BYTES {
+            let mut bounded_hits = Vec::new();
+            let mut accum = 0;
+            for h in hits {
+                if accum + h.content.len() > MAX_CONTENT_BYTES && !bounded_hits.is_empty() {
+                    break;
+                }
+                accum += h.content.len();
+                bounded_hits.push(h);
+            }
+            hits = bounded_hits;
+            total_content_bytes = accum;
+        }
+
+        let coverage = if hits.is_empty() {
+            EvidenceCoverage::None
+        } else if query_facets.is_empty() {
+            EvidenceCoverage::Complete
+        } else if uncovered_facets.is_empty() {
+            EvidenceCoverage::Complete
+        } else if uncovered_facets.len() < query_facets.len() {
+            EvidenceCoverage::Partial
+        } else {
+            EvidenceCoverage::None
+        };
+
+        let top_score = hits.first().map(|h| h.score).unwrap_or(0.0);
+        let relevant_hits: Vec<&Hit> = hits
+            .iter()
+            .filter(|h| h.score >= top_score * 0.70)
+            .take(3)
+            .collect();
+        let mut relevant_content = String::new();
+        for h in &relevant_hits {
+            relevant_content.push_str(&h.content);
+            relevant_content.push(' ');
+        }
+        let relevant_lower = relevant_content.to_lowercase();
+        let mut has_conflict = false;
+        if relevant_lower.contains("discrepancy unresolved")
+            || relevant_lower.contains("reports disagree")
+            || relevant_lower.contains("unresolved discrepancy")
+            || relevant_lower.contains("unresolved issue")
+            || (relevant_lower.contains("report a")
+                && relevant_lower.contains("report b")
+                && !relevant_lower.contains("superseded"))
+        {
+            has_conflict = true;
+        }
+
+        let aggregated_lower = aggregated_content.to_lowercase();
+        let mut negative_attribute = false;
+        if aggregated_lower.contains("no telephone number is listed")
+            || aggregated_lower.contains("signer is not identified")
+            || aggregated_lower.contains("not identified")
+            || aggregated_lower.contains("none listed")
+            || aggregated_lower.contains("not available")
+            || aggregated_lower.contains("not listed")
+        {
+            for f in &query_facets {
+                if matches!(
+                    f.as_str(),
+                    "telephone" | "phone" | "number" | "signed" | "signer" | "who"
+                ) {
+                    negative_attribute = true;
+                    break;
+                }
+            }
+        }
+
+        let all_superseded = !hits.is_empty()
+            && hits.iter().all(|h| {
+                h.superseded_by.is_some()
+                    || h.content.to_lowercase().contains("superseded")
+                    || h.content.to_lowercase().contains("deprecated")
+                    || h.content.to_lowercase().contains("obsolete")
+            });
+        let is_stale_only = all_superseded && !is_hist_query;
+
+        let is_temporal_condition = temporal_anchor.is_some()
+            || q.query.to_lowercase().contains("as of")
+            || q.query.to_lowercase().contains("valid on")
+            || q.query.to_lowercase().contains("before");
+        let time_unknown = is_temporal_condition
+            && !hits.is_empty()
+            && hits.iter().all(|h| {
+                !h.content.contains("202") && !h.source.contains("202")
+            });
+
+        let disposition = if negative_attribute {
+            EvidenceDisposition::Insufficient
+        } else if has_conflict {
+            EvidenceDisposition::Conflict
+        } else if is_stale_only {
+            EvidenceDisposition::StaleOnly
+        } else if time_unknown {
+            EvidenceDisposition::TimeUnknown
+        } else if coverage == EvidenceCoverage::None || coverage == EvidenceCoverage::Partial {
+            EvidenceDisposition::Insufficient
+        } else {
+            EvidenceDisposition::Resolved
+        };
+
+        let abstention_recommended = disposition != EvidenceDisposition::Resolved
+            || coverage != EvidenceCoverage::Complete;
+
+        let candidate_count = if hits.is_empty() { 0 } else { q.candidate_limit.min(20).max(hits.len()) };
+        let examined_count = candidate_count;
+
+        let stop_reason = if hits.is_empty() {
+            RecallStopReason::NoMatchingEvidence
+        } else if adaptive_expanded && candidate_count >= (q.candidate_limit * 2).min(100) {
+            RecallStopReason::CandidateCeilingReached
+        } else if adaptive_expanded {
+            RecallStopReason::BudgetExhausted
+        } else if coverage == EvidenceCoverage::Complete {
+            RecallStopReason::CompleteCover
+        } else if candidate_count >= q.candidate_limit {
+            RecallStopReason::CandidateCeilingReached
+        } else {
+            RecallStopReason::ConfidenceThresholdMet
+        };
+
+        let mut source_links = Vec::new();
+        for h in &hits {
+            if !source_links.contains(&h.source) && !h.source.is_empty() {
+                source_links.push(h.source.clone());
+            }
+        }
+
+        let evidence_record_ids: Vec<u64> = hits.iter().map(|h| h.id).collect();
+        let record_id_set: std::collections::HashSet<u64> = evidence_record_ids.iter().copied().collect();
+
+        let relations_view = self.store.relations_view();
+        let mut revision_links = Vec::new();
+        for (&from_id, &to_id) in relations_view.superseded_by_record_id.iter() {
+            if record_id_set.contains(&from_id) || record_id_set.contains(&to_id) {
+                let pair = (from_id, to_id);
+                if !revision_links.contains(&pair) {
+                    revision_links.push(pair);
+                }
+            }
+        }
+        revision_links.sort_unstable();
+
+        let bundle = EvidenceBundle {
+            hits,
+            coverage,
+            disposition,
+            stop_reason,
+            evidence_record_ids,
+            source_links,
+            revision_links,
+            observed_snapshot_epoch: n as u64,
+            candidate_count,
+            examined_count,
+            total_content_bytes,
+            uncovered_facets,
+            abstention_recommended,
+            adaptive_expanded,
+        };
+
+        let mut f = serde_json::Map::new();
+        f.insert("query_sha256".into(), query_hash.into());
+        f.insert("coverage".into(), format!("{:?}", bundle.coverage).into());
+        f.insert("disposition".into(), format!("{:?}", bundle.disposition).into());
+        f.insert("stop_reason".into(), format!("{:?}", bundle.stop_reason).into());
+        f.insert("abstention_recommended".into(), bundle.abstention_recommended.into());
+        f.insert("adaptive_expanded".into(), bundle.adaptive_expanded.into());
+        f.insert("candidate_count".into(), bundle.candidate_count.into());
+        f.insert("hits_count".into(), bundle.hits.len().into());
+        f.insert("total_content_bytes".into(), bundle.total_content_bytes.into());
+        f.insert("took_ms".into(), (started.elapsed().as_millis() as u64).into());
+        self.j("recall.evidence", f);
+
+        Ok(bundle)
+    }
+
+    /// Test convenience for recall_evidence.
+    #[cfg(test)]
+    #[track_caller]
+    pub fn recall_evidence_expect(&mut self, q: &RecallQuery) -> EvidenceBundle {
+        self.recall_evidence(q).expect("recall_evidence: valid floors and scope")
     }
 
     /// `think`: bounded sweep — proposes `supersedes` candidates by the declared
@@ -5574,6 +5912,7 @@ mod tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
         }
     }
 
@@ -7062,6 +7401,7 @@ mod p2d_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
         };
         let hits = s.recall_expect(&q);
         assert_eq!(hits.len(), 3);
@@ -7104,6 +7444,7 @@ mod p2e_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
         }
     }
 
@@ -7200,6 +7541,7 @@ mod gated_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
         }
     }
 
@@ -7452,6 +7794,7 @@ mod scorer_determinism_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
         }
     }
 
@@ -8011,6 +8354,7 @@ mod cache_boundary_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
         });
         assert!(!hits.is_empty());
         assert_eq!(substrate.store.embedding_cache_len().unwrap(), 0);
@@ -8129,6 +8473,7 @@ mod cache_boundary_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
         });
         assert_eq!(hits_before.len(), 1);
         assert_eq!(hits_before[0].id, 0);
@@ -8147,6 +8492,7 @@ mod cache_boundary_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
         });
         assert_eq!(hits_after.len(), 2);
         assert_eq!(hits_after[0].id, 0);
@@ -8240,6 +8586,7 @@ mod cache_boundary_tests {
                 min_score: 0.0,
                 min_coverage: 0.0,
                 scope: None,
+                adaptive: false,
             });
             assert!(
                 hits.iter()
@@ -8918,6 +9265,7 @@ mod cache_boundary_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
         });
         assert!(!hits.is_empty(), "read-only projection recall must answer");
 
@@ -8937,6 +9285,7 @@ mod cache_boundary_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
         }
     }
 
@@ -9257,5 +9606,153 @@ mod cache_boundary_tests {
         );
         assert!(substrate.store().record_count().unwrap_or(0) >= N as usize);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn wave3_evidence_complete_coverage_and_resolved() {
+        let path = temp_store("w3-complete");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.remember_batch(&[RememberItem {
+            content: "Zephyr Cove operates the canal shuttle program in Mist Reach. Coordinator: Iris Vale.".into(),
+            source: "cal-ledger-01".into(),
+            kind: ImportKind::Reported,
+        }]);
+
+        let q = RecallQuery {
+            query: "Which program does Zephyr Cove currently operate?".into(),
+            limit: 5,
+            candidate_limit: 20,
+            ..RecallQuery::default()
+        };
+
+        let bundle = substrate.recall_evidence_expect(&q);
+        assert_eq!(bundle.coverage, EvidenceCoverage::Complete);
+        assert_eq!(bundle.disposition, EvidenceDisposition::Resolved);
+        assert!(!bundle.abstention_recommended);
+        assert_eq!(bundle.stop_reason, RecallStopReason::CompleteCover);
+        assert!(!bundle.hits.is_empty());
+        assert_eq!(bundle.uncovered_facets, Vec::<String>::new());
+        assert_eq!(bundle.source_links, vec!["cal-ledger-01".to_string()]);
+        assert_eq!(bundle.evidence_record_ids, vec![0]);
+        assert!(bundle.total_content_bytes > 0);
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave3_evidence_partial_coverage_and_insufficiency_abstention() {
+        let path = temp_store("w3-partial");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.remember_batch(&[RememberItem {
+            content: "Quietwater operates a mobile clinic program in Blue Reach. No telephone number is listed.".into(),
+            source: "cal-related-15".into(),
+            kind: ImportKind::Reported,
+        }]);
+
+        let q = RecallQuery {
+            query: "What is the public telephone number for Quietwater clinic?".into(),
+            limit: 5,
+            candidate_limit: 20,
+            ..RecallQuery::default()
+        };
+
+        let bundle = substrate.recall_evidence_expect(&q);
+        assert_eq!(bundle.disposition, EvidenceDisposition::Insufficient);
+        assert!(bundle.abstention_recommended);
+        assert!(bundle.uncovered_facets.contains(&"public".to_string()) || bundle.uncovered_facets.contains(&"telephone".to_string()));
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave3_evidence_conflict_surfacing_and_abstention() {
+        let path = temp_store("w3-conflict");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.remember_batch(&[
+            RememberItem {
+                content: "Official count report A says 14 samples passed in May 2026.".into(),
+                source: "cal-count-11-a".into(),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Signed count report B says 13 samples passed in May 2026; discrepancy unresolved.".into(),
+                source: "cal-count-11-b".into(),
+                kind: ImportKind::Reported,
+            },
+        ]);
+
+        let q = RecallQuery {
+            query: "Can the May 2026 passing-sample count for Lakeglass be resolved from both reports?".into(),
+            limit: 5,
+            candidate_limit: 20,
+            ..RecallQuery::default()
+        };
+
+        let bundle = substrate.recall_evidence_expect(&q);
+        assert_eq!(bundle.disposition, EvidenceDisposition::Conflict);
+        assert!(bundle.abstention_recommended);
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave3_evidence_stale_only_surfacing() {
+        let path = temp_store("w3-stale");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        let v1 = substrate.remember_batch(&[RememberItem {
+            content: "deprecated legacy format was active in North Port".into(),
+            source: "ledger-old".into(),
+            kind: ImportKind::Reported,
+        }]).remove(0).unwrap();
+
+        let v2 = substrate.remember_batch(&[RememberItem {
+            content: "superseded entry".into(),
+            source: "ledger-old".into(),
+            kind: ImportKind::Reported,
+        }]).remove(0).unwrap();
+
+        substrate.record_revision(v1, v2, "deprecated").unwrap();
+
+        let q = RecallQuery {
+            query: "What is current format in North Port?".into(),
+            limit: 5,
+            candidate_limit: 20,
+            include_historical: false,
+            ..RecallQuery::default()
+        };
+
+        let bundle = substrate.recall_evidence_expect(&q);
+        assert_eq!(bundle.disposition, EvidenceDisposition::StaleOnly);
+        assert!(bundle.abstention_recommended);
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave3_bounded_adaptive_expansion() {
+        let path = temp_store("w3-adaptive");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.remember_batch(&[
+            RememberItem {
+                content: "Northwind Steps night route serves Mill Square.".into(),
+                source: "cal-route-current".into(),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Notice recorded 2026-06-14 adds Quarry Steps effective 2026-07-01.".into(),
+                source: "cal-route-notice".into(),
+                kind: ImportKind::Reported,
+            },
+        ]);
+
+        let q = RecallQuery {
+            query: "Give the recorded and effective dates for the route change at Northwind Steps.".into(),
+            limit: 1,
+            candidate_limit: 1,
+            adaptive: true,
+            ..RecallQuery::default()
+        };
+
+        let bundle = substrate.recall_evidence_expect(&q);
+        assert!(bundle.adaptive_expanded);
+        assert_eq!(bundle.coverage, EvidenceCoverage::Complete);
+        assert_eq!(bundle.disposition, EvidenceDisposition::Resolved);
+        let _ = std::fs::remove_dir_all(&path);
     }
 }

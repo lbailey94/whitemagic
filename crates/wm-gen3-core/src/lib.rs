@@ -134,9 +134,9 @@ pub use valkyrie::{
 
 pub use factory::{FactoryAdjudication, FactoryCandidate, SoftwareFactory, SoftwareFactoryConfig};
 pub use ops::{
-    MemCutAuditReport, MemoryWorthStats, ObligationStatus, ProspectiveObligation,
-    SessionCheckpoint, SessionContinuityView, VectorProjectionState, VectorRepairReport,
-    WriteWorthAssessment,
+    EvidenceBundle, EvidenceCoverage, EvidenceDisposition, MemCutAuditReport, MemoryWorthStats,
+    ObligationStatus, ProspectiveObligation, RecallStopReason, SessionCheckpoint,
+    SessionContinuityView, VectorProjectionState, VectorRepairReport, WriteWorthAssessment,
 };
 pub use sweep::{ChamberAuditReport, CognitiveChamber, is_disposable_telemetry};
 pub use transport::{

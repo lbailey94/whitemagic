@@ -321,6 +321,7 @@ pub fn run_grimoire_with_home(
         min_score: 0.0,
         min_coverage: 0.0,
         scope: None,
+        adaptive: false,
     };
 
     let verify_start = Instant::now();
