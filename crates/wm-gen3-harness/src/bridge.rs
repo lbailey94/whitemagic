@@ -35,6 +35,7 @@ use wm_gen3_core::ops::{
     Substrate, compose_session_digest,
 };
 use wm_gen3_core::sutra::{CANONICAL_MUDRAS, CompoundSutra, MudraEnvironment, SutraGlyph};
+use wm_gen3_core::temporal::{TemporalAssertionRequest, TemporalQuery};
 
 /// Active MCP Tool Profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -317,6 +318,8 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "memory.aggregate" => "memory.aggregate",
         "memory.query" | "memory.filter" => "memory.query",
         "memory.ingest" => "memory.ingest",
+        "memory.temporal_assert" => "memory.temporal_assert",
+        "memory.temporal_query" => "memory.temporal_query",
         "session.record" | "session_record" => "session.record",
         "session.continuity" | "session_continuity" => "session.continuity",
         "session.checkpoint" | "session_checkpoint" => "session.checkpoint",
@@ -992,6 +995,55 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
             }
         },
         {
+            "name": "memory.temporal_assert",
+            "title": "Assert Temporal Metadata",
+            "description": format!("Attach one explicit valid-time field assertion to an existing canonical record. recorded_at is assigned by the store; this does not verify truth.{mode_hint}"),
+            "inputSchema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "operation_id": { "type": "string" },
+                    "record_id": { "type": "integer", "minimum": 0 },
+                    "namespace": { "type": "string" },
+                    "subject": { "type": "string" },
+                    "predicate": { "type": "string" },
+                    "source_id": { "type": "string" },
+                    "value": { "type": "string" },
+                    "valid_from": { "$ref": "#/$defs/temporalBound" },
+                    "valid_until": { "$ref": "#/$defs/temporalBound" },
+                    "supersedes": { "type": ["integer", "null"], "minimum": 1 }
+                },
+                "$defs": {
+                    "temporalBound": {
+                        "oneOf": [
+                            { "type": "object", "additionalProperties": false, "properties": { "kind": { "const": "instant" }, "at": { "type": "string", "format": "date-time" } }, "required": ["kind", "at"] },
+                            { "type": "object", "additionalProperties": false, "properties": { "kind": { "const": "unbounded" } }, "required": ["kind"] },
+                            { "type": "object", "additionalProperties": false, "properties": { "kind": { "const": "unknown" } }, "required": ["kind"] }
+                        ]
+                    }
+                },
+                "required": ["operation_id", "record_id", "namespace", "subject", "predicate", "source_id", "value", "valid_from", "valid_until"]
+            }
+        },
+        {
+            "name": "memory.temporal_query",
+            "title": "Query Temporal Evidence",
+            "description": "Query scoped temporal source assertions and their statuses; results are evidence, not verified facts.",
+            "inputSchema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "mode": { "type": "string", "enum": ["current", "history", "as_of"] },
+                    "namespace": { "type": "string" },
+                    "subject": { "type": "string" },
+                    "predicate": { "type": ["string", "null"] },
+                    "valid_at": { "type": ["string", "null"], "format": "date-time", "description": "Offset-bearing RFC3339 valid time; required for as_of and forbidden for current/history." },
+                    "known_at": { "type": ["string", "null"], "format": "date-time", "description": "Optional offset-bearing RFC3339 knowledge cutoff; forbidden for current, defaults to now for as_of/history." }
+                },
+                "required": ["mode", "namespace", "subject"]
+            }
+        },
+        {
             "name": "memory.read",
             "title": "Read Memory",
             "description": "Retrieve a specific memory by its numeric record ID or UUID string.",
@@ -1642,6 +1694,13 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
     if let Value::Array(ref mut list) = tools {
         list.extend(sutra_tool_schemas_full(mode_hint));
     }
+    if readonly {
+        if let Value::Array(ref mut list) = tools {
+            list.retain(|tool| {
+                tool.get("name").and_then(Value::as_str) != Some("memory.temporal_assert")
+            });
+        }
+    }
     tools
 }
 
@@ -1681,6 +1740,27 @@ pub fn execute_hybrid_tool_call(
         // ── Memory Operations ──────────────────────────────────────────────
         "memory.create" | "memory_create" | "memory_remember" | "remember" => {
             handle_memory_create(args, substrate, readonly)
+        }
+        "memory.temporal_assert" => {
+            if readonly {
+                return Err("read-only mode: temporal assertion refused".into());
+            }
+            let request: TemporalAssertionRequest = serde_json::from_value(args.clone())
+                .map_err(|e| format!("invalid temporal assertion request: {e}"))?;
+            substrate.set_intake_authority(RatifiedChannel::mint("wm-temporal-assertion"));
+            let authority = RatifiedChannel::mint("wm-temporal-assertion");
+            let result = substrate
+                .assert_temporal(&authority, request)
+                .map_err(|e| e.to_string())?;
+            serde_json::to_value(result)
+                .map_err(|e| format!("serialize temporal assertion result: {e}"))
+        }
+        "memory.temporal_query" => {
+            let query: TemporalQuery = serde_json::from_value(args.clone())
+                .map_err(|e| format!("invalid temporal query: {e}"))?;
+            let result = substrate.query_temporal(query).map_err(|e| e.to_string())?;
+            serde_json::to_value(result)
+                .map_err(|e| format!("serialize temporal query result: {e}"))
         }
         "memory.search" | "memory_search" | "memory_recall" | "recall" | "memory.hybrid_recall" => {
             handle_memory_search(args, substrate)
@@ -2186,7 +2266,9 @@ fn handle_memory_search(args: &Value, substrate: &mut Substrate) -> Result<Value
                 "source": hit.source,
                 "recall_mode": "substrate",
                 "galaxy": crate::starter_galaxy::extract_galaxy_from_source(&hit.source),
-                "superseded_by": hit.superseded_by
+                "superseded_by": hit.superseded_by,
+                "superseded_by_record_id": hit.superseded_by_record_id,
+                "superseded_by_relation_id": hit.superseded_by_relation_id
             })
         })
         .collect();
@@ -2224,6 +2306,13 @@ fn handle_memory_read(args: &Value, substrate: &Substrate) -> Result<Value, Stri
         .into_iter()
         .find(|entry| entry.record_id == record_id)
         .map(|entry| entry.new_record_id);
+    // The legacy memory.read field intentionally means revision-journal
+    // successor record ID. Explicit identifiers describe one selected stored
+    // edge, using the same direction/order as recall; inconsistent journal and
+    // graph state can therefore produce a different legacy successor.
+    let stored_edge = substrate.supersession_edge(record_id);
+    let superseded_by_record_id = stored_edge.map(|(_, successor_id)| successor_id);
+    let superseded_by_relation_id = stored_edge.map(|(relation_id, _)| relation_id);
     let authoritative_head_id = revision_chain
         .last()
         .map(|entry| entry.new_record_id)
@@ -2244,6 +2333,8 @@ fn handle_memory_read(args: &Value, substrate: &Substrate) -> Result<Value, Stri
             "confidence": record.confidence(),
             "galaxy": galaxy,
             "superseded_by": superseded_by,
+            "superseded_by_record_id": superseded_by_record_id,
+            "superseded_by_relation_id": superseded_by_relation_id,
             "authoritative_head_id": authoritative_head_id
         }
     }))
@@ -8666,6 +8757,125 @@ mod profile_and_allowlist_tests {
     }
 
     #[test]
+    fn temporal_routes_are_full_profile_only_and_readonly_hides_assertion() {
+        let writable = get_tools_list_for_profile(McpProfile::Full, false);
+        let readonly = get_tools_list_for_profile(McpProfile::Full, true);
+        let cyberbrain = get_tools_list_for_profile(McpProfile::Cyberbrain, false);
+        let names = |tools: &Value| {
+            tools
+                .as_array()
+                .expect("tool array")
+                .iter()
+                .filter_map(|tool| tool.get("name").and_then(Value::as_str))
+                .map(str::to_owned)
+                .collect::<HashSet<_>>()
+        };
+        let writable_names = names(&writable);
+        let readonly_names = names(&readonly);
+        let cyberbrain_names = names(&cyberbrain);
+        assert!(writable_names.contains("memory.temporal_assert"));
+        assert!(writable_names.contains("memory.temporal_query"));
+        assert!(!readonly_names.contains("memory.temporal_assert"));
+        assert!(readonly_names.contains("memory.temporal_query"));
+        assert!(!cyberbrain_names.contains("memory.temporal_assert"));
+        assert!(!cyberbrain_names.contains("memory.temporal_query"));
+        assert!(profile_allows_tool(
+            McpProfile::Full,
+            "memory.temporal_assert"
+        ));
+        assert!(profile_allows_tool(
+            McpProfile::Full,
+            "memory.temporal_query"
+        ));
+        assert!(!profile_allows_tool(
+            McpProfile::Cyberbrain,
+            "memory.temporal_assert"
+        ));
+        assert!(!profile_allows_tool(
+            McpProfile::Cyberbrain,
+            "memory.temporal_query"
+        ));
+    }
+
+    #[test]
+    fn temporal_schema_and_dispatch_reject_untrusted_fields_and_readonly_writes() {
+        let tools = get_tools_list_for_profile(McpProfile::Full, false);
+        let schemas = tools.as_array().expect("tools");
+        let assertion = schemas
+            .iter()
+            .find(|tool| tool["name"] == "memory.temporal_assert")
+            .unwrap();
+        assert_eq!(assertion["inputSchema"]["additionalProperties"], false);
+        assert_eq!(
+            assertion["inputSchema"]["properties"]["valid_from"]["$ref"],
+            "#/$defs/temporalBound"
+        );
+        let query = schemas
+            .iter()
+            .find(|tool| tool["name"] == "memory.temporal_query")
+            .unwrap();
+        assert_eq!(
+            query["inputSchema"]["properties"]["mode"]["enum"],
+            json!(["current", "history", "as_of"])
+        );
+        assert_eq!(query["inputSchema"]["additionalProperties"], false);
+
+        let (mut substrate, dir) = test_substrate("temporal-readonly");
+        let refused = execute_hybrid_tool_call(
+            "memory.temporal_assert",
+            &json!({"recorded_at":"2000-01-01T00:00:00Z"}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::Full,
+        )
+        .expect_err("readonly assertion is refused before parsing");
+        assert!(refused.contains("read-only"));
+        let unknown_assertion_field = execute_hybrid_tool_call(
+            "memory.temporal_assert",
+            &json!({"recorded_at":"2000-01-01T00:00:00Z"}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Full,
+        )
+        .expect_err("public recorded_at is not accepted");
+        assert!(unknown_assertion_field.contains("unknown field"));
+        let malformed = execute_hybrid_tool_call(
+            "memory.temporal_query",
+            &json!({"mode":"as_of","namespace":"n","subject":"s","recorded_at":"2000-01-01T00:00:00Z"}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::Full,
+        ).expect_err("unknown temporal query fields reject");
+        assert!(malformed.contains("unknown field"));
+        let current_override = execute_hybrid_tool_call(
+            "memory.temporal_query",
+            &json!({"mode":"current","namespace":"n","subject":"s","valid_at":"2000-01-01T00:00:00Z"}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::Full,
+        )
+        .expect_err("current mode rejects caller valid-time override");
+        assert!(current_override.contains("current"));
+        assert!(current_override.contains("valid_at"));
+        let empty_read = execute_hybrid_tool_call(
+            "memory.temporal_query",
+            &json!({"mode":"current","namespace":"n","subject":"s"}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::Full,
+        )
+        .expect("read-only temporal query without ledger");
+        assert_eq!(empty_read["groups"], json!([]));
+        assert!(!dir.join("temporal-assertions-v1.jsonl").exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn profile_allowlist_rejects_full_only_routes_on_cyberbrain() {
         let (mut substrate, dir) = test_substrate("matrix");
         let full_only = "mandala.triage";
@@ -10617,6 +10827,21 @@ mod diaml_and_salience_refinement_tests {
         assert_eq!(u2["record_id"], r3_id);
         assert_eq!(u2["consolidated_to_existing"], true);
 
+        // Reopen so this contract is checked against persisted relations.
+        drop(substrate);
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("reopen substrate");
+        let retired_read = handle_memory_read(&json!({"id":r1_id}), &substrate).unwrap();
+        let read_relation_id = retired_read["record"]["superseded_by_relation_id"]
+            .as_u64()
+            .expect("read relation id");
+        assert_eq!(retired_read["record"]["superseded_by"], json!(r3_id));
+        assert_eq!(
+            retired_read["record"]["superseded_by_record_id"],
+            json!(r3_id)
+        );
+        assert_ne!(read_relation_id, r3_id);
+
         // Verify revision chain (converging DAG) from r1, r2, and r3
         for check_id in [r1_id, r2_id, r3_id] {
             let rev =
@@ -10641,7 +10866,84 @@ mod diaml_and_salience_refinement_tests {
         assert!(results[0]["superseded_by"].is_null());
         for hit in &results[1..] {
             assert!(hit["superseded_by"].as_u64().is_some());
+            assert_eq!(hit["superseded_by_relation_id"], hit["superseded_by"]);
+            assert_eq!(hit["superseded_by_record_id"], r3_id);
         }
+        assert!(results[0]["superseded_by_record_id"].is_null());
+        assert!(results[0]["superseded_by_relation_id"].is_null());
+
+        // Explicit alias route carries the same identifiers as canonical search.
+        let alias_search = execute_hybrid_tool_call(
+            "memory_recall",
+            &json!({"query":"Retry policy", "limit":5}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Full,
+        )
+        .expect("memory_recall alias");
+        let alias_results = alias_search["results"].as_array().unwrap();
+        assert_eq!(alias_results.len(), results.len());
+        assert_eq!(alias_results[0], results[0]);
+        for hit in &alias_results[1..] {
+            assert_eq!(hit["superseded_by_record_id"], r3_id);
+            assert_eq!(hit["superseded_by_relation_id"], hit["superseded_by"]);
+        }
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn memory_read_explicit_pair_comes_from_one_reopened_fork_edge() {
+        let dir = std::env::temp_dir().join(format!("wm-read-fork-edge-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("open substrate");
+        let stale =
+            handle_memory_create(&json!({"content":"forked fact v1"}), &mut substrate, false)
+                .expect("stale record")["record_id"]
+                .as_u64()
+                .unwrap();
+        let journal_successor =
+            handle_memory_create(&json!({"content":"forked fact v2"}), &mut substrate, false)
+                .expect("journal successor")["record_id"]
+                .as_u64()
+                .unwrap();
+        let graph_successor = handle_memory_create(
+            &json!({"content":"alternate stored successor"}),
+            &mut substrate,
+            false,
+        )
+        .expect("graph successor")["record_id"]
+            .as_u64()
+            .unwrap();
+        handle_memory_update(
+            &json!({"id":stale, "content":"forked fact v2", "reason":"journal link"}),
+            &mut substrate,
+            false,
+        )
+        .expect("write revision journal link");
+        assert_ne!(journal_successor, graph_successor);
+        substrate.set_intake_authority(RatifiedChannel::mint("identifier-fork-fixture"));
+        let relation_id = substrate
+            .add_relation(RelationKind::Supersedes, graph_successor, stale, 0.9)
+            .expect("write later fork edge");
+        assert_ne!(relation_id, graph_successor);
+        drop(substrate);
+
+        let substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("reopen substrate");
+        let read = handle_memory_read(&json!({"id":stale}), &substrate).expect("memory.read");
+        let record = &read["record"];
+        // Legacy memory.read is journal-derived, while the explicit pair names
+        // the same stored edge selected by recall after rebuilding its cache.
+        assert_eq!(record["superseded_by"], json!(journal_successor));
+        assert_eq!(record["superseded_by_record_id"], json!(graph_successor));
+        assert_eq!(record["superseded_by_relation_id"], json!(relation_id));
+        assert_eq!(
+            substrate.supersession_edge(stale),
+            Some((relation_id, graph_successor))
+        );
 
         let _ = std::fs::remove_dir_all(&dir);
     }

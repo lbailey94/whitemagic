@@ -39,6 +39,7 @@ use wm_gen3_core::sentinel::{
     SentinelCircuitBreaker, SentinelLeaseGuard, SentinelReport, SentinelStatus,
 };
 use wm_gen3_core::store::Store;
+use wm_gen3_core::temporal::{TemporalAssertionRequest, TemporalQuery};
 use wm_gen3_harness::bridge::{
     McpProfile, build_contract_manifest, get_tools_list_for_profile, mesh_sync_peer_allowlist,
 };
@@ -111,6 +112,18 @@ enum Commands {
         /// Epistemic kind: reported (default), system, or simulated
         #[arg(long, default_value = "reported", value_parser = parse_import_kind_arg)]
         kind: ImportKind,
+    },
+    /// Attach one explicit valid-time field assertion to an existing record
+    TemporalAssert {
+        /// JSON object matching TemporalAssertionRequest; recorded_at is store-assigned
+        #[arg(long)]
+        request_json: String,
+    },
+    /// Query versioned temporal evidence with current, history, or as-of semantics
+    TemporalQuery {
+        /// JSON object matching TemporalQuery
+        #[arg(long)]
+        request_json: String,
     },
     /// Recall memories matching a query string
     Recall {
@@ -1606,6 +1619,64 @@ fn main() {
                 }
             }
         }
+        Commands::TemporalAssert { request_json } => {
+            let request: TemporalAssertionRequest = match serde_json::from_str(&request_json) {
+                Ok(request) => request,
+                Err(error) => {
+                    eprintln!("Invalid temporal assertion request JSON: {error}");
+                    std::process::exit(2);
+                }
+            };
+            let journal_path = store_path.join("journal.jsonl");
+            let mut substrate =
+                match Substrate::open(&store_path, Some(&journal_path), default_view()) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("Error opening store at {}: {e}", store_path.display());
+                        std::process::exit(1);
+                    }
+                };
+            let authority = RatifiedChannel::mint("wm-cli-temporal-assertion");
+            substrate.set_intake_authority(RatifiedChannel::mint("wm-cli-temporal-assertion"));
+            match substrate.assert_temporal(&authority, request) {
+                Ok(result) => println!(
+                    "{}",
+                    serde_json::to_string(&result).expect("serialize temporal result")
+                ),
+                Err(error) => {
+                    eprintln!("Temporal assertion refused: {error}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        Commands::TemporalQuery { request_json } => {
+            let query: TemporalQuery = match serde_json::from_str(&request_json) {
+                Ok(query) => query,
+                Err(error) => {
+                    eprintln!("Invalid temporal query JSON: {error}");
+                    std::process::exit(2);
+                }
+            };
+            let journal_path = store_path.join("journal.jsonl");
+            let substrate =
+                match Substrate::open_readonly(&store_path, Some(&journal_path), default_view()) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("Error opening store at {}: {e}", store_path.display());
+                        std::process::exit(1);
+                    }
+                };
+            match substrate.query_temporal(query) {
+                Ok(result) => println!(
+                    "{}",
+                    serde_json::to_string(&result).expect("serialize temporal result")
+                ),
+                Err(error) => {
+                    eprintln!("Temporal query refused: {error}");
+                    std::process::exit(1);
+                }
+            }
+        }
         Commands::Recall {
             query,
             limit,
@@ -1681,8 +1752,11 @@ fn main() {
                     );
                     for (i, hit) in hits.iter().enumerate() {
                         let superseded = hit
-                            .superseded_by
-                            .map(|s| format!(" [superseded by #{s}]"))
+                            .superseded_by_record_id
+                            .zip(hit.superseded_by_relation_id)
+                            .map(|(record, relation)| {
+                                format!(" [superseded by record #{record} (relation #{relation})]")
+                            })
                             .unwrap_or_default();
                         println!(
                             "\n[{}] Record #{} (score: {:.4}){}",

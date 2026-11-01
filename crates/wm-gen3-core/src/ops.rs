@@ -31,6 +31,7 @@
 //! (not a full scan), and the brute-force vector pass stays behind the existing
 //! projection gates (`set_projection_gated`/`set_projection_gate_count`).
 
+use chrono::Utc;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -479,6 +480,12 @@ pub struct Hit {
     pub score: f32,
     pub rank: usize,
     pub superseded_by: Option<u64>,
+    /// Successor record ID; `superseded_by` remains the legacy relation ID.
+    /// Adding public fields requires downstream `Hit` struct literals to name
+    /// the new fields (or use `..` with a default where appropriate).
+    pub superseded_by_record_id: Option<u64>,
+    /// Supersedes relation ID, duplicated explicitly for unambiguous clients.
+    pub superseded_by_relation_id: Option<u64>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -704,9 +711,539 @@ pub struct Substrate {
     /// tokenizer-independent full-content scan (correctness first) for this
     /// handle, and healthy opens backfill the marker.
     dedupe_full_scan: bool,
+    /// Deterministic temporal acceptance clock available only to core unit tests.
+    #[cfg(test)]
+    temporal_test_clock: Option<chrono::DateTime<Utc>>,
+    #[cfg(test)]
+    temporal_test_fail_append: bool,
 }
 
 impl Substrate {
+    fn ensure_temporal_plaintext_store(&self) -> Result<(), crate::temporal::TemporalError> {
+        match self.store.at_rest_status() {
+            crate::at_rest::AtRestStatus::Absent => Ok(()),
+            crate::at_rest::AtRestStatus::Present(_) => Err(crate::temporal::TemporalError(
+                "temporal v1 metadata is plaintext; encrypted at-rest stores are refused".into(),
+            )),
+            crate::at_rest::AtRestStatus::Malformed { .. } => Err(crate::temporal::TemporalError(
+                "temporal v1 refuses stores with malformed at-rest metadata".into(),
+            )),
+        }
+    }
+
+    fn temporal_now_utc(&self) -> chrono::DateTime<Utc> {
+        #[cfg(test)]
+        if let Some(now) = self.temporal_test_clock {
+            return now;
+        }
+        Utc::now()
+    }
+
+    #[cfg(test)]
+    fn set_temporal_test_clock(&mut self, now: chrono::DateTime<Utc>) {
+        self.temporal_test_clock = Some(now);
+    }
+
+    #[cfg(test)]
+    fn set_temporal_test_fail_append(&mut self, fail: bool) {
+        self.temporal_test_fail_append = fail;
+    }
+
+    /// Append a time-bounded operator assertion to an already existing record.
+    /// This is a separate metadata operation: failure never changes canonical intake.
+    pub fn assert_temporal(
+        &mut self,
+        authority: &crate::evidence::RatifiedChannel,
+        request: crate::temporal::TemporalAssertionRequest,
+    ) -> Result<crate::temporal::TemporalAssertionResult, crate::temporal::TemporalError> {
+        use crate::temporal::{self as t, TemporalBound};
+        self.ensure_temporal_plaintext_store()?;
+        self.require_writable("memory.temporal_assert")?;
+        let configured = self
+            .intake_authority
+            .as_ref()
+            .ok_or_else(|| t::TemporalError("ratified authority is not installed".into()))?;
+        if authority.name().is_empty() || authority.name() != configured.name() {
+            return Err(t::TemporalError(
+                "provided ratified authority does not match the installed operator authority"
+                    .into(),
+            ));
+        }
+        let (valid_from, valid_until) = t::validate_request(&request)?;
+        let path = self.store.path().to_path_buf();
+        let _lock = t::LedgerLock::acquire(&path)?;
+        let mut entries = t::load_ledger(&path.join(t::LEDGER_NAME))?;
+        let store_realm_id = t::realm_hex(
+            self.store
+                .realm_id()
+                .map_err(|e| t::TemporalError(e.to_string()))?,
+        );
+        if entries.iter().any(|e| e.store_realm_id != store_realm_id) {
+            return Err(t::TemporalError(
+                "temporal ledger is bound to a different canonical store realm".into(),
+            ));
+        }
+
+        // Bind every retained assertion to live canonical content before either replay or append.
+        for entry in &entries {
+            let record = self
+                .store
+                .get_record(entry.record_id)
+                .map_err(|e| t::TemporalError(format!("temporal record lookup failed: {e}")))?
+                .ok_or_else(|| {
+                    t::TemporalError(format!(
+                        "temporal ledger record {} is absent or erased; refusing metadata use",
+                        entry.record_id
+                    ))
+                })?;
+            if sha256_hex(record.content().as_bytes()) != entry.content_sha256
+                || record.source() != entry.record_source
+            {
+                return Err(t::TemporalError(format!(
+                    "temporal record {} binding mismatch",
+                    entry.record_id
+                )));
+            }
+        }
+        if let Some(old) = entries
+            .iter()
+            .find(|e| e.operation_id == request.operation_id)
+        {
+            if old.record_id != request.record_id
+                || old.namespace != request.namespace
+                || old.subject != request.subject
+                || old.predicate != request.predicate
+                || old.source_id != request.source_id
+                || old.value != request.value
+                || old.valid_from != valid_from
+                || old.valid_until != valid_until
+                || old.supersedes != request.supersedes
+            {
+                return Err(t::TemporalError(
+                    "operation_id was already used for a different assertion request".into(),
+                ));
+            }
+            let rec = self
+                .store
+                .get_record(old.record_id)
+                .map_err(|e| t::TemporalError(e.to_string()))?
+                .ok_or_else(|| t::TemporalError("assertion record is absent or erased".into()))?;
+            t::sync_ledger(&path.join(t::LEDGER_NAME))?;
+            return Ok(t::TemporalAssertionResult {
+                schema_version: 1,
+                assertion_id: old.assertion_id,
+                recorded_at: old.recorded_at.clone(),
+                valid_from: old.valid_from.clone(),
+                valid_until: old.valid_until.clone(),
+                record_id: old.record_id,
+                content_sha256: old.content_sha256.clone(),
+                record_source: rec.source().to_string(),
+                replayed: true,
+            });
+        }
+        if entries.len() >= t::MAX_ASSERTIONS {
+            return Err(t::TemporalError(
+                "temporal ledger assertion limit reached".into(),
+            ));
+        }
+        let record = self
+            .store
+            .get_record(request.record_id)
+            .map_err(|e| t::TemporalError(format!("temporal record lookup failed: {e}")))?
+            .ok_or_else(|| {
+                t::TemporalError(format!("record {} is absent or erased", request.record_id))
+            })?;
+        let content_sha256 = sha256_hex(record.content().as_bytes());
+        if let Some(prior_id) = request.supersedes {
+            let prior = entries
+                .iter()
+                .find(|e| e.assertion_id == prior_id)
+                .ok_or_else(|| {
+                    t::TemporalError("supersedes assertion is not present in this ledger".into())
+                })?;
+            if prior.namespace != request.namespace
+                || prior.subject != request.subject
+                || prior.predicate != request.predicate
+                || prior.source_id != request.source_id
+            {
+                return Err(t::TemporalError(
+                    "supersedes must target the same key and source_id".into(),
+                ));
+            }
+            if prior.record_id == request.record_id {
+                return Err(t::TemporalError(
+                    "correction must reference a different record".into(),
+                ));
+            }
+            let TemporalBound::Instant { at: effective_from } = &valid_from else {
+                return Err(t::TemporalError(
+                    "a correction requires an instant valid_from".into(),
+                ));
+            };
+            let _ = effective_from;
+            let (revisions, next) = self.temporal_revision_graph()?;
+            self.validate_temporal_native_path(
+                prior.record_id,
+                request.record_id,
+                &revisions,
+                &next,
+            )?;
+        }
+        // Compare and persist the same clock observation. A second clock read
+        // after validation could regress and poison an otherwise valid ledger.
+        let recorded_now = self.temporal_now_utc();
+        if let Some(last) = entries.last() {
+            if recorded_now < t::parse_instant(&last.recorded_at)? {
+                return Err(t::TemporalError(
+                    "system recorded time regressed behind the temporal ledger".into(),
+                ));
+            }
+        }
+        let recorded_at = t::format_instant(recorded_now);
+        let assertion_id = entries.len() as u64 + 1;
+        let prev_digest = entries
+            .last()
+            .map(|e| e.entry_digest.clone())
+            .unwrap_or_else(|| "genesis".into());
+        // Canonical sources can be longer than this version's temporal schema
+        // (for example after repeated revisions). Refuse before append rather
+        // than writing a row that the strict reader would then reject.
+        if record.source().is_empty()
+            || record.source().len() > t::MAX_KEY_BYTES
+            || record.source().chars().any(char::is_control)
+        {
+            return Err(t::TemporalError(
+                "canonical record_source exceeds temporal field bounds; record unchanged".into(),
+            ));
+        }
+        let mut entry = t::LedgerEntry {
+            schema_version: 1,
+            assertion_id,
+            operation_id: request.operation_id.clone(),
+            recorded_at: recorded_at.clone(),
+            record_id: request.record_id,
+            namespace: request.namespace.clone(),
+            subject: request.subject.clone(),
+            predicate: request.predicate.clone(),
+            source_id: request.source_id.clone(),
+            value: request.value.clone(),
+            valid_from: valid_from.clone(),
+            valid_until: valid_until.clone(),
+            supersedes: request.supersedes,
+            content_sha256: content_sha256.clone(),
+            record_source: record.source().to_string(),
+            store_realm_id,
+            prev_digest,
+            entry_digest: String::new(),
+        };
+        entry.entry_digest = t::digest(&entry)?;
+        let ledger = path.join(t::LEDGER_NAME);
+        if ledger.exists()
+            && std::fs::metadata(&ledger)
+                .map_err(|e| t::TemporalError(e.to_string()))?
+                .len() as usize
+                + serde_json::to_vec(&entry)
+                    .map_err(|e| t::TemporalError(e.to_string()))?
+                    .len()
+                + 1
+                > t::MAX_LEDGER_BYTES
+        {
+            return Err(t::TemporalError(
+                "temporal ledger 8MiB limit reached".into(),
+            ));
+        }
+        #[cfg(test)]
+        if self.temporal_test_fail_append {
+            t::append_torn_for_test(&ledger, &entry)?;
+            self.temporal_test_fail_append = false;
+            return Err(t::TemporalError(
+                "injected temporal append failure after partial bytes".into(),
+            ));
+        }
+        t::append_entry(&ledger, &entry)?;
+        // Reread and validate durable bytes before acknowledging the operation.
+        entries = t::load_ledger(&ledger)?;
+        let durable = entries
+            .last()
+            .ok_or_else(|| t::TemporalError("temporal ledger append disappeared".into()))?;
+        if durable.entry_digest != entry.entry_digest {
+            return Err(t::TemporalError(
+                "temporal append could not be verified".into(),
+            ));
+        }
+        Ok(t::TemporalAssertionResult {
+            schema_version: 1,
+            assertion_id,
+            recorded_at,
+            valid_from,
+            valid_until,
+            record_id: request.record_id,
+            content_sha256,
+            record_source: record.source().to_string(),
+            replayed: false,
+        })
+    }
+
+    /// Resolve retained source assertions without changing legacy recall semantics.
+    pub fn query_temporal(
+        &self,
+        query: crate::temporal::TemporalQuery,
+    ) -> Result<crate::temporal::TemporalQueryResult, crate::temporal::TemporalError> {
+        self.ensure_temporal_plaintext_store()?;
+        #[cfg(unix)]
+        {
+            self.query_temporal_unix(query)
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = query;
+            Err(crate::temporal::TemporalError(
+                "temporal queries are unsupported on this platform; v1 requires Unix file locking"
+                    .into(),
+            ))
+        }
+    }
+
+    #[cfg(unix)]
+    fn query_temporal_unix(
+        &self,
+        query: crate::temporal::TemporalQuery,
+    ) -> Result<crate::temporal::TemporalQueryResult, crate::temporal::TemporalError> {
+        use crate::temporal::{
+            self as t, TemporalBound as B, TemporalMode as M, TemporalStatus as S,
+        };
+        let now = t::format_instant(self.temporal_now_utc());
+        let (valid_at, known_at) = match query.mode {
+            M::Current => {
+                if query.valid_at.is_some() || query.known_at.is_some() {
+                    return Err(t::TemporalError(
+                        "current mode does not accept valid_at or known_at overrides".into(),
+                    ));
+                }
+                (Some(now.clone()), now.clone())
+            }
+            M::AsOf => {
+                let v = query
+                    .valid_at
+                    .as_deref()
+                    .ok_or_else(|| t::TemporalError("as_of requires valid_at".into()))?;
+                (
+                    Some(t::format_instant(t::parse_instant(v)?)),
+                    t::format_instant(match query.known_at.as_deref() {
+                        Some(k) => t::parse_instant(k)?,
+                        None => self.temporal_now_utc(),
+                    }),
+                )
+            }
+            M::History => {
+                if query.valid_at.is_some() {
+                    return Err(t::TemporalError("history does not accept valid_at".into()));
+                }
+                (
+                    None,
+                    t::format_instant(match query.known_at.as_deref() {
+                        Some(k) => t::parse_instant(k)?,
+                        None => self.temporal_now_utc(),
+                    }),
+                )
+            }
+        };
+        for (name, v) in [("namespace", &query.namespace), ("subject", &query.subject)] {
+            if v.is_empty() || v.len() > t::MAX_KEY_BYTES || v.chars().any(char::is_control) {
+                return Err(t::TemporalError(format!("invalid {name}")));
+            }
+        }
+        if query.predicate.as_ref().is_some_and(|p| {
+            p.is_empty() || p.len() > t::MAX_KEY_BYTES || p.chars().any(char::is_control)
+        }) {
+            return Err(t::TemporalError("invalid predicate".into()));
+        }
+        let ledger_path = self.store.path().join(t::LEDGER_NAME);
+        // Missing means a consistent empty view without creating a lock. An existing ledger
+        // must have its sibling writer lock and is read under a bounded shared flock.
+        let ledger_exists = match std::fs::symlink_metadata(&ledger_path) {
+            Ok(_) => true,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
+            Err(error) => {
+                return Err(t::TemporalError(format!(
+                    "temporal ledger path metadata failed: {error}"
+                )));
+            }
+        };
+        let _read_lock = if ledger_exists {
+            Some(t::LedgerReadLock::acquire(self.store.path())?)
+        } else {
+            None
+        };
+        let entries = if _read_lock.is_some() {
+            t::load_ledger(&ledger_path)?
+        } else {
+            Vec::new()
+        };
+        let store_realm_id = t::realm_hex(
+            self.store
+                .realm_id()
+                .map_err(|e| t::TemporalError(e.to_string()))?,
+        );
+        if entries.iter().any(|e| e.store_realm_id != store_realm_id) {
+            return Err(t::TemporalError(
+                "temporal ledger is bound to a different canonical store realm".into(),
+            ));
+        }
+        let known_dt = t::parse_instant(&known_at)?;
+        // Apply the knowledge cutoff and requested scope before touching canonical records.
+        let relevant: Vec<_> = entries
+            .into_iter()
+            .filter(|e| {
+                e.namespace == query.namespace
+                    && e.subject == query.subject
+                    && query.predicate.as_ref().is_none_or(|p| e.predicate == *p)
+                    && t::parse_instant(&e.recorded_at).is_ok_and(|recorded| recorded <= known_dt)
+            })
+            .collect();
+        if relevant.iter().any(|e| e.supersedes.is_some()) {
+            let (revisions, edges) = self.temporal_revision_graph()?;
+            for replacement in &relevant {
+                if let Some(prior_assertion_id) = replacement.supersedes {
+                    let prior = relevant
+                        .iter()
+                        .find(|e| e.assertion_id == prior_assertion_id)
+                        .ok_or_else(|| {
+                            t::TemporalError(
+                                "known correction target is absent from cutoff view".into(),
+                            )
+                        })?;
+                    self.validate_temporal_native_path(
+                        prior.record_id,
+                        replacement.record_id,
+                        &revisions,
+                        &edges,
+                    )?;
+                }
+            }
+        }
+        for e in &relevant {
+            let rec = self
+                .store
+                .get_record(e.record_id)
+                .map_err(|x| t::TemporalError(format!("temporal record lookup failed: {x}")))?
+                .ok_or_else(|| {
+                    t::TemporalError(format!(
+                        "temporal ledger record {} is absent or erased; refusing query",
+                        e.record_id
+                    ))
+                })?;
+            if sha256_hex(rec.content().as_bytes()) != e.content_sha256
+                || rec.source() != e.record_source
+            {
+                return Err(t::TemporalError(format!(
+                    "temporal record {} binding mismatch",
+                    e.record_id
+                )));
+            }
+        }
+        let mut predicates: std::collections::BTreeSet<String> =
+            relevant.iter().map(|e| e.predicate.clone()).collect();
+        if let Some(p) = &query.predicate {
+            predicates.insert(p.clone());
+        }
+        let mut groups = Vec::new();
+        for predicate in predicates {
+            let all: Vec<_> = relevant
+                .iter()
+                .filter(|e| e.predicate == predicate)
+                .collect();
+            if query.mode == M::History {
+                let evidence: Vec<crate::temporal::TemporalEvidence> =
+                    all.iter().map(|e| t::to_evidence(e)).collect();
+                groups.push(t::TemporalEvidenceGroup {
+                    predicate,
+                    status: if evidence.is_empty() {
+                        S::NoEvidence
+                    } else {
+                        S::History
+                    },
+                    evidence,
+                    conflicting_values: Vec::new(),
+                });
+                continue;
+            }
+            let at = t::parse_instant(valid_at.as_deref().unwrap_or(&now))?;
+            let mut terminated_at: HashMap<u64, chrono::DateTime<Utc>> = HashMap::new();
+            for e in &all {
+                if let Some(id) = e.supersedes {
+                    let correction =
+                        all.iter().find(|x| x.assertion_id == id).ok_or_else(|| {
+                            t::TemporalError(
+                                "supersedes reference missing from relevant temporal history"
+                                    .into(),
+                            )
+                        })?;
+                    if t::parse_instant(&correction.recorded_at)? <= known_dt {
+                        let B::Instant { at: effective_at } = &e.valid_from else {
+                            return Err(t::TemporalError(
+                                "correction has no instant effective bound".into(),
+                            ));
+                        };
+                        let effective = t::parse_instant(effective_at)?;
+                        terminated_at
+                            .entry(id)
+                            .and_modify(|old| *old = (*old).min(effective))
+                            .or_insert(effective);
+                    }
+                }
+            }
+            let mut certain = Vec::new();
+            let mut uncertain = Vec::new();
+            for e in &all {
+                if terminated_at
+                    .get(&e.assertion_id)
+                    .is_some_and(|end| at >= *end)
+                {
+                    continue;
+                }
+                match t::applicability(&e.valid_from, &e.valid_until, at)? {
+                    t::Applicability::Yes => certain.push(*e),
+                    t::Applicability::Unknown => uncertain.push(*e),
+                    t::Applicability::No => {}
+                }
+            }
+            let mut values: Vec<String> = certain.iter().map(|e| e.value.clone()).collect();
+            values.sort();
+            values.dedup();
+            let status = if values.len() > 1 {
+                S::Conflict
+            } else if !uncertain.is_empty() {
+                S::TimeUnknown
+            } else if values.len() == 1 {
+                S::Resolved
+            } else {
+                S::NoEvidence
+            };
+            let mut evidence: Vec<_> = certain
+                .iter()
+                .chain(uncertain.iter())
+                .map(|e| t::to_evidence(e))
+                .collect();
+            evidence.sort_by_key(|e| e.assertion_id);
+            groups.push(t::TemporalEvidenceGroup {
+                predicate,
+                status,
+                evidence,
+                conflicting_values: if values.len() > 1 { values } else { Vec::new() },
+            });
+        }
+        Ok(t::TemporalQueryResult {
+            schema_version: 1,
+            mode: query.mode,
+            namespace: query.namespace,
+            subject: query.subject,
+            valid_at,
+            known_at,
+            groups,
+        })
+    }
+
     pub fn open(
         store_path: &Path,
         journal_path: Option<&Path>,
@@ -826,6 +1363,10 @@ impl Substrate {
             id_to_uuid,
             revision_counter: None,
             dedupe_full_scan,
+            #[cfg(test)]
+            temporal_test_clock: None,
+            #[cfg(test)]
+            temporal_test_fail_append: false,
         };
         substrate.recover_revision_intents()?;
         Ok(substrate)
@@ -1247,6 +1788,19 @@ impl Substrate {
     #[must_use]
     pub fn store(&self) -> &Store {
         &self.store
+    }
+
+    /// Return the selected stored `Supersedes` edge for a stale record as
+    /// `(relation_id, successor_record_id)`, using the same cached direction
+    /// and relation ordering as recall. This reports stored graph state only;
+    /// it does not reconcile that edge with revision journal metadata.
+    #[must_use]
+    pub fn supersession_edge(&self, stale_record_id: u64) -> Option<(u64, u64)> {
+        let view = self.store.relations_view();
+        Some((
+            *view.superseded_by.get(&stale_record_id)?,
+            *view.superseded_by_record_id.get(&stale_record_id)?,
+        ))
     }
 
     pub fn intake_realm_id(&self) -> Result<[u8; 16], String> {
@@ -1916,6 +2470,7 @@ impl Substrate {
         // until a relation write invalidates it (process-local cache only).
         let relations_view = self.store.relations_view();
         let superseded_by = &relations_view.superseded_by;
+        let superseded_by_record_id = &relations_view.superseded_by_record_id;
         let sources = &relations_view.sources;
         let graph_edges = &relations_view.graph_edges;
 
@@ -2342,6 +2897,7 @@ impl Substrate {
         for (rank, (key, support, sem, id, sup, stratum, _lex, _created)) in
             scored.into_iter().enumerate()
         {
+            let successor_record_id = superseded_by_record_id.get(&id).copied();
             let record = self.store.get_record(id).ok().flatten();
             let content = record
                 .as_ref()
@@ -2363,6 +2919,8 @@ impl Substrate {
                 "semantic_support": sem,
                 "stratum": stratum,
                 "superseded_by": sup,
+                "superseded_by_record_id": successor_record_id,
+                "superseded_by_relation_id": sup,
             }));
             hits.push(Hit {
                 id,
@@ -2371,6 +2929,8 @@ impl Substrate {
                 score: support,
                 rank: rank + 1,
                 superseded_by: sup,
+                superseded_by_record_id: successor_record_id,
+                superseded_by_relation_id: sup,
             });
         }
 
@@ -3194,6 +3754,89 @@ impl Substrate {
                     .map_err(|error| format!("revision log corrupt at line {}: {error}", index + 1))
             })
             .collect()
+    }
+
+    fn temporal_revision_graph(
+        &self,
+    ) -> Result<(Vec<RevisionEntry>, HashMap<u64, u64>), crate::temporal::TemporalError> {
+        let entries = self
+            .authoritative_revision_entries()
+            .map_err(crate::temporal::TemporalError)?;
+        let edges =
+            Self::validated_revision_edges(&entries).map_err(crate::temporal::TemporalError)?;
+        Ok((entries, edges))
+    }
+
+    fn validate_temporal_revision_hashes(
+        &self,
+        edge: &RevisionEntry,
+    ) -> Result<(), crate::temporal::TemporalError> {
+        let prior = self
+            .store
+            .get_record(edge.record_id)
+            .map_err(|e| {
+                crate::temporal::TemporalError(format!("native revision prior lookup failed: {e}"))
+            })?
+            .ok_or_else(|| {
+                crate::temporal::TemporalError(format!(
+                    "native revision prior {} is unavailable",
+                    edge.record_id
+                ))
+            })?;
+        let new = self
+            .store
+            .get_record(edge.new_record_id)
+            .map_err(|e| {
+                crate::temporal::TemporalError(format!("native revision target lookup failed: {e}"))
+            })?
+            .ok_or_else(|| {
+                crate::temporal::TemporalError(format!(
+                    "native revision target {} is unavailable",
+                    edge.new_record_id
+                ))
+            })?;
+        if sha256_hex(prior.content().as_bytes()) != edge.prior_content_hash
+            || sha256_hex(new.content().as_bytes()) != edge.new_content_hash
+        {
+            return Err(crate::temporal::TemporalError(format!(
+                "native revision {} content hash binding mismatch",
+                edge.revision
+            )));
+        }
+        Ok(())
+    }
+
+    fn validate_temporal_native_path(
+        &self,
+        prior_id: u64,
+        new_id: u64,
+        revisions: &[RevisionEntry],
+        edges: &HashMap<u64, u64>,
+    ) -> Result<(), crate::temporal::TemporalError> {
+        let mut cursor = prior_id;
+        let mut seen = HashSet::from([cursor]);
+        while cursor != new_id {
+            let edge = revisions
+                .iter()
+                .find(|r| r.record_id == cursor)
+                .ok_or_else(|| {
+                    crate::temporal::TemporalError(
+                        "temporal correction lacks a native revision path".into(),
+                    )
+                })?;
+            self.validate_temporal_revision_hashes(edge)?;
+            cursor = *edges.get(&cursor).ok_or_else(|| {
+                crate::temporal::TemporalError(
+                    "temporal correction lacks a native revision path".into(),
+                )
+            })?;
+            if !seen.insert(cursor) {
+                return Err(crate::temporal::TemporalError(
+                    "native revision path contains a cycle".into(),
+                ));
+            }
+        }
+        Ok(())
     }
 
     fn validated_revision_edges(entries: &[RevisionEntry]) -> Result<HashMap<u64, u64>, String> {
@@ -4934,6 +5577,784 @@ mod tests {
         }
     }
 
+    fn temporal_request(
+        record_id: u64,
+        operation_id: &str,
+        predicate: &str,
+        value: &str,
+        from: crate::temporal::TemporalBound,
+        until: crate::temporal::TemporalBound,
+    ) -> crate::temporal::TemporalAssertionRequest {
+        crate::temporal::TemporalAssertionRequest {
+            operation_id: operation_id.into(),
+            record_id,
+            namespace: "profile".into(),
+            subject: "user-1".into(),
+            predicate: predicate.into(),
+            source_id: "primary-stream".into(),
+            value: value.into(),
+            valid_from: from,
+            valid_until: until,
+            supersedes: None,
+        }
+    }
+    fn instant(at: &str) -> crate::temporal::TemporalBound {
+        crate::temporal::TemporalBound::Instant { at: at.into() }
+    }
+    fn temporal_query(
+        mode: crate::temporal::TemporalMode,
+        predicate: Option<&str>,
+        valid_at: Option<&str>,
+        known_at: Option<&str>,
+    ) -> crate::temporal::TemporalQuery {
+        crate::temporal::TemporalQuery {
+            mode,
+            namespace: "profile".into(),
+            subject: "user-1".into(),
+            predicate: predicate.map(str::to_string),
+            valid_at: valid_at.map(str::to_string),
+            known_at: known_at.map(str::to_string),
+        }
+    }
+
+    #[test]
+    fn temporal_announcement_is_not_effective_until_valid_from_and_known_cutoff_is_honored() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M, TemporalStatus as S};
+        let path = temp_store("temporal-announcement");
+        let mut s = Substrate::open(&path, None, default_view()).unwrap();
+        s.set_noise_enabled(false);
+        let ids = s.remember_batch(&[
+            item("home address before move"),
+            item("home address after move"),
+        ]);
+        let old = ids[0].as_ref().unwrap().to_owned();
+        let new = ids[1].as_ref().unwrap().to_owned();
+        s.record_revision(old, new, "move correction").unwrap();
+        s.set_temporal_test_clock(
+            chrono::DateTime::parse_from_rfc3339("2026-06-14T12:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+        );
+        let old_req = temporal_request(
+            old,
+            "announce-old",
+            "city",
+            "Boston",
+            B::Unbounded,
+            instant("2026-08-01T00:00:00Z"),
+        );
+        s.assert_temporal(
+            &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+            old_req,
+        )
+        .unwrap();
+        s.set_temporal_test_clock(
+            chrono::DateTime::parse_from_rfc3339("2026-06-16T09:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+        );
+        let mut replacement = temporal_request(
+            new,
+            "announce-new",
+            "city",
+            "Portland",
+            instant("2026-07-01T00:00:00-04:00"),
+            instant("2026-08-01T00:00:00Z"),
+        );
+        replacement.supersedes = Some(1);
+        let result = s
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                replacement,
+            )
+            .unwrap();
+        assert!(result.recorded_at.starts_with("2026-06-16T09:00:00"));
+        let before_known = s
+            .query_temporal(temporal_query(
+                M::AsOf,
+                Some("city"),
+                Some("2026-06-20T12:00:00Z"),
+                Some("2026-06-15T00:00:00Z"),
+            ))
+            .unwrap();
+        assert_eq!(before_known.groups[0].status, S::Resolved);
+        assert_eq!(before_known.groups[0].evidence[0].value, "Boston");
+        let announced = s
+            .query_temporal(temporal_query(
+                M::AsOf,
+                Some("city"),
+                Some("2026-06-20T12:00:00Z"),
+                Some("2026-06-17T00:00:00Z"),
+            ))
+            .unwrap();
+        assert_eq!(announced.groups[0].status, S::Resolved);
+        assert_eq!(announced.groups[0].evidence[0].value, "Boston");
+        let effective = s
+            .query_temporal(temporal_query(
+                M::AsOf,
+                Some("city"),
+                Some("2026-07-02T12:00:00Z"),
+                Some("2026-06-17T00:00:00Z"),
+            ))
+            .unwrap();
+        assert_eq!(effective.groups[0].status, S::Resolved);
+        assert_eq!(effective.groups[0].evidence[0].value, "Portland");
+        s.set_temporal_test_clock(
+            chrono::DateTime::parse_from_rfc3339("2026-07-02T12:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+        );
+        let current = s
+            .query_temporal(temporal_query(M::Current, Some("city"), None, None))
+            .unwrap();
+        assert_eq!(current.groups[0].evidence[0].value, "Portland");
+        let expired = s
+            .query_temporal(temporal_query(
+                M::AsOf,
+                Some("city"),
+                Some("2026-08-02T00:00:00Z"),
+                Some("2026-06-17T00:00:00Z"),
+            ))
+            .unwrap();
+        assert_eq!(
+            expired.groups[0].status,
+            S::NoEvidence,
+            "an expired correction must not revive its predecessor"
+        );
+        assert!(
+            s.query_temporal(temporal_query(
+                M::Current,
+                Some("city"),
+                Some("2026-06-20T00:00:00Z"),
+                None
+            ))
+            .is_err()
+        );
+        let mut retry_request = temporal_request(
+            new,
+            "announce-new",
+            "city",
+            "Portland",
+            instant("2026-07-01T04:00:00Z"),
+            instant("2026-08-01T00:00:00Z"),
+        );
+        retry_request.supersedes = Some(1);
+        let retry = s
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                retry_request,
+            )
+            .unwrap();
+        assert!(retry.replayed);
+        assert_eq!(retry.assertion_id, 2);
+        assert_eq!(retry.recorded_at, result.recorded_at);
+        drop(s);
+        let reopened = Substrate::open_readonly(&path, None, default_view()).unwrap();
+        assert_eq!(
+            reopened
+                .query_temporal(temporal_query(
+                    M::AsOf,
+                    Some("city"),
+                    Some("2026-07-02T12:00:00Z"),
+                    Some("2026-06-17T00:00:00Z")
+                ))
+                .unwrap()
+                .groups[0]
+                .evidence[0]
+                .value,
+            "Portland"
+        );
+        let _ = std::fs::remove_dir_all(path);
+    }
+
+    #[test]
+    fn temporal_partial_fields_conflicts_unknown_and_future_bounds_are_explicit() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M, TemporalStatus as S};
+        let mut s = substrate("temporal-partial");
+        s.set_noise_enabled(false);
+        let ids = s.remember_batch(&[item("record one"), item("record two")]);
+        let a = *ids[0].as_ref().unwrap();
+        let b = *ids[1].as_ref().unwrap();
+        let auth = crate::evidence::RatifiedChannel::stub("core-unit-tests");
+        s.assert_temporal(
+            &auth,
+            temporal_request(a, "a-city", "city", "Oslo", B::Unbounded, B::Unbounded),
+        )
+        .unwrap();
+        s.assert_temporal(
+            &auth,
+            temporal_request(a, "a-role", "role", "engineer", B::Unbounded, B::Unbounded),
+        )
+        .unwrap();
+        s.record_revision(a, b, "city field correction").unwrap();
+        let mut corrected_city = temporal_request(
+            b,
+            "b-city-correction",
+            "city",
+            "Bergen",
+            instant("2025-01-01T00:00:00Z"),
+            B::Unbounded,
+        );
+        corrected_city.supersedes = Some(1);
+        s.assert_temporal(&auth, corrected_city).unwrap();
+        let mut conflict =
+            temporal_request(b, "b-city", "city", "Riga", B::Unbounded, B::Unbounded);
+        conflict.source_id = "independent-stream".into();
+        s.assert_temporal(&auth, conflict).unwrap();
+        s.assert_temporal(
+            &auth,
+            temporal_request(
+                b,
+                "unknown-time",
+                "temperature",
+                "mild",
+                B::Unknown,
+                B::Unbounded,
+            ),
+        )
+        .unwrap();
+        s.assert_temporal(
+            &auth,
+            temporal_request(
+                b,
+                "future-time",
+                "launch",
+                "planned",
+                instant("2030-01-01T00:00:00Z"),
+                B::Unbounded,
+            ),
+        )
+        .unwrap();
+        let q = s
+            .query_temporal(temporal_query(
+                M::AsOf,
+                None,
+                Some("2026-10-31T00:00:00Z"),
+                None,
+            ))
+            .unwrap();
+        let get = |name: &str| q.groups.iter().find(|g| g.predicate == name).unwrap();
+        assert_eq!(get("city").status, S::Conflict);
+        assert_eq!(get("city").conflicting_values, vec!["Bergen", "Riga"]);
+        assert_eq!(get("role").status, S::Resolved);
+        assert_eq!(get("role").evidence[0].value, "engineer");
+        assert_eq!(get("temperature").status, S::TimeUnknown);
+        assert_eq!(get("launch").status, S::NoEvidence);
+        let _ = std::fs::remove_dir_all(s.store.path());
+    }
+
+    #[test]
+    fn temporal_bad_input_corruption_missing_records_and_readonly_are_fail_closed() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M};
+        let path = temp_store("temporal-fail-closed");
+        let mut s = Substrate::open(&path, None, default_view()).unwrap();
+        s.set_noise_enabled(false);
+        let id = *s.remember_batch(&[item("durable existing record")])[0]
+            .as_ref()
+            .unwrap();
+        let auth = crate::evidence::RatifiedChannel::stub("core-unit-tests");
+        let mut bad = temporal_request(
+            id,
+            "bad-date",
+            "when",
+            "yesterday",
+            B::Instant {
+                at: "2026-06-14".into(),
+            },
+            B::Unbounded,
+        );
+        assert!(s.assert_temporal(&auth, bad.clone()).is_err());
+        bad.valid_from = instant("2026-01-02T00:00:00Z");
+        bad.valid_until = instant("2026-01-01T00:00:00Z");
+        assert!(s.assert_temporal(&auth, bad).is_err());
+        let before = std::fs::read_dir(&path).unwrap().count();
+        let query = temporal_query(M::History, None, None, None);
+        assert!(s.query_temporal(query).unwrap().groups.is_empty());
+        assert_eq!(std::fs::read_dir(&path).unwrap().count(), before);
+        s.assert_temporal(
+            &auth,
+            temporal_request(
+                id,
+                "write-one",
+                "city",
+                "Lisbon",
+                B::Unbounded,
+                B::Unbounded,
+            ),
+        )
+        .unwrap();
+        let ledger = path.join(crate::temporal::LEDGER_NAME);
+        let content = std::fs::read_to_string(&ledger).unwrap();
+        std::fs::write(&ledger, format!("{content}{{")).unwrap();
+        assert!(
+            s.query_temporal(temporal_query(M::History, None, None, None))
+                .is_err()
+        );
+        drop(s);
+        assert!(
+            Substrate::open_readonly(&path, None, default_view())
+                .unwrap()
+                .assert_temporal(
+                    &auth,
+                    temporal_request(id, "readonly", "city", "Paris", B::Unbounded, B::Unbounded)
+                )
+                .is_err()
+        );
+        let _ = std::fs::remove_dir_all(path);
+    }
+
+    #[test]
+    fn temporal_known_cutoff_skips_later_erased_record_and_wrong_store_copy_is_rejected() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M};
+        let path = temp_store("temporal-cutoff-binding");
+        let mut s = Substrate::open(&path, None, default_view()).unwrap();
+        s.set_noise_enabled(false);
+        let ids = s.remember_batch(&[item("early retained fact"), item("late removable fact")]);
+        let early = *ids[0].as_ref().unwrap();
+        let late = *ids[1].as_ref().unwrap();
+        let auth = crate::evidence::RatifiedChannel::stub("core-unit-tests");
+        s.set_temporal_test_clock(
+            chrono::DateTime::parse_from_rfc3339("2026-06-01T00:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+        );
+        s.assert_temporal(
+            &auth,
+            temporal_request(
+                early,
+                "early-known",
+                "state",
+                "kept",
+                B::Unbounded,
+                B::Unbounded,
+            ),
+        )
+        .unwrap();
+        s.set_temporal_test_clock(
+            chrono::DateTime::parse_from_rfc3339("2026-06-03T00:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+        );
+        s.assert_temporal(
+            &auth,
+            temporal_request(
+                late,
+                "late-known",
+                "state",
+                "removed",
+                B::Unbounded,
+                B::Unbounded,
+            ),
+        )
+        .unwrap();
+        s.store.remove_record_and_indexes(late).unwrap();
+        let past = s
+            .query_temporal(temporal_query(
+                M::AsOf,
+                Some("state"),
+                Some("2026-06-04T00:00:00Z"),
+                Some("2026-06-02T00:00:00Z"),
+            ))
+            .unwrap();
+        assert_eq!(past.groups[0].evidence.len(), 1);
+        assert_eq!(past.groups[0].evidence[0].value, "kept");
+        drop(s);
+
+        let source_store = temp_store("temporal-wrong-store-source");
+        let mut source_substrate = Substrate::open(&source_store, None, default_view()).unwrap();
+        source_substrate.set_noise_enabled(false);
+        let source_id = *source_substrate.remember_batch(&[item("identical realm-bound record")])
+            [0]
+        .as_ref()
+        .unwrap();
+        assert_eq!(source_id, 0);
+        source_substrate
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                temporal_request(
+                    source_id,
+                    "copy-control",
+                    "city",
+                    "Sapporo",
+                    B::Unbounded,
+                    B::Unbounded,
+                ),
+            )
+            .unwrap();
+        drop(source_substrate);
+
+        let copied = temp_store("temporal-wrong-store");
+        let mut other = Substrate::open(&copied, None, default_view()).unwrap();
+        other.set_noise_enabled(false);
+        let same = *other.remember_batch(&[item("identical realm-bound record")])[0]
+            .as_ref()
+            .unwrap();
+        assert_eq!(
+            same, source_id,
+            "control shares record id/content/source; realm distinguishes the store"
+        );
+        other
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                temporal_request(
+                    same,
+                    "copy-control",
+                    "city",
+                    "Sapporo",
+                    B::Unbounded,
+                    B::Unbounded,
+                ),
+            )
+            .unwrap();
+        std::fs::copy(
+            source_store.join(crate::temporal::LEDGER_NAME),
+            copied.join(crate::temporal::LEDGER_NAME),
+        )
+        .unwrap();
+        assert!(
+            other
+                .query_temporal(temporal_query(M::History, None, None, None))
+                .is_err()
+        );
+        drop(other);
+        let _ = std::fs::remove_dir_all(path);
+        let _ = std::fs::remove_dir_all(source_store);
+        let _ = std::fs::remove_dir_all(copied);
+    }
+
+    #[test]
+    fn temporal_a_b_a_corrections_are_a_valid_chain_of_distinct_records() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M, TemporalStatus as S};
+        let mut s = substrate("temporal-aba");
+        s.set_noise_enabled(false);
+        let ids = s.remember_batch(&[
+            item("assertion record A"),
+            item("assertion record B"),
+            item("assertion record A again"),
+        ]);
+        let a = *ids[0].as_ref().unwrap();
+        let b = *ids[1].as_ref().unwrap();
+        let c = *ids[2].as_ref().unwrap();
+        s.record_revision(a, b, "A to B").unwrap();
+        s.record_revision(b, c, "B to A").unwrap();
+        let auth = crate::evidence::RatifiedChannel::stub("core-unit-tests");
+        s.assert_temporal(
+            &auth,
+            temporal_request(a, "aba-a", "status", "A", B::Unbounded, B::Unbounded),
+        )
+        .unwrap();
+        let mut rb = temporal_request(
+            b,
+            "aba-b",
+            "status",
+            "B",
+            instant("2021-01-01T00:00:00Z"),
+            B::Unbounded,
+        );
+        rb.supersedes = Some(1);
+        s.assert_temporal(&auth, rb).unwrap();
+        let mut rc = temporal_request(
+            c,
+            "aba-c",
+            "status",
+            "A",
+            instant("2022-01-01T00:00:00Z"),
+            B::Unbounded,
+        );
+        rc.supersedes = Some(2);
+        s.assert_temporal(&auth, rc).unwrap();
+        let result = s
+            .query_temporal(temporal_query(
+                M::AsOf,
+                Some("status"),
+                Some("2022-06-01T00:00:00Z"),
+                None,
+            ))
+            .unwrap();
+        assert_eq!(result.groups[0].status, S::Resolved);
+        assert_eq!(result.groups[0].evidence[0].value, "A");
+        let _ = std::fs::remove_dir_all(s.store.path());
+    }
+
+    #[test]
+    fn temporal_append_failure_keeps_canonical_record_and_requires_explicit_recovery() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M};
+        let path = temp_store("temporal-append-failure");
+        let mut s = Substrate::open(&path, None, default_view()).unwrap();
+        s.set_noise_enabled(false);
+        let id = *s.remember_batch(&[item("canonical record survives sidecar failure")])[0]
+            .as_ref()
+            .unwrap();
+        let before = s.store.get_record(id).unwrap().unwrap();
+        let content = before.content().to_string();
+        let source = before.source().to_string();
+        s.set_temporal_test_fail_append(true);
+        let err = s
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                temporal_request(
+                    id,
+                    "partial-append",
+                    "fact",
+                    "asserted",
+                    B::Unbounded,
+                    B::Unbounded,
+                ),
+            )
+            .unwrap_err();
+        assert!(err.to_string().contains("partial bytes"));
+        let after = s.store.get_record(id).unwrap().unwrap();
+        assert_eq!(after.content(), content);
+        assert_eq!(after.source(), source);
+        assert!(
+            s.query_temporal(temporal_query(M::History, Some("fact"), None, None))
+                .is_err(),
+            "torn metadata must remain visible until explicit recovery"
+        );
+        let _ = std::fs::remove_dir_all(path);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn temporal_query_times_out_while_writer_holds_exclusive_lock() {
+        use crate::temporal::{LedgerLock, TemporalBound as B, TemporalMode as M};
+        let path = temp_store("temporal-lock-timeout");
+        let mut s = Substrate::open(&path, None, default_view()).unwrap();
+        s.set_noise_enabled(false);
+        let id = *s.remember_batch(&[item("lock holder canonical record")])[0]
+            .as_ref()
+            .unwrap();
+        s.assert_temporal(
+            &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+            temporal_request(
+                id,
+                "lock-entry",
+                "fact",
+                "stable",
+                B::Unbounded,
+                B::Unbounded,
+            ),
+        )
+        .unwrap();
+        let _writer_lock = LedgerLock::acquire(&path).unwrap();
+        let error = s
+            .query_temporal(temporal_query(M::History, Some("fact"), None, None))
+            .unwrap_err();
+        assert!(error.to_string().contains("shared lock timed out"));
+        drop(_writer_lock);
+        assert!(
+            s.query_temporal(temporal_query(M::History, Some("fact"), None, None))
+                .is_ok()
+        );
+        let _ = std::fs::remove_dir_all(path);
+    }
+
+    #[test]
+    fn temporal_v1_refuses_at_rest_store_without_creating_sidecars() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M};
+        let path = temp_store("temporal-at-rest-refusal");
+        drop(
+            Store::open_with_at_rest(
+                &path,
+                &crate::at_rest::AtRestConfig::keyfile_with_root_key("ab".repeat(32)),
+            )
+            .unwrap(),
+        );
+        let mut substrate = Substrate::open_readonly(&path, None, default_view()).unwrap();
+        assert!(matches!(
+            substrate.store.at_rest_status(),
+            crate::at_rest::AtRestStatus::Present(_)
+        ));
+        let before = std::fs::read_dir(&path).unwrap().count();
+        let error = substrate
+            .query_temporal(temporal_query(M::History, None, None, None))
+            .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("encrypted at-rest stores are refused")
+        );
+        let write_error = substrate
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                temporal_request(
+                    0,
+                    "at-rest-write",
+                    "secret",
+                    "value",
+                    B::Unbounded,
+                    B::Unbounded,
+                ),
+            )
+            .unwrap_err();
+        assert!(
+            write_error
+                .to_string()
+                .contains("encrypted at-rest stores are refused")
+        );
+        assert_eq!(std::fs::read_dir(&path).unwrap().count(), before);
+        assert!(!path.join(crate::temporal::LEDGER_NAME).exists());
+        assert!(!path.join("temporal-assertions-v1.lock").exists());
+        drop(substrate);
+        let _ = std::fs::remove_dir_all(path);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn temporal_plaintext_sidecars_stay_private_under_permissive_umask_and_reject_links_or_modes() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M};
+        use std::os::unix::fs::{MetadataExt, PermissionsExt};
+        struct RestoreUmask(rustix::fs::Mode);
+        impl Drop for RestoreUmask {
+            fn drop(&mut self) {
+                let _ = rustix::process::umask(self.0);
+            }
+        }
+
+        let private_path = temp_store("temporal-private-mode");
+        let mut private = Substrate::open(&private_path, None, default_view()).unwrap();
+        private.set_noise_enabled(false);
+        let id = *private.remember_batch(&[item("private sidecar fixture")])[0]
+            .as_ref()
+            .unwrap();
+        let old_mask = rustix::process::umask(rustix::fs::Mode::empty());
+        let _restore = RestoreUmask(old_mask);
+        private
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                temporal_request(
+                    id,
+                    "private-mode",
+                    "fact",
+                    "secret",
+                    B::Unbounded,
+                    B::Unbounded,
+                ),
+            )
+            .unwrap();
+        let ledger_mode = std::fs::metadata(private_path.join(crate::temporal::LEDGER_NAME))
+            .unwrap()
+            .mode()
+            & 0o777;
+        let lock_mode = std::fs::metadata(private_path.join("temporal-assertions-v1.lock"))
+            .unwrap()
+            .mode()
+            & 0o777;
+        assert_eq!(
+            ledger_mode, 0o600,
+            "plaintext ledger creation must ignore a permissive umask"
+        );
+        assert_eq!(lock_mode, 0o600, "lock creation must be owner-only too");
+        drop(_restore);
+        drop(private);
+
+        let exposed_path = temp_store("temporal-reject-mode");
+        let mut exposed = Substrate::open(&exposed_path, None, default_view()).unwrap();
+        exposed.set_noise_enabled(false);
+        let exposed_id = *exposed.remember_batch(&[item("mode control record")])[0]
+            .as_ref()
+            .unwrap();
+        exposed
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                temporal_request(
+                    exposed_id,
+                    "mode-control",
+                    "fact",
+                    "private",
+                    B::Unbounded,
+                    B::Unbounded,
+                ),
+            )
+            .unwrap();
+        let ledger = exposed_path.join(crate::temporal::LEDGER_NAME);
+        std::fs::set_permissions(&ledger, std::fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(
+            exposed
+                .query_temporal(temporal_query(M::History, Some("fact"), None, None))
+                .unwrap_err()
+                .to_string()
+                .contains("permissions expose")
+        );
+        assert!(
+            exposed
+                .assert_temporal(
+                    &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                    temporal_request(
+                        exposed_id,
+                        "mode-control-2",
+                        "fact",
+                        "private",
+                        B::Unbounded,
+                        B::Unbounded
+                    )
+                )
+                .unwrap_err()
+                .to_string()
+                .contains("permissions expose")
+        );
+        assert_eq!(
+            std::fs::metadata(&ledger).unwrap().mode() & 0o777,
+            0o644,
+            "unsafe existing permissions must not be silently repaired"
+        );
+        drop(exposed);
+
+        let link_path = temp_store("temporal-reject-symlink");
+        let mut linked = Substrate::open(&link_path, None, default_view()).unwrap();
+        linked.set_noise_enabled(false);
+        let link_id = *linked.remember_batch(&[item("symlink control record")])[0]
+            .as_ref()
+            .unwrap();
+        linked
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                temporal_request(
+                    link_id,
+                    "link-control",
+                    "fact",
+                    "target",
+                    B::Unbounded,
+                    B::Unbounded,
+                ),
+            )
+            .unwrap();
+        let ledger = link_path.join(crate::temporal::LEDGER_NAME);
+        let moved = link_path.join("private-ledger-original");
+        std::fs::rename(&ledger, &moved).unwrap();
+        std::os::unix::fs::symlink(&moved, &ledger).unwrap();
+        assert!(
+            linked
+                .query_temporal(temporal_query(M::History, Some("fact"), None, None))
+                .is_err()
+        );
+        assert!(
+            linked
+                .assert_temporal(
+                    &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                    temporal_request(
+                        link_id,
+                        "link-control-2",
+                        "fact",
+                        "target",
+                        B::Unbounded,
+                        B::Unbounded
+                    )
+                )
+                .is_err()
+        );
+        assert!(
+            std::fs::symlink_metadata(&ledger)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        drop(linked);
+        let _ = std::fs::remove_dir_all(private_path);
+        let _ = std::fs::remove_dir_all(exposed_path);
+        let _ = std::fs::remove_dir_all(link_path);
+    }
+
     #[test]
     fn test_bijective_uuid_mapping_and_persistence() {
         let store_dir = temp_store("uuid-map");
@@ -5296,7 +6717,9 @@ mod tests {
             .into_iter()
             .map(|r| r.expect("remembered"))
             .collect();
-        let rel_id = s.store.alloc_relation_id().expect("id");
+        // Keep all three namespaces visibly distinct: successor record, stale
+        // record, and relation identifiers must not be inferred interchangeably.
+        let rel_id = 90_001;
         s.store
             .put_relation(&Relation::new(rel_id, ids[0], ids[1], 0.9, 0))
             .expect("relation");
@@ -5311,6 +6734,12 @@ mod tests {
         assert_eq!(entries[0]["stratum"], 0);
         assert_eq!(entries[1]["stratum"], 2);
         assert_eq!(entries[1]["superseded_by"], rel_id);
+        assert_eq!(entries[1]["superseded_by_record_id"], ids[0]);
+        assert_eq!(entries[1]["superseded_by_relation_id"], rel_id);
+        assert_eq!(hits[1].superseded_by, Some(rel_id));
+        assert_eq!(hits[1].superseded_by_record_id, Some(ids[0]));
+        assert_eq!(hits[1].superseded_by_relation_id, Some(rel_id));
+        assert_ne!(rel_id, ids[0]);
 
         let mut qh = q("north bay loading area");
         qh.include_historical = true;

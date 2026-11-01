@@ -302,7 +302,10 @@ pub struct Store {
 /// relation writes; equality with the recall-side full scan is a test invariant.
 #[derive(Debug, Default)]
 pub(crate) struct RelationsView {
+    /// Legacy recall pointer: stale record ID -> Supersedes relation ID.
     pub(crate) superseded_by: HashMap<u64, u64>,
+    /// Explicit replacement record ID for each stale record.
+    pub(crate) superseded_by_record_id: HashMap<u64, u64>,
     pub(crate) sources: HashSet<u64>,
     pub(crate) graph_edges: HashMap<u64, Vec<(u64, f32)>>,
 }
@@ -320,6 +323,7 @@ impl RelationsView {
             match r.kind() {
                 RelationKind::Supersedes => {
                     view.superseded_by.insert(r.dst(), r.id());
+                    view.superseded_by_record_id.insert(r.dst(), r.src());
                     view.sources.insert(r.src());
                 }
                 RelationKind::Associates => {
