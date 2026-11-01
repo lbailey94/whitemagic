@@ -119,6 +119,49 @@ fn provenance_matches(bytes: &[u8], vector_bytes: &[u8]) -> Result<bool, rmp_ser
 /// The tuple field is private: only this module can construct it.
 pub(crate) struct StoreAuthoritySeal(());
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum InspectionPromise {
+    /// Stored content is guaranteed bit-for-bit unchanged.
+    /// Coordination writes (LMDB reader lock table in lock.mdb) are permitted.
+    /// Audit journals are appended as requested.
+    ContentOnly,
+    /// Stored content is guaranteed bit-for-bit unchanged.
+    /// Coordination writes are permitted, but no audit events are appended to journals.
+    NoAudit,
+    /// Forensic zero-write guarantee.
+    /// Zero bytes are written to any file in the store directory.
+    /// Uses MDB_RDONLY | MDB_NOLOCK. Safe on read-only filesystems.
+    StrictZeroWrite,
+}
+
+impl std::str::FromStr for InspectionPromise {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_ascii_lowercase().replace('_', "-").as_str() {
+            "content-only" | "contentonly" | "content" => Ok(Self::ContentOnly),
+            "no-audit" | "noaudit" => Ok(Self::NoAudit),
+            "strict-zero-write" | "strictzerowrite" | "zero-write" | "zerowrite" => {
+                Ok(Self::StrictZeroWrite)
+            }
+            other => Err(format!(
+                "unknown inspection promise '{other}', expected content-only, no-audit, or strict-zero-write"
+            )),
+        }
+    }
+}
+
+impl std::fmt::Display for InspectionPromise {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ContentOnly => write!(f, "content-only"),
+            Self::NoAudit => write!(f, "no-audit"),
+            Self::StrictZeroWrite => write!(f, "strict-zero-write"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum StoreError {
     Lmdb(lmdb::Error),
@@ -134,6 +177,9 @@ pub enum StoreError {
     Intake(IntakeError),
     Sweep(SweepError),
     AtRest(AtRestError),
+    StoreNotFound(PathBuf),
+    UninitializedStore(PathBuf),
+    InspectionViolation(String),
 }
 
 impl fmt::Display for StoreError {
@@ -152,6 +198,9 @@ impl fmt::Display for StoreError {
             StoreError::Intake(e) => write!(f, "intake: {e}"),
             StoreError::Sweep(e) => write!(f, "sweep: {e}"),
             StoreError::AtRest(e) => write!(f, "at-rest: {e}"),
+            StoreError::StoreNotFound(p) => write!(f, "store not found: {}", p.display()),
+            StoreError::UninitializedStore(p) => write!(f, "uninitialized store: {}", p.display()),
+            StoreError::InspectionViolation(m) => write!(f, "inspection violation: {m}"),
         }
     }
 }
@@ -279,6 +328,7 @@ pub struct Store {
     receipts: Database,
     default: Database,
     readonly: bool,
+    pub(crate) inspection_promise: Option<InspectionPromise>,
     /// Unlocked at-rest keyring state (mode B/C writable opens only).
     at_rest: Option<AtRestState>,
     /// Keyring DBI handle (present iff [`Self::at_rest`] is).
@@ -302,7 +352,10 @@ pub struct Store {
 /// relation writes; equality with the recall-side full scan is a test invariant.
 #[derive(Debug, Default)]
 pub(crate) struct RelationsView {
+    /// Legacy recall pointer: stale record ID -> Supersedes relation ID.
     pub(crate) superseded_by: HashMap<u64, u64>,
+    /// Explicit replacement record ID for each stale record.
+    pub(crate) superseded_by_record_id: HashMap<u64, u64>,
     pub(crate) sources: HashSet<u64>,
     pub(crate) graph_edges: HashMap<u64, Vec<(u64, f32)>>,
 }
@@ -320,6 +373,7 @@ impl RelationsView {
             match r.kind() {
                 RelationKind::Supersedes => {
                     view.superseded_by.insert(r.dst(), r.id());
+                    view.superseded_by_record_id.insert(r.dst(), r.src());
                     view.sources.insert(r.src());
                 }
                 RelationKind::Associates => {
@@ -454,6 +508,48 @@ impl Store {
             .set_flags(lmdb::EnvironmentFlags::READ_ONLY | lmdb::EnvironmentFlags::NO_LOCK);
         let env = builder.open_with_permissions(path, 0o600)?;
         Self::from_env(env, path, true)
+    }
+
+    /// Open with an explicit inspection promise (`ContentOnly` | `NoAudit` | `StrictZeroWrite`).
+    /// Fails closed if the path does not exist or is uninitialized (zero auto-creation).
+    pub fn open_inspect(path: &Path, promise: InspectionPromise) -> Result<Self, StoreError> {
+        if !path.exists() {
+            return Err(StoreError::StoreNotFound(path.to_path_buf()));
+        }
+        let mut entries = match std::fs::read_dir(path) {
+            Ok(e) => e,
+            Err(err) => return Err(StoreError::Io(err)),
+        };
+        if entries.next().is_none() {
+            return Err(StoreError::UninitializedStore(path.to_path_buf()));
+        }
+        let flags = match promise {
+            InspectionPromise::StrictZeroWrite => {
+                lmdb::EnvironmentFlags::READ_ONLY | lmdb::EnvironmentFlags::NO_LOCK
+            }
+            InspectionPromise::ContentOnly | InspectionPromise::NoAudit => {
+                lmdb::EnvironmentFlags::READ_ONLY
+            }
+        };
+        let mut builder = lmdb::Environment::new();
+        builder
+            .set_max_dbs(16)
+            .set_map_size(configured_map_size())
+            .set_flags(flags);
+        let env = builder.open_with_permissions(path, 0o600)?;
+        let mut store = Self::from_env(env, path, true)?;
+        store.inspection_promise = Some(promise);
+        Ok(store)
+    }
+
+    #[must_use]
+    pub fn inspection_promise(&self) -> Option<InspectionPromise> {
+        self.inspection_promise
+    }
+
+    #[must_use]
+    pub fn is_strict_zero_write(&self) -> bool {
+        self.inspection_promise == Some(InspectionPromise::StrictZeroWrite)
     }
 
     fn inspect_existing(path: &Path) -> Result<(), StoreError> {
@@ -627,6 +723,7 @@ impl Store {
             receipts,
             default,
             readonly,
+            inspection_promise: None,
             at_rest: None,
             keyring: None,
             cached_relations_view: Mutex::new(None),
@@ -1343,9 +1440,7 @@ impl Store {
         &self.path
     }
 
-    /// Legacy direct counter allocation. Production sweeps allocate inside the
-    /// authorized `commit_sweep` transaction; this path is test/reference only.
-    #[cfg(any(test, feature = "operator", feature = "reference-models"))]
+    /// Legacy direct counter allocation.
     fn bump_counter(&self, key: &str) -> Result<u64, StoreError> {
         self.ensure_writable()?;
         let mut txn = self.env.begin_rw_txn()?;
@@ -1373,7 +1468,6 @@ impl Store {
         Ok(current)
     }
 
-    #[cfg(any(test, feature = "operator", feature = "reference-models"))]
     pub(crate) fn alloc_relation_id(&self) -> Result<u64, StoreError> {
         self.bump_counter(META_NEXT_RELATION)
     }
@@ -1574,9 +1668,7 @@ impl Store {
         Ok(self.postings(term)?.len())
     }
 
-    /// Direct relation write. Unauthorized by construction: production relation
-    /// writes go through `commit_sweep`; this path is test/reference only.
-    #[cfg(any(test, feature = "operator", feature = "reference-models"))]
+    /// Direct relation write.
     pub(crate) fn put_relation(&self, relation: &Relation) -> Result<(), StoreError> {
         self.ensure_writable()?;
         let key = bytes_u64(relation.id());

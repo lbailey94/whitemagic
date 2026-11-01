@@ -243,6 +243,8 @@ pub struct NremCompactionReceipt {
     pub compacted_summaries_minted: usize,
     pub token_compaction_ratio: f32,
     pub duration_us: f64,
+    #[serde(default)]
+    pub crystallized_record_ids: Vec<u64>,
 }
 
 /// Combined telemetry for the full dual-phase sleep cycle (NREM structural compaction + REM associative dreaming).
@@ -396,8 +398,8 @@ pub fn execute_incubation_epoch(
         let sample_target = total_records.min(50);
         let stride = (total_records / sample_target).max(1);
         let mut sample = Vec::with_capacity(sample_target);
-        let mut id = 1u64;
-        while sample.len() < sample_target && (id as usize) <= total_records {
+        let mut id = 0u64;
+        while sample.len() < sample_target && (id as usize) < total_records {
             if let Ok(Some(r)) = substrate.store().get_record(id) {
                 let text = r.content();
                 let first_line = text.lines().next().unwrap_or("term").trim();
@@ -726,6 +728,17 @@ pub fn execute_nrem_compaction_phase(
     substrate: &mut Substrate,
     sample_depth: usize,
 ) -> NremCompactionReceipt {
+    execute_nrem_compaction_phase_opts(substrate, sample_depth, false)
+}
+
+/// Executes the NREM consolidation phase with opt-in semantic crystallization (Stage 5).
+/// When `crystallize` is true, multiple session turns in a chain are crystallized into
+/// durable memory crystals with cryptographic/relational supersession links.
+pub fn execute_nrem_compaction_phase_opts(
+    substrate: &mut Substrate,
+    sample_depth: usize,
+    crystallize: bool,
+) -> NremCompactionReceipt {
     let start = Instant::now();
     let total_records = substrate.store().record_count().unwrap_or(0);
     if total_records == 0 {
@@ -736,28 +749,40 @@ pub fn execute_nrem_compaction_phase(
             compacted_summaries_minted: 0,
             token_compaction_ratio: 1.0,
             duration_us: start.elapsed().as_micros() as f64,
+            crystallized_record_ids: Vec::new(),
         };
     }
 
     let scan_count = total_records.min(sample_depth);
     let mut session_counts: std::collections::HashMap<String, usize> =
         std::collections::HashMap::new();
+    let mut session_records: std::collections::HashMap<String, Vec<u64>> =
+        std::collections::HashMap::new();
+    let mut existing_crystals: std::collections::HashMap<String, u64> =
+        std::collections::HashMap::new();
     let mut superseded_count = 0usize;
     let mut contradiction_count = 0usize;
     let mut original_bytes = 0usize;
 
     for i in 0..scan_count {
-        let id = (total_records - i) as u64;
+        let id = (total_records - 1 - i) as u64;
         if let Ok(Some(rec)) = substrate.store().get_record(id) {
             let src = rec.source();
             let content = rec.content();
             original_bytes += content.len();
 
-            if src.starts_with("session:") {
+            if let Some(c_sid) = src.strip_prefix("crystal:") {
+                let s_id = c_sid.split(':').next().unwrap_or("default").to_string();
+                existing_crystals
+                    .entry(s_id)
+                    .and_modify(|max_id| *max_id = (*max_id).max(id))
+                    .or_insert(id);
+            } else if src.starts_with("session:") {
                 let parts: Vec<&str> = src.split(':').collect();
                 let s_id = parts.get(1).copied().unwrap_or("default").to_string();
-                let count = session_counts.entry(s_id).or_insert(0);
+                let count = session_counts.entry(s_id.clone()).or_insert(0);
                 *count += 1;
+                session_records.entry(s_id).or_default().push(id);
                 // If a session has multiple checkpoint records, intermediate ones are superseded
                 if *count > 1 {
                     superseded_count += 1;
@@ -774,8 +799,64 @@ pub fn execute_nrem_compaction_phase(
         }
     }
 
+    let min_turns_for_crystal = if sample_depth > 10_000 { 3 } else { 2 };
+    let mut crystallized_ids = Vec::new();
+    if crystallize && !substrate.store().is_strict_zero_write() {
+        let mut sorted_sessions: Vec<(&String, &Vec<u64>)> = session_records.iter().collect();
+        sorted_sessions.sort_by(|a, b| a.0.cmp(b.0));
+        for (s_id, records) in sorted_sessions {
+            if records.len() >= min_turns_for_crystal {
+                // records[0] is the newest in the scan (reverse ID order)
+                let head_id = records[0];
+                if existing_crystals
+                    .get(s_id)
+                    .is_some_and(|&crystal_id| crystal_id > head_id)
+                {
+                    continue;
+                }
+                let older_records = &records[1..];
+                let head_content = substrate
+                    .store()
+                    .get_record(head_id)
+                    .ok()
+                    .flatten()
+                    .map(|r| r.content().to_string())
+                    .unwrap_or_default();
+                let crystal_json = serde_json::json!({
+                    "type": "memory_crystal",
+                    "session_id": s_id,
+                    "head_record_id": head_id,
+                    "superseded_record_ids": older_records,
+                    "summary": format!("Crystallized {} historical turns into semantic crystal for session {}", older_records.len(), s_id),
+                    "head_snippet": truncate_chars(&head_content, 120),
+                    "timestamp_ns": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos() as u64,
+                });
+                let m_ids = substrate.remember_batch(&[RememberItem {
+                    content: crystal_json.to_string(),
+                    source: format!("crystal:{}", s_id),
+                    kind: ImportKind::Simulated,
+                }]);
+                if let Some(Ok(crystal_id)) = m_ids.first() {
+                    crystallized_ids.push(*crystal_id);
+                    for &older_id in older_records {
+                        let _ = substrate.add_relation(
+                            crate::field::RelationKind::Supersedes,
+                            *crystal_id,
+                            older_id,
+                            1.0,
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     let sessions_scanned = session_counts.len();
-    let summaries_minted = sessions_scanned.min(superseded_count / 2 + 1);
+    let summaries_minted = if !crystallized_ids.is_empty() {
+        crystallized_ids.len()
+    } else {
+        sessions_scanned.min(superseded_count / 2 + 1)
+    };
     let compacted_bytes = original_bytes.saturating_sub(superseded_count * 120).max(1);
     let ratio = if original_bytes > 0 {
         (compacted_bytes as f32) / (original_bytes as f32)
@@ -790,6 +871,7 @@ pub fn execute_nrem_compaction_phase(
         compacted_summaries_minted: summaries_minted,
         token_compaction_ratio: ratio.clamp(0.10, 1.0),
         duration_us: start.elapsed().as_micros() as f64,
+        crystallized_record_ids: crystallized_ids,
     }
 }
 
@@ -873,13 +955,38 @@ pub fn execute_dual_phase_sleep_cycle(
     substrate: &mut Substrate,
     seed: u64,
 ) -> DualPhaseSleepTelemetry {
+    execute_dual_phase_sleep_cycle_opts(mode, regime, budget_steps, substrate, seed, false)
+}
+
+/// Executes the complete Dual-Phase Sleep Cycle with opt-in semantic crystallization (Stage 5).
+pub fn execute_dual_phase_sleep_cycle_opts(
+    mode: IncubationMode,
+    regime: &RegimeVector,
+    budget_steps: usize,
+    substrate: &mut Substrate,
+    seed: u64,
+    crystallize: bool,
+) -> DualPhaseSleepTelemetry {
+    execute_dual_phase_sleep_cycle_ext(mode, regime, budget_steps, substrate, seed, crystallize, 100)
+}
+
+/// Executes a dual-phase sleep cycle with an explicit sample depth for NREM consolidation.
+pub fn execute_dual_phase_sleep_cycle_ext(
+    mode: IncubationMode,
+    regime: &RegimeVector,
+    budget_steps: usize,
+    substrate: &mut Substrate,
+    seed: u64,
+    crystallize: bool,
+    sample_depth: usize,
+) -> DualPhaseSleepTelemetry {
     let start = Instant::now();
 
     // Phase 1: NREM Compaction
     let nrem_receipt = if mode == IncubationMode::BaselineIdle {
         NremCompactionReceipt::default()
     } else {
-        execute_nrem_compaction_phase(substrate, 100)
+        execute_nrem_compaction_phase_opts(substrate, sample_depth, crystallize)
     };
 
     // Phase 2: REM Incubation & Insight Synthesis

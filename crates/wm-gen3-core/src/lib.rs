@@ -74,6 +74,7 @@ pub mod store;
 pub mod sutra;
 pub mod sweep;
 pub(crate) mod sweep_planner;
+pub mod temporal;
 pub mod transport;
 pub mod tripartite_router;
 pub mod tuple_space;
@@ -133,7 +134,8 @@ pub use valkyrie::{
 
 pub use factory::{FactoryAdjudication, FactoryCandidate, SoftwareFactory, SoftwareFactoryConfig};
 pub use ops::{
-    MemCutAuditReport, MemoryWorthStats, ObligationStatus, ProspectiveObligation,
+    EvidenceBundle, EvidenceCoverage, EvidenceDisposition, InspectionPromise, InspectionReport,
+    MemCutAuditReport, MemoryWorthStats, ObligationStatus, ProspectiveObligation, RecallStopReason,
     SessionCheckpoint, SessionContinuityView, VectorProjectionState, VectorRepairReport,
     WriteWorthAssessment,
 };

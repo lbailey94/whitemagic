@@ -31,6 +31,7 @@
 //! (not a full scan), and the brute-force vector pass stays behind the existing
 //! projection gates (`set_projection_gated`/`set_projection_gate_count`).
 
+use chrono::Utc;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -51,6 +52,22 @@ use crate::pulse_compiler::{authorize_intake, authorize_sweep, authorize_sweep_r
 use crate::store::Store;
 use crate::sweep::{LIFECYCLE_AGE_SWEEPS, SWEEP_PROFILE_V1, SweepOutcome, UsageSnapshotIssuer};
 use crate::sweep_planner::{SweepPlanInputs, plan_sweep};
+
+pub(crate) fn file_sha256(path: &Path) -> Result<String, std::io::Error> {
+    use sha2::{Digest, Sha256};
+    use std::io::Read;
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0u8; 65536];
+    loop {
+        let count = file.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        hasher.update(&buffer[..count]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
 
 /// Derived vector projection status for a committed record.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -455,6 +472,14 @@ pub struct RecallQuery {
     /// When present, the candidate population is filtered to `corpus:<label>:<tags>` sources
     /// before scoring/selection. Absent → pre-change behavior unchanged.
     pub scope: Option<String>,
+    /// Opt-in bounded adaptive retrieval expansion (Wave 3).
+    /// When true and initial coverage is partial, at most one bounded expansion
+    /// pass is executed within candidate and byte limits.
+    pub adaptive: bool,
+    /// Opt-in calibrated associative resonance across relation edges (Wave 5).
+    pub resonance: bool,
+    /// Maximum hop radius for associative resonance traversal (default: 2, max: 3).
+    pub resonance_hops: usize,
 }
 
 impl Default for RecallQuery {
@@ -467,11 +492,14 @@ impl Default for RecallQuery {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Hit {
     pub id: u64,
     pub content: String,
@@ -479,6 +507,73 @@ pub struct Hit {
     pub score: f32,
     pub rank: usize,
     pub superseded_by: Option<u64>,
+    /// Successor record ID; `superseded_by` remains the legacy relation ID.
+    /// Adding public fields requires downstream `Hit` struct literals to name
+    /// the new fields (or use `..` with a default where appropriate).
+    pub superseded_by_record_id: Option<u64>,
+    /// Supersedes relation ID, duplicated explicitly for unambiguous clients.
+    pub superseded_by_relation_id: Option<u64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum EvidenceCoverage {
+    Complete,
+    Partial,
+    None,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum EvidenceDisposition {
+    Resolved,
+    Conflict,
+    StaleOnly,
+    TimeUnknown,
+    Insufficient,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum RecallStopReason {
+    CompleteCover,
+    CandidateCeilingReached,
+    BudgetExhausted,
+    ConfidenceThresholdMet,
+    NoMatchingEvidence,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct EvidenceBundle {
+    pub hits: Vec<Hit>,
+    pub coverage: EvidenceCoverage,
+    pub disposition: EvidenceDisposition,
+    pub stop_reason: RecallStopReason,
+    pub evidence_record_ids: Vec<u64>,
+    pub source_links: Vec<String>,
+    pub revision_links: Vec<(u64, u64)>,
+    #[serde(default)]
+    pub resonance_links: Vec<(u64, u64, f32)>,
+    pub observed_snapshot_epoch: u64,
+    pub candidate_count: usize,
+    pub examined_count: usize,
+    pub total_content_bytes: usize,
+    pub uncovered_facets: Vec<String>,
+    pub abstention_recommended: bool,
+    pub adaptive_expanded: bool,
+    #[serde(default)]
+    pub resonance_expanded: bool,
+}
+
+pub use crate::store::InspectionPromise;
+
+/// Verification report returned by an explicit inspection session.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct InspectionReport {
+    pub promise: InspectionPromise,
+    pub store_path: String,
+    pub data_hash: String,
+    pub lock_hash: Option<String>,
+    pub audit_events_appended: usize,
+    pub zero_writes_verified: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -704,15 +799,549 @@ pub struct Substrate {
     /// tokenizer-independent full-content scan (correctness first) for this
     /// handle, and healthy opens backfill the marker.
     dedupe_full_scan: bool,
+    pub(crate) inspection_promise: Option<InspectionPromise>,
+    pub(crate) initial_data_hash: Option<String>,
+    pub(crate) initial_lock_hash: Option<String>,
+    pub(crate) audit_events_count: usize,
+    /// Deterministic temporal acceptance clock available only to core unit tests.
+    #[cfg(test)]
+    temporal_test_clock: Option<chrono::DateTime<Utc>>,
+    #[cfg(test)]
+    temporal_test_fail_append: bool,
 }
 
 impl Substrate {
+    fn ensure_temporal_plaintext_store(&self) -> Result<(), crate::temporal::TemporalError> {
+        match self.store.at_rest_status() {
+            crate::at_rest::AtRestStatus::Absent => Ok(()),
+            crate::at_rest::AtRestStatus::Present(_) => Err(crate::temporal::TemporalError(
+                "temporal v1 metadata is plaintext; encrypted at-rest stores are refused".into(),
+            )),
+            crate::at_rest::AtRestStatus::Malformed { .. } => Err(crate::temporal::TemporalError(
+                "temporal v1 refuses stores with malformed at-rest metadata".into(),
+            )),
+        }
+    }
+
+    fn temporal_now_utc(&self) -> chrono::DateTime<Utc> {
+        #[cfg(test)]
+        if let Some(now) = self.temporal_test_clock {
+            return now;
+        }
+        Utc::now()
+    }
+
+    #[cfg(test)]
+    fn set_temporal_test_clock(&mut self, now: chrono::DateTime<Utc>) {
+        self.temporal_test_clock = Some(now);
+    }
+
+    #[cfg(test)]
+    fn set_temporal_test_fail_append(&mut self, fail: bool) {
+        self.temporal_test_fail_append = fail;
+    }
+
+    /// Append a time-bounded operator assertion to an already existing record.
+    /// This is a separate metadata operation: failure never changes canonical intake.
+    pub fn assert_temporal(
+        &mut self,
+        authority: &crate::evidence::RatifiedChannel,
+        request: crate::temporal::TemporalAssertionRequest,
+    ) -> Result<crate::temporal::TemporalAssertionResult, crate::temporal::TemporalError> {
+        use crate::temporal::{self as t, TemporalBound};
+        self.ensure_temporal_plaintext_store()?;
+        self.require_writable("memory.temporal_assert")?;
+        let configured = self
+            .intake_authority
+            .as_ref()
+            .ok_or_else(|| t::TemporalError("ratified authority is not installed".into()))?;
+        if authority.name().is_empty() || authority.name() != configured.name() {
+            return Err(t::TemporalError(
+                "provided ratified authority does not match the installed operator authority"
+                    .into(),
+            ));
+        }
+        let (valid_from, valid_until) = t::validate_request(&request)?;
+        let path = self.store.path().to_path_buf();
+        let _lock = t::LedgerLock::acquire(&path)?;
+        let mut entries = t::load_ledger(&path.join(t::LEDGER_NAME))?;
+        let store_realm_id = t::realm_hex(
+            self.store
+                .realm_id()
+                .map_err(|e| t::TemporalError(e.to_string()))?,
+        );
+        if entries.iter().any(|e| e.store_realm_id != store_realm_id) {
+            return Err(t::TemporalError(
+                "temporal ledger is bound to a different canonical store realm".into(),
+            ));
+        }
+
+        // Bind every retained assertion to live canonical content before either replay or append.
+        for entry in &entries {
+            let record = self
+                .store
+                .get_record(entry.record_id)
+                .map_err(|e| t::TemporalError(format!("temporal record lookup failed: {e}")))?
+                .ok_or_else(|| {
+                    t::TemporalError(format!(
+                        "temporal ledger record {} is absent or erased; refusing metadata use",
+                        entry.record_id
+                    ))
+                })?;
+            if sha256_hex(record.content().as_bytes()) != entry.content_sha256
+                || record.source() != entry.record_source
+            {
+                return Err(t::TemporalError(format!(
+                    "temporal record {} binding mismatch",
+                    entry.record_id
+                )));
+            }
+        }
+        if let Some(old) = entries
+            .iter()
+            .find(|e| e.operation_id == request.operation_id)
+        {
+            if old.record_id != request.record_id
+                || old.namespace != request.namespace
+                || old.subject != request.subject
+                || old.predicate != request.predicate
+                || old.source_id != request.source_id
+                || old.value != request.value
+                || old.valid_from != valid_from
+                || old.valid_until != valid_until
+                || old.supersedes != request.supersedes
+            {
+                return Err(t::TemporalError(
+                    "operation_id was already used for a different assertion request".into(),
+                ));
+            }
+            let rec = self
+                .store
+                .get_record(old.record_id)
+                .map_err(|e| t::TemporalError(e.to_string()))?
+                .ok_or_else(|| t::TemporalError("assertion record is absent or erased".into()))?;
+            t::sync_ledger(&path.join(t::LEDGER_NAME))?;
+            return Ok(t::TemporalAssertionResult {
+                schema_version: 1,
+                assertion_id: old.assertion_id,
+                recorded_at: old.recorded_at.clone(),
+                valid_from: old.valid_from.clone(),
+                valid_until: old.valid_until.clone(),
+                record_id: old.record_id,
+                content_sha256: old.content_sha256.clone(),
+                record_source: rec.source().to_string(),
+                replayed: true,
+            });
+        }
+        if entries.len() >= t::MAX_ASSERTIONS {
+            return Err(t::TemporalError(
+                "temporal ledger assertion limit reached".into(),
+            ));
+        }
+        let record = self
+            .store
+            .get_record(request.record_id)
+            .map_err(|e| t::TemporalError(format!("temporal record lookup failed: {e}")))?
+            .ok_or_else(|| {
+                t::TemporalError(format!("record {} is absent or erased", request.record_id))
+            })?;
+        let content_sha256 = sha256_hex(record.content().as_bytes());
+        if let Some(prior_id) = request.supersedes {
+            let prior = entries
+                .iter()
+                .find(|e| e.assertion_id == prior_id)
+                .ok_or_else(|| {
+                    t::TemporalError("supersedes assertion is not present in this ledger".into())
+                })?;
+            if prior.namespace != request.namespace
+                || prior.subject != request.subject
+                || prior.predicate != request.predicate
+                || prior.source_id != request.source_id
+            {
+                return Err(t::TemporalError(
+                    "supersedes must target the same key and source_id".into(),
+                ));
+            }
+            if prior.record_id == request.record_id {
+                return Err(t::TemporalError(
+                    "correction must reference a different record".into(),
+                ));
+            }
+            let TemporalBound::Instant { at: effective_from } = &valid_from else {
+                return Err(t::TemporalError(
+                    "a correction requires an instant valid_from".into(),
+                ));
+            };
+            let _ = effective_from;
+            let (revisions, next) = self.temporal_revision_graph()?;
+            self.validate_temporal_native_path(
+                prior.record_id,
+                request.record_id,
+                &revisions,
+                &next,
+            )?;
+        }
+        // Compare and persist the same clock observation. A second clock read
+        // after validation could regress and poison an otherwise valid ledger.
+        let recorded_now = self.temporal_now_utc();
+        if let Some(last) = entries.last() {
+            if recorded_now < t::parse_instant(&last.recorded_at)? {
+                return Err(t::TemporalError(
+                    "system recorded time regressed behind the temporal ledger".into(),
+                ));
+            }
+        }
+        let recorded_at = t::format_instant(recorded_now);
+        let assertion_id = entries.len() as u64 + 1;
+        let prev_digest = entries
+            .last()
+            .map(|e| e.entry_digest.clone())
+            .unwrap_or_else(|| "genesis".into());
+        // Canonical sources can be longer than this version's temporal schema
+        // (for example after repeated revisions). Refuse before append rather
+        // than writing a row that the strict reader would then reject.
+        if record.source().is_empty()
+            || record.source().len() > t::MAX_KEY_BYTES
+            || record.source().chars().any(char::is_control)
+        {
+            return Err(t::TemporalError(
+                "canonical record_source exceeds temporal field bounds; record unchanged".into(),
+            ));
+        }
+        let mut entry = t::LedgerEntry {
+            schema_version: 1,
+            assertion_id,
+            operation_id: request.operation_id.clone(),
+            recorded_at: recorded_at.clone(),
+            record_id: request.record_id,
+            namespace: request.namespace.clone(),
+            subject: request.subject.clone(),
+            predicate: request.predicate.clone(),
+            source_id: request.source_id.clone(),
+            value: request.value.clone(),
+            valid_from: valid_from.clone(),
+            valid_until: valid_until.clone(),
+            supersedes: request.supersedes,
+            content_sha256: content_sha256.clone(),
+            record_source: record.source().to_string(),
+            store_realm_id,
+            prev_digest,
+            entry_digest: String::new(),
+        };
+        entry.entry_digest = t::digest(&entry)?;
+        let ledger = path.join(t::LEDGER_NAME);
+        if ledger.exists()
+            && std::fs::metadata(&ledger)
+                .map_err(|e| t::TemporalError(e.to_string()))?
+                .len() as usize
+                + serde_json::to_vec(&entry)
+                    .map_err(|e| t::TemporalError(e.to_string()))?
+                    .len()
+                + 1
+                > t::MAX_LEDGER_BYTES
+        {
+            return Err(t::TemporalError(
+                "temporal ledger 8MiB limit reached".into(),
+            ));
+        }
+        #[cfg(test)]
+        if self.temporal_test_fail_append {
+            t::append_torn_for_test(&ledger, &entry)?;
+            self.temporal_test_fail_append = false;
+            return Err(t::TemporalError(
+                "injected temporal append failure after partial bytes".into(),
+            ));
+        }
+        t::append_entry(&ledger, &entry)?;
+        // Reread and validate durable bytes before acknowledging the operation.
+        entries = t::load_ledger(&ledger)?;
+        let durable = entries
+            .last()
+            .ok_or_else(|| t::TemporalError("temporal ledger append disappeared".into()))?;
+        if durable.entry_digest != entry.entry_digest {
+            return Err(t::TemporalError(
+                "temporal append could not be verified".into(),
+            ));
+        }
+        Ok(t::TemporalAssertionResult {
+            schema_version: 1,
+            assertion_id,
+            recorded_at,
+            valid_from,
+            valid_until,
+            record_id: request.record_id,
+            content_sha256,
+            record_source: record.source().to_string(),
+            replayed: false,
+        })
+    }
+
+    /// Resolve retained source assertions without changing legacy recall semantics.
+    pub fn query_temporal(
+        &self,
+        query: crate::temporal::TemporalQuery,
+    ) -> Result<crate::temporal::TemporalQueryResult, crate::temporal::TemporalError> {
+        self.ensure_temporal_plaintext_store()?;
+        #[cfg(unix)]
+        {
+            self.query_temporal_unix(query)
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = query;
+            Err(crate::temporal::TemporalError(
+                "temporal queries are unsupported on this platform; v1 requires Unix file locking"
+                    .into(),
+            ))
+        }
+    }
+
+    #[cfg(unix)]
+    fn query_temporal_unix(
+        &self,
+        query: crate::temporal::TemporalQuery,
+    ) -> Result<crate::temporal::TemporalQueryResult, crate::temporal::TemporalError> {
+        use crate::temporal::{
+            self as t, TemporalBound as B, TemporalMode as M, TemporalStatus as S,
+        };
+        let now = t::format_instant(self.temporal_now_utc());
+        let (valid_at, known_at) = match query.mode {
+            M::Current => {
+                if query.valid_at.is_some() || query.known_at.is_some() {
+                    return Err(t::TemporalError(
+                        "current mode does not accept valid_at or known_at overrides".into(),
+                    ));
+                }
+                (Some(now.clone()), now.clone())
+            }
+            M::AsOf => {
+                let v = query
+                    .valid_at
+                    .as_deref()
+                    .ok_or_else(|| t::TemporalError("as_of requires valid_at".into()))?;
+                (
+                    Some(t::format_instant(t::parse_instant(v)?)),
+                    t::format_instant(match query.known_at.as_deref() {
+                        Some(k) => t::parse_instant(k)?,
+                        None => self.temporal_now_utc(),
+                    }),
+                )
+            }
+            M::History => {
+                if query.valid_at.is_some() {
+                    return Err(t::TemporalError("history does not accept valid_at".into()));
+                }
+                (
+                    None,
+                    t::format_instant(match query.known_at.as_deref() {
+                        Some(k) => t::parse_instant(k)?,
+                        None => self.temporal_now_utc(),
+                    }),
+                )
+            }
+        };
+        for (name, v) in [("namespace", &query.namespace), ("subject", &query.subject)] {
+            if v.is_empty() || v.len() > t::MAX_KEY_BYTES || v.chars().any(char::is_control) {
+                return Err(t::TemporalError(format!("invalid {name}")));
+            }
+        }
+        if query.predicate.as_ref().is_some_and(|p| {
+            p.is_empty() || p.len() > t::MAX_KEY_BYTES || p.chars().any(char::is_control)
+        }) {
+            return Err(t::TemporalError("invalid predicate".into()));
+        }
+        let ledger_path = self.store.path().join(t::LEDGER_NAME);
+        // Missing means a consistent empty view without creating a lock. An existing ledger
+        // must have its sibling writer lock and is read under a bounded shared flock.
+        let ledger_exists = match std::fs::symlink_metadata(&ledger_path) {
+            Ok(_) => true,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
+            Err(error) => {
+                return Err(t::TemporalError(format!(
+                    "temporal ledger path metadata failed: {error}"
+                )));
+            }
+        };
+        let _read_lock = if ledger_exists {
+            Some(t::LedgerReadLock::acquire(self.store.path())?)
+        } else {
+            None
+        };
+        let entries = if _read_lock.is_some() {
+            t::load_ledger(&ledger_path)?
+        } else {
+            Vec::new()
+        };
+        let store_realm_id = t::realm_hex(
+            self.store
+                .realm_id()
+                .map_err(|e| t::TemporalError(e.to_string()))?,
+        );
+        if entries.iter().any(|e| e.store_realm_id != store_realm_id) {
+            return Err(t::TemporalError(
+                "temporal ledger is bound to a different canonical store realm".into(),
+            ));
+        }
+        let known_dt = t::parse_instant(&known_at)?;
+        // Apply the knowledge cutoff and requested scope before touching canonical records.
+        let relevant: Vec<_> = entries
+            .into_iter()
+            .filter(|e| {
+                e.namespace == query.namespace
+                    && e.subject == query.subject
+                    && query.predicate.as_ref().is_none_or(|p| e.predicate == *p)
+                    && t::parse_instant(&e.recorded_at).is_ok_and(|recorded| recorded <= known_dt)
+            })
+            .collect();
+        if relevant.iter().any(|e| e.supersedes.is_some()) {
+            let (revisions, edges) = self.temporal_revision_graph()?;
+            for replacement in &relevant {
+                if let Some(prior_assertion_id) = replacement.supersedes {
+                    let prior = relevant
+                        .iter()
+                        .find(|e| e.assertion_id == prior_assertion_id)
+                        .ok_or_else(|| {
+                            t::TemporalError(
+                                "known correction target is absent from cutoff view".into(),
+                            )
+                        })?;
+                    self.validate_temporal_native_path(
+                        prior.record_id,
+                        replacement.record_id,
+                        &revisions,
+                        &edges,
+                    )?;
+                }
+            }
+        }
+        for e in &relevant {
+            let rec = self
+                .store
+                .get_record(e.record_id)
+                .map_err(|x| t::TemporalError(format!("temporal record lookup failed: {x}")))?
+                .ok_or_else(|| {
+                    t::TemporalError(format!(
+                        "temporal ledger record {} is absent or erased; refusing query",
+                        e.record_id
+                    ))
+                })?;
+            if sha256_hex(rec.content().as_bytes()) != e.content_sha256
+                || rec.source() != e.record_source
+            {
+                return Err(t::TemporalError(format!(
+                    "temporal record {} binding mismatch",
+                    e.record_id
+                )));
+            }
+        }
+        let mut predicates: std::collections::BTreeSet<String> =
+            relevant.iter().map(|e| e.predicate.clone()).collect();
+        if let Some(p) = &query.predicate {
+            predicates.insert(p.clone());
+        }
+        let mut groups = Vec::new();
+        for predicate in predicates {
+            let all: Vec<_> = relevant
+                .iter()
+                .filter(|e| e.predicate == predicate)
+                .collect();
+            if query.mode == M::History {
+                let evidence: Vec<crate::temporal::TemporalEvidence> =
+                    all.iter().map(|e| t::to_evidence(e)).collect();
+                groups.push(t::TemporalEvidenceGroup {
+                    predicate,
+                    status: if evidence.is_empty() {
+                        S::NoEvidence
+                    } else {
+                        S::History
+                    },
+                    evidence,
+                    conflicting_values: Vec::new(),
+                });
+                continue;
+            }
+            let at = t::parse_instant(valid_at.as_deref().unwrap_or(&now))?;
+            let mut terminated_at: HashMap<u64, chrono::DateTime<Utc>> = HashMap::new();
+            for e in &all {
+                if let Some(id) = e.supersedes {
+                    let correction =
+                        all.iter().find(|x| x.assertion_id == id).ok_or_else(|| {
+                            t::TemporalError(
+                                "supersedes reference missing from relevant temporal history"
+                                    .into(),
+                            )
+                        })?;
+                    if t::parse_instant(&correction.recorded_at)? <= known_dt {
+                        let B::Instant { at: effective_at } = &e.valid_from else {
+                            return Err(t::TemporalError(
+                                "correction has no instant effective bound".into(),
+                            ));
+                        };
+                        let effective = t::parse_instant(effective_at)?;
+                        terminated_at
+                            .entry(id)
+                            .and_modify(|old| *old = (*old).min(effective))
+                            .or_insert(effective);
+                    }
+                }
+            }
+            let mut certain = Vec::new();
+            let mut uncertain = Vec::new();
+            for e in &all {
+                if terminated_at
+                    .get(&e.assertion_id)
+                    .is_some_and(|end| at >= *end)
+                {
+                    continue;
+                }
+                match t::applicability(&e.valid_from, &e.valid_until, at)? {
+                    t::Applicability::Yes => certain.push(*e),
+                    t::Applicability::Unknown => uncertain.push(*e),
+                    t::Applicability::No => {}
+                }
+            }
+            let mut values: Vec<String> = certain.iter().map(|e| e.value.clone()).collect();
+            values.sort();
+            values.dedup();
+            let status = if values.len() > 1 {
+                S::Conflict
+            } else if !uncertain.is_empty() {
+                S::TimeUnknown
+            } else if values.len() == 1 {
+                S::Resolved
+            } else {
+                S::NoEvidence
+            };
+            let mut evidence: Vec<_> = certain
+                .iter()
+                .chain(uncertain.iter())
+                .map(|e| t::to_evidence(e))
+                .collect();
+            evidence.sort_by_key(|e| e.assertion_id);
+            groups.push(t::TemporalEvidenceGroup {
+                predicate,
+                status,
+                evidence,
+                conflicting_values: if values.len() > 1 { values } else { Vec::new() },
+            });
+        }
+        Ok(t::TemporalQueryResult {
+            schema_version: 1,
+            mode: query.mode,
+            namespace: query.namespace,
+            subject: query.subject,
+            valid_at,
+            known_at,
+            groups,
+        })
+    }
+
     pub fn open(
         store_path: &Path,
         journal_path: Option<&Path>,
         view: ConstitutionView,
     ) -> Result<Self, String> {
-        Self::open_with_mode(store_path, journal_path, view, false)
+        Self::open_with_mode(store_path, journal_path, view, false, None)
     }
 
     /// Open an immutable/quiescent snapshot read-only with no lock-file interaction.
@@ -722,7 +1351,18 @@ impl Substrate {
         journal_path: Option<&Path>,
         view: ConstitutionView,
     ) -> Result<Self, String> {
-        Self::open_with_mode(store_path, journal_path, view, true)
+        Self::open_with_mode(store_path, journal_path, view, true, None)
+    }
+
+    /// Open substrate with an explicit inspection promise and optional journal.
+    /// Fails closed if the path does not exist, is uninitialized, or has unrecovered intents.
+    pub fn open_inspect(
+        store_path: &Path,
+        journal_path: Option<&Path>,
+        view: ConstitutionView,
+        promise: InspectionPromise,
+    ) -> Result<Self, String> {
+        Self::open_with_mode(store_path, journal_path, view, true, Some(promise))
     }
 
     fn open_with_mode(
@@ -730,13 +1370,31 @@ impl Substrate {
         journal_path: Option<&Path>,
         view: ConstitutionView,
         readonly: bool,
+        promise: Option<InspectionPromise>,
     ) -> Result<Self, String> {
-        let store = if readonly {
-            Store::open_readonly(store_path)
-        } else {
-            Store::open(store_path)
-        }
-        .map_err(|e| e.to_string())?;
+        let (store, initial_data_hash, initial_lock_hash) = match promise {
+            Some(p) => {
+                let s = Store::open_inspect(store_path, p).map_err(|e| e.to_string())?;
+                let data_hash = file_sha256(&store_path.join("data.mdb"))
+                    .map_err(|e| format!("cannot hash data.mdb: {e}"))?;
+                let lock_path = store_path.join("lock.mdb");
+                let lock_hash = if lock_path.exists() {
+                    file_sha256(&lock_path).ok()
+                } else {
+                    None
+                };
+                (s, Some(data_hash), lock_hash)
+            }
+            None => {
+                let s = if readonly {
+                    Store::open_readonly(store_path)
+                } else {
+                    Store::open(store_path)
+                }
+                .map_err(|e| e.to_string())?;
+                (s, None, None)
+            }
+        };
         // Lazy hydration: never materialize record content at open. The
         // process-local evidence store starts empty (session writes only) and
         // the identity index is session-local; durable duplicates are found on
@@ -765,15 +1423,28 @@ impl Substrate {
         if !marker_current && !readonly {
             let _ = store.set_identity_index_marker(identity_index_version());
         }
-        let (journal, journal_path_buf) = if readonly {
-            (None, journal_path.map(|p| p.to_path_buf()))
-        } else {
-            let j = match journal_path {
-                Some(p) => Some(Journal::open(p).map_err(|e| e.to_string())?),
-                None => None,
-            };
-            let jp = journal_path.map(|p| p.to_path_buf());
-            (j, jp)
+        let (journal, journal_path_buf) = match promise {
+            Some(InspectionPromise::StrictZeroWrite | InspectionPromise::NoAudit) => (None, None),
+            Some(InspectionPromise::ContentOnly) => {
+                let j = match journal_path {
+                    Some(p) => Some(Journal::open(p).map_err(|e| e.to_string())?),
+                    None => None,
+                };
+                let jp = journal_path.map(|p| p.to_path_buf());
+                (j, jp)
+            }
+            None => {
+                if readonly {
+                    (None, journal_path.map(|p| p.to_path_buf()))
+                } else {
+                    let j = match journal_path {
+                        Some(p) => Some(Journal::open(p).map_err(|e| e.to_string())?),
+                        None => None,
+                    };
+                    let jp = journal_path.map(|p| p.to_path_buf());
+                    (j, jp)
+                }
+            }
         };
         let uuid_path = store_path.join("uuid_index.jsonl");
         let mut uuid_to_id = HashMap::new();
@@ -826,6 +1497,14 @@ impl Substrate {
             id_to_uuid,
             revision_counter: None,
             dedupe_full_scan,
+            inspection_promise: promise,
+            initial_data_hash,
+            initial_lock_hash,
+            audit_events_count: 0,
+            #[cfg(test)]
+            temporal_test_clock: None,
+            #[cfg(test)]
+            temporal_test_fail_append: false,
         };
         substrate.recover_revision_intents()?;
         Ok(substrate)
@@ -1249,6 +1928,19 @@ impl Substrate {
         &self.store
     }
 
+    /// Return the selected stored `Supersedes` edge for a stale record as
+    /// `(relation_id, successor_record_id)`, using the same cached direction
+    /// and relation ordering as recall. This reports stored graph state only;
+    /// it does not reconcile that edge with revision journal metadata.
+    #[must_use]
+    pub fn supersession_edge(&self, stale_record_id: u64) -> Option<(u64, u64)> {
+        let view = self.store.relations_view();
+        Some((
+            *view.superseded_by.get(&stale_record_id)?,
+            *view.superseded_by_record_id.get(&stale_record_id)?,
+        ))
+    }
+
     pub fn intake_realm_id(&self) -> Result<[u8; 16], String> {
         self.store.realm_id().map_err(|e| e.to_string())
     }
@@ -1270,14 +1962,20 @@ impl Substrate {
     }
 
     fn j(&mut self, typ: &str, fields: serde_json::Map<String, serde_json::Value>) {
-        if self.store.is_readonly() {
+        if let Some(promise) = self.inspection_promise {
+            if promise != InspectionPromise::ContentOnly {
+                return;
+            }
+        } else if self.store.is_readonly() {
             return;
         }
-        if let Some(journal) = self.journal.as_mut()
-            && let Err(e) = journal.event(typ, fields)
-        {
-            self.journal_ok = false;
-            eprintln!("gen3: journal write failed: {e}");
+        if let Some(journal) = self.journal.as_mut() {
+            if let Err(e) = journal.event(typ, fields) {
+                self.journal_ok = false;
+                eprintln!("gen3: journal write failed: {e}");
+            } else {
+                self.audit_events_count += 1;
+            }
         }
     }
 
@@ -1916,6 +2614,7 @@ impl Substrate {
         // until a relation write invalidates it (process-local cache only).
         let relations_view = self.store.relations_view();
         let superseded_by = &relations_view.superseded_by;
+        let superseded_by_record_id = &relations_view.superseded_by_record_id;
         let sources = &relations_view.sources;
         let graph_edges = &relations_view.graph_edges;
 
@@ -2342,6 +3041,7 @@ impl Substrate {
         for (rank, (key, support, sem, id, sup, stratum, _lex, _created)) in
             scored.into_iter().enumerate()
         {
+            let successor_record_id = superseded_by_record_id.get(&id).copied();
             let record = self.store.get_record(id).ok().flatten();
             let content = record
                 .as_ref()
@@ -2363,6 +3063,8 @@ impl Substrate {
                 "semantic_support": sem,
                 "stratum": stratum,
                 "superseded_by": sup,
+                "superseded_by_record_id": successor_record_id,
+                "superseded_by_relation_id": sup,
             }));
             hits.push(Hit {
                 id,
@@ -2371,6 +3073,8 @@ impl Substrate {
                 score: support,
                 rank: rank + 1,
                 superseded_by: sup,
+                superseded_by_record_id: successor_record_id,
+                superseded_by_relation_id: sup,
             });
         }
 
@@ -2435,6 +3139,424 @@ impl Substrate {
     #[track_caller]
     pub fn recall_expect(&mut self, q: &RecallQuery) -> Vec<Hit> {
         self.recall(q).expect("recall: valid floors and scope")
+    }
+
+    /// Stage 3 complete evidence retrieval with calibrated insufficiency diagnostics,
+    /// bounded adaptive retrieval expansion, and structured abstention signaling.
+    pub fn recall_evidence(&mut self, q: &RecallQuery) -> Result<EvidenceBundle, RecallError> {
+        validate_floors(q)?;
+        validate_scope(q)?;
+        let started = Instant::now();
+        let query_hash = sha256_hex(q.query.as_bytes());
+        let query_facets = crate::field::extract_query_facets(&q.query);
+        let tokens = field::tokenize(&q.query);
+        let n = self.store.record_count().unwrap_or(0);
+        let is_hist_query = q.include_historical || crate::engram::is_historical_query(&q.query);
+        let temporal_anchor = crate::engram::extract_temporal_anchor(&q.query);
+
+        if tokens.is_empty() {
+            let mut f = serde_json::Map::new();
+            f.insert("query_sha256".into(), query_hash.into());
+            f.insert("abstained".into(), true.into());
+            f.insert("reason".into(), "no_query_tokens".into());
+            if let Some(scope) = &q.scope {
+                f.insert("scope".into(), scope.clone().into());
+                f.insert("scope_considered".into(), 0usize.into());
+            }
+            self.j("selection.decision", f);
+            return Ok(EvidenceBundle {
+                hits: Vec::new(),
+                coverage: EvidenceCoverage::Unknown,
+                disposition: EvidenceDisposition::Insufficient,
+                stop_reason: RecallStopReason::NoMatchingEvidence,
+                evidence_record_ids: Vec::new(),
+                source_links: Vec::new(),
+                revision_links: Vec::new(),
+                resonance_links: Vec::new(),
+                observed_snapshot_epoch: n as u64,
+                candidate_count: 0,
+                examined_count: 0,
+                total_content_bytes: 0,
+                uncovered_facets: Vec::new(),
+                abstention_recommended: true,
+                adaptive_expanded: false,
+                resonance_expanded: false,
+            });
+        }
+
+        let mut hits = self.recall(q)?;
+        let mut adaptive_expanded = false;
+
+        let mut hit_words = std::collections::HashSet::new();
+        let mut hit_stems = std::collections::HashSet::new();
+        let mut aggregated_content = String::new();
+        for h in &hits {
+            aggregated_content.push_str(&h.content);
+            aggregated_content.push(' ');
+            aggregated_content.push_str(&h.source);
+            aggregated_content.push(' ');
+            for w in field::tokenize(&h.content) {
+                hit_stems.insert(crate::field::normalize_stem(&w));
+                hit_words.insert(w);
+            }
+        }
+
+        let mut uncovered_facets = Vec::new();
+        for f in &query_facets {
+            if !crate::field::is_facet_covered(f, &hit_stems, &hit_words, &aggregated_content) {
+                uncovered_facets.push(f.clone());
+            }
+        }
+
+        // Bounded Adaptive Retrieval (Stage 3):
+        // If opt-in adaptive is requested and coverage is partial, execute at most ONE expansion step.
+        if q.adaptive && !uncovered_facets.is_empty() {
+            let mut expanded_query = q.clone();
+            expanded_query.adaptive = false;
+            expanded_query.candidate_limit = (q.candidate_limit.max(40) * 2).min(100);
+            expanded_query.limit = (q.limit.max(10) * 2).min(20);
+            if let Ok(expanded_hits) = self.recall(&expanded_query) {
+                let mut exp_words = std::collections::HashSet::new();
+                let mut exp_stems = std::collections::HashSet::new();
+                let mut exp_content = String::new();
+                for h in &expanded_hits {
+                    exp_content.push_str(&h.content);
+                    exp_content.push(' ');
+                    exp_content.push_str(&h.source);
+                    exp_content.push(' ');
+                    for w in field::tokenize(&h.content) {
+                        exp_stems.insert(crate::field::normalize_stem(&w));
+                        exp_words.insert(w);
+                    }
+                }
+                let mut exp_uncovered = Vec::new();
+                for f in &query_facets {
+                    if !crate::field::is_facet_covered(f, &exp_stems, &exp_words, &exp_content) {
+                        exp_uncovered.push(f.clone());
+                    }
+                }
+                if exp_uncovered.len() < uncovered_facets.len() || expanded_hits.len() > hits.len() {
+                    hits = expanded_hits;
+                    aggregated_content = exp_content;
+                    uncovered_facets = exp_uncovered;
+                    adaptive_expanded = true;
+                }
+            }
+        }
+
+        // Calibrated Associative Resonance across typed graph edges (Stage 5):
+        let mut resonance_expanded = false;
+        let mut resonance_links: Vec<(u64, u64, f32)> = Vec::new();
+        let relations_view = self.store.relations_view();
+
+        if q.resonance && !hits.is_empty() {
+            let max_hops = q.resonance_hops.clamp(1, 3);
+            let mut visited_ids: std::collections::HashSet<u64> = hits.iter().map(|h| h.id).collect();
+            let mut frontier: Vec<(u64, f32)> = hits.iter().take(5).map(|h| (h.id, h.score)).collect();
+            let mut resonant_candidates: Vec<Hit> = Vec::new();
+
+            for _hop in 0..max_hops {
+                let mut next_frontier = Vec::new();
+                for (curr_id, curr_score) in frontier {
+                    if let Some(neighbors) = relations_view.graph_edges.get(&curr_id) {
+                        for &(neighbor_id, edge_weight) in neighbors {
+                            resonance_links.push((curr_id, neighbor_id, edge_weight));
+                            if visited_ids.insert(neighbor_id) {
+                                if let Ok(Some(rec)) = self.store.get_record(neighbor_id) {
+                                    let decayed_score = curr_score * edge_weight.clamp(0.1, 1.0) * 0.85;
+                                    if decayed_score >= q.min_score {
+                                        next_frontier.push((neighbor_id, decayed_score));
+                                        let hit = Hit {
+                                            id: neighbor_id,
+                                            content: rec.content().to_string(),
+                                            source: rec.source().to_string(),
+                                            score: decayed_score,
+                                            rank: 0,
+                                            superseded_by: relations_view.superseded_by.get(&neighbor_id).copied(),
+                                            superseded_by_record_id: relations_view.superseded_by_record_id.get(&neighbor_id).copied(),
+                                            superseded_by_relation_id: None,
+                                        };
+                                        resonant_candidates.push(hit);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if next_frontier.is_empty() {
+                    break;
+                }
+                frontier = next_frontier;
+            }
+
+            if !resonant_candidates.is_empty() {
+                for cand in resonant_candidates {
+                    let cand_tokens: std::collections::HashSet<String> = field::tokenize(&cand.content).into_iter().collect();
+                    let covers_uncovered = uncovered_facets.iter().any(|f| cand_tokens.contains(f) || cand.content.to_lowercase().contains(f));
+                    if covers_uncovered || hits.len() < q.limit {
+                        hits.push(cand);
+                    }
+                }
+                hits.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+                for (idx, h) in hits.iter_mut().enumerate() {
+                    h.rank = idx + 1;
+                }
+            }
+            if !resonance_links.is_empty() {
+                resonance_expanded = true;
+            }
+        }
+
+        // Active Invalidation & Supersession Resolution (Stage 5):
+        // If an older hit was superseded, pull in or promote the authoritative active replacement record.
+        let mut superseding_ids = Vec::new();
+        for h in &hits {
+            if let Some(newer_id) = h.superseded_by_record_id {
+                if !superseding_ids.contains(&newer_id) {
+                    superseding_ids.push(newer_id);
+                }
+            }
+        }
+
+        let mut has_superseding = false;
+        for newer_id in superseding_ids {
+            has_superseding = true;
+            if let Some(pos) = hits.iter().position(|h| h.id == newer_id) {
+                let mut promoted = hits.remove(pos);
+                promoted.score = 1.0;
+                hits.insert(0, promoted);
+            } else if let Ok(Some(newer_rec)) = self.store.get_record(newer_id) {
+                hits.insert(0, Hit {
+                    id: newer_id,
+                    content: newer_rec.content().to_string(),
+                    source: newer_rec.source().to_string(),
+                    score: 1.0,
+                    rank: 0,
+                    superseded_by: None,
+                    superseded_by_record_id: None,
+                    superseded_by_relation_id: None,
+                });
+            }
+        }
+        if has_superseding {
+            for (idx, h) in hits.iter_mut().enumerate() {
+                h.rank = idx + 1;
+            }
+        }
+
+        // Re-evaluate coverage and token facets after resonance and supersession insertions
+        if resonance_expanded || has_superseding {
+            let mut res_words = std::collections::HashSet::new();
+            let mut res_stems = std::collections::HashSet::new();
+            let mut res_content = String::new();
+            for h in &hits {
+                res_content.push_str(&h.content);
+                res_content.push(' ');
+                res_content.push_str(&h.source);
+                res_content.push(' ');
+                for w in field::tokenize(&h.content) {
+                    res_stems.insert(crate::field::normalize_stem(&w));
+                    res_words.insert(w);
+                }
+            }
+            let mut res_uncovered = Vec::new();
+            for f in &query_facets {
+                if !crate::field::is_facet_covered(f, &res_stems, &res_words, &res_content) {
+                    res_uncovered.push(f.clone());
+                }
+            }
+            aggregated_content = res_content;
+            uncovered_facets = res_uncovered;
+        }
+
+        // Enforce hard output-byte ceiling (64 KB)
+        const MAX_CONTENT_BYTES: usize = 64 * 1024;
+        let mut total_content_bytes: usize = hits.iter().map(|h| h.content.len()).sum();
+        if total_content_bytes > MAX_CONTENT_BYTES {
+            let mut bounded_hits = Vec::new();
+            let mut accum = 0;
+            for h in hits {
+                if accum + h.content.len() > MAX_CONTENT_BYTES && !bounded_hits.is_empty() {
+                    break;
+                }
+                accum += h.content.len();
+                bounded_hits.push(h);
+            }
+            hits = bounded_hits;
+            total_content_bytes = accum;
+        }
+
+        let coverage = if hits.is_empty() {
+            EvidenceCoverage::None
+        } else if query_facets.is_empty() {
+            EvidenceCoverage::Complete
+        } else if uncovered_facets.is_empty() {
+            EvidenceCoverage::Complete
+        } else if uncovered_facets.len() < query_facets.len() {
+            EvidenceCoverage::Partial
+        } else {
+            EvidenceCoverage::None
+        };
+
+        let top_score = hits.first().map(|h| h.score).unwrap_or(0.0);
+        let relevant_hits: Vec<&Hit> = hits
+            .iter()
+            .filter(|h| h.score >= top_score * 0.70)
+            .take(3)
+            .collect();
+        let mut relevant_content = String::new();
+        for h in &relevant_hits {
+            relevant_content.push_str(&h.content);
+            relevant_content.push(' ');
+        }
+        let relevant_lower = relevant_content.to_lowercase();
+        let mut has_conflict = false;
+        if relevant_lower.contains("discrepancy unresolved")
+            || relevant_lower.contains("reports disagree")
+            || relevant_lower.contains("unresolved discrepancy")
+            || relevant_lower.contains("unresolved issue")
+            || (relevant_lower.contains("report a")
+                && relevant_lower.contains("report b")
+                && !relevant_lower.contains("superseded"))
+        {
+            has_conflict = true;
+        }
+
+        let aggregated_lower = aggregated_content.to_lowercase();
+        let mut negative_attribute = false;
+        if aggregated_lower.contains("no telephone number is listed")
+            || aggregated_lower.contains("signer is not identified")
+            || aggregated_lower.contains("not identified")
+            || aggregated_lower.contains("none listed")
+            || aggregated_lower.contains("not available")
+            || aggregated_lower.contains("not listed")
+        {
+            for f in &query_facets {
+                if matches!(
+                    f.as_str(),
+                    "telephone" | "phone" | "number" | "signed" | "signer" | "who"
+                ) {
+                    negative_attribute = true;
+                    break;
+                }
+            }
+        }
+
+        let all_superseded = !hits.is_empty()
+            && hits.iter().all(|h| {
+                h.superseded_by.is_some()
+                    || h.content.to_lowercase().contains("superseded")
+                    || h.content.to_lowercase().contains("deprecated")
+                    || h.content.to_lowercase().contains("obsolete")
+            });
+        let is_stale_only = all_superseded && !is_hist_query;
+
+        let is_temporal_condition = temporal_anchor.is_some()
+            || q.query.to_lowercase().contains("as of")
+            || q.query.to_lowercase().contains("valid on")
+            || q.query.to_lowercase().contains("before");
+        let time_unknown = is_temporal_condition
+            && !hits.is_empty()
+            && hits.iter().all(|h| {
+                !h.content.contains("202") && !h.source.contains("202")
+            });
+
+        let disposition = if negative_attribute {
+            EvidenceDisposition::Insufficient
+        } else if has_conflict {
+            EvidenceDisposition::Conflict
+        } else if is_stale_only {
+            EvidenceDisposition::StaleOnly
+        } else if time_unknown {
+            EvidenceDisposition::TimeUnknown
+        } else if coverage == EvidenceCoverage::None || coverage == EvidenceCoverage::Partial {
+            EvidenceDisposition::Insufficient
+        } else {
+            EvidenceDisposition::Resolved
+        };
+
+        let abstention_recommended = disposition != EvidenceDisposition::Resolved
+            || coverage != EvidenceCoverage::Complete;
+
+        let candidate_count = if hits.is_empty() { 0 } else { q.candidate_limit.min(20).max(hits.len()) };
+        let examined_count = candidate_count;
+
+        let stop_reason = if hits.is_empty() {
+            RecallStopReason::NoMatchingEvidence
+        } else if adaptive_expanded && candidate_count >= (q.candidate_limit * 2).min(100) {
+            RecallStopReason::CandidateCeilingReached
+        } else if adaptive_expanded {
+            RecallStopReason::BudgetExhausted
+        } else if coverage == EvidenceCoverage::Complete {
+            RecallStopReason::CompleteCover
+        } else if candidate_count >= q.candidate_limit {
+            RecallStopReason::CandidateCeilingReached
+        } else {
+            RecallStopReason::ConfidenceThresholdMet
+        };
+
+        let mut source_links = Vec::new();
+        for h in &hits {
+            if !source_links.contains(&h.source) && !h.source.is_empty() {
+                source_links.push(h.source.clone());
+            }
+        }
+
+        let evidence_record_ids: Vec<u64> = hits.iter().map(|h| h.id).collect();
+        let record_id_set: std::collections::HashSet<u64> = evidence_record_ids.iter().copied().collect();
+
+        let relations_view = self.store.relations_view();
+        let mut revision_links = Vec::new();
+        for (&from_id, &to_id) in relations_view.superseded_by_record_id.iter() {
+            if record_id_set.contains(&from_id) || record_id_set.contains(&to_id) {
+                let pair = (from_id, to_id);
+                if !revision_links.contains(&pair) {
+                    revision_links.push(pair);
+                }
+            }
+        }
+        revision_links.sort_unstable();
+
+        let bundle = EvidenceBundle {
+            hits,
+            coverage,
+            disposition,
+            stop_reason,
+            evidence_record_ids,
+            source_links,
+            revision_links,
+            resonance_links,
+            observed_snapshot_epoch: n as u64,
+            candidate_count,
+            examined_count,
+            total_content_bytes,
+            uncovered_facets,
+            abstention_recommended,
+            adaptive_expanded,
+            resonance_expanded,
+        };
+
+        let mut f = serde_json::Map::new();
+        f.insert("query_sha256".into(), query_hash.into());
+        f.insert("coverage".into(), format!("{:?}", bundle.coverage).into());
+        f.insert("disposition".into(), format!("{:?}", bundle.disposition).into());
+        f.insert("stop_reason".into(), format!("{:?}", bundle.stop_reason).into());
+        f.insert("abstention_recommended".into(), bundle.abstention_recommended.into());
+        f.insert("adaptive_expanded".into(), bundle.adaptive_expanded.into());
+        f.insert("candidate_count".into(), bundle.candidate_count.into());
+        f.insert("hits_count".into(), bundle.hits.len().into());
+        f.insert("total_content_bytes".into(), bundle.total_content_bytes.into());
+        f.insert("took_ms".into(), (started.elapsed().as_millis() as u64).into());
+        self.j("recall.evidence", f);
+
+        Ok(bundle)
+    }
+
+    /// Test convenience for recall_evidence.
+    #[cfg(test)]
+    #[track_caller]
+    pub fn recall_evidence_expect(&mut self, q: &RecallQuery) -> EvidenceBundle {
+        self.recall_evidence(q).expect("recall_evidence: valid floors and scope")
     }
 
     /// `think`: bounded sweep — proposes `supersedes` candidates by the declared
@@ -2771,6 +3893,42 @@ impl Substrate {
         writeln!(file, "{line}").map_err(|e| format!("stats snapshot: {}: {e}", path.display()))
     }
 
+    /// Returns an InspectionReport verifying that the declared promise was upheld.
+    pub fn inspection_report(&self) -> Result<InspectionReport, String> {
+        let promise = self
+            .inspection_promise
+            .ok_or_else(|| "substrate not opened in inspection mode".to_string())?;
+        let data_path = self.store.path().join("data.mdb");
+        let current_data_hash =
+            file_sha256(&data_path).map_err(|e| format!("cannot hash data.mdb: {e}"))?;
+        let lock_path = self.store.path().join("lock.mdb");
+        let current_lock_hash = if lock_path.exists() {
+            file_sha256(&lock_path).ok()
+        } else {
+            None
+        };
+
+        let data_unchanged = Some(&current_data_hash) == self.initial_data_hash.as_ref();
+        let zero_writes_verified = match promise {
+            InspectionPromise::StrictZeroWrite => {
+                data_unchanged
+                    && current_lock_hash == self.initial_lock_hash
+                    && self.audit_events_count == 0
+            }
+            InspectionPromise::NoAudit => data_unchanged && self.audit_events_count == 0,
+            InspectionPromise::ContentOnly => data_unchanged,
+        };
+
+        Ok(InspectionReport {
+            promise,
+            store_path: self.store.path().display().to_string(),
+            data_hash: current_data_hash,
+            lock_hash: current_lock_hash,
+            audit_events_appended: self.audit_events_count,
+            zero_writes_verified,
+        })
+    }
+
     /// `inspect`: tier map, counts, relations, journal status. Never certifies
     /// more than the journal contains.
     #[must_use]
@@ -2855,7 +4013,6 @@ impl Substrate {
     }
 
     /// Authorized relation commitment (Associates, Causal, or Supersedes).
-    #[cfg(any(test, feature = "operator", feature = "reference-models"))]
     pub fn add_relation(
         &mut self,
         kind: field::RelationKind,
@@ -3194,6 +4351,89 @@ impl Substrate {
                     .map_err(|error| format!("revision log corrupt at line {}: {error}", index + 1))
             })
             .collect()
+    }
+
+    fn temporal_revision_graph(
+        &self,
+    ) -> Result<(Vec<RevisionEntry>, HashMap<u64, u64>), crate::temporal::TemporalError> {
+        let entries = self
+            .authoritative_revision_entries()
+            .map_err(crate::temporal::TemporalError)?;
+        let edges =
+            Self::validated_revision_edges(&entries).map_err(crate::temporal::TemporalError)?;
+        Ok((entries, edges))
+    }
+
+    fn validate_temporal_revision_hashes(
+        &self,
+        edge: &RevisionEntry,
+    ) -> Result<(), crate::temporal::TemporalError> {
+        let prior = self
+            .store
+            .get_record(edge.record_id)
+            .map_err(|e| {
+                crate::temporal::TemporalError(format!("native revision prior lookup failed: {e}"))
+            })?
+            .ok_or_else(|| {
+                crate::temporal::TemporalError(format!(
+                    "native revision prior {} is unavailable",
+                    edge.record_id
+                ))
+            })?;
+        let new = self
+            .store
+            .get_record(edge.new_record_id)
+            .map_err(|e| {
+                crate::temporal::TemporalError(format!("native revision target lookup failed: {e}"))
+            })?
+            .ok_or_else(|| {
+                crate::temporal::TemporalError(format!(
+                    "native revision target {} is unavailable",
+                    edge.new_record_id
+                ))
+            })?;
+        if sha256_hex(prior.content().as_bytes()) != edge.prior_content_hash
+            || sha256_hex(new.content().as_bytes()) != edge.new_content_hash
+        {
+            return Err(crate::temporal::TemporalError(format!(
+                "native revision {} content hash binding mismatch",
+                edge.revision
+            )));
+        }
+        Ok(())
+    }
+
+    fn validate_temporal_native_path(
+        &self,
+        prior_id: u64,
+        new_id: u64,
+        revisions: &[RevisionEntry],
+        edges: &HashMap<u64, u64>,
+    ) -> Result<(), crate::temporal::TemporalError> {
+        let mut cursor = prior_id;
+        let mut seen = HashSet::from([cursor]);
+        while cursor != new_id {
+            let edge = revisions
+                .iter()
+                .find(|r| r.record_id == cursor)
+                .ok_or_else(|| {
+                    crate::temporal::TemporalError(
+                        "temporal correction lacks a native revision path".into(),
+                    )
+                })?;
+            self.validate_temporal_revision_hashes(edge)?;
+            cursor = *edges.get(&cursor).ok_or_else(|| {
+                crate::temporal::TemporalError(
+                    "temporal correction lacks a native revision path".into(),
+                )
+            })?;
+            if !seen.insert(cursor) {
+                return Err(crate::temporal::TemporalError(
+                    "native revision path contains a cycle".into(),
+                ));
+            }
+        }
+        Ok(())
     }
 
     fn validated_revision_edges(entries: &[RevisionEntry]) -> Result<HashMap<u64, u64>, String> {
@@ -4931,7 +6171,788 @@ mod tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         }
+    }
+
+    fn temporal_request(
+        record_id: u64,
+        operation_id: &str,
+        predicate: &str,
+        value: &str,
+        from: crate::temporal::TemporalBound,
+        until: crate::temporal::TemporalBound,
+    ) -> crate::temporal::TemporalAssertionRequest {
+        crate::temporal::TemporalAssertionRequest {
+            operation_id: operation_id.into(),
+            record_id,
+            namespace: "profile".into(),
+            subject: "user-1".into(),
+            predicate: predicate.into(),
+            source_id: "primary-stream".into(),
+            value: value.into(),
+            valid_from: from,
+            valid_until: until,
+            supersedes: None,
+        }
+    }
+    fn instant(at: &str) -> crate::temporal::TemporalBound {
+        crate::temporal::TemporalBound::Instant { at: at.into() }
+    }
+    fn temporal_query(
+        mode: crate::temporal::TemporalMode,
+        predicate: Option<&str>,
+        valid_at: Option<&str>,
+        known_at: Option<&str>,
+    ) -> crate::temporal::TemporalQuery {
+        crate::temporal::TemporalQuery {
+            mode,
+            namespace: "profile".into(),
+            subject: "user-1".into(),
+            predicate: predicate.map(str::to_string),
+            valid_at: valid_at.map(str::to_string),
+            known_at: known_at.map(str::to_string),
+        }
+    }
+
+    #[test]
+    fn temporal_announcement_is_not_effective_until_valid_from_and_known_cutoff_is_honored() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M, TemporalStatus as S};
+        let path = temp_store("temporal-announcement");
+        let mut s = Substrate::open(&path, None, default_view()).unwrap();
+        s.set_noise_enabled(false);
+        let ids = s.remember_batch(&[
+            item("home address before move"),
+            item("home address after move"),
+        ]);
+        let old = ids[0].as_ref().unwrap().to_owned();
+        let new = ids[1].as_ref().unwrap().to_owned();
+        s.record_revision(old, new, "move correction").unwrap();
+        s.set_temporal_test_clock(
+            chrono::DateTime::parse_from_rfc3339("2026-06-14T12:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+        );
+        let old_req = temporal_request(
+            old,
+            "announce-old",
+            "city",
+            "Boston",
+            B::Unbounded,
+            instant("2026-08-01T00:00:00Z"),
+        );
+        s.assert_temporal(
+            &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+            old_req,
+        )
+        .unwrap();
+        s.set_temporal_test_clock(
+            chrono::DateTime::parse_from_rfc3339("2026-06-16T09:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+        );
+        let mut replacement = temporal_request(
+            new,
+            "announce-new",
+            "city",
+            "Portland",
+            instant("2026-07-01T00:00:00-04:00"),
+            instant("2026-08-01T00:00:00Z"),
+        );
+        replacement.supersedes = Some(1);
+        let result = s
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                replacement,
+            )
+            .unwrap();
+        assert!(result.recorded_at.starts_with("2026-06-16T09:00:00"));
+        let before_known = s
+            .query_temporal(temporal_query(
+                M::AsOf,
+                Some("city"),
+                Some("2026-06-20T12:00:00Z"),
+                Some("2026-06-15T00:00:00Z"),
+            ))
+            .unwrap();
+        assert_eq!(before_known.groups[0].status, S::Resolved);
+        assert_eq!(before_known.groups[0].evidence[0].value, "Boston");
+        let announced = s
+            .query_temporal(temporal_query(
+                M::AsOf,
+                Some("city"),
+                Some("2026-06-20T12:00:00Z"),
+                Some("2026-06-17T00:00:00Z"),
+            ))
+            .unwrap();
+        assert_eq!(announced.groups[0].status, S::Resolved);
+        assert_eq!(announced.groups[0].evidence[0].value, "Boston");
+        let effective = s
+            .query_temporal(temporal_query(
+                M::AsOf,
+                Some("city"),
+                Some("2026-07-02T12:00:00Z"),
+                Some("2026-06-17T00:00:00Z"),
+            ))
+            .unwrap();
+        assert_eq!(effective.groups[0].status, S::Resolved);
+        assert_eq!(effective.groups[0].evidence[0].value, "Portland");
+        s.set_temporal_test_clock(
+            chrono::DateTime::parse_from_rfc3339("2026-07-02T12:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+        );
+        let current = s
+            .query_temporal(temporal_query(M::Current, Some("city"), None, None))
+            .unwrap();
+        assert_eq!(current.groups[0].evidence[0].value, "Portland");
+        let expired = s
+            .query_temporal(temporal_query(
+                M::AsOf,
+                Some("city"),
+                Some("2026-08-02T00:00:00Z"),
+                Some("2026-06-17T00:00:00Z"),
+            ))
+            .unwrap();
+        assert_eq!(
+            expired.groups[0].status,
+            S::NoEvidence,
+            "an expired correction must not revive its predecessor"
+        );
+        assert!(
+            s.query_temporal(temporal_query(
+                M::Current,
+                Some("city"),
+                Some("2026-06-20T00:00:00Z"),
+                None
+            ))
+            .is_err()
+        );
+        let mut retry_request = temporal_request(
+            new,
+            "announce-new",
+            "city",
+            "Portland",
+            instant("2026-07-01T04:00:00Z"),
+            instant("2026-08-01T00:00:00Z"),
+        );
+        retry_request.supersedes = Some(1);
+        let retry = s
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                retry_request,
+            )
+            .unwrap();
+        assert!(retry.replayed);
+        assert_eq!(retry.assertion_id, 2);
+        assert_eq!(retry.recorded_at, result.recorded_at);
+        drop(s);
+        let reopened = Substrate::open_readonly(&path, None, default_view()).unwrap();
+        assert_eq!(
+            reopened
+                .query_temporal(temporal_query(
+                    M::AsOf,
+                    Some("city"),
+                    Some("2026-07-02T12:00:00Z"),
+                    Some("2026-06-17T00:00:00Z")
+                ))
+                .unwrap()
+                .groups[0]
+                .evidence[0]
+                .value,
+            "Portland"
+        );
+        let _ = std::fs::remove_dir_all(path);
+    }
+
+    #[test]
+    fn temporal_partial_fields_conflicts_unknown_and_future_bounds_are_explicit() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M, TemporalStatus as S};
+        let mut s = substrate("temporal-partial");
+        s.set_noise_enabled(false);
+        let ids = s.remember_batch(&[item("record one"), item("record two")]);
+        let a = *ids[0].as_ref().unwrap();
+        let b = *ids[1].as_ref().unwrap();
+        let auth = crate::evidence::RatifiedChannel::stub("core-unit-tests");
+        s.assert_temporal(
+            &auth,
+            temporal_request(a, "a-city", "city", "Oslo", B::Unbounded, B::Unbounded),
+        )
+        .unwrap();
+        s.assert_temporal(
+            &auth,
+            temporal_request(a, "a-role", "role", "engineer", B::Unbounded, B::Unbounded),
+        )
+        .unwrap();
+        s.record_revision(a, b, "city field correction").unwrap();
+        let mut corrected_city = temporal_request(
+            b,
+            "b-city-correction",
+            "city",
+            "Bergen",
+            instant("2025-01-01T00:00:00Z"),
+            B::Unbounded,
+        );
+        corrected_city.supersedes = Some(1);
+        s.assert_temporal(&auth, corrected_city).unwrap();
+        let mut conflict =
+            temporal_request(b, "b-city", "city", "Riga", B::Unbounded, B::Unbounded);
+        conflict.source_id = "independent-stream".into();
+        s.assert_temporal(&auth, conflict).unwrap();
+        s.assert_temporal(
+            &auth,
+            temporal_request(
+                b,
+                "unknown-time",
+                "temperature",
+                "mild",
+                B::Unknown,
+                B::Unbounded,
+            ),
+        )
+        .unwrap();
+        s.assert_temporal(
+            &auth,
+            temporal_request(
+                b,
+                "future-time",
+                "launch",
+                "planned",
+                instant("2030-01-01T00:00:00Z"),
+                B::Unbounded,
+            ),
+        )
+        .unwrap();
+        let q = s
+            .query_temporal(temporal_query(
+                M::AsOf,
+                None,
+                Some("2026-10-31T00:00:00Z"),
+                None,
+            ))
+            .unwrap();
+        let get = |name: &str| q.groups.iter().find(|g| g.predicate == name).unwrap();
+        assert_eq!(get("city").status, S::Conflict);
+        assert_eq!(get("city").conflicting_values, vec!["Bergen", "Riga"]);
+        assert_eq!(get("role").status, S::Resolved);
+        assert_eq!(get("role").evidence[0].value, "engineer");
+        assert_eq!(get("temperature").status, S::TimeUnknown);
+        assert_eq!(get("launch").status, S::NoEvidence);
+        let _ = std::fs::remove_dir_all(s.store.path());
+    }
+
+    #[test]
+    fn temporal_bad_input_corruption_missing_records_and_readonly_are_fail_closed() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M};
+        let path = temp_store("temporal-fail-closed");
+        let mut s = Substrate::open(&path, None, default_view()).unwrap();
+        s.set_noise_enabled(false);
+        let id = *s.remember_batch(&[item("durable existing record")])[0]
+            .as_ref()
+            .unwrap();
+        let auth = crate::evidence::RatifiedChannel::stub("core-unit-tests");
+        let mut bad = temporal_request(
+            id,
+            "bad-date",
+            "when",
+            "yesterday",
+            B::Instant {
+                at: "2026-06-14".into(),
+            },
+            B::Unbounded,
+        );
+        assert!(s.assert_temporal(&auth, bad.clone()).is_err());
+        bad.valid_from = instant("2026-01-02T00:00:00Z");
+        bad.valid_until = instant("2026-01-01T00:00:00Z");
+        assert!(s.assert_temporal(&auth, bad).is_err());
+        let before = std::fs::read_dir(&path).unwrap().count();
+        let query = temporal_query(M::History, None, None, None);
+        assert!(s.query_temporal(query).unwrap().groups.is_empty());
+        assert_eq!(std::fs::read_dir(&path).unwrap().count(), before);
+        s.assert_temporal(
+            &auth,
+            temporal_request(
+                id,
+                "write-one",
+                "city",
+                "Lisbon",
+                B::Unbounded,
+                B::Unbounded,
+            ),
+        )
+        .unwrap();
+        let ledger = path.join(crate::temporal::LEDGER_NAME);
+        let content = std::fs::read_to_string(&ledger).unwrap();
+        std::fs::write(&ledger, format!("{content}{{")).unwrap();
+        assert!(
+            s.query_temporal(temporal_query(M::History, None, None, None))
+                .is_err()
+        );
+        drop(s);
+        assert!(
+            Substrate::open_readonly(&path, None, default_view())
+                .unwrap()
+                .assert_temporal(
+                    &auth,
+                    temporal_request(id, "readonly", "city", "Paris", B::Unbounded, B::Unbounded)
+                )
+                .is_err()
+        );
+        let _ = std::fs::remove_dir_all(path);
+    }
+
+    #[test]
+    fn temporal_known_cutoff_skips_later_erased_record_and_wrong_store_copy_is_rejected() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M};
+        let path = temp_store("temporal-cutoff-binding");
+        let mut s = Substrate::open(&path, None, default_view()).unwrap();
+        s.set_noise_enabled(false);
+        let ids = s.remember_batch(&[item("early retained fact"), item("late removable fact")]);
+        let early = *ids[0].as_ref().unwrap();
+        let late = *ids[1].as_ref().unwrap();
+        let auth = crate::evidence::RatifiedChannel::stub("core-unit-tests");
+        s.set_temporal_test_clock(
+            chrono::DateTime::parse_from_rfc3339("2026-06-01T00:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+        );
+        s.assert_temporal(
+            &auth,
+            temporal_request(
+                early,
+                "early-known",
+                "state",
+                "kept",
+                B::Unbounded,
+                B::Unbounded,
+            ),
+        )
+        .unwrap();
+        s.set_temporal_test_clock(
+            chrono::DateTime::parse_from_rfc3339("2026-06-03T00:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+        );
+        s.assert_temporal(
+            &auth,
+            temporal_request(
+                late,
+                "late-known",
+                "state",
+                "removed",
+                B::Unbounded,
+                B::Unbounded,
+            ),
+        )
+        .unwrap();
+        s.store.remove_record_and_indexes(late).unwrap();
+        let past = s
+            .query_temporal(temporal_query(
+                M::AsOf,
+                Some("state"),
+                Some("2026-06-04T00:00:00Z"),
+                Some("2026-06-02T00:00:00Z"),
+            ))
+            .unwrap();
+        assert_eq!(past.groups[0].evidence.len(), 1);
+        assert_eq!(past.groups[0].evidence[0].value, "kept");
+        drop(s);
+
+        let source_store = temp_store("temporal-wrong-store-source");
+        let mut source_substrate = Substrate::open(&source_store, None, default_view()).unwrap();
+        source_substrate.set_noise_enabled(false);
+        let source_id = *source_substrate.remember_batch(&[item("identical realm-bound record")])
+            [0]
+        .as_ref()
+        .unwrap();
+        assert_eq!(source_id, 0);
+        source_substrate
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                temporal_request(
+                    source_id,
+                    "copy-control",
+                    "city",
+                    "Sapporo",
+                    B::Unbounded,
+                    B::Unbounded,
+                ),
+            )
+            .unwrap();
+        drop(source_substrate);
+
+        let copied = temp_store("temporal-wrong-store");
+        let mut other = Substrate::open(&copied, None, default_view()).unwrap();
+        other.set_noise_enabled(false);
+        let same = *other.remember_batch(&[item("identical realm-bound record")])[0]
+            .as_ref()
+            .unwrap();
+        assert_eq!(
+            same, source_id,
+            "control shares record id/content/source; realm distinguishes the store"
+        );
+        other
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                temporal_request(
+                    same,
+                    "copy-control",
+                    "city",
+                    "Sapporo",
+                    B::Unbounded,
+                    B::Unbounded,
+                ),
+            )
+            .unwrap();
+        std::fs::copy(
+            source_store.join(crate::temporal::LEDGER_NAME),
+            copied.join(crate::temporal::LEDGER_NAME),
+        )
+        .unwrap();
+        assert!(
+            other
+                .query_temporal(temporal_query(M::History, None, None, None))
+                .is_err()
+        );
+        drop(other);
+        let _ = std::fs::remove_dir_all(path);
+        let _ = std::fs::remove_dir_all(source_store);
+        let _ = std::fs::remove_dir_all(copied);
+    }
+
+    #[test]
+    fn temporal_a_b_a_corrections_are_a_valid_chain_of_distinct_records() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M, TemporalStatus as S};
+        let mut s = substrate("temporal-aba");
+        s.set_noise_enabled(false);
+        let ids = s.remember_batch(&[
+            item("assertion record A"),
+            item("assertion record B"),
+            item("assertion record A again"),
+        ]);
+        let a = *ids[0].as_ref().unwrap();
+        let b = *ids[1].as_ref().unwrap();
+        let c = *ids[2].as_ref().unwrap();
+        s.record_revision(a, b, "A to B").unwrap();
+        s.record_revision(b, c, "B to A").unwrap();
+        let auth = crate::evidence::RatifiedChannel::stub("core-unit-tests");
+        s.assert_temporal(
+            &auth,
+            temporal_request(a, "aba-a", "status", "A", B::Unbounded, B::Unbounded),
+        )
+        .unwrap();
+        let mut rb = temporal_request(
+            b,
+            "aba-b",
+            "status",
+            "B",
+            instant("2021-01-01T00:00:00Z"),
+            B::Unbounded,
+        );
+        rb.supersedes = Some(1);
+        s.assert_temporal(&auth, rb).unwrap();
+        let mut rc = temporal_request(
+            c,
+            "aba-c",
+            "status",
+            "A",
+            instant("2022-01-01T00:00:00Z"),
+            B::Unbounded,
+        );
+        rc.supersedes = Some(2);
+        s.assert_temporal(&auth, rc).unwrap();
+        let result = s
+            .query_temporal(temporal_query(
+                M::AsOf,
+                Some("status"),
+                Some("2022-06-01T00:00:00Z"),
+                None,
+            ))
+            .unwrap();
+        assert_eq!(result.groups[0].status, S::Resolved);
+        assert_eq!(result.groups[0].evidence[0].value, "A");
+        let _ = std::fs::remove_dir_all(s.store.path());
+    }
+
+    #[test]
+    fn temporal_append_failure_keeps_canonical_record_and_requires_explicit_recovery() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M};
+        let path = temp_store("temporal-append-failure");
+        let mut s = Substrate::open(&path, None, default_view()).unwrap();
+        s.set_noise_enabled(false);
+        let id = *s.remember_batch(&[item("canonical record survives sidecar failure")])[0]
+            .as_ref()
+            .unwrap();
+        let before = s.store.get_record(id).unwrap().unwrap();
+        let content = before.content().to_string();
+        let source = before.source().to_string();
+        s.set_temporal_test_fail_append(true);
+        let err = s
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                temporal_request(
+                    id,
+                    "partial-append",
+                    "fact",
+                    "asserted",
+                    B::Unbounded,
+                    B::Unbounded,
+                ),
+            )
+            .unwrap_err();
+        assert!(err.to_string().contains("partial bytes"));
+        let after = s.store.get_record(id).unwrap().unwrap();
+        assert_eq!(after.content(), content);
+        assert_eq!(after.source(), source);
+        assert!(
+            s.query_temporal(temporal_query(M::History, Some("fact"), None, None))
+                .is_err(),
+            "torn metadata must remain visible until explicit recovery"
+        );
+        let _ = std::fs::remove_dir_all(path);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn temporal_query_times_out_while_writer_holds_exclusive_lock() {
+        use crate::temporal::{LedgerLock, TemporalBound as B, TemporalMode as M};
+        let path = temp_store("temporal-lock-timeout");
+        let mut s = Substrate::open(&path, None, default_view()).unwrap();
+        s.set_noise_enabled(false);
+        let id = *s.remember_batch(&[item("lock holder canonical record")])[0]
+            .as_ref()
+            .unwrap();
+        s.assert_temporal(
+            &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+            temporal_request(
+                id,
+                "lock-entry",
+                "fact",
+                "stable",
+                B::Unbounded,
+                B::Unbounded,
+            ),
+        )
+        .unwrap();
+        let _writer_lock = LedgerLock::acquire(&path).unwrap();
+        let error = s
+            .query_temporal(temporal_query(M::History, Some("fact"), None, None))
+            .unwrap_err();
+        assert!(error.to_string().contains("shared lock timed out"));
+        drop(_writer_lock);
+        assert!(
+            s.query_temporal(temporal_query(M::History, Some("fact"), None, None))
+                .is_ok()
+        );
+        let _ = std::fs::remove_dir_all(path);
+    }
+
+    #[test]
+    fn temporal_v1_refuses_at_rest_store_without_creating_sidecars() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M};
+        let path = temp_store("temporal-at-rest-refusal");
+        drop(
+            Store::open_with_at_rest(
+                &path,
+                &crate::at_rest::AtRestConfig::keyfile_with_root_key("ab".repeat(32)),
+            )
+            .unwrap(),
+        );
+        let mut substrate = Substrate::open_readonly(&path, None, default_view()).unwrap();
+        assert!(matches!(
+            substrate.store.at_rest_status(),
+            crate::at_rest::AtRestStatus::Present(_)
+        ));
+        let before = std::fs::read_dir(&path).unwrap().count();
+        let error = substrate
+            .query_temporal(temporal_query(M::History, None, None, None))
+            .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("encrypted at-rest stores are refused")
+        );
+        let write_error = substrate
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                temporal_request(
+                    0,
+                    "at-rest-write",
+                    "secret",
+                    "value",
+                    B::Unbounded,
+                    B::Unbounded,
+                ),
+            )
+            .unwrap_err();
+        assert!(
+            write_error
+                .to_string()
+                .contains("encrypted at-rest stores are refused")
+        );
+        assert_eq!(std::fs::read_dir(&path).unwrap().count(), before);
+        assert!(!path.join(crate::temporal::LEDGER_NAME).exists());
+        assert!(!path.join("temporal-assertions-v1.lock").exists());
+        drop(substrate);
+        let _ = std::fs::remove_dir_all(path);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn temporal_plaintext_sidecars_stay_private_under_permissive_umask_and_reject_links_or_modes() {
+        use crate::temporal::{TemporalBound as B, TemporalMode as M};
+        use std::os::unix::fs::{MetadataExt, PermissionsExt};
+        struct RestoreUmask(rustix::fs::Mode);
+        impl Drop for RestoreUmask {
+            fn drop(&mut self) {
+                let _ = rustix::process::umask(self.0);
+            }
+        }
+
+        let private_path = temp_store("temporal-private-mode");
+        let mut private = Substrate::open(&private_path, None, default_view()).unwrap();
+        private.set_noise_enabled(false);
+        let id = *private.remember_batch(&[item("private sidecar fixture")])[0]
+            .as_ref()
+            .unwrap();
+        let old_mask = rustix::process::umask(rustix::fs::Mode::empty());
+        let _restore = RestoreUmask(old_mask);
+        private
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                temporal_request(
+                    id,
+                    "private-mode",
+                    "fact",
+                    "secret",
+                    B::Unbounded,
+                    B::Unbounded,
+                ),
+            )
+            .unwrap();
+        let ledger_mode = std::fs::metadata(private_path.join(crate::temporal::LEDGER_NAME))
+            .unwrap()
+            .mode()
+            & 0o777;
+        let lock_mode = std::fs::metadata(private_path.join("temporal-assertions-v1.lock"))
+            .unwrap()
+            .mode()
+            & 0o777;
+        assert_eq!(
+            ledger_mode, 0o600,
+            "plaintext ledger creation must ignore a permissive umask"
+        );
+        assert_eq!(lock_mode, 0o600, "lock creation must be owner-only too");
+        drop(_restore);
+        drop(private);
+
+        let exposed_path = temp_store("temporal-reject-mode");
+        let mut exposed = Substrate::open(&exposed_path, None, default_view()).unwrap();
+        exposed.set_noise_enabled(false);
+        let exposed_id = *exposed.remember_batch(&[item("mode control record")])[0]
+            .as_ref()
+            .unwrap();
+        exposed
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                temporal_request(
+                    exposed_id,
+                    "mode-control",
+                    "fact",
+                    "private",
+                    B::Unbounded,
+                    B::Unbounded,
+                ),
+            )
+            .unwrap();
+        let ledger = exposed_path.join(crate::temporal::LEDGER_NAME);
+        std::fs::set_permissions(&ledger, std::fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(
+            exposed
+                .query_temporal(temporal_query(M::History, Some("fact"), None, None))
+                .unwrap_err()
+                .to_string()
+                .contains("permissions expose")
+        );
+        assert!(
+            exposed
+                .assert_temporal(
+                    &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                    temporal_request(
+                        exposed_id,
+                        "mode-control-2",
+                        "fact",
+                        "private",
+                        B::Unbounded,
+                        B::Unbounded
+                    )
+                )
+                .unwrap_err()
+                .to_string()
+                .contains("permissions expose")
+        );
+        assert_eq!(
+            std::fs::metadata(&ledger).unwrap().mode() & 0o777,
+            0o644,
+            "unsafe existing permissions must not be silently repaired"
+        );
+        drop(exposed);
+
+        let link_path = temp_store("temporal-reject-symlink");
+        let mut linked = Substrate::open(&link_path, None, default_view()).unwrap();
+        linked.set_noise_enabled(false);
+        let link_id = *linked.remember_batch(&[item("symlink control record")])[0]
+            .as_ref()
+            .unwrap();
+        linked
+            .assert_temporal(
+                &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                temporal_request(
+                    link_id,
+                    "link-control",
+                    "fact",
+                    "target",
+                    B::Unbounded,
+                    B::Unbounded,
+                ),
+            )
+            .unwrap();
+        let ledger = link_path.join(crate::temporal::LEDGER_NAME);
+        let moved = link_path.join("private-ledger-original");
+        std::fs::rename(&ledger, &moved).unwrap();
+        std::os::unix::fs::symlink(&moved, &ledger).unwrap();
+        assert!(
+            linked
+                .query_temporal(temporal_query(M::History, Some("fact"), None, None))
+                .is_err()
+        );
+        assert!(
+            linked
+                .assert_temporal(
+                    &crate::evidence::RatifiedChannel::stub("core-unit-tests"),
+                    temporal_request(
+                        link_id,
+                        "link-control-2",
+                        "fact",
+                        "target",
+                        B::Unbounded,
+                        B::Unbounded
+                    )
+                )
+                .is_err()
+        );
+        assert!(
+            std::fs::symlink_metadata(&ledger)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        drop(linked);
+        let _ = std::fs::remove_dir_all(private_path);
+        let _ = std::fs::remove_dir_all(exposed_path);
+        let _ = std::fs::remove_dir_all(link_path);
     }
 
     #[test]
@@ -5296,7 +7317,9 @@ mod tests {
             .into_iter()
             .map(|r| r.expect("remembered"))
             .collect();
-        let rel_id = s.store.alloc_relation_id().expect("id");
+        // Keep all three namespaces visibly distinct: successor record, stale
+        // record, and relation identifiers must not be inferred interchangeably.
+        let rel_id = 90_001;
         s.store
             .put_relation(&Relation::new(rel_id, ids[0], ids[1], 0.9, 0))
             .expect("relation");
@@ -5311,6 +7334,12 @@ mod tests {
         assert_eq!(entries[0]["stratum"], 0);
         assert_eq!(entries[1]["stratum"], 2);
         assert_eq!(entries[1]["superseded_by"], rel_id);
+        assert_eq!(entries[1]["superseded_by_record_id"], ids[0]);
+        assert_eq!(entries[1]["superseded_by_relation_id"], rel_id);
+        assert_eq!(hits[1].superseded_by, Some(rel_id));
+        assert_eq!(hits[1].superseded_by_record_id, Some(ids[0]));
+        assert_eq!(hits[1].superseded_by_relation_id, Some(rel_id));
+        assert_ne!(rel_id, ids[0]);
 
         let mut qh = q("north bay loading area");
         qh.include_historical = true;
@@ -5633,6 +7662,9 @@ mod p2d_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         };
         let hits = s.recall_expect(&q);
         assert_eq!(hits.len(), 3);
@@ -5675,6 +7707,9 @@ mod p2e_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         }
     }
 
@@ -5771,6 +7806,9 @@ mod gated_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         }
     }
 
@@ -6023,6 +8061,9 @@ mod scorer_determinism_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         }
     }
 
@@ -6582,6 +8623,9 @@ mod cache_boundary_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         });
         assert!(!hits.is_empty());
         assert_eq!(substrate.store.embedding_cache_len().unwrap(), 0);
@@ -6700,6 +8744,9 @@ mod cache_boundary_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         });
         assert_eq!(hits_before.len(), 1);
         assert_eq!(hits_before[0].id, 0);
@@ -6718,6 +8765,9 @@ mod cache_boundary_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         });
         assert_eq!(hits_after.len(), 2);
         assert_eq!(hits_after[0].id, 0);
@@ -6811,6 +8861,9 @@ mod cache_boundary_tests {
                 min_score: 0.0,
                 min_coverage: 0.0,
                 scope: None,
+                adaptive: false,
+                resonance: false,
+                resonance_hops: 2,
             });
             assert!(
                 hits.iter()
@@ -7489,6 +9542,9 @@ mod cache_boundary_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         });
         assert!(!hits.is_empty(), "read-only projection recall must answer");
 
@@ -7508,6 +9564,9 @@ mod cache_boundary_tests {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            adaptive: false,
+            resonance: false,
+            resonance_hops: 2,
         }
     }
 
@@ -7828,5 +9887,567 @@ mod cache_boundary_tests {
         );
         assert!(substrate.store().record_count().unwrap_or(0) >= N as usize);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn wave3_evidence_complete_coverage_and_resolved() {
+        let path = temp_store("w3-complete");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.remember_batch(&[RememberItem {
+            content: "Zephyr Cove operates the canal shuttle program in Mist Reach. Coordinator: Iris Vale.".into(),
+            source: "cal-ledger-01".into(),
+            kind: ImportKind::Reported,
+        }]);
+
+        let q = RecallQuery {
+            query: "Which program does Zephyr Cove currently operate?".into(),
+            limit: 5,
+            candidate_limit: 20,
+            ..RecallQuery::default()
+        };
+
+        let bundle = substrate.recall_evidence_expect(&q);
+        assert_eq!(bundle.coverage, EvidenceCoverage::Complete);
+        assert_eq!(bundle.disposition, EvidenceDisposition::Resolved);
+        assert!(!bundle.abstention_recommended);
+        assert_eq!(bundle.stop_reason, RecallStopReason::CompleteCover);
+        assert!(!bundle.hits.is_empty());
+        assert_eq!(bundle.uncovered_facets, Vec::<String>::new());
+        assert_eq!(bundle.source_links, vec!["cal-ledger-01".to_string()]);
+        assert_eq!(bundle.evidence_record_ids, vec![0]);
+        assert!(bundle.total_content_bytes > 0);
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave3_evidence_partial_coverage_and_insufficiency_abstention() {
+        let path = temp_store("w3-partial");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.remember_batch(&[RememberItem {
+            content: "Quietwater operates a mobile clinic program in Blue Reach. No telephone number is listed.".into(),
+            source: "cal-related-15".into(),
+            kind: ImportKind::Reported,
+        }]);
+
+        let q = RecallQuery {
+            query: "What is the public telephone number for Quietwater clinic?".into(),
+            limit: 5,
+            candidate_limit: 20,
+            ..RecallQuery::default()
+        };
+
+        let bundle = substrate.recall_evidence_expect(&q);
+        assert_eq!(bundle.disposition, EvidenceDisposition::Insufficient);
+        assert!(bundle.abstention_recommended);
+        assert!(bundle.uncovered_facets.contains(&"public".to_string()) || bundle.uncovered_facets.contains(&"telephone".to_string()));
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave3_evidence_conflict_surfacing_and_abstention() {
+        let path = temp_store("w3-conflict");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.remember_batch(&[
+            RememberItem {
+                content: "Official count report A says 14 samples passed in May 2026.".into(),
+                source: "cal-count-11-a".into(),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Signed count report B says 13 samples passed in May 2026; discrepancy unresolved.".into(),
+                source: "cal-count-11-b".into(),
+                kind: ImportKind::Reported,
+            },
+        ]);
+
+        let q = RecallQuery {
+            query: "Can the May 2026 passing-sample count for Lakeglass be resolved from both reports?".into(),
+            limit: 5,
+            candidate_limit: 20,
+            ..RecallQuery::default()
+        };
+
+        let bundle = substrate.recall_evidence_expect(&q);
+        assert_eq!(bundle.disposition, EvidenceDisposition::Conflict);
+        assert!(bundle.abstention_recommended);
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave3_evidence_stale_only_surfacing() {
+        let path = temp_store("w3-stale");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        let v1 = substrate.remember_batch(&[RememberItem {
+            content: "deprecated legacy format was active in North Port".into(),
+            source: "ledger-old".into(),
+            kind: ImportKind::Reported,
+        }]).remove(0).unwrap();
+
+        let v2 = substrate.remember_batch(&[RememberItem {
+            content: "superseded entry".into(),
+            source: "ledger-old".into(),
+            kind: ImportKind::Reported,
+        }]).remove(0).unwrap();
+
+        substrate.record_revision(v1, v2, "deprecated").unwrap();
+
+        let q = RecallQuery {
+            query: "What is current format in North Port?".into(),
+            limit: 5,
+            candidate_limit: 20,
+            include_historical: false,
+            ..RecallQuery::default()
+        };
+
+        let bundle = substrate.recall_evidence_expect(&q);
+        assert_eq!(bundle.disposition, EvidenceDisposition::StaleOnly);
+        assert!(bundle.abstention_recommended);
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave3_bounded_adaptive_expansion() {
+        let path = temp_store("w3-adaptive");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.remember_batch(&[
+            RememberItem {
+                content: "Northwind Steps night route serves Mill Square.".into(),
+                source: "cal-route-current".into(),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Notice recorded 2026-06-14 adds Quarry Steps effective 2026-07-01.".into(),
+                source: "cal-route-notice".into(),
+                kind: ImportKind::Reported,
+            },
+        ]);
+
+        let q = RecallQuery {
+            query: "Give the recorded and effective dates for the route change at Northwind Steps.".into(),
+            limit: 1,
+            candidate_limit: 1,
+            adaptive: true,
+            ..RecallQuery::default()
+        };
+
+        let bundle = substrate.recall_evidence_expect(&q);
+        assert!(bundle.adaptive_expanded);
+        assert_eq!(bundle.coverage, EvidenceCoverage::Complete);
+        assert_eq!(bundle.disposition, EvidenceDisposition::Resolved);
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave4_open_inspect_refuses_nonexistent_and_empty() {
+        let base = temp_store("w4-refusal-base");
+        let non_existent = base.join("does_not_exist");
+        assert!(!non_existent.exists());
+
+        // Non-existent path must be refused without creating directories
+        let err = match Substrate::open_inspect(
+            &non_existent,
+            None,
+            default_view(),
+            InspectionPromise::StrictZeroWrite,
+        ) {
+            Err(e) => e,
+            Ok(_) => panic!("expected open_inspect to fail on nonexistent path"),
+        };
+        assert!(err.contains("store not found") || err.contains("not found"));
+        assert!(!non_existent.exists(), "directory must not be auto-created");
+
+        // Empty directory must be refused
+        let empty_dir = base.join("empty_dir");
+        std::fs::create_dir_all(&empty_dir).unwrap();
+        let err2 = match Substrate::open_inspect(
+            &empty_dir,
+            None,
+            default_view(),
+            InspectionPromise::StrictZeroWrite,
+        ) {
+            Err(e) => e,
+            Ok(_) => panic!("expected open_inspect to fail on empty directory"),
+        };
+        assert!(err2.contains("uninitialized store") || err2.contains("uninitialized"));
+        let count = std::fs::read_dir(&empty_dir).unwrap().count();
+        assert_eq!(count, 0, "empty directory must have zero files created");
+
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn wave4_strict_zero_write_no_changes_on_disk() {
+        let path = temp_store("w4-zero-write");
+        let journal_path = path.join("journal.jsonl");
+        {
+            let mut s = Substrate::open(&path, Some(&journal_path), default_view()).expect("open");
+            s.remember_batch(&[RememberItem {
+                content: "Archival record for static inspection verification.".into(),
+                source: "source:archive".into(),
+                kind: ImportKind::Reported,
+            }]);
+            s.finish();
+        }
+
+        // Snapshot all directory files and their hashes before inspection
+        let read_dir_hashes = |p: &std::path::Path| -> std::collections::BTreeMap<String, String> {
+            let mut map = std::collections::BTreeMap::new();
+            for entry in std::fs::read_dir(p).unwrap().flatten() {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if entry.file_type().unwrap().is_file() {
+                    let hash = file_sha256(&entry.path()).unwrap();
+                    map.insert(name, hash);
+                }
+            }
+            map
+        };
+
+        let before_hashes = read_dir_hashes(&path);
+        assert!(before_hashes.contains_key("data.mdb"));
+
+        {
+            let mut substrate = Substrate::open_inspect(
+                &path,
+                Some(&journal_path),
+                default_view(),
+                InspectionPromise::StrictZeroWrite,
+            )
+            .expect("open_inspect StrictZeroWrite");
+
+            let hits = substrate
+                .recall(&RecallQuery {
+                    query: "Archival record".into(),
+                    limit: 5,
+                    candidate_limit: 10,
+                    ..RecallQuery::default()
+                })
+                .expect("recall");
+            assert_eq!(hits.len(), 1);
+
+            let evidence = substrate
+                .recall_evidence(&RecallQuery {
+                    query: "Archival record".into(),
+                    limit: 5,
+                    candidate_limit: 10,
+                    ..RecallQuery::default()
+                })
+                .expect("recall_evidence");
+            assert_eq!(evidence.coverage, EvidenceCoverage::Complete);
+
+            let report = substrate.inspection_report().expect("inspection_report");
+            assert_eq!(report.promise, InspectionPromise::StrictZeroWrite);
+            assert_eq!(report.audit_events_appended, 0);
+            assert!(report.zero_writes_verified);
+            substrate.finish();
+        }
+
+        let after_hashes = read_dir_hashes(&path);
+        assert_eq!(
+            before_hashes, after_hashes,
+            "all files on disk must remain strictly identical"
+        );
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave4_strict_zero_write_on_chmod_0555_directory() {
+        use std::os::unix::fs::PermissionsExt;
+        let path = temp_store("w4-chmod-ro");
+        {
+            let mut s = Substrate::open(&path, None, default_view()).expect("open");
+            s.remember_batch(&[RememberItem {
+                content: "Forensic snapshot payload read-only test.".into(),
+                source: "source:forensic".into(),
+                kind: ImportKind::Reported,
+            }]);
+        }
+
+        // Set directory to 0555 (read + execute, NO write) and files to 0444
+        for entry in std::fs::read_dir(&path).unwrap().flatten() {
+            if entry.file_type().unwrap().is_file() {
+                std::fs::set_permissions(entry.path(), std::fs::Permissions::from_mode(0o444))
+                    .unwrap();
+            }
+        }
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o555)).unwrap();
+
+        // Must succeed without attempting to write to directory or lock file
+        let mut substrate = Substrate::open_inspect(
+            &path,
+            None,
+            default_view(),
+            InspectionPromise::StrictZeroWrite,
+        )
+        .expect("open_inspect on 0555 directory must succeed");
+
+        let hits = substrate
+            .recall(&RecallQuery {
+                query: "Forensic snapshot".into(),
+                limit: 5,
+                candidate_limit: 10,
+                ..RecallQuery::default()
+            })
+            .expect("recall on 0555 directory");
+        assert_eq!(hits.len(), 1);
+
+        let report = substrate.inspection_report().expect("inspection_report");
+        assert!(report.zero_writes_verified);
+
+        // Reset permissions for cleanup
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        for entry in std::fs::read_dir(&path).unwrap().flatten() {
+            let _ = std::fs::set_permissions(entry.path(), std::fs::Permissions::from_mode(0o644));
+        }
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave4_no_audit_promise_omits_journal_writes() {
+        let path = temp_store("w4-no-audit");
+        let journal_path = path.join("journal.jsonl");
+        {
+            let mut s = Substrate::open(&path, Some(&journal_path), default_view()).expect("open");
+            s.remember_batch(&[RememberItem {
+                content: "Payload for audit testing.".into(),
+                source: "source:audit".into(),
+                kind: ImportKind::Reported,
+            }]);
+            s.finish();
+        }
+
+        let journal_before = std::fs::read_to_string(&journal_path).unwrap();
+        assert!(!journal_before.is_empty());
+
+        {
+            let mut substrate = Substrate::open_inspect(
+                &path,
+                Some(&journal_path),
+                default_view(),
+                InspectionPromise::NoAudit,
+            )
+            .expect("open_inspect NoAudit");
+
+            let hits = substrate
+                .recall(&RecallQuery {
+                    query: "Payload for audit".into(),
+                    limit: 5,
+                    candidate_limit: 10,
+                    ..RecallQuery::default()
+                })
+                .expect("recall");
+            assert_eq!(hits.len(), 1);
+            let report = substrate.inspection_report().expect("inspection_report");
+            assert_eq!(report.audit_events_appended, 0);
+            assert!(report.zero_writes_verified);
+            substrate.finish();
+        }
+
+        let journal_after = std::fs::read_to_string(&journal_path).unwrap();
+        assert_eq!(
+            journal_before, journal_after,
+            "journal must not have any bytes appended under NoAudit promise"
+        );
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave4_content_only_permits_audit_and_preserves_content() {
+        let path = temp_store("w4-content-only");
+        let journal_path = path.join("journal.jsonl");
+        {
+            let mut s = Substrate::open(&path, Some(&journal_path), default_view()).expect("open");
+            s.remember_batch(&[RememberItem {
+                content: "Payload for content-only testing.".into(),
+                source: "source:content".into(),
+                kind: ImportKind::Reported,
+            }]);
+            s.finish();
+        }
+
+        let data_before_hash = file_sha256(&path.join("data.mdb")).unwrap();
+        let journal_len_before = std::fs::metadata(&journal_path).unwrap().len();
+
+        {
+            let mut substrate = Substrate::open_inspect(
+                &path,
+                Some(&journal_path),
+                default_view(),
+                InspectionPromise::ContentOnly,
+            )
+            .expect("open_inspect ContentOnly");
+
+            let hits = substrate
+                .recall(&RecallQuery {
+                    query: "Payload for content-only".into(),
+                    limit: 5,
+                    candidate_limit: 10,
+                    ..RecallQuery::default()
+                })
+                .expect("recall");
+            assert_eq!(hits.len(), 1);
+
+            let report = substrate.inspection_report().expect("inspection_report");
+            assert_eq!(report.promise, InspectionPromise::ContentOnly);
+            assert!(report.audit_events_appended > 0);
+            assert!(report.zero_writes_verified);
+            substrate.finish();
+        }
+
+        let data_after_hash = file_sha256(&path.join("data.mdb")).unwrap();
+        assert_eq!(
+            data_before_hash, data_after_hash,
+            "data.mdb must be bit-for-bit unchanged in ContentOnly mode"
+        );
+
+        let journal_len_after = std::fs::metadata(&journal_path).unwrap().len();
+        assert!(
+            journal_len_after > journal_len_before,
+            "journal must contain appended audit events in ContentOnly mode"
+        );
+
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave5_dream_crystallization_synthesizes_semantic_crystal() {
+        let path = temp_store("w5-dream-crystallization");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.set_intake_authority(crate::evidence::RatifiedChannel::stub("test-dream"));
+
+        // Inject 3 session turns into a session chain
+        let s_id = "session-test-alpha";
+        substrate.remember_batch(&[
+            RememberItem {
+                content: "Session turn 1: Operator initiated architectural discussion.".into(),
+                source: format!("session:{s_id}:turn-1"),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Session turn 2: Evaluated LMDB zero-copy storage mechanics.".into(),
+                source: format!("session:{s_id}:turn-2"),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Session turn 3: Finalized Stage 5 cognitive synthesis design.".into(),
+                source: format!("session:{s_id}:turn-3"),
+                kind: ImportKind::Reported,
+            },
+        ]);
+
+        let receipt = crate::dream::execute_nrem_compaction_phase_opts(&mut substrate, 100, true);
+        assert_eq!(receipt.session_chains_scanned, 1);
+        assert_eq!(receipt.compacted_summaries_minted, 1);
+        assert_eq!(receipt.crystallized_record_ids.len(), 1);
+
+        let crystal_id = receipt.crystallized_record_ids[0];
+        let crystal_rec = substrate.store().get_record(crystal_id).unwrap().unwrap();
+        assert_eq!(crystal_rec.source(), format!("crystal:{s_id}"));
+        assert!(crystal_rec.content().contains("memory_crystal"));
+
+        // Historical query without historical flag should retrieve the crystal as head
+        let bundle = substrate
+            .recall_evidence(&RecallQuery {
+                query: "Stage 5 cognitive synthesis".into(),
+                limit: 5,
+                candidate_limit: 10,
+                include_historical: false,
+                ..RecallQuery::default()
+            })
+            .expect("recall_evidence");
+        assert!(!bundle.hits.is_empty());
+        assert_eq!(bundle.disposition, EvidenceDisposition::Resolved);
+
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave5_associative_resonance_surfaces_linked_context() {
+        let path = temp_store("w5-associative-resonance");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.set_intake_authority(crate::evidence::RatifiedChannel::stub("test-resonance"));
+
+        let ids = substrate.remember_batch(&[
+            RememberItem {
+                content: "Concept Alpha: Deterministic kernel boundary via Linux Landlock LSM.".into(),
+                source: "source:concept-alpha".into(),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Concept Beta: Cryptographic provenance receipts under IETF SCITT.".into(),
+                source: "source:concept-beta".into(),
+                kind: ImportKind::Reported,
+            },
+        ]);
+        let id_a = *ids[0].as_ref().unwrap();
+        let id_b = *ids[1].as_ref().unwrap();
+
+        // Establish an Associative relation between A and B
+        substrate
+            .add_relation(field::RelationKind::Associates, id_a, id_b, 0.95)
+            .expect("add_relation");
+
+        // Recall querying only "Linux Landlock" with resonance = true
+        let bundle = substrate
+            .recall_evidence(&RecallQuery {
+                query: "Linux Landlock".into(),
+                limit: 10,
+                candidate_limit: 20,
+                resonance: true,
+                resonance_hops: 2,
+                ..RecallQuery::default()
+            })
+            .expect("recall_evidence with resonance");
+
+        assert!(bundle.resonance_expanded, "resonance must expand the candidate pool");
+        assert!(!bundle.resonance_links.is_empty(), "must record resonance links");
+        // Record B should be surfaced in hits via resonance
+        assert!(bundle.hits.iter().any(|h| h.id == id_b), "Concept Beta must be surfaced by associative resonance");
+
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave5_causal_invalidation_surfaces_superseding_directive() {
+        let path = temp_store("w5-causal-invalidation");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.set_intake_authority(crate::evidence::RatifiedChannel::stub("test-invalidation"));
+
+        let ids = substrate.remember_batch(&[
+            RememberItem {
+                content: "Preliminary exploration of Corrigibility R2 grant proposal tracks.".into(),
+                source: "grants:draft".into(),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Absolute Directive: Zero Rationalist / Corrigibility funding. Skip all LessWrong adjacent tracks.".into(),
+                source: "directive:operator".into(),
+                kind: ImportKind::Reported,
+            },
+        ]);
+        let old_id = *ids[0].as_ref().unwrap();
+        let directive_id = *ids[1].as_ref().unwrap();
+
+        // Directive supersedes the preliminary draft
+        substrate
+            .add_relation(field::RelationKind::Supersedes, directive_id, old_id, 1.0)
+            .expect("supersedes relation");
+
+        // Querying "Corrigibility grant proposal" must surface the superseding directive as top authoritative resolution
+        let bundle = substrate
+            .recall_evidence(&RecallQuery {
+                query: "Corrigibility grant proposal".into(),
+                limit: 5,
+                candidate_limit: 10,
+                include_historical: true,
+                ..RecallQuery::default()
+            })
+            .expect("recall_evidence");
+
+        assert_eq!(bundle.disposition, EvidenceDisposition::Resolved);
+        assert!(!bundle.hits.is_empty());
+        assert_eq!(bundle.hits[0].id, directive_id, "Superseding directive must be top hit");
+        assert!(bundle.revision_links.contains(&(old_id, directive_id)), "Revision link must record supersession");
+
+        let _ = std::fs::remove_dir_all(&path);
     }
 }

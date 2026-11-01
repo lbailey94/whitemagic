@@ -20,6 +20,7 @@ use wm_gen3_core::constitution::default_view;
 use wm_gen3_core::evidence::RatifiedChannel;
 use wm_gen3_core::intake::{CommitDisposition, IntakeKind, IntakeRequest, OperationId};
 use wm_gen3_core::ops::{ImportKind, RecallQuery, RememberItem, Substrate};
+use wm_gen3_core::temporal::{TemporalAssertionRequest, TemporalQuery};
 
 fn arg_value(args: &[String], name: &str) -> Option<String> {
     args.iter()
@@ -208,6 +209,7 @@ fn handle_route(
             route,
             "memory.batch_create"
                 | "memory.intake_authorized"
+                | "memory.temporal_assert"
                 | "gen3.canary"
                 | "gen3.think_sweep"
                 | "sandbox.set_limits"
@@ -220,6 +222,38 @@ fn handle_route(
         }));
     }
     match route {
+        "memory.temporal_assert" => {
+            let request: TemporalAssertionRequest = match serde_json::from_value(args.clone()) {
+                Ok(request) => request,
+                Err(error) => {
+                    return Some(
+                        json!({"status":"error", "route":route, "error":format!("invalid temporal assertion request: {error}")}),
+                    );
+                }
+            };
+            match substrate.assert_temporal(intake_authority, request) {
+                Ok(result) => Some(json!({"status":"success", "route":route, "result":result})),
+                Err(error) => {
+                    Some(json!({"status":"error", "route":route, "error":error.to_string()}))
+                }
+            }
+        }
+        "memory.temporal_query" => {
+            let query: TemporalQuery = match serde_json::from_value(args.clone()) {
+                Ok(query) => query,
+                Err(error) => {
+                    return Some(
+                        json!({"status":"error", "route":route, "error":format!("invalid temporal query: {error}")}),
+                    );
+                }
+            };
+            match substrate.query_temporal(query) {
+                Ok(result) => Some(json!({"status":"success", "route":route, "result":result})),
+                Err(error) => {
+                    Some(json!({"status":"error", "route":route, "error":error.to_string()}))
+                }
+            }
+        }
         "sandbox.set_limits" => {
             if let Some(limit) = args.get("max_writes_per_minute").and_then(Value::as_u64) {
                 if limit > u32::MAX as u64 {
@@ -518,6 +552,9 @@ fn handle_route(
                 min_score,
                 min_coverage,
                 scope,
+                adaptive: false,
+                resonance: false,
+                resonance_hops: 2,
             }) {
                 Ok(hits) => hits,
                 Err(e) => {
@@ -540,6 +577,8 @@ fn handle_route(
                         "score": h.score,
                         "rank": h.rank,
                         "superseded_by": h.superseded_by,
+                        "superseded_by_record_id": h.superseded_by_record_id,
+                        "superseded_by_relation_id": h.superseded_by_relation_id,
                         "recall_mode": "substrate",
                         "galaxy": "codex",
                     })
@@ -627,6 +666,9 @@ fn handle_route(
                     min_score: 0.0,
                     min_coverage: 0.0,
                     scope: None,
+                    adaptive: false,
+                    resonance: false,
+                    resonance_hops: 2,
                 };
                 let hits = substrate.recall(&query).unwrap_or_default();
                 let results: Vec<Value> = hits

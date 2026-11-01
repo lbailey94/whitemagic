@@ -297,6 +297,119 @@ pub fn propose_supersedes(
     Some((later.id(), earlier.id(), confidence))
 }
 
+/// Deterministic suffix normalization (stemming) for common inflections (plurals, verb tenses, agent nouns).
+#[must_use]
+pub fn normalize_stem(word: &str) -> String {
+    let mut w = word.to_lowercase();
+    if w.ends_with("ies") && w.len() > 4 {
+        w.truncate(w.len() - 3);
+        w.push('y');
+    } else if w.ends_with("es") && w.len() > 4 {
+        w.truncate(w.len() - 2);
+    } else if w.ends_with('s') && w.len() > 3 && !w.ends_with("ss") {
+        w.truncate(w.len() - 1);
+    }
+    if w.ends_with("ing") && w.len() > 5 {
+        w.truncate(w.len() - 3);
+    } else if w.ends_with("ed") && w.len() > 4 {
+        w.truncate(w.len() - 2);
+    } else if w.ends_with("er") && w.len() > 4 {
+        w.truncate(w.len() - 2);
+    }
+    if w.ends_with('e') && w.len() > 3 {
+        w.truncate(w.len() - 1);
+    }
+    w
+}
+
+const QUERY_FRAMING: &[&str] = &[
+    "which", "what", "who", "whom", "whose", "when", "where", "why", "how",
+    "can", "could", "would", "should", "shall", "may", "might", "must",
+    "does", "did", "do", "done", "doing", "is", "was", "are", "were", "be", "been", "being",
+    "the", "a", "an", "and", "or", "but", "not", "no", "to", "of", "in", "on", "at", "for", "with",
+    "as", "so", "this", "that", "these", "those", "there", "here", "about", "into", "over",
+    "give", "list", "state", "using", "both", "tell", "show", "find", "determine", "identify",
+    "either", "neither", "record", "records", "information", "using", "from", "its",
+    "currently", "current", "active", "valid", "known", "by", "before", "after",
+    "remain", "remains", "remained", "unchanged", "kept", "new", "added", "change", "changes",
+    "resolved", "resolve", "resolution", "discrepancy", "report", "reports"
+];
+
+const MONTH_PATTERNS: &[(&str, &str)] = &[
+    ("january", "-01-"),
+    ("february", "-02-"),
+    ("march", "-03-"),
+    ("april", "-04-"),
+    ("may", "-05-"),
+    ("june", "-06-"),
+    ("july", "-07-"),
+    ("august", "-08-"),
+    ("september", "-09-"),
+    ("october", "-10-"),
+    ("november", "-11-"),
+    ("december", "-12-"),
+];
+
+const WEEKDAY_NAMES: &[&str] = &[
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
+];
+
+/// Extracts content facets from a query string, filtering out framing, instructions,
+/// temporal operators, and raw date digits.
+#[must_use]
+pub fn extract_query_facets(query: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    let tokens = tokenize(query);
+    for t in tokens {
+        let lower = t.to_lowercase();
+        if QUERY_FRAMING.contains(&lower.as_str()) {
+            continue;
+        }
+        if lower.chars().all(|c| c.is_ascii_digit()) {
+            continue;
+        }
+        if seen.insert(lower.clone()) {
+            out.push(lower);
+        }
+    }
+    out
+}
+
+/// Checks whether a query facet is covered by candidate hit stems, words, or content text.
+#[must_use]
+pub fn is_facet_covered(
+    facet: &str,
+    content_stems: &std::collections::HashSet<String>,
+    content_words: &std::collections::HashSet<String>,
+    raw_content: &str,
+) -> bool {
+    let sf = normalize_stem(facet);
+    if content_stems.contains(&sf) || content_words.contains(facet) {
+        return true;
+    }
+    for &(month, pat) in MONTH_PATTERNS {
+        if facet == month && (raw_content.contains(pat) || raw_content.to_lowercase().contains(month)) {
+            return true;
+        }
+    }
+    if facet == "weekday" && WEEKDAY_NAMES.iter().any(|d| content_words.contains(*d) || raw_content.to_lowercase().contains(d)) {
+        return true;
+    }
+    if facet == "date" || facet == "dates" {
+        let has_iso = raw_content.as_bytes().windows(10).any(|w| {
+            w[4] == b'-' && w[7] == b'-'
+                && w[0..4].iter().all(u8::is_ascii_digit)
+                && w[5..7].iter().all(u8::is_ascii_digit)
+                && w[8..10].iter().all(u8::is_ascii_digit)
+        });
+        if has_iso {
+            return true;
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -428,5 +541,37 @@ mod tests {
         };
         // Should be accepted because shared_rare = 2 ("redis", "cluster") and values changed
         assert!(propose_supersedes(&later, &earlier, 2, &df).is_some());
+    }
+
+    #[test]
+    fn test_normalize_stem_inflections() {
+        assert_eq!(normalize_stem("operates"), "operat");
+        assert_eq!(normalize_stem("operate"), "operat");
+        assert_eq!(normalize_stem("operated"), "operat");
+        assert_eq!(normalize_stem("operating"), "operat");
+        assert_eq!(normalize_stem("samples"), "sampl");
+        assert_eq!(normalize_stem("sample"), "sampl");
+        assert_eq!(normalize_stem("reports"), "report");
+        assert_eq!(normalize_stem("report"), "report");
+        assert_eq!(normalize_stem("signer"), "sign");
+        assert_eq!(normalize_stem("signed"), "sign");
+        assert_eq!(normalize_stem("signing"), "sign");
+        assert_eq!(normalize_stem("dates"), "dat");
+        assert_eq!(normalize_stem("date"), "dat");
+    }
+
+    #[test]
+    fn test_extract_query_facets_and_coverage() {
+        let q = "Which program does Zephyr Cove currently operate?";
+        let facets = extract_query_facets(q);
+        assert_eq!(facets, vec!["program", "zephyr", "cove", "operate"]);
+
+        let rec_text = "Zephyr Cove operates the canal shuttle program in Mist Reach.";
+        let words: std::collections::HashSet<String> = tokenize(rec_text).into_iter().collect();
+        let stems: std::collections::HashSet<String> = words.iter().map(|w| normalize_stem(w)).collect();
+
+        for f in &facets {
+            assert!(is_facet_covered(f, &stems, &words, rec_text), "facet {} must be covered", f);
+        }
     }
 }
