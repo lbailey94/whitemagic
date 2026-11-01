@@ -1692,7 +1692,19 @@ fn main() {
                             superseded
                         );
                         println!("    Source:  {}", hit.source);
-                        println!("    Content: {}", hit.content);
+                        let (content_display, truncated_info) = if hit.content.len() > 2000 {
+                            let mut end = 2000;
+                            while end > 0 && !hit.content.is_char_boundary(end) {
+                                end -= 1;
+                            }
+                            (
+                                format!("{}...", &hit.content[..end]),
+                                format!(" (truncated from {} bytes)", hit.content.len()),
+                            )
+                        } else {
+                            (hit.content.clone(), String::new())
+                        };
+                        println!("    Content{}: {}", truncated_info, content_display);
                     }
                 }
                 Err(e) => {

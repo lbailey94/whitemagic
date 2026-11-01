@@ -2155,6 +2155,13 @@ fn handle_memory_search(args: &Value, substrate: &mut Substrate) -> Result<Value
         .and_then(Value::as_bool)
         .unwrap_or(false);
     let scope = args.get("scope").and_then(Value::as_str).map(String::from);
+    let max_content_bytes = args
+        .get("max_content_bytes")
+        .or_else(|| args.get("truncate_bytes"))
+        .and_then(Value::as_u64)
+        .map(|v| v as usize)
+        .unwrap_or(2048)
+        .min(65536);
 
     let q = RecallQuery {
         query: query.to_string(),
@@ -2176,11 +2183,18 @@ fn handle_memory_search(args: &Value, substrate: &mut Substrate) -> Result<Value
             let uuid = substrate
                 .lookup_uuid_by_id(hit.id)
                 .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &hit.id.to_be_bytes()));
+            let (content, truncated) = if hit.content.len() > max_content_bytes {
+                (truncate_utf8(&hit.content, max_content_bytes), true)
+            } else {
+                (hit.content.clone(), false)
+            };
             json!({
                 "id": uuid.to_string(),
                 "record_id": hit.id,
                 "uuid": uuid.to_string(),
-                "content": hit.content,
+                "content": content,
+                "content_truncated": truncated,
+                "total_content_bytes": hit.content.len(),
                 "score": hit.score,
                 "rank": hit.rank,
                 "source": hit.source,
@@ -2229,13 +2243,28 @@ fn handle_memory_read(args: &Value, substrate: &Substrate) -> Result<Value, Stri
         .map(|entry| entry.new_record_id)
         .unwrap_or(record_id);
 
+    let max_content_bytes = args
+        .get("max_content_bytes")
+        .and_then(Value::as_u64)
+        .map(|v| v as usize)
+        .unwrap_or(65536)
+        .min(262144);
+
+    let (content, truncated) = if record.content().len() > max_content_bytes {
+        (truncate_utf8(record.content(), max_content_bytes), true)
+    } else {
+        (record.content().to_string(), false)
+    };
+
     Ok(json!({
         "status": "success",
         "record": {
             "id": uuid.to_string(),
             "record_id": record.id(),
             "uuid": uuid.to_string(),
-            "content": record.content(),
+            "content": content,
+            "content_truncated": truncated,
+            "total_content_bytes": record.content().len(),
             "source": record.source(),
             "domain": format!("{:?}", record.domain()),
             "class": format!("{:?}", record.class()),
@@ -2459,11 +2488,18 @@ fn handle_memory_search_batch(args: &Value, substrate: &mut Substrate) -> Result
                 let uuid = substrate
                     .lookup_uuid_by_id(h.id)
                     .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &h.id.to_be_bytes()));
+                let (content, truncated) = if h.content.len() > 2048 {
+                    (truncate_utf8(&h.content, 2048), true)
+                } else {
+                    (h.content.clone(), false)
+                };
                 json!({
                     "id": uuid.to_string(),
                     "record_id": h.id,
                     "uuid": uuid.to_string(),
-                    "content": h.content,
+                    "content": content,
+                    "content_truncated": truncated,
+                    "total_content_bytes": h.content.len(),
                     "score": h.score
                 })
             })
@@ -2494,11 +2530,18 @@ fn handle_memory_batch_read(args: &Value, substrate: &Substrate) -> Result<Value
                 let uuid = substrate
                     .lookup_uuid_by_id(rec_id)
                     .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &rec_id.to_be_bytes()));
+                let (content, truncated) = if rec.content().len() > 65536 {
+                    (truncate_utf8(rec.content(), 65536), true)
+                } else {
+                    (rec.content().to_string(), false)
+                };
                 records.push(json!({
                     "id": uuid.to_string(),
                     "record_id": rec_id,
                     "uuid": uuid.to_string(),
-                    "content": rec.content(),
+                    "content": content,
+                    "content_truncated": truncated,
+                    "total_content_bytes": rec.content().len(),
                     "source": rec.source(),
                     "created_at": rec.created_at()
                 }));
@@ -3906,6 +3949,17 @@ fn handle_session_record(
     }))
 }
 
+fn is_daemon_session_id(lane: &str) -> bool {
+    let lower = lane.to_ascii_lowercase();
+    lower.starts_with("vps-")
+        || lower.starts_with("daemon-")
+        || lower.starts_with("cron-")
+        || lower.contains("sentinel")
+        || lower.contains("deploy-check")
+        || lower.contains("organic-watch")
+        || lower.contains("distribution-scan")
+}
+
 fn resolve_continuity_session_lane(
     explicit_session: Option<&str>,
     current_session: Option<&str>,
@@ -4005,8 +4059,20 @@ fn resolve_continuity_session_lane(
         .iter()
         .rev()
         .map(|turn| turn.session_id.as_str())
-        .find(|lane| !lane.is_empty() && Some(*lane) != current_session)
+        .find(|lane| {
+            !lane.is_empty()
+                && Some(*lane) != current_session
+                && !is_daemon_session_id(lane)
+        })
         .map(str::to_string)
+        .or_else(|| {
+            all_turns
+                .iter()
+                .rev()
+                .map(|turn| turn.session_id.as_str())
+                .find(|lane| !lane.is_empty() && Some(*lane) != current_session)
+                .map(str::to_string)
+        })
 }
 
 fn handle_session_continuity(
