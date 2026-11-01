@@ -150,6 +150,9 @@ enum Commands {
         /// Opt-in bounded adaptive expansion (Stage 3)
         #[arg(long)]
         adaptive: bool,
+        /// Explicit inspection promise: content-only, no-audit, strict-zero-write (Stage 4)
+        #[arg(long)]
+        inspect_promise: Option<String>,
     },
     /// Recall memories with complete evidence bundle and diagnostics (Stage 3)
     EvidenceRecall {
@@ -243,9 +246,15 @@ enum Commands {
     },
     /// Inspect substrate invariants, active constitution view, and self-model state
     Inspect {
-        /// Inspection scope: all (default), invariants, balance, calibration, apotheosis
+        /// Inspection scope: all (default), invariants, balance, calibration, apotheosis, verification
         #[arg(long, default_value = "all")]
         scope: String,
+        /// Explicit inspection promise: content-only, no-audit, strict-zero-write (Stage 4)
+        #[arg(long)]
+        promise: Option<String>,
+        /// Output verification report as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Run an Apotheosis Meta-Learning, Invariant Audit & Truth-Drift evaluation
     Apotheosis {
@@ -1716,16 +1725,31 @@ fn main() {
             projection,
             evidence,
             adaptive,
+            inspect_promise,
         } => {
             let journal_path = store_path.join("journal.jsonl");
-            let mut substrate =
-                match Substrate::open_readonly(&store_path, Some(&journal_path), default_view()) {
+            let mut substrate = match inspect_promise {
+                Some(promise_str) => {
+                    let promise: wm_gen3_core::store::InspectionPromise = promise_str.parse().unwrap_or_else(|e| {
+                        eprintln!("{e}");
+                        std::process::exit(1);
+                    });
+                    match Substrate::open_inspect(&store_path, Some(&journal_path), default_view(), promise) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!("Error opening store for inspection at {}: {e}", store_path.display());
+                            std::process::exit(1);
+                        }
+                    }
+                }
+                None => match Substrate::open_readonly(&store_path, Some(&journal_path), default_view()) {
                     Ok(s) => s,
                     Err(e) => {
                         eprintln!("Error opening store at {}: {e}", store_path.display());
                         std::process::exit(1);
                     }
-                };
+                },
+            };
 
             let projection_requested = projection
                 || std::env::var("WM_GEN3_PROJECTION")
@@ -2658,7 +2682,66 @@ fn main() {
                 }
             }
         }
-        Commands::Inspect { scope } => {
+        Commands::Inspect {
+            scope,
+            promise,
+            json,
+        } => {
+            if let Some(promise_str) = promise {
+                let promise_parsed: wm_gen3_core::store::InspectionPromise =
+                    promise_str.parse().unwrap_or_else(|e| {
+                        eprintln!("{e}");
+                        std::process::exit(1);
+                    });
+                let journal_path = store_path.join("journal.jsonl");
+                let substrate = match Substrate::open_inspect(
+                    &store_path,
+                    Some(&journal_path),
+                    default_view(),
+                    promise_parsed,
+                ) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("Inspection open failed at {}: {e}", store_path.display());
+                        std::process::exit(1);
+                    }
+                };
+
+                let report = match substrate.inspection_report() {
+                    Ok(r) => r,
+                    Err(e) => {
+                        eprintln!("Failed to generate inspection report: {e}");
+                        std::process::exit(1);
+                    }
+                };
+
+                if json {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&report).expect("serialize inspection report")
+                    );
+                } else {
+                    println!("=== WHITEMAGIC STORE INSPECTION REPORT ===");
+                    println!("Store Path:            {}", report.store_path);
+                    println!("Inspection Promise:    {}", report.promise);
+                    println!("Data Checksum (SHA):   {}", report.data_hash);
+                    println!(
+                        "Lock Checksum (SHA):   {}",
+                        report.lock_hash.as_deref().unwrap_or("(untouched / absent)")
+                    );
+                    println!("Audit Events Appended: {}", report.audit_events_appended);
+                    println!(
+                        "Zero-Write Verified:   {}",
+                        if report.zero_writes_verified {
+                            "PASS"
+                        } else {
+                            "FAIL"
+                        }
+                    );
+                }
+                return;
+            }
+
             let journal_path = store_path.join("journal.jsonl");
             let substrate =
                 match Substrate::open_readonly(&store_path, Some(&journal_path), default_view()) {

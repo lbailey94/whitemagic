@@ -53,6 +53,22 @@ use crate::store::Store;
 use crate::sweep::{LIFECYCLE_AGE_SWEEPS, SWEEP_PROFILE_V1, SweepOutcome, UsageSnapshotIssuer};
 use crate::sweep_planner::{SweepPlanInputs, plan_sweep};
 
+pub(crate) fn file_sha256(path: &Path) -> Result<String, std::io::Error> {
+    use sha2::{Digest, Sha256};
+    use std::io::Read;
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0u8; 65536];
+    loop {
+        let count = file.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        hasher.update(&buffer[..count]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
 /// Derived vector projection status for a committed record.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -537,6 +553,19 @@ pub struct EvidenceBundle {
     pub adaptive_expanded: bool,
 }
 
+pub use crate::store::InspectionPromise;
+
+/// Verification report returned by an explicit inspection session.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct InspectionReport {
+    pub promise: InspectionPromise,
+    pub store_path: String,
+    pub data_hash: String,
+    pub lock_hash: Option<String>,
+    pub audit_events_appended: usize,
+    pub zero_writes_verified: bool,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct SweepStats {
     pub sweep: u64,
@@ -760,6 +789,10 @@ pub struct Substrate {
     /// tokenizer-independent full-content scan (correctness first) for this
     /// handle, and healthy opens backfill the marker.
     dedupe_full_scan: bool,
+    pub(crate) inspection_promise: Option<InspectionPromise>,
+    pub(crate) initial_data_hash: Option<String>,
+    pub(crate) initial_lock_hash: Option<String>,
+    pub(crate) audit_events_count: usize,
     /// Deterministic temporal acceptance clock available only to core unit tests.
     #[cfg(test)]
     temporal_test_clock: Option<chrono::DateTime<Utc>>,
@@ -1298,7 +1331,7 @@ impl Substrate {
         journal_path: Option<&Path>,
         view: ConstitutionView,
     ) -> Result<Self, String> {
-        Self::open_with_mode(store_path, journal_path, view, false)
+        Self::open_with_mode(store_path, journal_path, view, false, None)
     }
 
     /// Open an immutable/quiescent snapshot read-only with no lock-file interaction.
@@ -1308,7 +1341,18 @@ impl Substrate {
         journal_path: Option<&Path>,
         view: ConstitutionView,
     ) -> Result<Self, String> {
-        Self::open_with_mode(store_path, journal_path, view, true)
+        Self::open_with_mode(store_path, journal_path, view, true, None)
+    }
+
+    /// Open substrate with an explicit inspection promise and optional journal.
+    /// Fails closed if the path does not exist, is uninitialized, or has unrecovered intents.
+    pub fn open_inspect(
+        store_path: &Path,
+        journal_path: Option<&Path>,
+        view: ConstitutionView,
+        promise: InspectionPromise,
+    ) -> Result<Self, String> {
+        Self::open_with_mode(store_path, journal_path, view, true, Some(promise))
     }
 
     fn open_with_mode(
@@ -1316,13 +1360,31 @@ impl Substrate {
         journal_path: Option<&Path>,
         view: ConstitutionView,
         readonly: bool,
+        promise: Option<InspectionPromise>,
     ) -> Result<Self, String> {
-        let store = if readonly {
-            Store::open_readonly(store_path)
-        } else {
-            Store::open(store_path)
-        }
-        .map_err(|e| e.to_string())?;
+        let (store, initial_data_hash, initial_lock_hash) = match promise {
+            Some(p) => {
+                let s = Store::open_inspect(store_path, p).map_err(|e| e.to_string())?;
+                let data_hash = file_sha256(&store_path.join("data.mdb"))
+                    .map_err(|e| format!("cannot hash data.mdb: {e}"))?;
+                let lock_path = store_path.join("lock.mdb");
+                let lock_hash = if lock_path.exists() {
+                    file_sha256(&lock_path).ok()
+                } else {
+                    None
+                };
+                (s, Some(data_hash), lock_hash)
+            }
+            None => {
+                let s = if readonly {
+                    Store::open_readonly(store_path)
+                } else {
+                    Store::open(store_path)
+                }
+                .map_err(|e| e.to_string())?;
+                (s, None, None)
+            }
+        };
         // Lazy hydration: never materialize record content at open. The
         // process-local evidence store starts empty (session writes only) and
         // the identity index is session-local; durable duplicates are found on
@@ -1351,15 +1413,28 @@ impl Substrate {
         if !marker_current && !readonly {
             let _ = store.set_identity_index_marker(identity_index_version());
         }
-        let (journal, journal_path_buf) = if readonly {
-            (None, journal_path.map(|p| p.to_path_buf()))
-        } else {
-            let j = match journal_path {
-                Some(p) => Some(Journal::open(p).map_err(|e| e.to_string())?),
-                None => None,
-            };
-            let jp = journal_path.map(|p| p.to_path_buf());
-            (j, jp)
+        let (journal, journal_path_buf) = match promise {
+            Some(InspectionPromise::StrictZeroWrite | InspectionPromise::NoAudit) => (None, None),
+            Some(InspectionPromise::ContentOnly) => {
+                let j = match journal_path {
+                    Some(p) => Some(Journal::open(p).map_err(|e| e.to_string())?),
+                    None => None,
+                };
+                let jp = journal_path.map(|p| p.to_path_buf());
+                (j, jp)
+            }
+            None => {
+                if readonly {
+                    (None, journal_path.map(|p| p.to_path_buf()))
+                } else {
+                    let j = match journal_path {
+                        Some(p) => Some(Journal::open(p).map_err(|e| e.to_string())?),
+                        None => None,
+                    };
+                    let jp = journal_path.map(|p| p.to_path_buf());
+                    (j, jp)
+                }
+            }
         };
         let uuid_path = store_path.join("uuid_index.jsonl");
         let mut uuid_to_id = HashMap::new();
@@ -1412,6 +1487,10 @@ impl Substrate {
             id_to_uuid,
             revision_counter: None,
             dedupe_full_scan,
+            inspection_promise: promise,
+            initial_data_hash,
+            initial_lock_hash,
+            audit_events_count: 0,
             #[cfg(test)]
             temporal_test_clock: None,
             #[cfg(test)]
@@ -1873,14 +1952,20 @@ impl Substrate {
     }
 
     fn j(&mut self, typ: &str, fields: serde_json::Map<String, serde_json::Value>) {
-        if self.store.is_readonly() {
+        if let Some(promise) = self.inspection_promise {
+            if promise != InspectionPromise::ContentOnly {
+                return;
+            }
+        } else if self.store.is_readonly() {
             return;
         }
-        if let Some(journal) = self.journal.as_mut()
-            && let Err(e) = journal.event(typ, fields)
-        {
-            self.journal_ok = false;
-            eprintln!("gen3: journal write failed: {e}");
+        if let Some(journal) = self.journal.as_mut() {
+            if let Err(e) = journal.event(typ, fields) {
+                self.journal_ok = false;
+                eprintln!("gen3: journal write failed: {e}");
+            } else {
+                self.audit_events_count += 1;
+            }
         }
     }
 
@@ -3667,6 +3752,42 @@ impl Substrate {
             .open(&path)
             .map_err(|e| format!("stats snapshot: {}: {e}", path.display()))?;
         writeln!(file, "{line}").map_err(|e| format!("stats snapshot: {}: {e}", path.display()))
+    }
+
+    /// Returns an InspectionReport verifying that the declared promise was upheld.
+    pub fn inspection_report(&self) -> Result<InspectionReport, String> {
+        let promise = self
+            .inspection_promise
+            .ok_or_else(|| "substrate not opened in inspection mode".to_string())?;
+        let data_path = self.store.path().join("data.mdb");
+        let current_data_hash =
+            file_sha256(&data_path).map_err(|e| format!("cannot hash data.mdb: {e}"))?;
+        let lock_path = self.store.path().join("lock.mdb");
+        let current_lock_hash = if lock_path.exists() {
+            file_sha256(&lock_path).ok()
+        } else {
+            None
+        };
+
+        let data_unchanged = Some(&current_data_hash) == self.initial_data_hash.as_ref();
+        let zero_writes_verified = match promise {
+            InspectionPromise::StrictZeroWrite => {
+                data_unchanged
+                    && current_lock_hash == self.initial_lock_hash
+                    && self.audit_events_count == 0
+            }
+            InspectionPromise::NoAudit => data_unchanged && self.audit_events_count == 0,
+            InspectionPromise::ContentOnly => data_unchanged,
+        };
+
+        Ok(InspectionReport {
+            promise,
+            store_path: self.store.path().display().to_string(),
+            data_hash: current_data_hash,
+            lock_hash: current_lock_hash,
+            audit_events_appended: self.audit_events_count,
+            zero_writes_verified,
+        })
     }
 
     /// `inspect`: tier map, counts, relations, journal status. Never certifies
@@ -9753,6 +9874,277 @@ mod cache_boundary_tests {
         assert!(bundle.adaptive_expanded);
         assert_eq!(bundle.coverage, EvidenceCoverage::Complete);
         assert_eq!(bundle.disposition, EvidenceDisposition::Resolved);
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave4_open_inspect_refuses_nonexistent_and_empty() {
+        let base = temp_store("w4-refusal-base");
+        let non_existent = base.join("does_not_exist");
+        assert!(!non_existent.exists());
+
+        // Non-existent path must be refused without creating directories
+        let err = match Substrate::open_inspect(
+            &non_existent,
+            None,
+            default_view(),
+            InspectionPromise::StrictZeroWrite,
+        ) {
+            Err(e) => e,
+            Ok(_) => panic!("expected open_inspect to fail on nonexistent path"),
+        };
+        assert!(err.contains("store not found") || err.contains("not found"));
+        assert!(!non_existent.exists(), "directory must not be auto-created");
+
+        // Empty directory must be refused
+        let empty_dir = base.join("empty_dir");
+        std::fs::create_dir_all(&empty_dir).unwrap();
+        let err2 = match Substrate::open_inspect(
+            &empty_dir,
+            None,
+            default_view(),
+            InspectionPromise::StrictZeroWrite,
+        ) {
+            Err(e) => e,
+            Ok(_) => panic!("expected open_inspect to fail on empty directory"),
+        };
+        assert!(err2.contains("uninitialized store") || err2.contains("uninitialized"));
+        let count = std::fs::read_dir(&empty_dir).unwrap().count();
+        assert_eq!(count, 0, "empty directory must have zero files created");
+
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn wave4_strict_zero_write_no_changes_on_disk() {
+        let path = temp_store("w4-zero-write");
+        let journal_path = path.join("journal.jsonl");
+        {
+            let mut s = Substrate::open(&path, Some(&journal_path), default_view()).expect("open");
+            s.remember_batch(&[RememberItem {
+                content: "Archival record for static inspection verification.".into(),
+                source: "source:archive".into(),
+                kind: ImportKind::Reported,
+            }]);
+            s.finish();
+        }
+
+        // Snapshot all directory files and their hashes before inspection
+        let read_dir_hashes = |p: &std::path::Path| -> std::collections::BTreeMap<String, String> {
+            let mut map = std::collections::BTreeMap::new();
+            for entry in std::fs::read_dir(p).unwrap().flatten() {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if entry.file_type().unwrap().is_file() {
+                    let hash = file_sha256(&entry.path()).unwrap();
+                    map.insert(name, hash);
+                }
+            }
+            map
+        };
+
+        let before_hashes = read_dir_hashes(&path);
+        assert!(before_hashes.contains_key("data.mdb"));
+
+        {
+            let mut substrate = Substrate::open_inspect(
+                &path,
+                Some(&journal_path),
+                default_view(),
+                InspectionPromise::StrictZeroWrite,
+            )
+            .expect("open_inspect StrictZeroWrite");
+
+            let hits = substrate
+                .recall(&RecallQuery {
+                    query: "Archival record".into(),
+                    limit: 5,
+                    candidate_limit: 10,
+                    ..RecallQuery::default()
+                })
+                .expect("recall");
+            assert_eq!(hits.len(), 1);
+
+            let evidence = substrate
+                .recall_evidence(&RecallQuery {
+                    query: "Archival record".into(),
+                    limit: 5,
+                    candidate_limit: 10,
+                    ..RecallQuery::default()
+                })
+                .expect("recall_evidence");
+            assert_eq!(evidence.coverage, EvidenceCoverage::Complete);
+
+            let report = substrate.inspection_report().expect("inspection_report");
+            assert_eq!(report.promise, InspectionPromise::StrictZeroWrite);
+            assert_eq!(report.audit_events_appended, 0);
+            assert!(report.zero_writes_verified);
+            substrate.finish();
+        }
+
+        let after_hashes = read_dir_hashes(&path);
+        assert_eq!(
+            before_hashes, after_hashes,
+            "all files on disk must remain strictly identical"
+        );
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave4_strict_zero_write_on_chmod_0555_directory() {
+        use std::os::unix::fs::PermissionsExt;
+        let path = temp_store("w4-chmod-ro");
+        {
+            let mut s = Substrate::open(&path, None, default_view()).expect("open");
+            s.remember_batch(&[RememberItem {
+                content: "Forensic snapshot payload read-only test.".into(),
+                source: "source:forensic".into(),
+                kind: ImportKind::Reported,
+            }]);
+        }
+
+        // Set directory to 0555 (read + execute, NO write) and files to 0444
+        for entry in std::fs::read_dir(&path).unwrap().flatten() {
+            if entry.file_type().unwrap().is_file() {
+                std::fs::set_permissions(entry.path(), std::fs::Permissions::from_mode(0o444))
+                    .unwrap();
+            }
+        }
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o555)).unwrap();
+
+        // Must succeed without attempting to write to directory or lock file
+        let mut substrate = Substrate::open_inspect(
+            &path,
+            None,
+            default_view(),
+            InspectionPromise::StrictZeroWrite,
+        )
+        .expect("open_inspect on 0555 directory must succeed");
+
+        let hits = substrate
+            .recall(&RecallQuery {
+                query: "Forensic snapshot".into(),
+                limit: 5,
+                candidate_limit: 10,
+                ..RecallQuery::default()
+            })
+            .expect("recall on 0555 directory");
+        assert_eq!(hits.len(), 1);
+
+        let report = substrate.inspection_report().expect("inspection_report");
+        assert!(report.zero_writes_verified);
+
+        // Reset permissions for cleanup
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        for entry in std::fs::read_dir(&path).unwrap().flatten() {
+            let _ = std::fs::set_permissions(entry.path(), std::fs::Permissions::from_mode(0o644));
+        }
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave4_no_audit_promise_omits_journal_writes() {
+        let path = temp_store("w4-no-audit");
+        let journal_path = path.join("journal.jsonl");
+        {
+            let mut s = Substrate::open(&path, Some(&journal_path), default_view()).expect("open");
+            s.remember_batch(&[RememberItem {
+                content: "Payload for audit testing.".into(),
+                source: "source:audit".into(),
+                kind: ImportKind::Reported,
+            }]);
+            s.finish();
+        }
+
+        let journal_before = std::fs::read_to_string(&journal_path).unwrap();
+        assert!(!journal_before.is_empty());
+
+        {
+            let mut substrate = Substrate::open_inspect(
+                &path,
+                Some(&journal_path),
+                default_view(),
+                InspectionPromise::NoAudit,
+            )
+            .expect("open_inspect NoAudit");
+
+            let hits = substrate
+                .recall(&RecallQuery {
+                    query: "Payload for audit".into(),
+                    limit: 5,
+                    candidate_limit: 10,
+                    ..RecallQuery::default()
+                })
+                .expect("recall");
+            assert_eq!(hits.len(), 1);
+            let report = substrate.inspection_report().expect("inspection_report");
+            assert_eq!(report.audit_events_appended, 0);
+            assert!(report.zero_writes_verified);
+            substrate.finish();
+        }
+
+        let journal_after = std::fs::read_to_string(&journal_path).unwrap();
+        assert_eq!(
+            journal_before, journal_after,
+            "journal must not have any bytes appended under NoAudit promise"
+        );
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn wave4_content_only_permits_audit_and_preserves_content() {
+        let path = temp_store("w4-content-only");
+        let journal_path = path.join("journal.jsonl");
+        {
+            let mut s = Substrate::open(&path, Some(&journal_path), default_view()).expect("open");
+            s.remember_batch(&[RememberItem {
+                content: "Payload for content-only testing.".into(),
+                source: "source:content".into(),
+                kind: ImportKind::Reported,
+            }]);
+            s.finish();
+        }
+
+        let data_before_hash = file_sha256(&path.join("data.mdb")).unwrap();
+        let journal_len_before = std::fs::metadata(&journal_path).unwrap().len();
+
+        {
+            let mut substrate = Substrate::open_inspect(
+                &path,
+                Some(&journal_path),
+                default_view(),
+                InspectionPromise::ContentOnly,
+            )
+            .expect("open_inspect ContentOnly");
+
+            let hits = substrate
+                .recall(&RecallQuery {
+                    query: "Payload for content-only".into(),
+                    limit: 5,
+                    candidate_limit: 10,
+                    ..RecallQuery::default()
+                })
+                .expect("recall");
+            assert_eq!(hits.len(), 1);
+
+            let report = substrate.inspection_report().expect("inspection_report");
+            assert_eq!(report.promise, InspectionPromise::ContentOnly);
+            assert!(report.audit_events_appended > 0);
+            assert!(report.zero_writes_verified);
+            substrate.finish();
+        }
+
+        let data_after_hash = file_sha256(&path.join("data.mdb")).unwrap();
+        assert_eq!(
+            data_before_hash, data_after_hash,
+            "data.mdb must be bit-for-bit unchanged in ContentOnly mode"
+        );
+
+        let journal_len_after = std::fs::metadata(&journal_path).unwrap().len();
+        assert!(
+            journal_len_after > journal_len_before,
+            "journal must contain appended audit events in ContentOnly mode"
+        );
+
         let _ = std::fs::remove_dir_all(&path);
     }
 }

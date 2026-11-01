@@ -342,7 +342,9 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "decision.outcome" | "receipts.outcome" => "decision.outcome",
         "mesh_sync" | "sync" => "mesh_sync",
         "sweep" => "sweep",
-        "inspect" => "inspect",
+        "store.inspect" | "memory.inspect" | "store_inspect" | "memory_inspect" | "inspect" => {
+            "inspect"
+        }
         "gnosis.status" | "gnosis.explain" | "gnosis" => "gnosis.status",
         "sangha.status" | "sangha_status" => "sangha.status",
         "sangha.inbox" | "sangha_inbox" => "sangha.inbox",
@@ -1841,7 +1843,9 @@ pub fn execute_hybrid_tool_call(
         // ── Mesh & Infrastructure ──────────────────────────────────────────
         "mesh_sync" | "sync" => handle_mesh_sync(args, substrate, store_path, readonly),
         "sweep" => handle_sweep(substrate, readonly),
-        "inspect" => handle_inspect(args, substrate),
+        "store.inspect" | "memory.inspect" | "store_inspect" | "memory_inspect" | "inspect" => {
+            handle_inspect(args, substrate)
+        }
         "gnosis.status" | "gnosis.explain" | "gnosis" => handle_gnosis(args, substrate),
 
         // ── Sangha Whiteboard Agora ────────────────────────────────────────
@@ -6528,6 +6532,26 @@ fn handle_sweep(substrate: &mut Substrate, readonly: bool) -> Result<Value, Stri
 }
 
 fn handle_inspect(args: &Value, substrate: &Substrate) -> Result<Value, String> {
+    if args.get("promise").is_some() || args.get("verify").and_then(Value::as_bool).unwrap_or(false) {
+        if let Ok(report) = substrate.inspection_report() {
+            return serde_json::to_value(report).map_err(|e| format!("Serialization error: {e}"));
+        }
+        let promise_str = args
+            .get("promise")
+            .and_then(Value::as_str)
+            .unwrap_or("strict-zero-write");
+        let promise: wm_gen3_core::store::InspectionPromise = promise_str
+            .parse()
+            .map_err(|e: String| e)?;
+        let temp_sub = Substrate::open_inspect(
+            substrate.store().path(),
+            None,
+            wm_gen3_core::constitution::default_view(),
+            promise,
+        )?;
+        let report = temp_sub.inspection_report()?;
+        return serde_json::to_value(report).map_err(|e| format!("Serialization error: {e}"));
+    }
     let scope = args.get("scope").and_then(Value::as_str).unwrap_or("all");
     Ok(substrate.inspect(scope))
 }
