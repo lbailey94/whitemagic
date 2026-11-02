@@ -338,7 +338,7 @@ const QUERY_FRAMING: &[&str] = &[
     "everything", "become", "according", "older", "later", "many", "two", "associated",
     "scheduled", "begin", "planned", "preserved", "detail", "range", "conflicting",
     "issue", "stop", "old", "named", "sources", "source", "counts", "count",
-    "agree", "established", "corrected", "official", "value"
+    "agree", "established", "corrected", "official", "value", "location", "changed", "say", "field"
 ];
 
 const MONTH_PATTERNS: &[(&str, &str)] = &[

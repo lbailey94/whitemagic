@@ -3409,8 +3409,8 @@ impl Substrate {
         let top_score = hits.first().map(|h| h.score).unwrap_or(0.0);
         let relevant_hits: Vec<&Hit> = hits
             .iter()
-            .filter(|h| h.score >= top_score * 0.70)
-            .take(3)
+            .filter(|h| h.score >= top_score * 0.65)
+            .take(5)
             .collect();
         let mut relevant_content = String::new();
         for h in &relevant_hits {
