@@ -315,6 +315,8 @@ pub fn normalize_stem(word: &str) -> String {
         w.truncate(w.len() - 2);
     } else if w.ends_with("er") && w.len() > 4 {
         w.truncate(w.len() - 2);
+    } else if w.ends_with("or") && w.len() > 5 {
+        w.truncate(w.len() - 2);
     }
     if w.ends_with('e') && w.len() > 3 {
         w.truncate(w.len() - 1);
@@ -329,10 +331,13 @@ const QUERY_FRAMING: &[&str] = &[
     "the", "a", "an", "and", "or", "but", "not", "no", "to", "of", "in", "on", "at", "for", "with",
     "as", "so", "this", "that", "these", "those", "there", "here", "about", "into", "over",
     "give", "list", "state", "using", "both", "tell", "show", "find", "determine", "identify",
-    "either", "neither", "record", "records", "information", "using", "from", "its",
-    "currently", "current", "active", "valid", "known", "by", "before", "after",
+    "either", "neither", "record", "records", "information", "from", "its", "their",
+    "currently", "current", "active", "valid", "known", "by", "before", "after", "immediately",
     "remain", "remains", "remained", "unchanged", "kept", "new", "added", "change", "changes",
-    "resolved", "resolve", "resolution", "discrepancy", "report", "reports"
+    "resolved", "resolve", "resolution", "discrepancy", "report", "reports",
+    "everything", "become", "according", "older", "later", "many", "two", "associated",
+    "scheduled", "begin", "planned", "preserved", "detail", "range", "conflicting",
+    "issue", "stop", "old", "named", "sources", "source", "counts", "count"
 ];
 
 const MONTH_PATTERNS: &[(&str, &str)] = &[

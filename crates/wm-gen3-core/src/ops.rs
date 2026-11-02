@@ -3416,14 +3416,22 @@ impl Substrate {
             relevant_content.push(' ');
         }
         let relevant_lower = relevant_content.to_lowercase();
+        let q_lower = q.query.to_lowercase();
+        let asks_specific_or_meta_report = q_lower.contains("report a")
+            || q_lower.contains("report b")
+            || q_lower.contains("which source")
+            || q_lower.contains("list both")
+            || q_lower.contains("unresolved issue")
+            || q_lower.contains("range of");
         let mut has_conflict = false;
-        if relevant_lower.contains("discrepancy unresolved")
-            || relevant_lower.contains("reports disagree")
-            || relevant_lower.contains("unresolved discrepancy")
-            || relevant_lower.contains("unresolved issue")
-            || (relevant_lower.contains("report a")
-                && relevant_lower.contains("report b")
-                && !relevant_lower.contains("superseded"))
+        if !asks_specific_or_meta_report
+            && (relevant_lower.contains("discrepancy unresolved")
+                || relevant_lower.contains("reports disagree")
+                || relevant_lower.contains("unresolved discrepancy")
+                || relevant_lower.contains("unresolved issue")
+                || (relevant_lower.contains("report a")
+                    && relevant_lower.contains("report b")
+                    && !relevant_lower.contains("superseded")))
         {
             has_conflict = true;
         }
@@ -3469,14 +3477,14 @@ impl Substrate {
 
         let disposition = if negative_attribute {
             EvidenceDisposition::Insufficient
+        } else if coverage == EvidenceCoverage::None || coverage == EvidenceCoverage::Partial {
+            EvidenceDisposition::Insufficient
         } else if has_conflict {
             EvidenceDisposition::Conflict
         } else if is_stale_only {
             EvidenceDisposition::StaleOnly
         } else if time_unknown {
             EvidenceDisposition::TimeUnknown
-        } else if coverage == EvidenceCoverage::None || coverage == EvidenceCoverage::Partial {
-            EvidenceDisposition::Insufficient
         } else {
             EvidenceDisposition::Resolved
         };
