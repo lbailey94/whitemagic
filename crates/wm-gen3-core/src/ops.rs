@@ -2524,9 +2524,23 @@ impl Substrate {
             .is_some_and(|r| source_label(r.source()) == Some(scope))
     }
 
+    fn recall_record_visible(&self, record_id: u64, sanctuary_sealed: bool) -> bool {
+        if !sanctuary_sealed {
+            return true;
+        }
+        self.store
+            .get_record(record_id)
+            .ok()
+            .flatten()
+            .is_some_and(|record| {
+                ConsentRing::from_source(record.source()) <= ConsentRing::Ring1OperationalProject
+            })
+    }
+
     pub fn recall(&mut self, q: &RecallQuery) -> Result<Vec<Hit>, RecallError> {
         validate_floors(q)?;
         validate_scope(q)?;
+        let sanctuary_sealed = self.hermit_crab_status().sealed;
         let started = Instant::now();
         let tokens = field::tokenize(&q.query);
         let query_hash = sha256_hex(q.query.as_bytes());
@@ -2607,6 +2621,10 @@ impl Substrate {
             counts.retain(|id, _| self.record_in_view(*id, scope));
             lex_matched_idf.retain(|id, _| counts.contains_key(id));
         }
+        if sanctuary_sealed {
+            counts.retain(|id, _| self.recall_record_visible(*id, sanctuary_sealed));
+            lex_matched_idf.retain(|id, _| counts.contains_key(id));
+        }
 
         // State relations are needed by the activation diagnostics below and by
         // the structural selector later; compute them once, before the gate.
@@ -2676,6 +2694,9 @@ impl Substrate {
                     let qv = v.pop().unwrap_or_default();
                     if !qv.is_empty() {
                         for (id, v) in self.store.iter_vectors().unwrap_or_default() {
+                            if !self.recall_record_visible(id, sanctuary_sealed) {
+                                continue;
+                            }
                             let c = cosine(&qv, &v);
                             if c > TAU_GATE {
                                 semantic.insert(id, semantic_support(c));
@@ -2695,6 +2716,9 @@ impl Substrate {
         }
         if let Some(scope) = &q.scope {
             semantic.retain(|id, _| self.record_in_view(*id, scope));
+        }
+        if sanctuary_sealed {
+            semantic.retain(|id, _| self.recall_record_visible(*id, sanctuary_sealed));
         }
         if counts.is_empty() && semantic.is_empty() {
             let mut f = serde_json::Map::new();
@@ -2720,15 +2744,21 @@ impl Substrate {
 
         let mut candidate_ids: Vec<u64> = counts.keys().chain(semantic.keys()).copied().collect();
         if !graph_edges.is_empty() {
-            let mut visited: HashSet<u64> = candidate_ids.iter().copied().collect();
-            let mut frontier = candidate_ids.clone();
+            let mut visited: HashSet<u64> = candidate_ids
+                .iter()
+                .copied()
+                .filter(|id| self.recall_record_visible(*id, sanctuary_sealed))
+                .collect();
+            let mut frontier: Vec<u64> = visited.iter().copied().collect();
             // Bounded 2-hop graph expansion for multi-step execution traces (Call -> Output -> Synthesis)
             for _hop in 0..2 {
                 let mut next_frontier = Vec::new();
                 for id in frontier {
                     if let Some(neighbors) = graph_edges.get(&id) {
                         for (target_id, _) in neighbors {
-                            if visited.insert(*target_id) {
+                            if self.recall_record_visible(*target_id, sanctuary_sealed)
+                                && visited.insert(*target_id)
+                            {
                                 next_frontier.push(*target_id);
                             }
                         }
@@ -3038,11 +3068,13 @@ impl Substrate {
         let mut hits = Vec::new();
         let mut selected_json = Vec::new();
         let mut applied_relations = Vec::new();
-        let sanctuary_sealed = self.hermit_crab_status().sealed;
         for (rank, (key, support, sem, id, sup, stratum, _lex, _created)) in
             scored.into_iter().enumerate()
         {
-            let successor_record_id = superseded_by_record_id.get(&id).copied();
+            let successor_record_id = superseded_by_record_id
+                .get(&id)
+                .copied()
+                .filter(|successor_id| self.recall_record_visible(*successor_id, sanctuary_sealed));
             let record = self.store.get_record(id).ok().flatten();
             let content = record
                 .as_ref()
@@ -3050,12 +3082,16 @@ impl Substrate {
             let source = record
                 .as_ref()
                 .map_or(String::new(), |r| r.source().to_string());
-            if sanctuary_sealed
-                && ConsentRing::from_source(&source) > ConsentRing::Ring1OperationalProject
-            {
+            if sanctuary_sealed && !self.recall_record_visible(id, sanctuary_sealed) {
                 continue;
             }
-            if let Some(rel_id) = sup
+            let visible_supersession = successor_record_id.is_some();
+            let visible_sup_relation = if visible_supersession || !sanctuary_sealed {
+                sup
+            } else {
+                None
+            };
+            if let Some(rel_id) = sup.filter(|_| visible_supersession || !sanctuary_sealed)
                 && !q.include_historical
             {
                 *self.usage.entry(rel_id).or_default() += 1;
@@ -3068,9 +3104,9 @@ impl Substrate {
                 "score": support,
                 "semantic_support": sem,
                 "stratum": stratum,
-                "superseded_by": sup,
+                "superseded_by": visible_sup_relation,
                 "superseded_by_record_id": successor_record_id,
-                "superseded_by_relation_id": sup,
+                "superseded_by_relation_id": visible_sup_relation,
             }));
             hits.push(Hit {
                 id,
@@ -3078,9 +3114,9 @@ impl Substrate {
                 source,
                 score: support,
                 rank: rank + 1,
-                superseded_by: sup,
+                superseded_by: visible_sup_relation,
                 superseded_by_record_id: successor_record_id,
-                superseded_by_relation_id: sup,
+                superseded_by_relation_id: visible_sup_relation,
             });
         }
 
@@ -3157,6 +3193,7 @@ impl Substrate {
         let query_facets = crate::field::extract_query_facets(&q.query);
         let tokens = field::tokenize(&q.query);
         let n = self.store.record_count().unwrap_or(0);
+        let sanctuary_sealed = self.hermit_crab_status().sealed;
         let is_hist_query = q.include_historical || crate::engram::is_historical_query(&q.query);
         let temporal_anchor = crate::engram::extract_temporal_anchor(&q.query);
 
@@ -3279,6 +3316,9 @@ impl Substrate {
                 for (curr_id, curr_score) in frontier {
                     if let Some(neighbors) = relations_view.graph_edges.get(&curr_id) {
                         for &(neighbor_id, edge_weight) in neighbors {
+                            if !self.recall_record_visible(neighbor_id, sanctuary_sealed) {
+                                continue;
+                            }
                             resonance_links.push((curr_id, neighbor_id, edge_weight));
                             if visited_ids.insert(neighbor_id) {
                                 if let Ok(Some(rec)) = self.store.get_record(neighbor_id) {
@@ -3293,13 +3333,31 @@ impl Substrate {
                                             score: decayed_score,
                                             rank: 0,
                                             superseded_by: relations_view
-                                                .superseded_by
+                                                .superseded_by_record_id
                                                 .get(&neighbor_id)
-                                                .copied(),
+                                                .copied()
+                                                .filter(|successor_id| {
+                                                    self.recall_record_visible(
+                                                        *successor_id,
+                                                        sanctuary_sealed,
+                                                    )
+                                                })
+                                                .and_then(|_| {
+                                                    relations_view
+                                                        .superseded_by
+                                                        .get(&neighbor_id)
+                                                        .copied()
+                                                }),
                                             superseded_by_record_id: relations_view
                                                 .superseded_by_record_id
                                                 .get(&neighbor_id)
-                                                .copied(),
+                                                .copied()
+                                                .filter(|successor_id| {
+                                                    self.recall_record_visible(
+                                                        *successor_id,
+                                                        sanctuary_sealed,
+                                                    )
+                                                }),
                                             superseded_by_relation_id: None,
                                         };
                                         resonant_candidates.push(hit);
@@ -3353,6 +3411,9 @@ impl Substrate {
 
         let mut has_superseding = false;
         for newer_id in superseding_ids {
+            if !self.recall_record_visible(newer_id, sanctuary_sealed) {
+                continue;
+            }
             has_superseding = true;
             if let Some(pos) = hits.iter().position(|h| h.id == newer_id) {
                 let mut promoted = hits.remove(pos);
@@ -3492,7 +3553,16 @@ impl Substrate {
                     || h.content.to_lowercase().contains("deprecated")
                     || h.content.to_lowercase().contains("obsolete")
             });
-        let is_stale_only = all_superseded && !is_hist_query;
+        let has_hidden_supersession = sanctuary_sealed
+            && hits.iter().any(|hit| {
+                relations_view
+                    .superseded_by_record_id
+                    .get(&hit.id)
+                    .is_some_and(|successor_id| {
+                        !self.recall_record_visible(*successor_id, sanctuary_sealed)
+                    })
+            });
+        let is_stale_only = (all_superseded && !is_hist_query) || has_hidden_supersession;
 
         let is_temporal_condition = temporal_anchor.is_some()
             || q.query.to_lowercase().contains("as of")
@@ -3556,6 +3626,11 @@ impl Substrate {
         let relations_view = self.store.relations_view();
         let mut revision_links = Vec::new();
         for (&from_id, &to_id) in relations_view.superseded_by_record_id.iter() {
+            if !self.recall_record_visible(from_id, sanctuary_sealed)
+                || !self.recall_record_visible(to_id, sanctuary_sealed)
+            {
+                continue;
+            }
             if record_id_set.contains(&from_id) || record_id_set.contains(&to_id) {
                 let pair = (from_id, to_id);
                 if !revision_links.contains(&pair) {
@@ -10828,6 +10903,169 @@ mod cache_boundary_tests {
         assert!(
             bundle.revision_links.contains(&(old_id, directive_id)),
             "Revision link must record supersession"
+        );
+
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[test]
+    fn sealed_sanctuary_gates_evidence_expansion_and_relation_metadata() {
+        let path = temp_store("sealed-sanctuary-evidence-gating");
+        let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
+        substrate.set_intake_authority(crate::evidence::RatifiedChannel::stub(
+            "test-sanctuary-gating",
+        ));
+
+        let ids = substrate.remember_batch(&[
+            RememberItem {
+                content: "Cedar compass operational draft for navigation.".into(),
+                source: "ops:ring1".into(),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Cedar compass protected replacement with private bearings.".into(),
+                source: "sanctuary:ring3".into(),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Protected second hop contains hidden aurora cipher.".into(),
+                source: "relational:ring2".into(),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "Public commons cedar compass reference.".into(),
+                source: "public:ring0".into(),
+                kind: ImportKind::Reported,
+            },
+        ]);
+        let operational_id = *ids[0].as_ref().expect("operational id");
+        let protected_id = *ids[1].as_ref().expect("protected id");
+        let second_hop_id = *ids[2].as_ref().expect("second-hop id");
+        let public_id = *ids[3].as_ref().expect("public id");
+        substrate
+            .add_relation(
+                field::RelationKind::Supersedes,
+                protected_id,
+                operational_id,
+                1.0,
+            )
+            .expect("supersedes relation");
+        substrate
+            .add_relation(
+                field::RelationKind::Associates,
+                operational_id,
+                protected_id,
+                1.0,
+            )
+            .expect("first resonance edge");
+        substrate
+            .add_relation(
+                field::RelationKind::Associates,
+                protected_id,
+                second_hop_id,
+                1.0,
+            )
+            .expect("second resonance edge");
+
+        substrate
+            .engage_hermit_crab_sanctuary("test", "steward", "agent")
+            .expect("seal sanctuary");
+
+        let query = RecallQuery {
+            query: "cedar compass".into(),
+            limit: 10,
+            candidate_limit: 20,
+            include_historical: true,
+            resonance: true,
+            resonance_hops: 2,
+            ..RecallQuery::default()
+        };
+        let sealed = substrate
+            .recall_evidence(&query)
+            .expect("sealed evidence recall");
+        let sealed_ids: std::collections::HashSet<_> =
+            sealed.hits.iter().map(|hit| hit.id).collect();
+        assert!(
+            sealed_ids.contains(&operational_id),
+            "Ring 1 evidence remains available"
+        );
+        assert!(
+            sealed_ids.contains(&public_id),
+            "Ring 0 evidence remains available"
+        );
+        assert!(
+            !sealed_ids.contains(&protected_id),
+            "Ring 3 replacement stays hidden"
+        );
+        assert!(
+            !sealed_ids.contains(&second_hop_id),
+            "resonance cannot traverse through hidden Ring 3"
+        );
+        assert_eq!(
+            sealed.disposition,
+            EvidenceDisposition::StaleOnly,
+            "a hidden replacement must not make an older hit look current"
+        );
+        assert!(
+            sealed
+                .resonance_links
+                .iter()
+                .all(|(_, id, _)| *id != protected_id && *id != second_hop_id)
+        );
+        assert!(
+            sealed
+                .revision_links
+                .iter()
+                .all(|(from, to)| *from != protected_id && *to != protected_id)
+        );
+        let operational_hit = sealed
+            .hits
+            .iter()
+            .find(|hit| hit.id == operational_id)
+            .expect("operational hit");
+        assert_eq!(
+            operational_hit.superseded_by, None,
+            "hidden supersession relation is omitted"
+        );
+        assert_eq!(
+            operational_hit.superseded_by_record_id, None,
+            "hidden replacement id is omitted"
+        );
+        assert_eq!(
+            operational_hit.superseded_by_relation_id, None,
+            "hidden relation id is omitted"
+        );
+        assert!(
+            substrate
+                .recall(&RecallQuery {
+                    query: "aurora cipher".into(),
+                    ..RecallQuery::default()
+                })
+                .expect("direct Ring 2 recall")
+                .is_empty(),
+            "direct Ring 2 lexical seeds remain withheld while sealed"
+        );
+
+        substrate
+            .release_hermit_crab_sanctuary("steward", "agent")
+            .expect("unseal sanctuary");
+        let unsealed = substrate
+            .recall_evidence(&query)
+            .expect("unsealed evidence recall");
+        let unsealed_ids: std::collections::HashSet<_> =
+            unsealed.hits.iter().map(|hit| hit.id).collect();
+        assert!(
+            unsealed_ids.contains(&protected_id),
+            "valid unseal restores protected recall"
+        );
+        assert!(
+            unsealed_ids.contains(&second_hop_id),
+            "unsealed resonance can traverse both hops"
+        );
+        assert!(
+            unsealed
+                .revision_links
+                .contains(&(operational_id, protected_id))
         );
 
         let _ = std::fs::remove_dir_all(&path);

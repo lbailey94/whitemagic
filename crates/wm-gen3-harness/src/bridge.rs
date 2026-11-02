@@ -9857,6 +9857,107 @@ mod contract_truth_tests {
 }
 
 #[cfg(test)]
+mod sanctuary_e2e_tests {
+    use super::*;
+    use crate::mcp_server::{McpBackend, dispatch_json};
+
+    fn call(backend: &McpBackend, route: &str, args: Value) -> Value {
+        let request = json!({
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "wm", "arguments": {"route": route, "args": args}}
+        });
+        let response = dispatch_json(backend, request.to_string().as_bytes()).expect("response");
+        let wire: Value = serde_json::from_str(&response).expect("JSON-RPC");
+        assert_eq!(wire["result"]["isError"], false, "{route}: {wire}");
+        serde_json::from_str(wire["result"]["content"][0]["text"].as_str().expect("text"))
+            .expect("tool result")
+    }
+
+    #[test]
+    fn sanctuary_e2e_filters_supersession_and_navigation_on_the_mcp_wire() {
+        let dir = std::env::temp_dir().join(format!("wm-sanctuary-wire-{}", Uuid::new_v4()));
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("substrate");
+        substrate.set_intake_authority(RatifiedChannel::mint("sanctuary-wire-test"));
+        substrate.set_noise_enabled(false);
+        substrate.set_budget(1_000_000);
+        let records = [
+            ("SUPERSESSPROBE public earlier schedule", "corpus:codex:ring1_old"),
+            ("PRIVATE_REPLACEMENT later protected schedule", "corpus:codex:ring3_new"),
+            ("NAVPROBE public navigation anchor", "corpus:codex:ring1_anchor"),
+            ("PRIVATE_NEIGHBOR relational bridge", "corpus:codex:ring2_neighbor"),
+            ("public adjacent context", "public:ring0_neighbor"),
+            ("Distant commons context beyond the relational bridge", "public:ring0_behind"),
+        ];
+        let ids: Vec<u64> = records
+            .into_iter()
+            .map(|(content, source)| {
+                *substrate.remember_batch(&[wm_gen3_core::ops::RememberItem {
+                    content: content.into(), source: source.into(), kind: ImportKind::Reported,
+                }])[0].as_ref().expect("record")
+            })
+            .collect();
+        substrate.add_relation(wm_gen3_core::field::RelationKind::Supersedes, ids[1], ids[0], 1.0)
+            .expect("supersession");
+        substrate.add_relation(wm_gen3_core::field::RelationKind::Associates, ids[2], ids[3], 1.0)
+            .expect("protected neighbor");
+        substrate.add_relation(wm_gen3_core::field::RelationKind::Associates, ids[2], ids[4], 1.0)
+            .expect("public neighbor");
+        substrate.add_relation(wm_gen3_core::field::RelationKind::Associates, ids[3], ids[5], 1.0)
+            .expect("public record behind protected neighbor");
+        let backend = McpBackend::gen3(substrate, &dir, McpProfile::Full, false);
+        let sealed = call(&backend, "sanctuary.seal", json!({
+            "reason": "wire regression", "share_a": "fixture-a", "share_b": "fixture-b"
+        }));
+        assert_eq!(sealed["hermit_crab_sanctuary"]["sealed"], true);
+        assert_eq!(sealed["hermit_crab_sanctuary"]["protected_records_count"], 2);
+
+        for evidence in [false, true] {
+            let response = call(&backend, "memory.search", json!({
+                "query": "SUPERSESSPROBE", "historical": true, "evidence": evidence, "limit": 10
+            }));
+            let text = response.to_string();
+            assert!(!text.contains("PRIVATE_REPLACEMENT"), "{response}");
+            assert!(!text.contains("ring3_new"), "{response}");
+            let hits = response[if evidence { "hits" } else { "results" }].as_array().expect("hits");
+            assert!(!hits.is_empty(), "public historical record remains useful");
+            for hit in hits {
+                assert_ne!(hit["record_id"], ids[1]);
+                assert!(hit["superseded_by_record_id"].is_null(), "{hit}");
+                assert!(hit["superseded_by_relation_id"].is_null(), "{hit}");
+            }
+            if evidence {
+                assert_eq!(response["revision_links"], json!([]));
+            }
+        }
+        let current = call(&backend, "memory.search", json!({"query": "SUPERSESSPROBE", "evidence": true}));
+        assert_eq!(current["abstention_recommended"], true, "hidden replacement cannot make old evidence current: {current}");
+
+        let navigation = call(&backend, "galaxy.navigate", json!({"query": "NAVPROBE", "hops": 3, "limit": 10}));
+        assert!(!navigation.to_string().contains("PRIVATE_NEIGHBOR"), "{navigation}");
+        assert!(!navigation.to_string().contains("ring2_neighbor"), "{navigation}");
+        assert!(navigation["hits"].as_array().expect("navigation hits").iter()
+            .any(|hit| hit["record_id"] == ids[2]));
+        assert!(!navigation["hits"].as_array().expect("navigation hits").iter()
+            .any(|hit| hit["record_id"] == ids[5]), "protected records cannot be traversal bridges: {navigation}");
+        for link in navigation["resonance_links"].as_array().expect("links") {
+            assert_ne!(link[0], ids[3]);
+            assert_ne!(link[1], ids[3]);
+        }
+
+        let unsealed = call(&backend, "sanctuary.unseal", json!({"share_a": "fixture-a", "share_b": "fixture-b"}));
+        assert_eq!(unsealed["hermit_crab_sanctuary"]["sealed"], false);
+        let restored = call(&backend, "memory.search", json!({"query": "SUPERSESSPROBE", "historical": true, "evidence": true}));
+        assert!(restored.to_string().contains("PRIVATE_REPLACEMENT"), "{restored}");
+        let restored_navigation = call(&backend, "galaxy.navigate", json!({"query": "NAVPROBE", "hops": 3, "limit": 10}));
+        assert!(restored_navigation["hits"].as_array().expect("restored hits").iter()
+            .any(|hit| hit["record_id"] == ids[5]), "unseal restores the graph path: {restored_navigation}");
+        drop(backend);
+        std::fs::remove_dir_all(&dir).expect("cleanup synthetic store");
+    }
+}
+
+#[cfg(test)]
 mod session_e2e_tests {
     use super::*;
     use crate::mcp_server::{McpBackend, dispatch_json};
