@@ -10380,12 +10380,12 @@ mod cache_boundary_tests {
         let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
         substrate.remember_batch(&[
             RememberItem {
-                content: "Official count report A says 14 samples passed in May 2026.".into(),
+                content: "Official Lakeglass count report A says 14 samples passed in May 2026.".into(),
                 source: "cal-count-11-a".into(),
                 kind: ImportKind::Reported,
             },
             RememberItem {
-                content: "Signed count report B says 13 samples passed in May 2026; discrepancy unresolved.".into(),
+                content: "Signed Lakeglass count report B says 13 samples passed in May 2026; discrepancy unresolved.".into(),
                 source: "cal-count-11-b".into(),
                 kind: ImportKind::Reported,
             },
@@ -10403,6 +10403,14 @@ mod cache_boundary_tests {
         let bundle = substrate.recall_evidence_expect(&q);
         assert_eq!(bundle.disposition, EvidenceDisposition::Conflict);
         assert!(bundle.abstention_recommended);
+
+        // A conflict about one entity cannot resolve an unsupported entity query.
+        let unrelated = substrate.recall_evidence_expect(&RecallQuery {
+            query: q.query.replace("Lakeglass", "Distantford"),
+            ..q
+        });
+        assert_eq!(unrelated.disposition, EvidenceDisposition::Insufficient);
+        assert!(unrelated.abstention_recommended);
         let _ = std::fs::remove_dir_all(&path);
     }
 
