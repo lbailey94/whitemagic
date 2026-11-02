@@ -90,7 +90,7 @@ hkdf = "0.12"
 zeroize = { version = "1", features = ["derive"] }
 rayon = "1.10"
 ed25519-dalek = "3.0.0"
-getrandom = "0.3"
+getrandom = "0.4"
 uuid = { version = "1", features = ["serde", "v4", "v5"] }
 chrono = { version = "0.4", features = ["serde"] }
 wm-gen3-shm = { workspace = true }
