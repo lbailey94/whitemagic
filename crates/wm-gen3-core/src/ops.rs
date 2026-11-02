@@ -3193,10 +3193,11 @@ impl Substrate {
         let mut hits = self.recall(q)?;
         let mut adaptive_expanded = false;
 
+        let top_initial_score = hits.first().map(|h| h.score).unwrap_or(0.0);
         let mut hit_words = std::collections::HashSet::new();
         let mut hit_stems = std::collections::HashSet::new();
         let mut aggregated_content = String::new();
-        for h in &hits {
+        for h in hits.iter().filter(|h| h.score >= top_initial_score * 0.65).take(4) {
             aggregated_content.push_str(&h.content);
             aggregated_content.push(' ');
             aggregated_content.push_str(&h.source);
@@ -3222,10 +3223,11 @@ impl Substrate {
             expanded_query.candidate_limit = (q.candidate_limit.max(40) * 2).min(100);
             expanded_query.limit = (q.limit.max(10) * 2).min(20);
             if let Ok(expanded_hits) = self.recall(&expanded_query) {
+                let top_exp_score = expanded_hits.first().map(|h| h.score).unwrap_or(0.0);
                 let mut exp_words = std::collections::HashSet::new();
                 let mut exp_stems = std::collections::HashSet::new();
                 let mut exp_content = String::new();
-                for h in &expanded_hits {
+                for h in expanded_hits.iter().filter(|h| h.score >= top_exp_score * 0.65).take(4) {
                     exp_content.push_str(&h.content);
                     exp_content.push(' ');
                     exp_content.push_str(&h.source);
@@ -3426,6 +3428,7 @@ impl Substrate {
         let mut has_conflict = false;
         if !asks_specific_or_meta_report
             && (relevant_lower.contains("discrepancy unresolved")
+                || relevant_lower.contains("discrepancy is unresolved")
                 || relevant_lower.contains("reports disagree")
                 || relevant_lower.contains("unresolved discrepancy")
                 || relevant_lower.contains("unresolved issue")
