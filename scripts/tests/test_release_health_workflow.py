@@ -321,7 +321,7 @@ fi
             finally:
                 os.chdir(previous_cwd)
         self.assertEqual(result["status"], "live", result)
-        self.assertEqual(result["total"], 6)
+        self.assertEqual(result["total"], 7)
         self.assertNotIn("unrelated-checkout", result["live"])
         self.assertIn("wm-gen3-harness", result["live"])
 

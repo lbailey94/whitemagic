@@ -176,6 +176,7 @@ fn test_h9d1_migration_fidelity_and_strict_idempotency() {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            ..RecallQuery::default()
         };
         let hits = substrate.recall(&q).expect("recall query");
         assert!(!hits.is_empty(), "Should recall migrated item");

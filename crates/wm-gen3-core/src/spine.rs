@@ -168,10 +168,8 @@ impl KernelSpine for StandardKernelSpine {
         let mut committed = Vec::new();
         if !artifacts.staged_records.is_empty() {
             let results = substrate.remember_batch(&artifacts.staged_records);
-            for r in results {
-                if let Ok(id) = r {
-                    committed.push(id);
-                }
+            for id in results.into_iter().flatten() {
+                committed.push(id);
             }
         }
         let receipt_hash = format!(

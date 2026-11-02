@@ -311,9 +311,7 @@ pub fn normalize_stem(word: &str) -> String {
     }
     if w.ends_with("ing") && w.len() > 5 {
         w.truncate(w.len() - 3);
-    } else if w.ends_with("ed") && w.len() > 4 {
-        w.truncate(w.len() - 2);
-    } else if w.ends_with("er") && w.len() > 4 {
+    } else if (w.ends_with("ed") || w.ends_with("er")) && w.len() > 4 {
         w.truncate(w.len() - 2);
     } else if w.ends_with("or") && w.len() > 5 {
         w.truncate(w.len() - 2);
@@ -325,20 +323,135 @@ pub fn normalize_stem(word: &str) -> String {
 }
 
 const QUERY_FRAMING: &[&str] = &[
-    "which", "what", "who", "whom", "whose", "when", "where", "why", "how",
-    "can", "could", "would", "should", "shall", "may", "might", "must",
-    "does", "did", "do", "done", "doing", "is", "was", "are", "were", "be", "been", "being",
-    "the", "a", "an", "and", "or", "but", "not", "no", "to", "of", "in", "on", "at", "for", "with",
-    "as", "so", "this", "that", "these", "those", "there", "here", "about", "into", "over",
-    "give", "list", "state", "using", "both", "tell", "show", "find", "determine", "identify",
-    "either", "neither", "record", "records", "information", "from", "its", "their",
-    "currently", "current", "active", "valid", "known", "by", "before", "after", "immediately",
-    "remain", "remains", "remained", "unchanged", "kept", "new", "added", "change", "changes",
-    "resolved", "resolve", "resolution", "discrepancy", "report", "reports",
-    "everything", "become", "according", "older", "later", "many", "two", "associated",
-    "scheduled", "begin", "planned", "preserved", "detail", "range", "conflicting",
-    "issue", "stop", "old", "named", "sources", "source", "counts", "count",
-    "agree", "established", "corrected", "official", "value", "location", "changed", "say", "field"
+    "which",
+    "what",
+    "who",
+    "whom",
+    "whose",
+    "when",
+    "where",
+    "why",
+    "how",
+    "can",
+    "could",
+    "would",
+    "should",
+    "shall",
+    "may",
+    "might",
+    "must",
+    "does",
+    "did",
+    "do",
+    "done",
+    "doing",
+    "is",
+    "was",
+    "are",
+    "were",
+    "be",
+    "been",
+    "being",
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "but",
+    "not",
+    "no",
+    "to",
+    "of",
+    "in",
+    "on",
+    "at",
+    "for",
+    "with",
+    "as",
+    "so",
+    "this",
+    "that",
+    "these",
+    "those",
+    "there",
+    "here",
+    "about",
+    "into",
+    "over",
+    "give",
+    "list",
+    "state",
+    "using",
+    "both",
+    "tell",
+    "show",
+    "find",
+    "determine",
+    "identify",
+    "either",
+    "neither",
+    "record",
+    "records",
+    "information",
+    "from",
+    "its",
+    "their",
+    "currently",
+    "current",
+    "active",
+    "valid",
+    "known",
+    "by",
+    "before",
+    "after",
+    "immediately",
+    "remain",
+    "remains",
+    "remained",
+    "unchanged",
+    "kept",
+    "new",
+    "added",
+    "change",
+    "changes",
+    "resolved",
+    "resolve",
+    "resolution",
+    "discrepancy",
+    "report",
+    "reports",
+    "everything",
+    "become",
+    "according",
+    "older",
+    "later",
+    "many",
+    "two",
+    "associated",
+    "scheduled",
+    "begin",
+    "planned",
+    "preserved",
+    "detail",
+    "range",
+    "conflicting",
+    "issue",
+    "stop",
+    "old",
+    "named",
+    "sources",
+    "source",
+    "counts",
+    "count",
+    "agree",
+    "established",
+    "corrected",
+    "official",
+    "value",
+    "location",
+    "changed",
+    "say",
+    "field",
 ];
 
 const MONTH_PATTERNS: &[(&str, &str)] = &[
@@ -357,7 +470,13 @@ const MONTH_PATTERNS: &[(&str, &str)] = &[
 ];
 
 const WEEKDAY_NAMES: &[&str] = &[
-    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
 ];
 
 /// Extracts content facets from a query string, filtering out framing, instructions,
@@ -395,16 +514,23 @@ pub fn is_facet_covered(
         return true;
     }
     for &(month, pat) in MONTH_PATTERNS {
-        if facet == month && (raw_content.contains(pat) || raw_content.to_lowercase().contains(month)) {
+        if facet == month
+            && (raw_content.contains(pat) || raw_content.to_lowercase().contains(month))
+        {
             return true;
         }
     }
-    if facet == "weekday" && WEEKDAY_NAMES.iter().any(|d| content_words.contains(*d) || raw_content.to_lowercase().contains(d)) {
+    if facet == "weekday"
+        && WEEKDAY_NAMES
+            .iter()
+            .any(|d| content_words.contains(*d) || raw_content.to_lowercase().contains(d))
+    {
         return true;
     }
     if facet == "date" || facet == "dates" {
         let has_iso = raw_content.as_bytes().windows(10).any(|w| {
-            w[4] == b'-' && w[7] == b'-'
+            w[4] == b'-'
+                && w[7] == b'-'
                 && w[0..4].iter().all(u8::is_ascii_digit)
                 && w[5..7].iter().all(u8::is_ascii_digit)
                 && w[8..10].iter().all(u8::is_ascii_digit)
@@ -574,10 +700,15 @@ mod tests {
 
         let rec_text = "Zephyr Cove operates the canal shuttle program in Mist Reach.";
         let words: std::collections::HashSet<String> = tokenize(rec_text).into_iter().collect();
-        let stems: std::collections::HashSet<String> = words.iter().map(|w| normalize_stem(w)).collect();
+        let stems: std::collections::HashSet<String> =
+            words.iter().map(|w| normalize_stem(w)).collect();
 
         for f in &facets {
-            assert!(is_facet_covered(f, &stems, &words, rec_text), "facet {} must be covered", f);
+            assert!(
+                is_facet_covered(f, &stems, &words, rec_text),
+                "facet {} must be covered",
+                f
+            );
         }
     }
 }

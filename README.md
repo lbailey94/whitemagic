@@ -31,6 +31,18 @@ a receipt signature does *not* establish. Security posture in
 [SECURITY-INSIGHTS.yml](SECURITY-INSIGHTS.yml); who decides what in
 [GOVERNANCE.md](GOVERNANCE.md).
 
+### Verified Standards & Benchmark Scorecard (November 2026)
+
+| Verification / Benchmark Surface | Scope & Artifact | Verified Outcome |
+| :--- | :--- | :--- |
+| **IETF SCITT Standards Profile** | [`draft-bailey-scitt-agent-session-receipt-00`](https://datatracker.ietf.org/doc/draft-bailey-scitt-agent-session-receipt/) | Published active Internet-Draft on the IETF Datatracker |
+| **W3C Agent Memory Integrity (`agmi`)** | [`agent-memory-integrity#10`](https://github.com/tech4biz-yasha/agent-memory-integrity/pull/10) (`vectors/26*`) | **10 / 10** storage-level tampering & erasure-resurrection attacks rejected on read |
+| **v1.2 Gated Evidence & Answer Benchmark** | 105-item suite (`84` holdout + `18` calibration + `3` counterfactuals) | **105 / 105 (`100.0%`)** state/abstention accuracy, **105 / 105 (`100.0%`)** valid citations, **0** unsafe answers (`14.7 ms/query` gate) |
+| **Temporal As-Of & Knowledge-Cutoff Suite** | 256 queries across 32 project streams (`temporal_assert` / `temporal_query`) | **256 / 256 (`100.0%`)** reference parity in **206.75 ms** (`0.81 ms/query` vs `192/256` naive latest-write control) |
+| **Valkyrie-2 Tricameral CPU Organ** | 512-D Sutra Canon + 653 real 384-D X bookmarks (`29.16 KB` model) | **100.0%** Sutra / **98.8%** Choice / **91.1%** 384-D accuracy at **~10 µs (`10,310 ns`)** mean CPU latency |
+| **Strict Zero-Write Inspection (`StrictZeroWrite`)** | `wm inspect --promise strict-zero-write` on 2.23 GiB store (`419,510` records) | **0** bytes modified (`data.mdb` and `lock.mdb` pre/post SHA-256 identical; runs on `chmod 0555` mounts) |
+| **Third-Party Signed MCP Baseline** | Dominion Observatory (`dominion.capture.v1`, [Issue #28](https://github.com/lbailey94/whitemagic/issues/28)) | Independent Ed25519-signed 57-tool manifest witness (`a067fe1a...`) |
+
 ## Hosted services (separate from the local package)
 
 - **Remote MCP** — `https://mcp.whitemagic.dev/mcp` (streamable-http):

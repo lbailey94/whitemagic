@@ -2868,7 +2868,7 @@ impl Substrate {
             let record_content = record_opt.as_ref().map(|r| r.content()).unwrap_or("");
             let is_temporal_match = temporal_anchor
                 .as_ref()
-                .map_or(false, |d| record_content.contains(d.as_str()));
+                .is_some_and(|d| record_content.contains(d.as_str()));
             let lower_content = record_content.to_lowercase();
             let is_content_superseded = lower_content.contains("superseded")
                 || lower_content.contains("deprecated")
@@ -3197,7 +3197,11 @@ impl Substrate {
         let mut hit_words = std::collections::HashSet::new();
         let mut hit_stems = std::collections::HashSet::new();
         let mut aggregated_content = String::new();
-        for h in hits.iter().filter(|h| h.score >= top_initial_score * 0.65).take(4) {
+        for h in hits
+            .iter()
+            .filter(|h| h.score >= top_initial_score * 0.65)
+            .take(4)
+        {
             aggregated_content.push_str(&h.content);
             aggregated_content.push(' ');
             aggregated_content.push_str(&h.source);
@@ -3227,7 +3231,11 @@ impl Substrate {
                 let mut exp_words = std::collections::HashSet::new();
                 let mut exp_stems = std::collections::HashSet::new();
                 let mut exp_content = String::new();
-                for h in expanded_hits.iter().filter(|h| h.score >= top_exp_score * 0.65).take(4) {
+                for h in expanded_hits
+                    .iter()
+                    .filter(|h| h.score >= top_exp_score * 0.65)
+                    .take(4)
+                {
                     exp_content.push_str(&h.content);
                     exp_content.push(' ');
                     exp_content.push_str(&h.source);
@@ -3243,7 +3251,8 @@ impl Substrate {
                         exp_uncovered.push(f.clone());
                     }
                 }
-                if exp_uncovered.len() < uncovered_facets.len() || expanded_hits.len() > hits.len() {
+                if exp_uncovered.len() < uncovered_facets.len() || expanded_hits.len() > hits.len()
+                {
                     hits = expanded_hits;
                     aggregated_content = exp_content;
                     uncovered_facets = exp_uncovered;
@@ -3259,8 +3268,10 @@ impl Substrate {
 
         if q.resonance && !hits.is_empty() {
             let max_hops = q.resonance_hops.clamp(1, 3);
-            let mut visited_ids: std::collections::HashSet<u64> = hits.iter().map(|h| h.id).collect();
-            let mut frontier: Vec<(u64, f32)> = hits.iter().take(5).map(|h| (h.id, h.score)).collect();
+            let mut visited_ids: std::collections::HashSet<u64> =
+                hits.iter().map(|h| h.id).collect();
+            let mut frontier: Vec<(u64, f32)> =
+                hits.iter().take(5).map(|h| (h.id, h.score)).collect();
             let mut resonant_candidates: Vec<Hit> = Vec::new();
 
             for _hop in 0..max_hops {
@@ -3271,7 +3282,8 @@ impl Substrate {
                             resonance_links.push((curr_id, neighbor_id, edge_weight));
                             if visited_ids.insert(neighbor_id) {
                                 if let Ok(Some(rec)) = self.store.get_record(neighbor_id) {
-                                    let decayed_score = curr_score * edge_weight.clamp(0.1, 1.0) * 0.85;
+                                    let decayed_score =
+                                        curr_score * edge_weight.clamp(0.1, 1.0) * 0.85;
                                     if decayed_score >= q.min_score {
                                         next_frontier.push((neighbor_id, decayed_score));
                                         let hit = Hit {
@@ -3280,8 +3292,14 @@ impl Substrate {
                                             source: rec.source().to_string(),
                                             score: decayed_score,
                                             rank: 0,
-                                            superseded_by: relations_view.superseded_by.get(&neighbor_id).copied(),
-                                            superseded_by_record_id: relations_view.superseded_by_record_id.get(&neighbor_id).copied(),
+                                            superseded_by: relations_view
+                                                .superseded_by
+                                                .get(&neighbor_id)
+                                                .copied(),
+                                            superseded_by_record_id: relations_view
+                                                .superseded_by_record_id
+                                                .get(&neighbor_id)
+                                                .copied(),
                                             superseded_by_relation_id: None,
                                         };
                                         resonant_candidates.push(hit);
@@ -3299,13 +3317,20 @@ impl Substrate {
 
             if !resonant_candidates.is_empty() {
                 for cand in resonant_candidates {
-                    let cand_tokens: std::collections::HashSet<String> = field::tokenize(&cand.content).into_iter().collect();
-                    let covers_uncovered = uncovered_facets.iter().any(|f| cand_tokens.contains(f) || cand.content.to_lowercase().contains(f));
+                    let cand_tokens: std::collections::HashSet<String> =
+                        field::tokenize(&cand.content).into_iter().collect();
+                    let covers_uncovered = uncovered_facets.iter().any(|f| {
+                        cand_tokens.contains(f) || cand.content.to_lowercase().contains(f)
+                    });
                     if covers_uncovered || hits.len() < q.limit {
                         hits.push(cand);
                     }
                 }
-                hits.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+                hits.sort_by(|a, b| {
+                    b.score
+                        .partial_cmp(&a.score)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                });
                 for (idx, h) in hits.iter_mut().enumerate() {
                     h.rank = idx + 1;
                 }
@@ -3334,16 +3359,19 @@ impl Substrate {
                 promoted.score = 1.0;
                 hits.insert(0, promoted);
             } else if let Ok(Some(newer_rec)) = self.store.get_record(newer_id) {
-                hits.insert(0, Hit {
-                    id: newer_id,
-                    content: newer_rec.content().to_string(),
-                    source: newer_rec.source().to_string(),
-                    score: 1.0,
-                    rank: 0,
-                    superseded_by: None,
-                    superseded_by_record_id: None,
-                    superseded_by_relation_id: None,
-                });
+                hits.insert(
+                    0,
+                    Hit {
+                        id: newer_id,
+                        content: newer_rec.content().to_string(),
+                        source: newer_rec.source().to_string(),
+                        score: 1.0,
+                        rank: 0,
+                        superseded_by: None,
+                        superseded_by_record_id: None,
+                        superseded_by_relation_id: None,
+                    },
+                );
             }
         }
         if has_superseding {
@@ -3396,9 +3424,7 @@ impl Substrate {
 
         let coverage = if hits.is_empty() {
             EvidenceCoverage::None
-        } else if query_facets.is_empty() {
-            EvidenceCoverage::Complete
-        } else if uncovered_facets.is_empty() {
+        } else if query_facets.is_empty() || uncovered_facets.is_empty() {
             EvidenceCoverage::Complete
         } else if uncovered_facets.len() < query_facets.len() {
             EvidenceCoverage::Partial
@@ -3474,9 +3500,9 @@ impl Substrate {
             || q.query.to_lowercase().contains("before");
         let time_unknown = is_temporal_condition
             && !hits.is_empty()
-            && hits.iter().all(|h| {
-                !h.content.contains("202") && !h.source.contains("202")
-            });
+            && hits
+                .iter()
+                .all(|h| !h.content.contains("202") && !h.source.contains("202"));
 
         let disposition = if negative_attribute {
             EvidenceDisposition::Insufficient
@@ -3492,10 +3518,14 @@ impl Substrate {
             EvidenceDisposition::Resolved
         };
 
-        let abstention_recommended = disposition != EvidenceDisposition::Resolved
-            || coverage != EvidenceCoverage::Complete;
+        let abstention_recommended =
+            disposition != EvidenceDisposition::Resolved || coverage != EvidenceCoverage::Complete;
 
-        let candidate_count = if hits.is_empty() { 0 } else { q.candidate_limit.min(20).max(hits.len()) };
+        let candidate_count = if hits.is_empty() {
+            0
+        } else {
+            q.candidate_limit.min(20).max(hits.len())
+        };
         let examined_count = candidate_count;
 
         let stop_reason = if hits.is_empty() {
@@ -3520,7 +3550,8 @@ impl Substrate {
         }
 
         let evidence_record_ids: Vec<u64> = hits.iter().map(|h| h.id).collect();
-        let record_id_set: std::collections::HashSet<u64> = evidence_record_ids.iter().copied().collect();
+        let record_id_set: std::collections::HashSet<u64> =
+            evidence_record_ids.iter().copied().collect();
 
         let relations_view = self.store.relations_view();
         let mut revision_links = Vec::new();
@@ -3556,14 +3587,29 @@ impl Substrate {
         let mut f = serde_json::Map::new();
         f.insert("query_sha256".into(), query_hash.into());
         f.insert("coverage".into(), format!("{:?}", bundle.coverage).into());
-        f.insert("disposition".into(), format!("{:?}", bundle.disposition).into());
-        f.insert("stop_reason".into(), format!("{:?}", bundle.stop_reason).into());
-        f.insert("abstention_recommended".into(), bundle.abstention_recommended.into());
+        f.insert(
+            "disposition".into(),
+            format!("{:?}", bundle.disposition).into(),
+        );
+        f.insert(
+            "stop_reason".into(),
+            format!("{:?}", bundle.stop_reason).into(),
+        );
+        f.insert(
+            "abstention_recommended".into(),
+            bundle.abstention_recommended.into(),
+        );
         f.insert("adaptive_expanded".into(), bundle.adaptive_expanded.into());
         f.insert("candidate_count".into(), bundle.candidate_count.into());
         f.insert("hits_count".into(), bundle.hits.len().into());
-        f.insert("total_content_bytes".into(), bundle.total_content_bytes.into());
-        f.insert("took_ms".into(), (started.elapsed().as_millis() as u64).into());
+        f.insert(
+            "total_content_bytes".into(),
+            bundle.total_content_bytes.into(),
+        );
+        f.insert(
+            "took_ms".into(),
+            (started.elapsed().as_millis() as u64).into(),
+        );
         self.j("recall.evidence", f);
 
         Ok(bundle)
@@ -3573,7 +3619,8 @@ impl Substrate {
     #[cfg(test)]
     #[track_caller]
     pub fn recall_evidence_expect(&mut self, q: &RecallQuery) -> EvidenceBundle {
-        self.recall_evidence(q).expect("recall_evidence: valid floors and scope")
+        self.recall_evidence(q)
+            .expect("recall_evidence: valid floors and scope")
     }
 
     /// `think`: bounded sweep — proposes `supersedes` candidates by the declared
@@ -6121,7 +6168,10 @@ impl Substrate {
             || share_b_sha != current.share_b_sha256
             || combined_sha != current.combined_commitment_sha256
         {
-            return Err("Hermit-Crab 2-of-2 split-key verification failed (sanctuary remains sealed)".into());
+            return Err(
+                "Hermit-Crab 2-of-2 split-key verification failed (sanctuary remains sealed)"
+                    .into(),
+            );
         }
         let epoch = self.store.epoch().map_err(|e| e.to_string())?;
         let unsealed = HermitCrabSanctuary {
@@ -10242,7 +10292,10 @@ mod cache_boundary_tests {
         let bundle = substrate.recall_evidence_expect(&q);
         assert_eq!(bundle.disposition, EvidenceDisposition::Insufficient);
         assert!(bundle.abstention_recommended);
-        assert!(bundle.uncovered_facets.contains(&"public".to_string()) || bundle.uncovered_facets.contains(&"telephone".to_string()));
+        assert!(
+            bundle.uncovered_facets.contains(&"public".to_string())
+                || bundle.uncovered_facets.contains(&"telephone".to_string())
+        );
         let _ = std::fs::remove_dir_all(&path);
     }
 
@@ -10264,7 +10317,9 @@ mod cache_boundary_tests {
         ]);
 
         let q = RecallQuery {
-            query: "Can the May 2026 passing-sample count for Lakeglass be resolved from both reports?".into(),
+            query:
+                "Can the May 2026 passing-sample count for Lakeglass be resolved from both reports?"
+                    .into(),
             limit: 5,
             candidate_limit: 20,
             ..RecallQuery::default()
@@ -10280,17 +10335,23 @@ mod cache_boundary_tests {
     fn wave3_evidence_stale_only_surfacing() {
         let path = temp_store("w3-stale");
         let mut substrate = Substrate::open(&path, None, default_view()).expect("open");
-        let v1 = substrate.remember_batch(&[RememberItem {
-            content: "deprecated legacy format was active in North Port".into(),
-            source: "ledger-old".into(),
-            kind: ImportKind::Reported,
-        }]).remove(0).unwrap();
+        let v1 = substrate
+            .remember_batch(&[RememberItem {
+                content: "deprecated legacy format was active in North Port".into(),
+                source: "ledger-old".into(),
+                kind: ImportKind::Reported,
+            }])
+            .remove(0)
+            .unwrap();
 
-        let v2 = substrate.remember_batch(&[RememberItem {
-            content: "superseded entry".into(),
-            source: "ledger-old".into(),
-            kind: ImportKind::Reported,
-        }]).remove(0).unwrap();
+        let v2 = substrate
+            .remember_batch(&[RememberItem {
+                content: "superseded entry".into(),
+                source: "ledger-old".into(),
+                kind: ImportKind::Reported,
+            }])
+            .remove(0)
+            .unwrap();
 
         substrate.record_revision(v1, v2, "deprecated").unwrap();
 
@@ -10319,14 +10380,16 @@ mod cache_boundary_tests {
                 kind: ImportKind::Reported,
             },
             RememberItem {
-                content: "Notice recorded 2026-06-14 adds Quarry Steps effective 2026-07-01.".into(),
+                content: "Notice recorded 2026-06-14 adds Quarry Steps effective 2026-07-01."
+                    .into(),
                 source: "cal-route-notice".into(),
                 kind: ImportKind::Reported,
             },
         ]);
 
         let q = RecallQuery {
-            query: "Give the recorded and effective dates for the route change at Northwind Steps.".into(),
+            query: "Give the recorded and effective dates for the route change at Northwind Steps."
+                .into(),
             limit: 1,
             candidate_limit: 1,
             adaptive: true,
@@ -10671,7 +10734,8 @@ mod cache_boundary_tests {
 
         let ids = substrate.remember_batch(&[
             RememberItem {
-                content: "Concept Alpha: Deterministic kernel boundary via Linux Landlock LSM.".into(),
+                content: "Concept Alpha: Deterministic kernel boundary via Linux Landlock LSM."
+                    .into(),
                 source: "source:concept-alpha".into(),
                 kind: ImportKind::Reported,
             },
@@ -10701,10 +10765,19 @@ mod cache_boundary_tests {
             })
             .expect("recall_evidence with resonance");
 
-        assert!(bundle.resonance_expanded, "resonance must expand the candidate pool");
-        assert!(!bundle.resonance_links.is_empty(), "must record resonance links");
+        assert!(
+            bundle.resonance_expanded,
+            "resonance must expand the candidate pool"
+        );
+        assert!(
+            !bundle.resonance_links.is_empty(),
+            "must record resonance links"
+        );
         // Record B should be surfaced in hits via resonance
-        assert!(bundle.hits.iter().any(|h| h.id == id_b), "Concept Beta must be surfaced by associative resonance");
+        assert!(
+            bundle.hits.iter().any(|h| h.id == id_b),
+            "Concept Beta must be surfaced by associative resonance"
+        );
 
         let _ = std::fs::remove_dir_all(&path);
     }
@@ -10748,8 +10821,14 @@ mod cache_boundary_tests {
 
         assert_eq!(bundle.disposition, EvidenceDisposition::Resolved);
         assert!(!bundle.hits.is_empty());
-        assert_eq!(bundle.hits[0].id, directive_id, "Superseding directive must be top hit");
-        assert!(bundle.revision_links.contains(&(old_id, directive_id)), "Revision link must record supersession");
+        assert_eq!(
+            bundle.hits[0].id, directive_id,
+            "Superseding directive must be top hit"
+        );
+        assert!(
+            bundle.revision_links.contains(&(old_id, directive_id)),
+            "Revision link must record supersession"
+        );
 
         let _ = std::fs::remove_dir_all(&path);
     }

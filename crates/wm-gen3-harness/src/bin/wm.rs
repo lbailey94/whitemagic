@@ -1198,7 +1198,9 @@ enum SutraCommands {
     #[command(alias = "deliberate")]
     Deliberator {
         /// Natural language inquiry or Sutra codon to deliberate
-        #[arg(default_value = "navigate holographic constellations and synthesize session crystals")]
+        #[arg(
+            default_value = "navigate holographic constellations and synthesize session crystals"
+        )]
         inquiry: String,
         /// Emit JSON output
         #[arg(long)]
@@ -1865,25 +1867,37 @@ fn main() {
             let journal_path = store_path.join("journal.jsonl");
             let mut substrate = match inspect_promise {
                 Some(promise_str) => {
-                    let promise: wm_gen3_core::store::InspectionPromise = promise_str.parse().unwrap_or_else(|e| {
-                        eprintln!("{e}");
-                        std::process::exit(1);
-                    });
-                    match Substrate::open_inspect(&store_path, Some(&journal_path), default_view(), promise) {
+                    let promise: wm_gen3_core::store::InspectionPromise =
+                        promise_str.parse().unwrap_or_else(|e| {
+                            eprintln!("{e}");
+                            std::process::exit(1);
+                        });
+                    match Substrate::open_inspect(
+                        &store_path,
+                        Some(&journal_path),
+                        default_view(),
+                        promise,
+                    ) {
                         Ok(s) => s,
                         Err(e) => {
-                            eprintln!("Error opening store for inspection at {}: {e}", store_path.display());
+                            eprintln!(
+                                "Error opening store for inspection at {}: {e}",
+                                store_path.display()
+                            );
                             std::process::exit(1);
                         }
                     }
                 }
-                None => match Substrate::open_readonly(&store_path, Some(&journal_path), default_view()) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        eprintln!("Error opening store at {}: {e}", store_path.display());
-                        std::process::exit(1);
+                None => {
+                    match Substrate::open_readonly(&store_path, Some(&journal_path), default_view())
+                    {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!("Error opening store at {}: {e}", store_path.display());
+                            std::process::exit(1);
+                        }
                     }
-                },
+                }
             };
 
             let projection_requested = projection
@@ -2019,16 +2033,49 @@ fn main() {
                     std::process::exit(1);
                 });
                 RecallQuery {
-                    query: v.get("query").and_then(serde_json::Value::as_str).unwrap_or("").to_string(),
-                    limit: v.get("limit").and_then(serde_json::Value::as_u64).unwrap_or(limit as u64) as usize,
-                    candidate_limit: v.get("candidate_limit").and_then(serde_json::Value::as_u64).unwrap_or(candidate_limit as u64) as usize,
-                    include_historical: v.get("historical").and_then(serde_json::Value::as_bool).unwrap_or(historical),
-                    min_score: v.get("min_score").and_then(serde_json::Value::as_f64).unwrap_or(0.0) as f32,
-                    min_coverage: v.get("min_coverage").and_then(serde_json::Value::as_f64).unwrap_or(0.0) as f32,
-                    scope: v.get("scope").and_then(serde_json::Value::as_str).map(String::from).or(scope),
-                    adaptive: v.get("adaptive").and_then(serde_json::Value::as_bool).unwrap_or(adaptive),
-                    resonance: v.get("resonance").and_then(serde_json::Value::as_bool).unwrap_or(false),
-                    resonance_hops: v.get("resonance_hops").and_then(serde_json::Value::as_u64).unwrap_or(2) as usize,
+                    query: v
+                        .get("query")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("")
+                        .to_string(),
+                    limit: v
+                        .get("limit")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or(limit as u64) as usize,
+                    candidate_limit: v
+                        .get("candidate_limit")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or(candidate_limit as u64)
+                        as usize,
+                    include_historical: v
+                        .get("historical")
+                        .and_then(serde_json::Value::as_bool)
+                        .unwrap_or(historical),
+                    min_score: v
+                        .get("min_score")
+                        .and_then(serde_json::Value::as_f64)
+                        .unwrap_or(0.0) as f32,
+                    min_coverage: v
+                        .get("min_coverage")
+                        .and_then(serde_json::Value::as_f64)
+                        .unwrap_or(0.0) as f32,
+                    scope: v
+                        .get("scope")
+                        .and_then(serde_json::Value::as_str)
+                        .map(String::from)
+                        .or(scope),
+                    adaptive: v
+                        .get("adaptive")
+                        .and_then(serde_json::Value::as_bool)
+                        .unwrap_or(adaptive),
+                    resonance: v
+                        .get("resonance")
+                        .and_then(serde_json::Value::as_bool)
+                        .unwrap_or(false),
+                    resonance_hops: v
+                        .get("resonance_hops")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or(2) as usize,
                 }
             } else {
                 RecallQuery {
@@ -2798,8 +2845,10 @@ fn main() {
                                 epoch,
                                 0.90,
                             );
-                            let normalized_omega = (coords.omega.sin() * 0.5 + 0.5).clamp(0.0, 0.9999);
-                            let bin_idx = (normalized_omega * num_clusters as f64).floor() as usize % num_clusters;
+                            let normalized_omega =
+                                (coords.omega.sin() * 0.5 + 0.5).clamp(0.0, 0.9999);
+                            let bin_idx = (normalized_omega * num_clusters as f64).floor() as usize
+                                % num_clusters;
                             let b = &mut bins[bin_idx];
                             b.count += 1;
                             b.sum_x += coords.x;
@@ -2862,7 +2911,10 @@ fn main() {
                         println!("Target Galaxy:        {}", galaxy);
                         println!("Total Store Records:  {}", total_records);
                         println!("Constellation Bins:   {}", num_clusters);
-                        println!("Sample Size:          {} (stride: {})", sample_count, stride);
+                        println!(
+                            "Sample Size:          {} (stride: {})",
+                            sample_count, stride
+                        );
                         println!("==================================================");
 
                         for (idx, b) in bins.iter().enumerate() {
@@ -2871,10 +2923,26 @@ fn main() {
                             }
                             let c = b.count as f64;
                             let (glyph, archetype) = glyph_names[idx % glyph_names.len()];
-                            println!("\n✦ Constellation #{:02}: {} [{}]", idx + 1, glyph, archetype);
-                            println!("  Stars Count:    {} records ({:.1}% of sample)", b.count, (c / sample_count as f64) * 100.0);
-                            println!("  6D Centroid:    ⟨x={:.2}, y={:.2}, z={:.2} | τ={:.2}, σ={:.2}, ω={:.2}⟩",
-                                b.sum_x / c, b.sum_y / c, b.sum_z / c, b.sum_tau / c, b.sum_sigma / c, b.sum_omega / c);
+                            println!(
+                                "\n✦ Constellation #{:02}: {} [{}]",
+                                idx + 1,
+                                glyph,
+                                archetype
+                            );
+                            println!(
+                                "  Stars Count:    {} records ({:.1}% of sample)",
+                                b.count,
+                                (c / sample_count as f64) * 100.0
+                            );
+                            println!(
+                                "  6D Centroid:    ⟨x={:.2}, y={:.2}, z={:.2} | τ={:.2}, σ={:.2}, ω={:.2}⟩",
+                                b.sum_x / c,
+                                b.sum_y / c,
+                                b.sum_z / c,
+                                b.sum_tau / c,
+                                b.sum_sigma / c,
+                                b.sum_omega / c
+                            );
                             println!("  Anchor Stars:");
                             for (id, snippet) in &b.samples {
                                 println!("    #{} \"{}\"", id, snippet);
@@ -2973,7 +3041,8 @@ fn main() {
                                 0.90,
                             );
                             let norm_w = (c.omega.sin() * 0.5 + 0.5).clamp(0.0, 0.9999);
-                            let idx = (norm_w * num_clusters as f64).floor() as usize % num_clusters;
+                            let idx =
+                                (norm_w * num_clusters as f64).floor() as usize % num_clusters;
                             counts[idx] += 1;
                             sums[idx][0] += c.x;
                             sums[idx][1] += c.y;
@@ -3143,8 +3212,12 @@ fn main() {
                         );
                         println!("--------------------------------------------------");
                         for (idx, h) in bundle.hits.iter().enumerate() {
-                            let snippet: String =
-                                h.content.chars().take(120).collect::<String>().replace('\n', " ");
+                            let snippet: String = h
+                                .content
+                                .chars()
+                                .take(120)
+                                .collect::<String>()
+                                .replace('\n', " ");
                             println!(
                                 "  [{}] #{} (score={:.4}, src={}) \"{}\"",
                                 idx + 1,
@@ -3234,8 +3307,13 @@ fn main() {
                             let norm_w = (coords.omega.sin() * 0.5 + 0.5).clamp(0.0, 0.9999);
                             let c_bin = (norm_w * 6.0).floor() as usize % 6;
                             let (s_glyph, s_arch) = sutra_glyphs[c_bin];
-                            let links: Vec<u64> =
-                                adj.get(&id).cloned().unwrap_or_default().into_iter().take(4).collect();
+                            let links: Vec<u64> = adj
+                                .get(&id)
+                                .cloned()
+                                .unwrap_or_default()
+                                .into_iter()
+                                .take(4)
+                                .collect();
                             let preview = if record.content().len() > 160 {
                                 let mut end = 160;
                                 while end > 0 && !record.content().is_char_boundary(end) {
@@ -3351,7 +3429,10 @@ fn main() {
                     println!("Data Checksum (SHA):   {}", report.data_hash);
                     println!(
                         "Lock Checksum (SHA):   {}",
-                        report.lock_hash.as_deref().unwrap_or("(untouched / absent)")
+                        report
+                            .lock_hash
+                            .as_deref()
+                            .unwrap_or("(untouched / absent)")
                     );
                     println!("Audit Events Appended: {}", report.audit_events_appended);
                     println!(
@@ -4010,7 +4091,11 @@ fn main() {
                         println!("==================================================");
                         println!(
                             "Hermit-Crab Seal:     {} (reason: {})",
-                            if hc.sealed { "SEALED (Ring 0..1 Only)" } else { "OPEN (Ring 0..3 Active)" },
+                            if hc.sealed {
+                                "SEALED (Ring 0..1 Only)"
+                            } else {
+                                "OPEN (Ring 0..3 Active)"
+                            },
                             hc.reason
                         );
                         println!("Max Public Ring:      {:?}", hc.max_public_ring);
@@ -4019,7 +4104,11 @@ fn main() {
                         for l in &loops {
                             println!(
                                 "  • [{}] ({:?}, sal={:.2}, rev={}) \"{}\"",
-                                l.loop_id, l.consent_ring, l.salience, l.revisit_count, l.question_or_hypothesis
+                                l.loop_id,
+                                l.consent_ring,
+                                l.salience,
+                                l.revisit_count,
+                                l.question_or_hypothesis
                             );
                         }
                         println!("==================================================");
@@ -4052,11 +4141,17 @@ fn main() {
                             std::process::exit(1);
                         });
                     if json {
-                        println!("{}", serde_json::to_string_pretty(&item).unwrap_or_default());
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&item).unwrap_or_default()
+                        );
                     } else {
                         println!(
                             "Registered OpenLoop {} ({:?}, salience={:.2}): \"{}\"",
-                            item.loop_id, item.consent_ring, item.salience, item.question_or_hypothesis
+                            item.loop_id,
+                            item.consent_ring,
+                            item.salience,
+                            item.question_or_hypothesis
                         );
                     }
                 }
@@ -4067,10 +4162,12 @@ fn main() {
                                 eprintln!("Error opening store: {e}");
                                 std::process::exit(1);
                             });
-                    let revisited = substrate.revisit_open_loops_dream_pass().unwrap_or_else(|e| {
-                        eprintln!("Error revisiting OpenLoops: {e}");
-                        std::process::exit(1);
-                    });
+                    let revisited = substrate
+                        .revisit_open_loops_dream_pass()
+                        .unwrap_or_else(|e| {
+                            eprintln!("Error revisiting OpenLoops: {e}");
+                            std::process::exit(1);
+                        });
                     if json {
                         println!(
                             "{}",
@@ -4105,15 +4202,22 @@ fn main() {
                                 eprintln!("Error opening store: {e}");
                                 std::process::exit(1);
                             });
-                    let resolved =
-                        substrate.resolve_open_loop(&loop_id, &insight).unwrap_or_else(|e| {
+                    let resolved = substrate
+                        .resolve_open_loop(&loop_id, &insight)
+                        .unwrap_or_else(|e| {
                             eprintln!("Error resolving OpenLoop: {e}");
                             std::process::exit(1);
                         });
                     if json {
-                        println!("{}", serde_json::to_string_pretty(&resolved).unwrap_or_default());
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&resolved).unwrap_or_default()
+                        );
                     } else {
-                        println!("Synthesized OpenLoop {}: {:?}", resolved.loop_id, resolved.status);
+                        println!(
+                            "Synthesized OpenLoop {}: {:?}",
+                            resolved.loop_id, resolved.status
+                        );
                     }
                 }
                 SanctuaryCommands::Seal {
@@ -11358,7 +11462,9 @@ fn run_sutra_deliberator(inquiry: &str, json: bool) {
     ];
 
     let pred_class = v2_res["decision"]["predicted_class"].as_u64().unwrap_or(0) as usize;
-    let top_prob = v2_res["decision"]["top_probability"].as_f64().unwrap_or(0.85);
+    let top_prob = v2_res["decision"]["top_probability"]
+        .as_f64()
+        .unwrap_or(0.85);
     let primary_glyph_idx = sutra.glyphs.first().map(|g| *g as usize).unwrap_or(0);
     let mut ranked_mansions = Vec::with_capacity(3);
     for rank in 0..3usize {
@@ -11390,18 +11496,27 @@ fn run_sutra_deliberator(inquiry: &str, json: bool) {
     });
 
     if json {
-        println!("{}", serde_json::to_string_pretty(&payload).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).unwrap_or_default()
+        );
     } else {
         println!("==========================================================================");
         println!("   SUTRA-VALKYRIE 15 Hz LATENT DELIBERATOR & 28 LUNAR MANSION RANKER      ");
         println!("==========================================================================");
         println!("  Inquiry           : \"{}\"", inquiry);
-        println!("  Sutra Codon       : {} ({})", sutra.codon_str, sutra.taoist_formula());
+        println!(
+            "  Sutra Codon       : {} ({})",
+            sutra.codon_str,
+            sutra.taoist_formula()
+        );
         println!("  Bound Skeleton    : {}", sutra.primary_skeleton_id);
         println!(
             "  Valkyrie 15Hz Ring: {} ns | Catuṣkoṭi={} | Zero-Backprop=true",
             ring_ns,
-            v2_res["decision"]["catuskoti_corner"].as_str().unwrap_or("K1")
+            v2_res["decision"]["catuskoti_corner"]
+                .as_str()
+                .unwrap_or("K1")
         );
         println!("  Top-3 Ranked Lunar Mansions (28 Gana State Matrix):");
         for m in &ranked_mansions {

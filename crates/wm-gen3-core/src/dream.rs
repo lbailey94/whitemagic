@@ -967,7 +967,15 @@ pub fn execute_dual_phase_sleep_cycle_opts(
     seed: u64,
     crystallize: bool,
 ) -> DualPhaseSleepTelemetry {
-    execute_dual_phase_sleep_cycle_ext(mode, regime, budget_steps, substrate, seed, crystallize, 100)
+    execute_dual_phase_sleep_cycle_ext(
+        mode,
+        regime,
+        budget_steps,
+        substrate,
+        seed,
+        crystallize,
+        100,
+    )
 }
 
 /// Executes a dual-phase sleep cycle with an explicit sample depth for NREM consolidation.

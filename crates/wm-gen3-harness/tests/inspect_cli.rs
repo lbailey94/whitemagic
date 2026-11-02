@@ -2,7 +2,8 @@ use std::process::Command;
 
 #[test]
 fn inspect_cli_nonexistent_store_fails_closed() {
-    let non_existent = std::env::temp_dir().join(format!("wm-inspect-none-{}", uuid::Uuid::new_v4()));
+    let non_existent =
+        std::env::temp_dir().join(format!("wm-inspect-none-{}", uuid::Uuid::new_v4()));
     assert!(!non_existent.exists());
 
     let output = Command::new(env!("CARGO_BIN_EXE_wm"))
@@ -16,8 +17,14 @@ fn inspect_cli_nonexistent_store_fails_closed() {
         .output()
         .expect("run wm inspect");
 
-    assert!(!output.status.success(), "inspect must fail on non-existent store");
-    assert!(!non_existent.exists(), "non-existent store directory must not be auto-created");
+    assert!(
+        !output.status.success(),
+        "inspect must fail on non-existent store"
+    );
+    assert!(
+        !non_existent.exists(),
+        "non-existent store directory must not be auto-created"
+    );
 }
 
 #[test]

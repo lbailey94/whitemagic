@@ -113,6 +113,7 @@ fn p0_1_qemem_sufficiency_set_cover_beats_topk_redundancy() {
         min_score: 0.0,
         min_coverage: 0.0,
         scope: None,
+        ..RecallQuery::default()
     };
 
     // 1. Standard PenaltyMultiplier top-2 selects two redundant Facet-A records

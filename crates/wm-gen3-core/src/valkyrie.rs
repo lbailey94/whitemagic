@@ -4230,7 +4230,7 @@ mod tests {
         );
         let test_prompt = "Retrieve the note with staging details";
         let mut test_emb = vec![0.0f32; dummy_dim];
-        test_emb[1 * 16] = 2.0; // Class 1: System05Vector
+        test_emb[16] = 2.0; // Class 1: System05Vector
         let hybrid_res = hybrid_router.route_hybrid(test_prompt, Some(&test_emb), Some(&projector));
         assert!(hybrid_res.used_semantic_organ);
         assert_eq!(hybrid_res.tier, CognitiveTier::System05Vector);

@@ -1902,9 +1902,7 @@ pub fn execute_hybrid_tool_call(
         "sanctuary.open_loop" | "sanctuary_open_loop" => {
             handle_sanctuary_open_loop(args, substrate, readonly)
         }
-        "sanctuary.revisit" | "sanctuary_revisit" => {
-            handle_sanctuary_revisit(substrate, readonly)
-        }
+        "sanctuary.revisit" | "sanctuary_revisit" => handle_sanctuary_revisit(substrate, readonly),
         "sanctuary.resolve" | "sanctuary_resolve" => {
             handle_sanctuary_resolve(args, substrate, readonly)
         }
@@ -2275,7 +2273,11 @@ fn handle_memory_create(
 }
 
 fn handle_memory_search(args: &Value, substrate: &mut Substrate) -> Result<Value, String> {
-    if args.get("evidence").and_then(Value::as_bool).unwrap_or(false) {
+    if args
+        .get("evidence")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+    {
         return handle_memory_recall_evidence(args, substrate);
     }
     let query = args
@@ -2301,8 +2303,14 @@ fn handle_memory_search(args: &Value, substrate: &mut Substrate) -> Result<Value
         .unwrap_or(2048)
         .min(65536);
 
-    let resonance = args.get("resonance").and_then(Value::as_bool).unwrap_or(false);
-    let resonance_hops = args.get("resonance_hops").and_then(Value::as_u64).unwrap_or(2) as usize;
+    let resonance = args
+        .get("resonance")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let resonance_hops = args
+        .get("resonance_hops")
+        .and_then(Value::as_u64)
+        .unwrap_or(2) as usize;
 
     let q = RecallQuery {
         query: query.to_string(),
@@ -2370,7 +2378,10 @@ fn handle_memory_recall_evidence(args: &Value, substrate: &mut Substrate) -> Res
     }
 
     let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(10) as usize;
-    let candidate_limit = args.get("candidate_limit").and_then(Value::as_u64).unwrap_or(40) as usize;
+    let candidate_limit = args
+        .get("candidate_limit")
+        .and_then(Value::as_u64)
+        .unwrap_or(40) as usize;
     let historical = args
         .get("historical")
         .and_then(Value::as_bool)
@@ -2381,10 +2392,19 @@ fn handle_memory_recall_evidence(args: &Value, substrate: &mut Substrate) -> Res
         .unwrap_or(false);
     let scope = args.get("scope").and_then(Value::as_str).map(String::from);
     let min_score = args.get("min_score").and_then(Value::as_f64).unwrap_or(0.0) as f32;
-    let min_coverage = args.get("min_coverage").and_then(Value::as_f64).unwrap_or(0.0) as f32;
+    let min_coverage = args
+        .get("min_coverage")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.0) as f32;
 
-    let resonance = args.get("resonance").and_then(Value::as_bool).unwrap_or(false);
-    let resonance_hops = args.get("resonance_hops").and_then(Value::as_u64).unwrap_or(2) as usize;
+    let resonance = args
+        .get("resonance")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let resonance_hops = args
+        .get("resonance_hops")
+        .and_then(Value::as_u64)
+        .unwrap_or(2) as usize;
 
     let q = RecallQuery {
         query: query.to_string(),
@@ -2403,23 +2423,27 @@ fn handle_memory_recall_evidence(args: &Value, substrate: &mut Substrate) -> Res
         .recall_evidence(&q)
         .map_err(|e| format!("Recall evidence failed: {e}"))?;
 
-    let hits_with_uuid: Vec<Value> = bundle.hits.iter().map(|hit| {
-        let uuid = substrate
-            .lookup_uuid_by_id(hit.id)
-            .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &hit.id.to_be_bytes()));
-        json!({
-            "id": uuid.to_string(),
-            "record_id": hit.id,
-            "uuid": uuid.to_string(),
-            "content": hit.content,
-            "score": hit.score,
-            "rank": hit.rank,
-            "source": hit.source,
-            "superseded_by": hit.superseded_by,
-            "superseded_by_record_id": hit.superseded_by_record_id,
-            "superseded_by_relation_id": hit.superseded_by_relation_id
+    let hits_with_uuid: Vec<Value> = bundle
+        .hits
+        .iter()
+        .map(|hit| {
+            let uuid = substrate
+                .lookup_uuid_by_id(hit.id)
+                .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &hit.id.to_be_bytes()));
+            json!({
+                "id": uuid.to_string(),
+                "record_id": hit.id,
+                "uuid": uuid.to_string(),
+                "content": hit.content,
+                "score": hit.score,
+                "rank": hit.rank,
+                "source": hit.source,
+                "superseded_by": hit.superseded_by,
+                "superseded_by_record_id": hit.superseded_by_record_id,
+                "superseded_by_relation_id": hit.superseded_by_relation_id
+            })
         })
-    }).collect();
+        .collect();
 
     Ok(json!({
         "status": "success",
@@ -4306,9 +4330,7 @@ fn resolve_continuity_session_lane(
         .rev()
         .map(|turn| turn.session_id.as_str())
         .find(|lane| {
-            !lane.is_empty()
-                && Some(*lane) != current_session
-                && !is_daemon_session_id(lane)
+            !lane.is_empty() && Some(*lane) != current_session && !is_daemon_session_id(lane)
         })
         .map(str::to_string)
         .or_else(|| {
@@ -6659,7 +6681,8 @@ fn handle_sweep(substrate: &mut Substrate, readonly: bool) -> Result<Value, Stri
 }
 
 fn handle_inspect(args: &Value, substrate: &Substrate) -> Result<Value, String> {
-    if args.get("promise").is_some() || args.get("verify").and_then(Value::as_bool).unwrap_or(false) {
+    if args.get("promise").is_some() || args.get("verify").and_then(Value::as_bool).unwrap_or(false)
+    {
         if let Ok(report) = substrate.inspection_report() {
             return serde_json::to_value(report).map_err(|e| format!("Serialization error: {e}"));
         }
@@ -6667,9 +6690,8 @@ fn handle_inspect(args: &Value, substrate: &Substrate) -> Result<Value, String> 
             .get("promise")
             .and_then(Value::as_str)
             .unwrap_or("strict-zero-write");
-        let promise: wm_gen3_core::store::InspectionPromise = promise_str
-            .parse()
-            .map_err(|e: String| e)?;
+        let promise: wm_gen3_core::store::InspectionPromise =
+            promise_str.parse().map_err(|e: String| e)?;
         let temp_sub = Substrate::open_inspect(
             substrate.store().path(),
             None,

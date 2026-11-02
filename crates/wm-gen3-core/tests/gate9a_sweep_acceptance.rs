@@ -122,6 +122,7 @@ fn restart_sensitivity_demotes_used_relations_when_lineage_is_lost() {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            ..RecallQuery::default()
         })
         .expect("recall");
     assert!(
@@ -356,6 +357,7 @@ fn authorized_sweep_proposes_promotes_and_replays() {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            ..RecallQuery::default()
         })
         .expect("recall");
     assert!(

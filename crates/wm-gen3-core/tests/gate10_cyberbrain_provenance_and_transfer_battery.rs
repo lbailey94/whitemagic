@@ -214,6 +214,7 @@ fn cb_3_execution_provenance_full_support_budget_benchmark() {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            ..RecallQuery::default()
         })
         .expect("recall unlinked");
     let unlinked_ids: Vec<u64> = hits_unlinked.iter().map(|h| h.id).collect();
@@ -245,6 +246,7 @@ fn cb_3_execution_provenance_full_support_budget_benchmark() {
             min_score: 0.0,
             min_coverage: 0.0,
             scope: None,
+            ..RecallQuery::default()
         })
         .expect("recall linked");
 
@@ -358,6 +360,7 @@ fn cb_5_hebbian_coactivation_and_graph_propagation() {
         min_score: 0.0,
         min_coverage: 0.0,
         scope: None,
+        ..RecallQuery::default()
     };
 
     // Fire 3 pulses

@@ -88,11 +88,21 @@ fn dream_cli_crystallization_and_associative_resonance() {
 
     assert!(resonance_recall.status.success());
     let res_stdout = String::from_utf8_lossy(&resonance_recall.stdout);
-    let bundle: serde_json::Value = serde_json::from_str(&res_stdout).expect("valid JSON evidence bundle");
+    let bundle: serde_json::Value =
+        serde_json::from_str(&res_stdout).expect("valid JSON evidence bundle");
 
-    assert!(bundle.get("resonance_expanded").is_some(), "evidence bundle must contain resonance_expanded flag");
-    assert!(bundle.get("resonance_links").is_some(), "evidence bundle must contain resonance_links field");
-    assert!(bundle["resonance_links"].is_array(), "resonance_links must be an array");
+    assert!(
+        bundle.get("resonance_expanded").is_some(),
+        "evidence bundle must contain resonance_expanded flag"
+    );
+    assert!(
+        bundle.get("resonance_links").is_some(),
+        "evidence bundle must contain resonance_links field"
+    );
+    assert!(
+        bundle["resonance_links"].is_array(),
+        "resonance_links must be an array"
+    );
 
     let _ = std::fs::remove_dir_all(&store);
 }
