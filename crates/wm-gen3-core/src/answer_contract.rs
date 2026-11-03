@@ -180,8 +180,9 @@ fn validate_request(request: &Request) -> Result<(), String> {
     parse_time(&request.question.known_at)?;
     if let Some(proposal) = &request.proposal {
         check_string("proposal.status", &proposal.status)?;
-        if proposal.claims.len() > MAX_ASSERTIONS {
-            return Err(format!("proposal claims exceeds limit of {MAX_ASSERTIONS}"));
+        let claim_limit = MAX_ASSERTIONS * request.question.valid_at.len();
+        if proposal.claims.len() > claim_limit {
+            return Err(format!("proposal claims exceeds limit of {claim_limit}"));
         }
         for claim in &proposal.claims {
             for (name, value) in [
@@ -980,5 +981,42 @@ mod tests {
         value["assertions"] =
             serde_json::json!(vec![value["assertions"][0].clone(); MAX_ASSERTIONS + 1]);
         assert!(process("resolve", &value.to_string()).is_err());
+    }
+
+    #[test]
+    fn two_dates_can_verify_more_than_512_complete_conflict_claims() {
+        let records: Vec<_> = (0..257)
+            .map(|i| {
+                serde_json::json!({
+                    "record_id":format!("r{i}"),"subject":"A","predicate":"role",
+                    "value":format!("v{i}"),"source_id":format!("s{i}"),
+                    "valid_from":"2020-01-01","valid_until":null,
+                    "recorded_at":"2020-01-01","supersedes":null
+                })
+            })
+            .collect();
+        let claims: Vec<_> = ["2020-01-01", "2020-01-02"]
+            .iter()
+            .flat_map(|date| {
+                (0..257).map(move |i| {
+                    serde_json::json!({
+                        "valid_at":date,"record_id":format!("r{i}"),"value":format!("v{i}")
+                    })
+                })
+            })
+            .collect();
+        assert_eq!(claims.len(), 514);
+        let request = base(
+            &serde_json::to_string(&records).unwrap(),
+            r#"["2020-01-01","2020-01-02"]"#,
+            "2020-01-01",
+        );
+        let result = verification(&with_proposal(
+            &request,
+            "conflict",
+            serde_json::json!(claims),
+        ));
+        assert!(result.accepted);
+        assert_eq!(result.decision.unwrap().facts.len(), 514);
     }
 }
