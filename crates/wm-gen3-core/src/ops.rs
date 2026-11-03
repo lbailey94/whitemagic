@@ -4250,11 +4250,12 @@ impl Substrate {
             .ok_or_else(|| "no outcome from remember_batch".to_string())?
     }
 
-    /// Retrieve the latest compounding continuity view for a given session (or overall latest if None).
-    pub fn session_continuity(
+    /// Retrieve compounding continuity views for a given session (or overall latest if None).
+    pub fn session_continuities(
         &self,
         session_id: Option<&str>,
-    ) -> Result<Option<SessionContinuityView>, String> {
+        limit: usize,
+    ) -> Result<Vec<SessionContinuityView>, String> {
         let prefix = match session_id {
             Some(id) => format!("session:{}:", id),
             None => "session:".to_string(),
@@ -4263,81 +4264,91 @@ impl Substrate {
         let n = self.store.record_count().unwrap_or(0);
         let epoch = self.store.epoch().unwrap_or(0);
         let scan_depth = 5000usize.min(n);
+        let target_limit = limit.max(1);
 
-        // Find the record with the largest ID that matches the prefix by scanning backwards
-        let mut best: Option<crate::evidence::EvidenceRecord> = None;
+        let mut matches: Vec<crate::evidence::EvidenceRecord> = Vec::new();
         for id in (n.saturating_sub(scan_depth)..=n).rev() {
             if let Ok(Some(record)) = self.store.get_record(id as u64) {
                 if record.source().starts_with(&prefix) {
-                    best = Some(record);
-                    break;
+                    matches.push(record);
+                    if matches.len() >= target_limit {
+                        break;
+                    }
                 }
             }
         }
 
-        let Some(record) = best else {
-            return Ok(None);
-        };
+        let mut views = Vec::new();
+        for record in matches {
+            // Try to parse structured checkpoint
+            if let Ok(cp) = serde_json::from_str::<SessionCheckpoint>(record.content()) {
+                let meta = serde_json::from_str::<serde_json::Value>(record.content()).ok();
+                let meta_str = |key: &str| {
+                    meta.as_ref()
+                        .and_then(|value| value.get(key))
+                        .and_then(serde_json::Value::as_str)
+                        .map(str::to_string)
+                };
+                let tests_green = meta
+                    .as_ref()
+                    .and_then(|value| value.get("tests_green"))
+                    .and_then(serde_json::Value::as_bool);
+                views.push(SessionContinuityView {
+                    record_id: record.id(),
+                    epoch,
+                    session_id: cp.session_id,
+                    agent_id: cp.agent_id,
+                    checkpoint_type: cp.checkpoint_type,
+                    summary: cp.summary,
+                    next_queue: cp.next_queue,
+                    open_flags: cp.open_flags,
+                    context_token: cp.context_token,
+                    representation: cp.representation,
+                    timestamp_iso: cp.timestamp_iso,
+                    raw_content: record.content().to_string(),
+                    track: meta_str("track"),
+                    commit: meta_str("commit"),
+                    branch: meta_str("branch"),
+                    tests_green,
+                    lease_id: meta_str("lease_id"),
+                });
+            } else {
+                let parts: Vec<&str> = record.source().split(':').collect();
+                let s_id = parts.get(1).copied().unwrap_or("unknown").to_string();
+                let a_id = parts.get(2).copied().unwrap_or("agent").to_string();
+                let cp_type = parts.get(3).copied().unwrap_or("log").to_string();
 
-        // Try to parse structured checkpoint
-        if let Ok(cp) = serde_json::from_str::<SessionCheckpoint>(record.content()) {
-            let meta = serde_json::from_str::<serde_json::Value>(record.content()).ok();
-            let meta_str = |key: &str| {
-                meta.as_ref()
-                    .and_then(|value| value.get(key))
-                    .and_then(serde_json::Value::as_str)
-                    .map(str::to_string)
-            };
-            let tests_green = meta
-                .as_ref()
-                .and_then(|value| value.get("tests_green"))
-                .and_then(serde_json::Value::as_bool);
-            return Ok(Some(SessionContinuityView {
-                record_id: record.id(),
-                epoch,
-                session_id: cp.session_id,
-                agent_id: cp.agent_id,
-                checkpoint_type: cp.checkpoint_type,
-                summary: cp.summary,
-                next_queue: cp.next_queue,
-                open_flags: cp.open_flags,
-                context_token: cp.context_token,
-                representation: cp.representation,
-                timestamp_iso: cp.timestamp_iso,
-                raw_content: record.content().to_string(),
-                track: meta_str("track"),
-                commit: meta_str("commit"),
-                branch: meta_str("branch"),
-                tests_green,
-                lease_id: meta_str("lease_id"),
-            }));
+                views.push(SessionContinuityView {
+                    record_id: record.id(),
+                    epoch,
+                    session_id: s_id,
+                    agent_id: a_id,
+                    checkpoint_type: cp_type,
+                    summary: record.content().to_string(),
+                    next_queue: Vec::new(),
+                    open_flags: Vec::new(),
+                    context_token: None,
+                    representation: None,
+                    timestamp_iso: None,
+                    raw_content: record.content().to_string(),
+                    track: None,
+                    commit: None,
+                    branch: None,
+                    tests_green: None,
+                    lease_id: None,
+                });
+            }
         }
 
-        // Fallback for unstructured session records
-        let parts: Vec<&str> = record.source().split(':').collect();
-        let s_id = parts.get(1).copied().unwrap_or("unknown").to_string();
-        let a_id = parts.get(2).copied().unwrap_or("agent").to_string();
-        let cp_type = parts.get(3).copied().unwrap_or("log").to_string();
+        Ok(views)
+    }
 
-        Ok(Some(SessionContinuityView {
-            record_id: record.id(),
-            epoch,
-            session_id: s_id,
-            agent_id: a_id,
-            checkpoint_type: cp_type,
-            summary: record.content().to_string(),
-            next_queue: Vec::new(),
-            open_flags: Vec::new(),
-            context_token: None,
-            representation: None,
-            timestamp_iso: None,
-            raw_content: record.content().to_string(),
-            track: None,
-            commit: None,
-            branch: None,
-            tests_green: None,
-            lease_id: None,
-        }))
+    /// Retrieve the latest compounding continuity view for a given session (or overall latest if None).
+    pub fn session_continuity(
+        &self,
+        session_id: Option<&str>,
+    ) -> Result<Option<SessionContinuityView>, String> {
+        Ok(self.session_continuities(session_id, 1)?.into_iter().next())
     }
 
     /// List all unique session IDs recorded in the substrate.

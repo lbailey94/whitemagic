@@ -936,6 +936,9 @@ enum SessionCommands {
         /// Optional session identifier filter
         #[arg(long)]
         session_id: Option<String>,
+        /// Number of recent checkpoints to display (default: 3)
+        #[arg(long, short = 'n', default_value_t = 3)]
+        limit: usize,
     },
     /// List all active session IDs in the substrate
     List,
@@ -7563,7 +7566,7 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                 }
             }
         }
-        SessionCommands::Continuity { session_id } => {
+        SessionCommands::Continuity { session_id, limit } => {
             let substrate =
                 match Substrate::open_readonly(store_path, Some(&journal_path), default_view()) {
                     Ok(s) => s,
@@ -7572,10 +7575,23 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                         std::process::exit(1);
                     }
                 };
-            match substrate.session_continuity(session_id.as_deref()) {
-                Ok(Some(view)) => {
+            let views = match substrate.session_continuities(session_id.as_deref(), limit) {
+                Ok(v) => v,
+                Err(e) => {
+                    eprintln!("Error retrieving session continuity: {e}");
+                    std::process::exit(1);
+                }
+            };
+            if views.is_empty() {
+                println!("No session continuity records found for query '{session_id:?}'.");
+            } else {
+                for (idx, view) in views.iter().enumerate() {
                     println!("==================================================");
-                    println!("         WhiteMagic Session Continuity            ");
+                    if views.len() > 1 {
+                        println!("     WhiteMagic Session Continuity [{}/{}]        ", idx + 1, views.len());
+                    } else {
+                        println!("         WhiteMagic Session Continuity            ");
+                    }
                     println!("==================================================");
                     println!("Record ID:       {}", view.record_id);
                     println!("Epoch:           {}", view.epoch);
@@ -7616,6 +7632,7 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                             println!("  - ⚠️  {}", flag);
                         }
                     }
+                }
 
                     let insights_path = store_path.join("dream_insights.jsonl");
                     if insights_path.exists() {
@@ -7658,15 +7675,7 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                     }
                     println!("==================================================");
                 }
-                Ok(None) => {
-                    println!("No session continuity records found for query '{session_id:?}'.");
-                }
-                Err(e) => {
-                    eprintln!("Error retrieving session continuity: {e}");
-                    std::process::exit(1);
-                }
             }
-        }
         SessionCommands::List => {
             let substrate =
                 match Substrate::open_readonly(store_path, Some(&journal_path), default_view()) {
