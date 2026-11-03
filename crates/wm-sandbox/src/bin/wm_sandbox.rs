@@ -93,7 +93,10 @@ fn main() {
                         .and_then(serde_json::Value::as_bool)
                         .unwrap_or(false);
                     builder.allow_net = net;
-                    if let Some(ws) = envelope.get("workspace").and_then(serde_json::Value::as_str) {
+                    if let Some(ws) = envelope
+                        .get("workspace")
+                        .and_then(serde_json::Value::as_str)
+                    {
                         let is_rw = envelope
                             .get("rw")
                             .and_then(serde_json::Value::as_bool)

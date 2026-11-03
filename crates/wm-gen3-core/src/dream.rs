@@ -1548,4 +1548,32 @@ mod tests {
         let ascii = "x".repeat(100);
         assert_eq!(truncate_chars(&ascii, 60), "x".repeat(60));
     }
+
+    #[test]
+    fn test_dream_substrate_homomorphism_roaring_bitmap_index() {
+        use crate::roaring_bitmap::RoaringMemoryIndex;
+
+        // Dream Insight dream-a3bd46a8cb69b027:
+        // SubstrateHomomorphism between low-level storage representation (Record #287912)
+        // and higher-order reasoning state (Record #42340).
+        let mut index = RoaringMemoryIndex::new();
+
+        let rec_storage = 287912u32;
+        let rec_reasoning = 42340u32;
+
+        index.index_record(rec_storage, 1, &["storage".into(), "homomorphism".into()]);
+        index.index_record(
+            rec_reasoning,
+            2,
+            &["reasoning".into(), "homomorphism".into()],
+        );
+
+        // Intersecting records on tag "homomorphism" under Ring 2 boundary
+        let matched = index.query_records(&["homomorphism"], 2);
+        assert_eq!(matched, vec![rec_reasoning, rec_storage]);
+
+        // Ring 1 Hermit-Crab seal isolates higher-order reasoning state
+        let sealed = index.query_records(&["homomorphism"], 1);
+        assert_eq!(sealed, vec![rec_storage]);
+    }
 }

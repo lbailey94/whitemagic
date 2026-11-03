@@ -351,6 +351,39 @@ impl ActionSkeleton {
             validation_duration_micros,
         }
     }
+
+    /// Extracts all discrete AST scope anchors declared across this skeleton's deltas.
+    #[must_use]
+    pub fn ast_scope_anchors(&self) -> Vec<String> {
+        self.deltas
+            .iter()
+            .map(|d| format!("{}::{}", d.scope_path, d.target_symbol))
+            .collect()
+    }
+
+    /// Checks if this action skeleton conflicts with active pheromones in a stigmergic field.
+    #[must_use]
+    pub fn conflicts_with_stigmergy(
+        &self,
+        field: &crate::stigmergy::StigmergicField,
+        now_ms: u64,
+        threshold: f64,
+        ignore_issuer: Option<&str>,
+    ) -> Vec<crate::stigmergy::Pheromone> {
+        let anchors = self.ast_scope_anchors();
+        field
+            .sense_conflicts(
+                &self.target_file,
+                &anchors,
+                None,
+                threshold,
+                now_ms,
+                ignore_issuer,
+            )
+            .into_iter()
+            .map(|(p, _)| p.clone())
+            .collect()
+    }
 }
 
 #[cfg(test)]
@@ -441,5 +474,71 @@ class WhiteboardHandler(SimpleHTTPRequestHandler):
         let isolate_valid =
             isolate_skel.validate_speculative(Some("from sentinel.airlock import isolate_path\n"));
         assert!(isolate_valid.is_valid);
+    }
+
+    #[test]
+    fn test_action_skeleton_ast_stigmergy_coordination() {
+        use crate::stigmergy::{Pheromone, PheromoneKind, StigmergicField};
+
+        let now_ms = 1_000_000;
+        let mut field = StigmergicField::new();
+
+        // Agent A emits a lock on function `execute_contract` in bridge.rs
+        let p_agent_a = Pheromone::new(
+            "crates/wm-gen3-harness/src/bridge.rs",
+            vec!["fn::execute_contract".to_string()],
+            PheromoneKind::MutationActive,
+            1.0,
+            60_000,
+            "agent_a",
+        );
+        field.emit(p_agent_a);
+
+        // Skeleton 1 (Agent B) targets a DIFFERENT function in the same file `resolve_q34_route`
+        let delta_different = AstDelta {
+            scope_path: "fn".into(),
+            target_symbol: "resolve_q34_route".into(),
+            action_type: AstActionType::AddFunction,
+            new_imports: vec![],
+            signature_delta: "pub fn resolve_q34_route(glyph: &str) -> Option<&'static str>".into(),
+            pre_invariants: vec![],
+            post_invariants: vec![],
+        };
+        let skel_different = ActionSkeleton::new(
+            Uuid::new_v4(),
+            "crates/wm-gen3-harness/src/bridge.rs",
+            SkeletonLanguage::Rust,
+            vec![delta_different],
+        );
+
+        // Must NOT conflict because AST symbols are disjoint
+        let conflicts_b =
+            skel_different.conflicts_with_stigmergy(&field, now_ms, 0.01, Some("agent_b"));
+        assert!(
+            conflicts_b.is_empty(),
+            "Different AST symbols in the same file must not conflict!"
+        );
+
+        // Skeleton 2 (Agent C) targets the SAME function `execute_contract`
+        let delta_same = AstDelta {
+            scope_path: "fn".into(),
+            target_symbol: "execute_contract".into(),
+            action_type: AstActionType::ModifySignature,
+            new_imports: vec![],
+            signature_delta: "pub fn execute_contract(mode: &str) -> Result<Output, String>".into(),
+            pre_invariants: vec![],
+            post_invariants: vec![],
+        };
+        let skel_same = ActionSkeleton::new(
+            Uuid::new_v4(),
+            "crates/wm-gen3-harness/src/bridge.rs",
+            SkeletonLanguage::Rust,
+            vec![delta_same],
+        );
+
+        // MUST conflict because AST symbols intersect
+        let conflicts_c = skel_same.conflicts_with_stigmergy(&field, now_ms, 0.01, Some("agent_c"));
+        assert_eq!(conflicts_c.len(), 1, "Same AST symbol must conflict!");
+        assert_eq!(conflicts_c[0].issuer, "agent_a");
     }
 }

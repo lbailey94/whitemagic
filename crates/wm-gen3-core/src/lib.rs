@@ -67,6 +67,7 @@ pub mod pulse_compiler;
 pub mod quarantine;
 pub mod recipe;
 pub mod relativity;
+pub mod roaring_bitmap;
 pub mod sentinel;
 pub mod spectroscopy;
 pub mod spine;
@@ -80,6 +81,7 @@ pub mod transport;
 pub mod tripartite_router;
 pub mod tuple_space;
 pub mod valkyrie;
+pub mod zodiac_arcana;
 
 pub use hexagram::{Hexagram, HexagramMeta, Trigram, WuXing};
 pub use legion::{
@@ -120,6 +122,7 @@ pub use covenant::{
     CovenantView, GroundAspect, MandalaKosha, PrimordialCovenant, RSI_LAWS, SUBSTRATE_ARTICLES,
 };
 pub use gen1_gems::{GemCluster, Gen1Arsenal, Gen1Gem, PluginPack};
+pub use roaring_bitmap::{RoaringBitmap, RoaringMemoryIndex};
 pub use stigmergy::{Pheromone, PheromoneKind, StigmergicField};
 pub use tuple_space::{Tuple, TupleKind, TuplePattern, TupleSpace};
 pub use valkyrie::{

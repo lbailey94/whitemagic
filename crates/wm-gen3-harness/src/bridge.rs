@@ -15,6 +15,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::path::Path;
@@ -383,6 +384,8 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "valkyrie.pulse" | "valkyrie_pulse" | "sutra.valkyrie" | "sutra_valkyrie" => {
             "valkyrie.pulse"
         }
+        "council.deliberate" | "council_deliberate" | "zodiac.deliberate" => "council.deliberate",
+        "dhumavati.check" | "dhumavati_check" => "dhumavati.check",
         _ => return None,
     })
 }
@@ -428,6 +431,8 @@ fn allowed_profile_keys(profile: McpProfile) -> &'static HashSet<&'static str> {
             keys.insert("sanctuary.resolve");
             keys.insert("sanctuary.seal");
             keys.insert("sanctuary.unseal");
+            keys.insert("council.deliberate");
+            keys.insert("dhumavati.check");
             keys
         }),
         McpProfile::Full => FULL.get_or_init(|| {
@@ -440,6 +445,8 @@ fn allowed_profile_keys(profile: McpProfile) -> &'static HashSet<&'static str> {
             keys.insert("sanctuary.resolve");
             keys.insert("sanctuary.seal");
             keys.insert("sanctuary.unseal");
+            keys.insert("council.deliberate");
+            keys.insert("dhumavati.check");
             keys
         }),
     }
@@ -607,6 +614,11 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
     ("legion.summon", &["edict", "clones", "peer", "archetype"]),
     ("chohan.settle", &["payload", "proof", "bid"]),
     ("valkyrie.pulse", &["inquiry", "digest", "benchmark"]),
+    (
+        "council.deliberate",
+        &["inquiry", "full_round", "evidence_ids", "has_conflict"],
+    ),
+    ("dhumavati.check", &["query"]),
 ];
 
 /// Consumed-argument list for a canonical tool route, if declared.
@@ -699,17 +711,18 @@ fn sutra_tool_schemas_cyberbrain(mode_hint: &str) -> Vec<Value> {
         }),
         json!({
             "name": "sutra_contract",
-            "description": "Evaluate or verify a deterministic Catuṣkoṭi typed answer contract over bounded caller-asserted temporal assertions. Validates temporal applicability across supersedes edges, detects factual conflicts across distinct sources, and enforces sealed sanctuary isolation without false acceptance.",
+            "description": "Resolve or verify bounded caller-asserted temporal assertions. Results describe the supplied metadata; this tool does not authenticate sources or enforce native-store sanctuary access.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "mode": { "type": "string", "enum": ["resolve", "verify"], "description": "Contract operation: resolve assertions into facts/citations or verify a candidate proposal (default: resolve)" },
-                    "assertions": { "type": "array", "description": "Array of caller-asserted temporal records with record_id, subject, predicate, value, valid_from, valid_until, recorded_at, supersedes" },
+                    "assertions": { "type": "array", "description": "Caller-asserted records with record_id, source_id, subject, predicate, value, valid_from, valid_until, recorded_at, supersedes; exclude when request_json is supplied" },
                     "question": { "type": "object", "description": "Question object with question_id, query, subject, predicate, valid_at (array of dates), and known_at cutoff" },
                     "proposal": { "type": "object", "description": "Candidate proposal object (for verify mode) with status and claims array" },
-                    "request_json": { "type": "string", "description": "Optional raw JSON string representing the full request payload" },
-                    "attest": { "type": "boolean", "description": "Optional flag to compute and return a SHA-256 CPR provenance digest over the contract decision" }
-                }
+                    "request_json": { "type": "string", "description": "Full raw request JSON; mutually exclusive with assertions, question and proposal" },
+                    "attest": { "type": "boolean", "description": "Return an unsigned SHA-256 digest binding the operation, exact request bytes and result; not a signature or CPR receipt" }
+                },
+                "additionalProperties": false
             }
         }),
     ]
@@ -789,17 +802,18 @@ fn sutra_tool_schemas_full(mode_hint: &str) -> Vec<Value> {
         json!({
             "name": "sutra.contract",
             "title": "Catuṣkoṭi Answer Contract",
-            "description": "Evaluate or verify a deterministic Catuṣkoṭi typed answer contract over bounded caller-asserted temporal assertions. Validates temporal applicability across supersedes edges, detects factual conflicts across distinct sources, and enforces sealed sanctuary isolation without false acceptance.",
+            "description": "Resolve or verify bounded caller-asserted temporal assertions. Results describe the supplied metadata; this tool does not authenticate sources or enforce native-store sanctuary access.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "mode": { "type": "string", "enum": ["resolve", "verify"], "description": "Contract operation: resolve assertions into facts/citations or verify a candidate proposal (default: resolve)" },
-                    "assertions": { "type": "array", "description": "Array of caller-asserted temporal records with record_id, subject, predicate, value, valid_from, valid_until, recorded_at, supersedes" },
+                    "assertions": { "type": "array", "description": "Caller-asserted records with record_id, source_id, subject, predicate, value, valid_from, valid_until, recorded_at, supersedes; exclude when request_json is supplied" },
                     "question": { "type": "object", "description": "Question object with question_id, query, subject, predicate, valid_at (array of dates), and known_at cutoff" },
                     "proposal": { "type": "object", "description": "Candidate proposal object (for verify mode) with status and claims array" },
-                    "request_json": { "type": "string", "description": "Optional raw JSON string representing the full request payload" },
-                    "attest": { "type": "boolean", "description": "Optional flag to compute and return a SHA-256 CPR provenance digest over the contract decision" }
-                }
+                    "request_json": { "type": "string", "description": "Full raw request JSON; mutually exclusive with assertions, question and proposal" },
+                    "attest": { "type": "boolean", "description": "Return an unsigned SHA-256 digest binding the operation, exact request bytes and result; not a signature or CPR receipt" }
+                },
+                "additionalProperties": false
             }
         }),
         json!({
@@ -1980,6 +1994,10 @@ pub fn execute_hybrid_tool_call(
         "valkyrie.pulse" | "valkyrie_pulse" | "sutra.valkyrie" | "sutra_valkyrie" => {
             handle_valkyrie_pulse(args)
         }
+        "council.deliberate" | "council_deliberate" | "zodiac.deliberate" => {
+            handle_council_deliberate(args)
+        }
+        "dhumavati.check" | "dhumavati_check" => handle_dhumavati_check(args),
 
         // ── Gen3 v10.6 Research Synthesis Routes (Beliefs, MemCut, TokenWorth, Obligations, ParetoGate) ──
         "belief.register" | "belief_register" => handle_belief_register(args, substrate, readonly),
@@ -7526,9 +7544,10 @@ fn handle_sutra_route(args: &Value, store_path: &Path) -> Result<Value, String> 
     let latency_us = start.elapsed().as_micros();
     let shadow = shadow_route_l05(inquiry, context, &decision, store_path);
 
-    // Shadow-by-default contract: keep Tripartite as primary unless explicit promotion
-    // (`WM_PROMOTE_VALKYRIE_L05=1`) is enabled.
-    let promote_l05 = std::env::var("WM_PROMOTE_VALKYRIE_L05").unwrap_or_default() == "1";
+    // Promoted-by-default: Valkyrie-L0.5 hybrid routing organ is active as primary
+    // unless explicitly suppressed (`WM_PROMOTE_VALKYRIE_L05=0`). Degrades to Tripartite if unavailable.
+    let promote_l05 =
+        std::env::var("WM_PROMOTE_VALKYRIE_L05").unwrap_or_else(|_| "1".to_string()) != "0";
     let (active_tier, active_confidence, is_graduated) = if promote_l05
         && shadow["available"].as_bool() == Some(true)
         && shadow["used_hybrid_projection"].as_bool() == Some(true)
@@ -7567,14 +7586,37 @@ fn handle_sutra_route(args: &Value, store_path: &Path) -> Result<Value, String> 
 }
 
 fn handle_sutra_contract(args: &Value) -> Result<Value, String> {
+    if !args.is_object() {
+        return Err("sutra.contract arguments must be an object".to_string());
+    }
     reject_unknown_args("sutra.contract", args)?;
-    let mode = args.get("mode").and_then(Value::as_str).unwrap_or("resolve");
+    let mode = match args.get("mode") {
+        None => "resolve",
+        Some(Value::String(mode)) => mode.as_str(),
+        Some(_) => return Err("Parameter 'mode' must be a string".to_string()),
+    };
     if mode != "resolve" && mode != "verify" {
         return Err("Parameter 'mode' must be 'resolve' or 'verify'".to_string());
     }
+    let attest = match args.get("attest") {
+        None => false,
+        Some(Value::Bool(attest)) => *attest,
+        Some(_) => return Err("Parameter 'attest' must be a boolean".to_string()),
+    };
 
-    let request_json = if let Some(raw) = args.get("request_json").and_then(Value::as_str) {
-        raw.to_string()
+    let request_json = if let Some(raw) = args.get("request_json") {
+        if ["assertions", "question", "proposal"]
+            .iter()
+            .any(|key| args.get(key).is_some())
+        {
+            return Err(
+                "request_json cannot be combined with assertions, question or proposal".to_string(),
+            );
+        }
+        Cow::Borrowed(
+            raw.as_str()
+                .ok_or("Parameter 'request_json' must be a string")?,
+        )
     } else {
         let mut map = serde_json::Map::new();
         if let Some(assertions) = args.get("assertions") {
@@ -7586,8 +7628,10 @@ fn handle_sutra_contract(args: &Value) -> Result<Value, String> {
         if let Some(proposal) = args.get("proposal") {
             map.insert("proposal".to_string(), proposal.clone());
         }
-        serde_json::to_string(&Value::Object(map))
-            .map_err(|e| format!("cannot serialize request: {e}"))?
+        Cow::Owned(
+            serde_json::to_string(&Value::Object(map))
+                .map_err(|e| format!("cannot serialize request: {e}"))?,
+        )
     };
 
     let output = wm_gen3_core::answer_contract::process(mode, &request_json)
@@ -7596,21 +7640,237 @@ fn handle_sutra_contract(args: &Value) -> Result<Value, String> {
     let mut result = serde_json::to_value(&output)
         .map_err(|e| format!("cannot serialize contract output: {e}"))?;
 
-    let attest = args.get("attest").and_then(Value::as_bool).unwrap_or(false);
     if attest {
+        let contract_digest = unsigned_contract_digest(mode, &request_json, &result)?;
         if let Some(obj) = result.as_object_mut() {
-            let mut hasher = Sha256::new();
-            hasher.update(b"cpr:contract:v1|");
-            hasher.update(mode.as_bytes());
-            hasher.update(b"|");
-            hasher.update(request_json.as_bytes());
-            let contract_digest = hex_encode(&hasher.finalize());
-            obj.insert("contract_digest".to_string(), Value::String(contract_digest));
-            obj.insert("attestation_spec".to_string(), Value::String("cpr-0.5.4".to_string()));
+            obj.insert(
+                "contract_digest".to_string(),
+                Value::String(contract_digest),
+            );
+            obj.insert(
+                "digest_profile".to_string(),
+                json!("wm-answer-contract-sha256-v1"),
+            );
+            obj.insert("digest_authentication".to_string(), json!("unsigned"));
         }
     }
 
     Ok(result)
+}
+
+fn unsigned_contract_digest(
+    mode: &str,
+    request_json: &str,
+    result: &Value,
+) -> Result<String, String> {
+    let result_json =
+        serde_json::to_vec(result).map_err(|e| format!("cannot serialize contract output: {e}"))?;
+    let mut hasher = Sha256::new();
+    hasher.update(b"wm-answer-contract-sha256-v1\0");
+    for bytes in [
+        mode.as_bytes(),
+        request_json.as_bytes(),
+        result_json.as_slice(),
+    ] {
+        hasher.update((bytes.len() as u64).to_be_bytes());
+        hasher.update(bytes);
+    }
+    Ok(hex_encode(&hasher.finalize()))
+}
+
+#[cfg(test)]
+mod sutra_contract_tests {
+    use super::*;
+
+    fn request() -> Value {
+        json!({"assertions": [], "question": {
+            "question_id": "q1", "query": "Who leads the workshop?",
+            "subject": "Workshop", "predicate": "leader",
+            "valid_at": ["2026-01-02"], "known_at": "2025-12-15"
+        }})
+    }
+
+    #[test]
+    fn malformed_options_cannot_silently_select_defaults() {
+        for value in [Value::Null, json!(false), json!(1), json!([]), json!({})] {
+            let mut args = request();
+            args["mode"] = value;
+            assert!(handle_sutra_contract(&args).unwrap_err().contains("mode"));
+        }
+        for value in [Value::Null, json!("false"), json!(0), json!([]), json!({})] {
+            let mut args = request();
+            args["attest"] = value;
+            assert!(handle_sutra_contract(&args).unwrap_err().contains("attest"));
+        }
+        assert!(handle_sutra_contract(&json!([])).is_err());
+        assert!(handle_sutra_contract(&json!({"request_json": false})).is_err());
+    }
+
+    #[test]
+    fn raw_and_structured_requests_are_exclusive_and_equivalent() {
+        let request = request();
+        let raw = serde_json::to_string(&request).unwrap();
+        let direct = handle_sutra_contract(&request).unwrap();
+        assert_eq!(
+            handle_sutra_contract(&json!({"request_json": raw})).unwrap(),
+            direct
+        );
+        for key in ["assertions", "question", "proposal"] {
+            let mut args = json!({"request_json": raw});
+            args[key] = Value::Null;
+            assert!(
+                handle_sutra_contract(&args)
+                    .unwrap_err()
+                    .contains("cannot be combined")
+            );
+        }
+        let mut args = request;
+        args["question"]["subject"] = json!("A different workshop");
+        args["request_json"] = json!(raw);
+        assert!(handle_sutra_contract(&args).is_err());
+    }
+
+    #[test]
+    fn digest_is_unsigned_binds_the_result_and_preserves_rejected_decisions() {
+        // Independently generated with printf framing piped to sha256sum.
+        assert_eq!(
+            unsigned_contract_digest("x", "y", &json!({"z": 1})).unwrap(),
+            "6316613aa00792d4b9b63b883a7588c2c5cb8efab2ae78de2a6a8750af783226"
+        );
+        let mut args = request();
+        assert!(
+            handle_sutra_contract(&args)
+                .unwrap()
+                .get("contract_digest")
+                .is_none()
+        );
+        args["attest"] = json!(true);
+        let mut result = handle_sutra_contract(&args).unwrap();
+        assert_eq!(result["digest_authentication"], "unsigned");
+        assert_eq!(result["digest_profile"], "wm-answer-contract-sha256-v1");
+        assert!(result.get("attestation_spec").is_none());
+        let digest = result
+            .as_object_mut()
+            .unwrap()
+            .remove("contract_digest")
+            .unwrap();
+        result.as_object_mut().unwrap().remove("digest_profile");
+        result
+            .as_object_mut()
+            .unwrap()
+            .remove("digest_authentication");
+        let raw = serde_json::to_string(&request()).unwrap();
+        assert_eq!(
+            digest,
+            unsigned_contract_digest("resolve", &raw, &result).unwrap()
+        );
+        let mut changed = result.clone();
+        changed["status"] = json!("answer");
+        assert_ne!(
+            digest,
+            unsigned_contract_digest("resolve", &raw, &changed).unwrap()
+        );
+        assert_ne!(
+            digest,
+            unsigned_contract_digest("verify", &raw, &result).unwrap()
+        );
+        assert_ne!(
+            digest,
+            unsigned_contract_digest("resolve", &(raw + " "), &result).unwrap()
+        );
+
+        args["mode"] = json!("verify");
+        args["proposal"] = json!({"status": "answer", "claims": []});
+        let rejected = handle_sutra_contract(&args).unwrap();
+        assert_eq!(rejected["accepted"], false);
+        assert_eq!(rejected["decision"], Value::Null);
+        assert_eq!(rejected["digest_authentication"], "unsigned");
+    }
+
+    #[test]
+    fn raw_limits_duplicate_members_and_schema_claims_remain_bounded() {
+        let raw = serde_json::to_string(&request()).unwrap();
+        let duplicate = raw.replacen("{", r#"{"assertions":[],"#, 1);
+        assert!(handle_sutra_contract(&json!({"request_json": duplicate})).is_err());
+        assert!(
+            handle_sutra_contract(&json!({"request_json": " ".repeat(1024 * 1024 + 1)})).is_err()
+        );
+        let mut args = request();
+        args["extra"] = json!(true);
+        assert!(handle_sutra_contract(&args).is_err());
+        for profile in [McpProfile::Cyberbrain, McpProfile::Full] {
+            let tools = match profile {
+                McpProfile::Cyberbrain => sutra_tool_schemas_cyberbrain(""),
+                _ => sutra_tool_schemas_full(""),
+            };
+            let tool = tools
+                .iter()
+                .find(|tool| tool["name"] == "sutra_contract" || tool["name"] == "sutra.contract")
+                .unwrap();
+            assert!(
+                !tool["description"]
+                    .as_str()
+                    .unwrap()
+                    .contains("enforces sealed")
+            );
+            assert_eq!(tool["inputSchema"]["additionalProperties"], false);
+            assert!(
+                tool["inputSchema"]["properties"]["attest"]["description"]
+                    .as_str()
+                    .unwrap()
+                    .contains("unsigned")
+            );
+        }
+    }
+}
+
+fn handle_council_deliberate(args: &Value) -> Result<Value, String> {
+    reject_unknown_args("council.deliberate", args)?;
+    let inquiry = args
+        .get("inquiry")
+        .and_then(Value::as_str)
+        .ok_or("Parameter 'inquiry' is required")?;
+    let full_round = args
+        .get("full_round")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let has_conflict = args
+        .get("has_conflict")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let evidence_ids: Vec<String> = args
+        .get("evidence_ids")
+        .and_then(Value::as_array)
+        .map(|arr| {
+            arr.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let report = wm_gen3_core::zodiac_arcana::deliberate_council(
+        inquiry,
+        full_round,
+        &evidence_ids,
+        has_conflict,
+    );
+    serde_json::to_value(report).map_err(|e| format!("Failed to serialize council report: {e}"))
+}
+
+fn handle_dhumavati_check(args: &Value) -> Result<Value, String> {
+    reject_unknown_args("dhumavati.check", args)?;
+    let query = args
+        .get("query")
+        .and_then(Value::as_str)
+        .ok_or("Parameter 'query' is required")?;
+    let matches = wm_gen3_core::zodiac_arcana::check_dhumavati_antibodies(query);
+    Ok(json!({
+        "status": "success",
+        "query": query,
+        "matched_count": matches.len(),
+        "antibodies": matches,
+    }))
 }
 
 fn handle_valkyrie_pulse(args: &Value) -> Result<Value, String> {
@@ -9979,44 +10239,100 @@ mod sanctuary_e2e_tests {
         substrate.set_noise_enabled(false);
         substrate.set_budget(1_000_000);
         let records = [
-            ("SUPERSESSPROBE public earlier schedule", "corpus:codex:ring1_old"),
-            ("PRIVATE_REPLACEMENT later protected schedule", "corpus:codex:ring3_new"),
-            ("NAVPROBE public navigation anchor", "corpus:codex:ring1_anchor"),
-            ("PRIVATE_NEIGHBOR relational bridge", "corpus:codex:ring2_neighbor"),
+            (
+                "SUPERSESSPROBE public earlier schedule",
+                "corpus:codex:ring1_old",
+            ),
+            (
+                "PRIVATE_REPLACEMENT later protected schedule",
+                "corpus:codex:ring3_new",
+            ),
+            (
+                "NAVPROBE public navigation anchor",
+                "corpus:codex:ring1_anchor",
+            ),
+            (
+                "PRIVATE_NEIGHBOR relational bridge",
+                "corpus:codex:ring2_neighbor",
+            ),
             ("public adjacent context", "public:ring0_neighbor"),
-            ("Distant commons context beyond the relational bridge", "public:ring0_behind"),
+            (
+                "Distant commons context beyond the relational bridge",
+                "public:ring0_behind",
+            ),
         ];
         let ids: Vec<u64> = records
             .into_iter()
             .map(|(content, source)| {
                 *substrate.remember_batch(&[wm_gen3_core::ops::RememberItem {
-                    content: content.into(), source: source.into(), kind: ImportKind::Reported,
-                }])[0].as_ref().expect("record")
+                    content: content.into(),
+                    source: source.into(),
+                    kind: ImportKind::Reported,
+                }])[0]
+                    .as_ref()
+                    .expect("record")
             })
             .collect();
-        substrate.add_relation(wm_gen3_core::field::RelationKind::Supersedes, ids[1], ids[0], 1.0)
+        substrate
+            .add_relation(
+                wm_gen3_core::field::RelationKind::Supersedes,
+                ids[1],
+                ids[0],
+                1.0,
+            )
             .expect("supersession");
-        substrate.add_relation(wm_gen3_core::field::RelationKind::Associates, ids[2], ids[3], 1.0)
+        substrate
+            .add_relation(
+                wm_gen3_core::field::RelationKind::Associates,
+                ids[2],
+                ids[3],
+                1.0,
+            )
             .expect("protected neighbor");
-        substrate.add_relation(wm_gen3_core::field::RelationKind::Associates, ids[2], ids[4], 1.0)
+        substrate
+            .add_relation(
+                wm_gen3_core::field::RelationKind::Associates,
+                ids[2],
+                ids[4],
+                1.0,
+            )
             .expect("public neighbor");
-        substrate.add_relation(wm_gen3_core::field::RelationKind::Associates, ids[3], ids[5], 1.0)
+        substrate
+            .add_relation(
+                wm_gen3_core::field::RelationKind::Associates,
+                ids[3],
+                ids[5],
+                1.0,
+            )
             .expect("public record behind protected neighbor");
         let backend = McpBackend::gen3(substrate, &dir, McpProfile::Full, false);
-        let sealed = call(&backend, "sanctuary.seal", json!({
-            "reason": "wire regression", "share_a": "fixture-a", "share_b": "fixture-b"
-        }));
+        let sealed = call(
+            &backend,
+            "sanctuary.seal",
+            json!({
+                "reason": "wire regression", "share_a": "fixture-a", "share_b": "fixture-b"
+            }),
+        );
         assert_eq!(sealed["hermit_crab_sanctuary"]["sealed"], true);
-        assert_eq!(sealed["hermit_crab_sanctuary"]["protected_records_count"], 2);
+        assert_eq!(
+            sealed["hermit_crab_sanctuary"]["protected_records_count"],
+            2
+        );
 
         for evidence in [false, true] {
-            let response = call(&backend, "memory.search", json!({
-                "query": "SUPERSESSPROBE", "historical": true, "evidence": evidence, "limit": 10
-            }));
+            let response = call(
+                &backend,
+                "memory.search",
+                json!({
+                    "query": "SUPERSESSPROBE", "historical": true, "evidence": evidence, "limit": 10
+                }),
+            );
             let text = response.to_string();
             assert!(!text.contains("PRIVATE_REPLACEMENT"), "{response}");
             assert!(!text.contains("ring3_new"), "{response}");
-            let hits = response[if evidence { "hits" } else { "results" }].as_array().expect("hits");
+            let hits = response[if evidence { "hits" } else { "results" }]
+                .as_array()
+                .expect("hits");
             assert!(!hits.is_empty(), "public historical record remains useful");
             for hit in hits {
                 assert_ne!(hit["record_id"], ids[1]);
@@ -10027,28 +10343,77 @@ mod sanctuary_e2e_tests {
                 assert_eq!(response["revision_links"], json!([]));
             }
         }
-        let current = call(&backend, "memory.search", json!({"query": "SUPERSESSPROBE", "evidence": true}));
-        assert_eq!(current["abstention_recommended"], true, "hidden replacement cannot make old evidence current: {current}");
+        let current = call(
+            &backend,
+            "memory.search",
+            json!({"query": "SUPERSESSPROBE", "evidence": true}),
+        );
+        assert_eq!(
+            current["abstention_recommended"], true,
+            "hidden replacement cannot make old evidence current: {current}"
+        );
 
-        let navigation = call(&backend, "galaxy.navigate", json!({"query": "NAVPROBE", "hops": 3, "limit": 10}));
-        assert!(!navigation.to_string().contains("PRIVATE_NEIGHBOR"), "{navigation}");
-        assert!(!navigation.to_string().contains("ring2_neighbor"), "{navigation}");
-        assert!(navigation["hits"].as_array().expect("navigation hits").iter()
-            .any(|hit| hit["record_id"] == ids[2]));
-        assert!(!navigation["hits"].as_array().expect("navigation hits").iter()
-            .any(|hit| hit["record_id"] == ids[5]), "protected records cannot be traversal bridges: {navigation}");
+        let navigation = call(
+            &backend,
+            "galaxy.navigate",
+            json!({"query": "NAVPROBE", "hops": 3, "limit": 10}),
+        );
+        assert!(
+            !navigation.to_string().contains("PRIVATE_NEIGHBOR"),
+            "{navigation}"
+        );
+        assert!(
+            !navigation.to_string().contains("ring2_neighbor"),
+            "{navigation}"
+        );
+        assert!(
+            navigation["hits"]
+                .as_array()
+                .expect("navigation hits")
+                .iter()
+                .any(|hit| hit["record_id"] == ids[2])
+        );
+        assert!(
+            !navigation["hits"]
+                .as_array()
+                .expect("navigation hits")
+                .iter()
+                .any(|hit| hit["record_id"] == ids[5]),
+            "protected records cannot be traversal bridges: {navigation}"
+        );
         for link in navigation["resonance_links"].as_array().expect("links") {
             assert_ne!(link[0], ids[3]);
             assert_ne!(link[1], ids[3]);
         }
 
-        let unsealed = call(&backend, "sanctuary.unseal", json!({"share_a": "fixture-a", "share_b": "fixture-b"}));
+        let unsealed = call(
+            &backend,
+            "sanctuary.unseal",
+            json!({"share_a": "fixture-a", "share_b": "fixture-b"}),
+        );
         assert_eq!(unsealed["hermit_crab_sanctuary"]["sealed"], false);
-        let restored = call(&backend, "memory.search", json!({"query": "SUPERSESSPROBE", "historical": true, "evidence": true}));
-        assert!(restored.to_string().contains("PRIVATE_REPLACEMENT"), "{restored}");
-        let restored_navigation = call(&backend, "galaxy.navigate", json!({"query": "NAVPROBE", "hops": 3, "limit": 10}));
-        assert!(restored_navigation["hits"].as_array().expect("restored hits").iter()
-            .any(|hit| hit["record_id"] == ids[5]), "unseal restores the graph path: {restored_navigation}");
+        let restored = call(
+            &backend,
+            "memory.search",
+            json!({"query": "SUPERSESSPROBE", "historical": true, "evidence": true}),
+        );
+        assert!(
+            restored.to_string().contains("PRIVATE_REPLACEMENT"),
+            "{restored}"
+        );
+        let restored_navigation = call(
+            &backend,
+            "galaxy.navigate",
+            json!({"query": "NAVPROBE", "hops": 3, "limit": 10}),
+        );
+        assert!(
+            restored_navigation["hits"]
+                .as_array()
+                .expect("restored hits")
+                .iter()
+                .any(|hit| hit["record_id"] == ids[5]),
+            "unseal restores the graph path: {restored_navigation}"
+        );
         drop(backend);
         std::fs::remove_dir_all(&dir).expect("cleanup synthetic store");
     }
@@ -12185,7 +12550,7 @@ mod v10_6_mcp_bridge_routes_tests {
         .expect("q34 recall");
         assert!(q34_recall["count"].as_u64().unwrap_or(0) >= 1);
 
-        // 7. Catuṣkoṭi Answer Contract MCP Integration with CPR 0.5.4 Attestation
+        // 7. Answer contract MCP integration with an explicitly unsigned digest
         let contract_resolve = execute_hybrid_tool_call(
             "wm",
             &json!({
@@ -12223,7 +12588,8 @@ mod v10_6_mcp_bridge_routes_tests {
         assert_eq!(contract_resolve["status"], "answer");
         assert_eq!(contract_resolve["facts"][0]["value"], "operational");
         assert!(contract_resolve["contract_digest"].as_str().is_some());
-        assert_eq!(contract_resolve["attestation_spec"], "cpr-0.5.4");
+        assert_eq!(contract_resolve["digest_authentication"], "unsigned");
+        assert!(contract_resolve.get("attestation_spec").is_none());
 
         // Verify mode under Cyberbrain profile (sutra_contract alias)
         let contract_verify = execute_hybrid_tool_call(

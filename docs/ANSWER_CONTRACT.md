@@ -30,3 +30,26 @@ Assertions use exact subject and predicate matching. Recording cutoffs are inclu
 Later recording alone does not choose a winner. Distinct applicable values produce a conflict hold; no applicable value produces an insufficient hold. A question with two dates receives a whole-question status so that an unresolved date cannot become a complete answer. Holds must be handled as holds by callers, even if diagnostic support is included in the decision.
 
 Inputs are bounded to 1 MiB, 512 assertions, 4,096 bytes per string, and one or two strictly ascending requested dates. Unknown fields and malformed assertion graphs fail closed. This contract does not qualify arbitrary prose synthesis, source honesty, cryptographic provenance, native Temporal ledger import, direct-ID authorization, hosted operation or independent operators.
+
+The MCP `sutra.contract` / `sutra_contract` route accepts either structured
+`assertions`, `question` and optional `proposal`, or a single `request_json`
+string. Mixing these forms is refused, including nullable duplicate forms.
+`mode` is an optional string (`resolve` by default) and `attest` is an optional
+boolean (`false` by default); wrong types are refused. The handler consumes
+caller-supplied assertions and does not consult or enforce native-store
+sanctuary access. The hosting MCP server may already have its store open.
+
+For compatibility, `attest: true` requests an **unsigned byte digest**, not a
+signed attestation or CPR receipt. The result carries `contract_digest`,
+`digest_profile: "wm-answer-contract-sha256-v1"`, and
+`digest_authentication: "unsigned"`. It does not carry `attestation_spec`.
+The digest is SHA-256 over the UTF-8 domain `wm-answer-contract-sha256-v1`
+followed by a NUL byte, then three byte strings: mode, the exact JSON request
+passed to the resolver, and the compact serialized result before digest
+metadata is added. Each string is preceded by its UTF-8 byte length encoded
+as an unsigned 64-bit big-endian integer. The result uses this Rust build's
+`serde_json` serialization; this is a byte-binding profile, not RFC 8785
+canonicalization. Re-serialization may produce a different digest.
+Anyone can recompute it; it authenticates no issuer or source. A rejected
+proposal retains `accepted: false` and `decision: null` even when a digest
+is requested.
