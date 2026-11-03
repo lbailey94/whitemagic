@@ -8,10 +8,12 @@ fn print_help() {
 
 USAGE:
     wm-sandbox [OPTIONS] -- <cmd> [args...]
+    wm-sandbox --exec '<json envelope>'
     wm-sandbox --probe
     wm-sandbox --test
 
 OPTIONS:
+    --exec '<json>'     Execute JSON envelope (schema: wm-sandbox-exec-v1)
     --ro <paths>        Colon-delimited paths granted Read-Only access
                         Default: /usr:/lib:/lib64:/bin:/sbin:/etc:/proc:/dev/urandom:/dev/null:/dev/zero
     --rw <paths>        Colon-delimited paths granted Read-Write access
@@ -60,6 +62,54 @@ fn main() {
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
+            "--exec" => {
+                if i + 1 < args.len() {
+                    let envelope_str = &args[i + 1];
+                    let envelope: serde_json::Value = serde_json::from_str(envelope_str)
+                        .unwrap_or_else(|e| {
+                            eprintln!("[wm-sandbox] ERROR: invalid JSON envelope: {e}");
+                            std::process::exit(64);
+                        });
+                    let program = envelope
+                        .get("program")
+                        .and_then(serde_json::Value::as_str)
+                        .filter(|p| !p.is_empty())
+                        .unwrap_or_else(|| {
+                            eprintln!("[wm-sandbox] ERROR: envelope missing 'program'");
+                            std::process::exit(64);
+                        })
+                        .to_string();
+                    let exec_args: Vec<String> = envelope
+                        .get("args")
+                        .and_then(serde_json::Value::as_array)
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(String::from))
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    let net = envelope
+                        .get("net")
+                        .and_then(serde_json::Value::as_bool)
+                        .unwrap_or(false);
+                    builder.allow_net = net;
+                    if let Some(ws) = envelope.get("workspace").and_then(serde_json::Value::as_str) {
+                        let is_rw = envelope
+                            .get("rw")
+                            .and_then(serde_json::Value::as_bool)
+                            .unwrap_or(false);
+                        if is_rw {
+                            builder.rw_paths.push(PathBuf::from(ws));
+                        } else {
+                            builder.ro_paths.push(PathBuf::from(ws));
+                        }
+                    }
+                    builder.execute_sandboxed(&program, &exec_args);
+                } else {
+                    eprintln!("[wm-sandbox] ERROR: --exec requires a JSON envelope argument");
+                    std::process::exit(64);
+                }
+            }
             "--" => {
                 cmd_start_idx = Some(i + 1);
                 break;

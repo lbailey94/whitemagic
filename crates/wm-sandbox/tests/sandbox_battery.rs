@@ -40,3 +40,19 @@ fn test_sandbox_builder_rw_and_ro_paths() {
     assert!(test_file.exists());
     let _ = fs::remove_dir_all(&tmp_dir);
 }
+
+#[test]
+fn test_sandbox_envelope_exec_mandala_b2() {
+    let tmp_dir = std::env::temp_dir().join(format!("wm_sandbox_envelope_{}", std::process::id()));
+    fs::create_dir_all(&tmp_dir).expect("create test tmp dir");
+    let test_file = tmp_dir.join("envelope_test.txt");
+
+    let builder = SandboxBuilder::new().rw_path(&tmp_dir).allow_net(false);
+    let status = builder
+        .spawn_command("touch", &[test_file.to_string_lossy().to_string()])
+        .expect("spawn touch via builder");
+    assert!(status.success());
+    assert!(test_file.exists());
+
+    let _ = fs::remove_dir_all(&tmp_dir);
+}
