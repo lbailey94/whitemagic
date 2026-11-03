@@ -21,6 +21,7 @@
 pub mod action_skeleton;
 pub mod adaptive;
 pub mod admin;
+pub mod answer_contract;
 pub mod apotheosis;
 pub mod at_rest;
 pub mod attestation;

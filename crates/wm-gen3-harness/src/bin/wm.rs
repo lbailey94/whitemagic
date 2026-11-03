@@ -75,6 +75,15 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Resolve or verify a bounded caller-asserted temporal answer contract without opening a store
+    AnswerContract {
+        /// Contract operation: resolve or verify
+        #[arg(long, value_parser = ["resolve", "verify"])]
+        mode: String,
+        /// Strict JSON request containing assertions, question, and (for verify) proposal
+        #[arg(long)]
+        request_json: String,
+    },
     /// Run guided first-run onboarding pass, surface the starter guide galaxy, and verify setup
     Grimoire {
         /// Output report as JSON for agent consumption
@@ -1599,10 +1608,23 @@ fn main() {
         print_build_identity(*json);
         return;
     }
+    if let Commands::AnswerContract { mode, request_json } = &cli.command {
+        match wm_gen3_core::answer_contract::process(mode, request_json)
+            .and_then(|output| serde_json::to_string(&output).map_err(|e| e.to_string()))
+        {
+            Ok(output) => println!("{output}"),
+            Err(error) => {
+                eprintln!("answer-contract: {error}");
+                std::process::exit(2);
+            }
+        }
+        return;
+    }
     let store_path = resolve_store_path(cli.store.as_ref());
 
     match cli.command {
         Commands::BuildInfo { json } => print_build_identity(json),
+        Commands::AnswerContract { .. } => unreachable!("handled before store resolution"),
         Commands::Grimoire { json, plan } => {
             if let Err(e) = wm_gen3_harness::grimoire::run_grimoire(&store_path, json, plan) {
                 eprintln!("Grimoire run failed: {e}");

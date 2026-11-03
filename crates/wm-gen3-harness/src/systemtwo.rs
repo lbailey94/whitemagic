@@ -177,11 +177,25 @@ pub fn build_request_body(
 }
 
 pub fn extract_content(body: &str) -> Result<(String, Option<u64>), String> {
-    let value: serde_json::Value =
-        serde_json::from_str(body).map_err(|e| format!("system2: response is not JSON: {e}"))?;
+    let value = crate::receipt_verify::parse_strict_json(body)
+        .map_err(|e| format!("system2: response is not strict JSON: {e}"))?;
     let message = value
         .pointer("/choices/0/message")
         .ok_or_else(|| "system2: response has no choices[0].message".to_string())?;
+    let finish_reason = value
+        .pointer("/choices/0/finish_reason")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "system2: response has no recognized finish_reason".to_string())?;
+    if finish_reason != "stop" {
+        return Err(format!(
+            "system2: response finish_reason is not stop ({finish_reason})"
+        ));
+    }
+    if let Some(refusal) = message.get("refusal") {
+        if !refusal.is_null() && !refusal.as_str().is_some_and(|s| s.trim().is_empty()) {
+            return Err("system2: model refused the request or returned malformed refusal".into());
+        }
+    }
     let content = message
         .get("content")
         .and_then(|c| c.as_str())
@@ -522,7 +536,7 @@ mod tests {
 
     #[test]
     fn extract_content_reads_choice_message() {
-        let body = r#"{"choices":[{"message":{"content":"grounded answer"}}],"usage":{"completion_tokens":7}}"#;
+        let body = r#"{"choices":[{"message":{"content":"grounded answer"},"finish_reason":"stop"}],"usage":{"completion_tokens":7}}"#;
         let (content, tokens) = extract_content(body).expect("content");
         assert_eq!(content, "grounded answer");
         assert_eq!(tokens, Some(7));
@@ -532,7 +546,27 @@ mod tests {
     fn reasoning_only_response_is_a_clear_error() {
         let body = r#"{"choices":[{"message":{"content":"","reasoning":"thinking..."},"finish_reason":"length"}]}"#;
         let err = extract_content(body).unwrap_err();
-        assert!(err.contains("reasoning tokens only"), "{err}");
+        assert!(err.contains("finish_reason is not stop"), "{err}");
+    }
+
+    #[test]
+    fn finish_reason_must_be_exact_stop_and_refusal_is_rejected() {
+        for body in [
+            r#"{"choices":[{"message":{"content":"ok"}}]}"#,
+            r#"{"choices":[{"message":{"content":"ok"},"finish_reason":"tool_calls"}]}"#,
+            r#"{"choices":[{"message":{"content":"ok","refusal":"no"},"finish_reason":"stop"}]}"#,
+            r#"{"choices":[{"message":{"content":"ok","refusal":true},"finish_reason":"stop"}]}"#,
+            r#"{"choices":[{"message":{"content":"ok"},"finish_reason":"length","finish_reason":"stop"}]}"#,
+            r#"{"choices":[{"message":{"content":"ok","refusal":"no","refusal":null},"finish_reason":"stop"}]}"#,
+        ] {
+            assert!(extract_content(body).is_err());
+        }
+        let reasoning_only = r#"{"choices":[{"message":{"content":"","reasoning":"thinking"},"finish_reason":"stop"}]}"#;
+        assert!(
+            extract_content(reasoning_only)
+                .unwrap_err()
+                .contains("reasoning tokens only")
+        );
     }
 
     #[test]
