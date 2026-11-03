@@ -421,7 +421,10 @@ impl SandboxBuilder {
             exit(status.code().unwrap_or(1));
         }
 
-        let _ = self.restrict_self();
+        if let Err(error) = self.restrict_self() {
+            eprintln!("[wm-sandbox] ERROR: confinement failed: {error}");
+            exit(126);
+        }
 
         let c_cmd = CString::new(cmd).expect("Invalid cmd");
         let mut c_args: Vec<CString> = vec![c_cmd.clone()];
