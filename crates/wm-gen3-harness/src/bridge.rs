@@ -296,6 +296,7 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "投" => "sutra.cast",
         "编" => "sutra.compile",
         "导" => "sutra.route",
+        "契" => "sutra.contract",
         "卦" => "sutra.hexagram",
         "心" => "mandala.status",
         "审" => "mandala.triage",
@@ -374,6 +375,9 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "sutra.list" | "sutra_list" => "sutra.list",
         "sutra.hexagram" | "sutra_hexagram" => "sutra.hexagram",
         "sutra.route" | "sutra_route" | "cognitive.route" | "cognitive_route" => "sutra.route",
+        "sutra.contract" | "sutra_contract" | "answer.contract" | "answer_contract" => {
+            "sutra.contract"
+        }
         "legion.summon" | "legion_summon" | "sutra.legion" | "sutra_legion" => "legion.summon",
         "chohan.settle" | "chohan_settle" | "sutra.chohan" | "sutra_chohan" => "chohan.settle",
         "valkyrie.pulse" | "valkyrie_pulse" | "sutra.valkyrie" | "sutra_valkyrie" => {
@@ -589,6 +593,17 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
     ("sutra.list", &[]),
     ("sutra.hexagram", &["query", "mutate_line"]),
     ("sutra.route", &["inquiry", "utility", "context"]),
+    (
+        "sutra.contract",
+        &[
+            "mode",
+            "assertions",
+            "question",
+            "proposal",
+            "request_json",
+            "attest",
+        ],
+    ),
     ("legion.summon", &["edict", "clones", "peer", "archetype"]),
     ("chohan.settle", &["payload", "proof", "bid"]),
     ("valkyrie.pulse", &["inquiry", "digest", "benchmark"]),
@@ -682,6 +697,21 @@ fn sutra_tool_schemas_cyberbrain(mode_hint: &str) -> Vec<Value> {
                 "required": ["inquiry"]
             }
         }),
+        json!({
+            "name": "sutra_contract",
+            "description": "Evaluate or verify a deterministic Catuṣkoṭi typed answer contract over bounded caller-asserted temporal assertions. Validates temporal applicability across supersedes edges, detects factual conflicts across distinct sources, and enforces sealed sanctuary isolation without false acceptance.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "mode": { "type": "string", "enum": ["resolve", "verify"], "description": "Contract operation: resolve assertions into facts/citations or verify a candidate proposal (default: resolve)" },
+                    "assertions": { "type": "array", "description": "Array of caller-asserted temporal records with record_id, subject, predicate, value, valid_from, valid_until, recorded_at, supersedes" },
+                    "question": { "type": "object", "description": "Question object with question_id, query, subject, predicate, valid_at (array of dates), and known_at cutoff" },
+                    "proposal": { "type": "object", "description": "Candidate proposal object (for verify mode) with status and claims array" },
+                    "request_json": { "type": "string", "description": "Optional raw JSON string representing the full request payload" },
+                    "attest": { "type": "boolean", "description": "Optional flag to compute and return a SHA-256 CPR provenance digest over the contract decision" }
+                }
+            }
+        }),
     ]
 }
 
@@ -754,6 +784,22 @@ fn sutra_tool_schemas_full(mode_hint: &str) -> Vec<Value> {
                     "utility": { "type": "number", "minimum": 0.0, "maximum": 1.0, "description": "Expected marginal utility threshold (default: 0.8)" }
                 },
                 "required": ["inquiry"]
+            }
+        }),
+        json!({
+            "name": "sutra.contract",
+            "title": "Catuṣkoṭi Answer Contract",
+            "description": "Evaluate or verify a deterministic Catuṣkoṭi typed answer contract over bounded caller-asserted temporal assertions. Validates temporal applicability across supersedes edges, detects factual conflicts across distinct sources, and enforces sealed sanctuary isolation without false acceptance.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "mode": { "type": "string", "enum": ["resolve", "verify"], "description": "Contract operation: resolve assertions into facts/citations or verify a candidate proposal (default: resolve)" },
+                    "assertions": { "type": "array", "description": "Array of caller-asserted temporal records with record_id, subject, predicate, value, valid_from, valid_until, recorded_at, supersedes" },
+                    "question": { "type": "object", "description": "Question object with question_id, query, subject, predicate, valid_at (array of dates), and known_at cutoff" },
+                    "proposal": { "type": "object", "description": "Candidate proposal object (for verify mode) with status and claims array" },
+                    "request_json": { "type": "string", "description": "Optional raw JSON string representing the full request payload" },
+                    "attest": { "type": "boolean", "description": "Optional flag to compute and return a SHA-256 CPR provenance digest over the contract decision" }
+                }
             }
         }),
         json!({
@@ -1920,6 +1966,9 @@ pub fn execute_hybrid_tool_call(
         "sutra.route" | "sutra_route" | "cognitive.route" | "cognitive_route" => {
             handle_sutra_route(args, store_path)
         }
+        "sutra.contract" | "sutra_contract" | "answer.contract" | "answer_contract" => {
+            handle_sutra_contract(args)
+        }
 
         // ── General Agentic System (GAS) Legion & Cho-Han Operations ──────────
         "legion.summon" | "legion_summon" | "sutra.legion" | "sutra_legion" => {
@@ -1982,6 +2031,7 @@ fn resolve_q34_route(r: &str) -> Option<&'static str> {
         "投" | "cast" | "sutra.cast" => Some("sutra.cast"),
         "编" | "compile" | "sutra.compile" => Some("sutra.compile"),
         "导" | "route" | "sutra.route" => Some("sutra.route"),
+        "契" | "contract" | "sutra.contract" => Some("sutra.contract"),
         "卦" | "hexagram" | "sutra.hexagram" => Some("sutra.hexagram"),
         "心" | "status" | "mandala.status" => Some("mandala.status"),
         "审" | "triage" | "mandala.triage" => Some("mandala.triage"),
@@ -7516,6 +7566,53 @@ fn handle_sutra_route(args: &Value, store_path: &Path) -> Result<Value, String> 
     }))
 }
 
+fn handle_sutra_contract(args: &Value) -> Result<Value, String> {
+    reject_unknown_args("sutra.contract", args)?;
+    let mode = args.get("mode").and_then(Value::as_str).unwrap_or("resolve");
+    if mode != "resolve" && mode != "verify" {
+        return Err("Parameter 'mode' must be 'resolve' or 'verify'".to_string());
+    }
+
+    let request_json = if let Some(raw) = args.get("request_json").and_then(Value::as_str) {
+        raw.to_string()
+    } else {
+        let mut map = serde_json::Map::new();
+        if let Some(assertions) = args.get("assertions") {
+            map.insert("assertions".to_string(), assertions.clone());
+        }
+        if let Some(question) = args.get("question") {
+            map.insert("question".to_string(), question.clone());
+        }
+        if let Some(proposal) = args.get("proposal") {
+            map.insert("proposal".to_string(), proposal.clone());
+        }
+        serde_json::to_string(&Value::Object(map))
+            .map_err(|e| format!("cannot serialize request: {e}"))?
+    };
+
+    let output = wm_gen3_core::answer_contract::process(mode, &request_json)
+        .map_err(|e| format!("answer_contract failed: {e}"))?;
+
+    let mut result = serde_json::to_value(&output)
+        .map_err(|e| format!("cannot serialize contract output: {e}"))?;
+
+    let attest = args.get("attest").and_then(Value::as_bool).unwrap_or(false);
+    if attest {
+        if let Some(obj) = result.as_object_mut() {
+            let mut hasher = Sha256::new();
+            hasher.update(b"cpr:contract:v1|");
+            hasher.update(mode.as_bytes());
+            hasher.update(b"|");
+            hasher.update(request_json.as_bytes());
+            let contract_digest = hex_encode(&hasher.finalize());
+            obj.insert("contract_digest".to_string(), Value::String(contract_digest));
+            obj.insert("attestation_spec".to_string(), Value::String("cpr-0.5.4".to_string()));
+        }
+    }
+
+    Ok(result)
+}
+
 fn handle_valkyrie_pulse(args: &Value) -> Result<Value, String> {
     reject_unknown_args("valkyrie.pulse", args)?;
     let run_bench = args
@@ -12087,6 +12184,123 @@ mod v10_6_mcp_bridge_routes_tests {
         )
         .expect("q34 recall");
         assert!(q34_recall["count"].as_u64().unwrap_or(0) >= 1);
+
+        // 7. Catuṣkoṭi Answer Contract MCP Integration with CPR 0.5.4 Attestation
+        let contract_resolve = execute_hybrid_tool_call(
+            "wm",
+            &json!({
+                "route": "sutra.contract",
+                "args": {
+                    "mode": "resolve",
+                    "assertions": [{
+                        "record_id": "REC-01",
+                        "subject": "Antigravity Bridge",
+                        "predicate": "status",
+                        "value": "operational",
+                        "source_id": "SRC-AGENT-01",
+                        "valid_from": "2026-11-01",
+                        "valid_until": "2026-11-30",
+                        "recorded_at": "2026-11-01",
+                        "supersedes": null
+                    }],
+                    "question": {
+                        "question_id": "Q-01",
+                        "query": "Is the bridge operational?",
+                        "subject": "Antigravity Bridge",
+                        "predicate": "status",
+                        "valid_at": ["2026-11-02"],
+                        "known_at": "2026-11-02"
+                    },
+                    "attest": true
+                }
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Full,
+        )
+        .expect("sutra.contract resolve dispatch");
+        assert_eq!(contract_resolve["status"], "answer");
+        assert_eq!(contract_resolve["facts"][0]["value"], "operational");
+        assert!(contract_resolve["contract_digest"].as_str().is_some());
+        assert_eq!(contract_resolve["attestation_spec"], "cpr-0.5.4");
+
+        // Verify mode under Cyberbrain profile (sutra_contract alias)
+        let contract_verify = execute_hybrid_tool_call(
+            "sutra_contract",
+            &json!({
+                "mode": "verify",
+                "assertions": [{
+                    "record_id": "REC-01",
+                    "subject": "Antigravity Bridge",
+                    "predicate": "status",
+                    "value": "operational",
+                    "source_id": "SRC-AGENT-01",
+                    "valid_from": "2026-11-01",
+                    "valid_until": "2026-11-30",
+                    "recorded_at": "2026-11-01",
+                    "supersedes": null
+                }],
+                "question": {
+                    "question_id": "Q-01",
+                    "query": "Is the bridge operational?",
+                    "subject": "Antigravity Bridge",
+                    "predicate": "status",
+                    "valid_at": ["2026-11-02"],
+                    "known_at": "2026-11-02"
+                },
+                "proposal": {
+                    "status": "answer",
+                    "claims": [{
+                        "record_id": "REC-01",
+                        "valid_at": "2026-11-02",
+                        "value": "operational"
+                    }]
+                }
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Cyberbrain,
+        )
+        .expect("sutra_contract verify dispatch");
+        assert_eq!(contract_verify["accepted"], true);
+
+        // Hanzi logoglyph "契" dispatch
+        let contract_hanzi = execute_hybrid_tool_call(
+            "wm",
+            &json!({
+                "r": "契",
+                "a": {
+                    "mode": "resolve",
+                    "assertions": [{
+                        "record_id": "REC-01",
+                        "subject": "Antigravity Bridge",
+                        "predicate": "status",
+                        "value": "operational",
+                        "source_id": "SRC-AGENT-01",
+                        "valid_from": "2026-11-01",
+                        "valid_until": "2026-11-30",
+                        "recorded_at": "2026-11-01",
+                        "supersedes": null
+                    }],
+                    "question": {
+                        "question_id": "Q-01",
+                        "query": "Is the bridge operational?",
+                        "subject": "Antigravity Bridge",
+                        "predicate": "status",
+                        "valid_at": ["2026-11-02"],
+                        "known_at": "2026-11-02"
+                    }
+                }
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Full,
+        )
+        .expect("hanzi contract dispatch");
+        assert_eq!(contract_hanzi["status"], "answer");
 
         let _ = std::fs::remove_dir_all(&dir);
     }
