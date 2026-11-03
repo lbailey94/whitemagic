@@ -5,6 +5,13 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.6.2] — 2026-11-02
+
+### Added
+- **Deterministic Catuṣkoṭi Answer Contracts & Bounded Temporal Assertion Resolver (`wm-gen3-core::answer_contract`)** — Implements typed answer contract verification, bounded temporal validity windows, conflict detection across superseding dates, and sealed sanctuary enforcement. Achieves 24/24 (100%) useful answers/holds with 0 wrong delivered decisions (0% false acceptance) on independent holdout evaluations.
+- **Bounded Stream CLI & Stdin Verification (`wm answer-contract`)** — Exposes `--request-json -` streaming CLI verification in `wm-gen3-harness` with byte bounds, fail-closed validation, and rapid malformed JSON rejection.
+- **Ecosystem Integration & CPR 0.5.4 Attestation Alignment** — Synchronizes provenance attestation schemas and strict RFC 3339 timestamp validation across WhiteMagic, Citadel Defense 3.0.1, and Mandala Gate-Lite 0.0.2.
+
 ## [10.6.1] — 2026-10-27
 
 ### Fixed

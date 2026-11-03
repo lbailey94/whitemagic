@@ -10,7 +10,7 @@ Local-first memory and session continuity for coding agents, exposed over MCP. A
 
 ```bash
 curl -fsSL https://www.whitemagic.dev/install.sh?ref=gen3-skill | sh
-wm --version         # expect: wm 10.6.1 (Gen3 line)
+wm --version         # expect: wm 10.6.2 (Gen3 line)
 wm --store "$HOME/.local/share/whitemagic/gen3" grimoire --plan
                      # environment/store check + client-config target preview
                      # may initialize/seed this store; does not edit client configs
