@@ -125,6 +125,7 @@ impl std::fmt::Display for SandboxError {
 impl std::error::Error for SandboxError {}
 
 pub fn get_landlock_abi() -> i32 {
+    #[cfg(target_os = "linux")]
     unsafe {
         libc::syscall(
             SYS_LANDLOCK_CREATE_RULESET,
@@ -132,6 +133,10 @@ pub fn get_landlock_abi() -> i32 {
             0,
             LANDLOCK_CREATE_RULESET_VERSION,
         ) as i32
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        -1
     }
 }
 
@@ -243,6 +248,7 @@ impl SandboxBuilder {
     }
 
     /// Irrevocably confines the current process with Landlock rules.
+    #[cfg(target_os = "linux")]
     pub fn restrict_self(&self) -> Result<(), SandboxError> {
         let abi = get_landlock_abi();
         if abi < 1 {
@@ -374,6 +380,12 @@ impl SandboxBuilder {
         }
 
         Ok(())
+    }
+
+    /// Irrevocably confines the current process with Landlock rules (non-Linux stub).
+    #[cfg(not(target_os = "linux"))]
+    pub fn restrict_self(&self) -> Result<(), SandboxError> {
+        Err(SandboxError::LandlockNotSupported(-1))
     }
 
     /// Spawns a command inside a confined child process and waits for its exit status.

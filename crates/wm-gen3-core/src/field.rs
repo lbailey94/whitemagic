@@ -311,9 +311,9 @@ pub fn normalize_stem(word: &str) -> String {
     }
     if w.ends_with("ing") && w.len() > 5 {
         w.truncate(w.len() - 3);
-    } else if (w.ends_with("ed") || w.ends_with("er")) && w.len() > 4 {
-        w.truncate(w.len() - 2);
-    } else if w.ends_with("or") && w.len() > 5 {
+    } else if ((w.ends_with("ed") || w.ends_with("er")) && w.len() > 4)
+        || (w.ends_with("or") && w.len() > 5)
+    {
         w.truncate(w.len() - 2);
     }
     if w.ends_with('e') && w.len() > 3 {

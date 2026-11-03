@@ -3010,7 +3010,7 @@ fn main() {
 
                     // 1. Resolve Sutra trajectory codon
                     let compiled_sutra = if let Some(ref raw_via) = via {
-                        let normalized = raw_via.replace('-', " ").replace('→', " ");
+                        let normalized = raw_via.replace(['-', '→'], " ");
                         CompoundSutra::parse(&normalized).unwrap_or_else(|_| {
                             CompoundSutra::parse("觀 應 鏡").expect("default sutra")
                         })

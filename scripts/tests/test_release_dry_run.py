@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -74,9 +75,12 @@ class ReleaseDryRunTests(unittest.TestCase):
                 )
                 stub.chmod(0o755)
 
+            cargo_text = (root / "Cargo.toml").read_text(encoding="utf-8")
+            match = re.search(r'^version\s*=\s*"([^"]+)"', cargo_text, re.MULTILINE)
+            current_version = match.group(1) if match else "10.6.2"
             env = dict(os.environ, PATH=f"{fakebin}:{os.environ['PATH']}")
             proc = subprocess.run(
-                ["bash", "scripts/release.sh", "10.6.1", "--tail-only", "--dry-run"],
+                ["bash", "scripts/release.sh", current_version, "--tail-only", "--dry-run"],
                 cwd=root, env=env, text=True, capture_output=True, check=False,
             )
             self.assertEqual(proc.returncode, 0, proc.stderr + "\n" + proc.stdout)

@@ -3574,9 +3574,10 @@ impl Substrate {
                 .iter()
                 .all(|h| !h.content.contains("202") && !h.source.contains("202"));
 
-        let disposition = if negative_attribute {
-            EvidenceDisposition::Insufficient
-        } else if coverage == EvidenceCoverage::None || coverage == EvidenceCoverage::Partial {
+        let disposition = if negative_attribute
+            || coverage == EvidenceCoverage::None
+            || coverage == EvidenceCoverage::Partial
+        {
             EvidenceDisposition::Insufficient
         } else if has_conflict {
             EvidenceDisposition::Conflict
