@@ -80,7 +80,7 @@ enum Commands {
         /// Contract operation: resolve or verify
         #[arg(long, value_parser = ["resolve", "verify"])]
         mode: String,
-        /// Strict JSON request containing assertions, question, and (for verify) proposal
+        /// Strict JSON request, or - to read up to 1 MiB from standard input
         #[arg(long)]
         request_json: String,
     },
@@ -1609,9 +1609,12 @@ fn main() {
         return;
     }
     if let Commands::AnswerContract { mode, request_json } = &cli.command {
-        match wm_gen3_core::answer_contract::process(mode, request_json)
-            .and_then(|output| serde_json::to_string(&output).map_err(|e| e.to_string()))
-        {
+        let result = if request_json == "-" {
+            wm_gen3_core::answer_contract::process_reader(mode, std::io::stdin().lock())
+        } else {
+            wm_gen3_core::answer_contract::process(mode, request_json)
+        };
+        match result.and_then(|output| serde_json::to_string(&output).map_err(|e| e.to_string())) {
             Ok(output) => println!("{output}"),
             Err(error) => {
                 eprintln!("answer-contract: {error}");

@@ -6,6 +6,21 @@
 wm answer-contract --mode resolve --request-json '{"assertions":[{"record_id":"r1","subject":"Workshop","predicate":"opening_time","value":"09:00","source_id":"schedule","valid_from":"2026-01-01","valid_until":null,"recorded_at":"2025-12-01","supersedes":null}],"question":{"question_id":"example","query":"When does Workshop open on January 2, as known December 15?","subject":"Workshop","predicate":"opening_time","valid_at":["2026-01-02"],"known_at":"2025-12-15"}}'
 ```
 
+For files and pipelines, pass `--request-json -` and send the JSON through
+standard input:
+
+```sh
+wm answer-contract --mode resolve --request-json - < request.json
+wm answer-contract --mode verify --request-json - < proposal-request.json
+```
+
+This avoids command-line argument size limits and placing the request contents
+in the process arguments. The stream reader consumes at most 1 MiB plus one
+byte, rejects oversized input, invalid UTF-8 and read failures, and uses the
+same strict resolver/verifier as inline JSON. Requests must end with EOF;
+the byte limit does not impose a deadline on a stalled producer. Both input
+paths run before store resolution and leave the memory store unopened.
+
 The deterministic `resolve` operation returns a structured decision and record citations derived from the applicable assertions. Its authority label is `caller_asserted_metadata`: a correct result means that the supplied metadata resolves that way, not that the underlying claim is true or complete.
 
 The separate `verify` operation requires an additional `proposal` with `status` (`answer`, `conflict` or `insufficient`) and a `claims` array. Each claim contains exactly `valid_at`, `record_id`, and `value`. For an answer, supply supporting claims for every requested date. For a conflict, supply supported competing values; for insufficient evidence, supply no claims. Wrong scope, time, status, value, record ID or incomplete support is rejected with `accepted: false`, `decision: null`, and reason codes. The verifier does not repair a proposal or return a replacement answer when it rejects one.

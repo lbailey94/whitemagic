@@ -4,6 +4,7 @@
 //! does not establish that records are true, complete, independently sourced, or authorized.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::io::Read;
 
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
@@ -111,6 +112,24 @@ struct ParsedAssertion {
     from: DateTime<Utc>,
     until: Option<DateTime<Utc>>,
     recorded: DateTime<Utc>,
+}
+
+/// Read and process a request without consuming more than the input limit plus
+/// one byte. This supports pipes without allocating for an unbounded stream.
+pub fn process_reader(mode: &str, reader: impl Read) -> Result<Output, String> {
+    if mode != "resolve" && mode != "verify" {
+        return Err("mode must be resolve or verify".into());
+    }
+    let mut bytes = Vec::new();
+    reader
+        .take((MAX_INPUT_BYTES + 1) as u64)
+        .read_to_end(&mut bytes)
+        .map_err(|_| "cannot read request".to_string())?;
+    if bytes.len() > MAX_INPUT_BYTES {
+        return Err("request exceeds 1 MiB".into());
+    }
+    let json = std::str::from_utf8(&bytes).map_err(|_| "request must be UTF-8".to_string())?;
+    process(mode, json)
 }
 
 /// Resolve or verify one strict JSON request. `mode` is exactly `resolve` or `verify`.
@@ -491,6 +510,67 @@ fn status_name(status: &DecisionStatus) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn stream_accepts_the_exact_byte_limit_and_stops_after_one_extra_byte() {
+        let request = base("[]", r#"["2020-01-01"]"#, "2020-01-01");
+        let expected = process("resolve", &request).unwrap();
+        let mut padded = request.into_bytes();
+        padded.resize(MAX_INPUT_BYTES, b' ');
+        assert_eq!(
+            process_reader("resolve", padded.as_slice()).unwrap(),
+            expected
+        );
+        padded.extend_from_slice(&[b' '; 64]);
+        let mut cursor = std::io::Cursor::new(padded);
+        assert_eq!(
+            process_reader("resolve", &mut cursor).unwrap_err(),
+            "request exceeds 1 MiB"
+        );
+        assert_eq!(cursor.position(), (MAX_INPUT_BYTES + 1) as u64);
+    }
+
+    #[test]
+    fn stream_rejects_invalid_encoding_partial_reads_and_invalid_modes() {
+        struct BrokenReader;
+        impl Read for BrokenReader {
+            fn read(&mut self, _: &mut [u8]) -> std::io::Result<usize> {
+                Err(std::io::Error::other("private diagnostic"))
+            }
+        }
+        assert_eq!(
+            process_reader("resolve", &[0xff][..]).unwrap_err(),
+            "request must be UTF-8"
+        );
+        let request = base("[]", r#"["2020-01-01"]"#, "2020-01-01");
+        let reader = std::io::Cursor::new(request).chain(BrokenReader);
+        assert_eq!(
+            process_reader("resolve", reader).unwrap_err(),
+            "cannot read request"
+        );
+        assert_eq!(
+            process_reader("invalid", BrokenReader).unwrap_err(),
+            "mode must be resolve or verify"
+        );
+    }
+
+    #[test]
+    fn stream_verification_matches_inline_and_rejects_trailing_or_duplicate_json() {
+        let request = base("[]", r#"["2020-01-01"]"#, "2020-01-01");
+        let proposal = request.replacen(
+            "{",
+            r#"{"proposal":{"status":"insufficient","claims":[]},"#,
+            1,
+        );
+        assert_eq!(
+            process_reader("verify", proposal.as_bytes()).unwrap(),
+            process("verify", &proposal).unwrap()
+        );
+        assert!(process_reader("resolve", format!("{request} {{}}").as_bytes()).is_err());
+        let duplicate = request.replacen("{", r#"{"assertions":[],"#, 1);
+        assert!(process_reader("resolve", duplicate.as_bytes()).is_err());
+    }
+
     fn base(assertions: &str, dates: &str, known: &str) -> String {
         format!(
             r#"{{"assertions":{assertions},"question":{{"question_id":"q1","query":"What?","subject":"A","predicate":"role","valid_at":{dates},"known_at":"{known}"}}}}"#
