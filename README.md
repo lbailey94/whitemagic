@@ -273,7 +273,7 @@ cargo clippy --all-targets
 
 ## Authored Memory-Task Evaluation (32 Scenarios)
 
-[`benchmarks/pinned_task_eval.py`](benchmarks/pinned_task_eval.py) runs 32 authored scenarios, eight each for continuity, conflict, record-addressed repair, and cue-guided deterministic migration. The final frozen run is tied to public source commit [`766edb2`](https://github.com/lbailey94/whitemagic/tree/766edb2de10d73b6d7204b916473816329eb5efb), a local source-derived candidate whose exact version and binary hash are recorded in the task report. It is not the separately signed release binary; this run does not qualify the current public-main release. The [final task report](benchmarks/TASK_EVAL_REPORT.md) and [machine-readable results](benchmarks/pinned-task-eval-results.json) are archived with the evaluation. The historical [19169fa result JSON](https://github.com/lbailey94/whitemagic/blob/19169fa8c2fccfb51fc1b11b6e0c762257288a65/benchmarks/pinned-task-eval-results.json) remains available separately.
+[`benchmarks/pinned_task_eval.py`](benchmarks/pinned_task_eval.py) runs 32 authored scenarios, eight each for continuity, conflict, record-addressed repair, and cue-guided deterministic migration. The final frozen run is tied to public source commit [`766edb2`](https://github.com/lbailey94/whitemagic/tree/766edb2de10d73b6d7204b916473816329eb5efb), a local source-derived candidate whose exact version and binary hash are recorded in the task report. It is not the separately signed release binary; this run does not qualify the current public-main release. The [machine-readable results](benchmarks/pinned-task-eval-results.json) are archived with the evaluation. The historical [19169fa result JSON](https://github.com/lbailey94/whitemagic/blob/19169fa8c2fccfb51fc1b11b6e0c762257288a65/benchmarks/pinned-task-eval-results.json) remains available separately.
 
 - **Continuity:** WhiteMagic scored 8/8 on decision recall, open-arc precision, cross-session crystal surfacing, and new-session track routing. The structured-metadata file baseline also scored 8/8 on decisions and arcs under the same salience rules. `agent_context.text` stayed within a 1,120 UTF-8-byte cap (largest 1,091; mean of per-context ceil(bytes/4) estimates 266.625). This is a byte-based estimate, not a tokenizer guarantee; transport/debug metadata is excluded.
 - **Conflict:** governed current truth and verifiable revision lineage scored 7/7. All-case current truth was 7/8 because M8 is an intentional unlinked-contradiction negative control; unlinked contradictory text is not a supersession operation. Structured files matched on governed conflict.
@@ -292,13 +292,14 @@ python3 -m unittest discover -s benchmarks -p test_pinned_task_eval.py
 ## Documentation
 
 - [`docs/INDEX.md`](docs/INDEX.md) — map of the documentation tree
+- [`docs/DEVELOPER_GUIDE.md`](docs/DEVELOPER_GUIDE.md) — workspace layout, build, test, and architecture
 - [`docs/SELFTEST_AND_HOST_HEALTH.md`](docs/SELFTEST_AND_HOST_HEALTH.md) — `wm selftest` checks, thresholds, and `--strict`/`--json` contracts
-- [`benchmarks/pinned_task_eval.py`](benchmarks/pinned_task_eval.py) — 24-scenario continuity, conflict resolution, and surgical repair evaluation harness
+- [`docs/STORE_LAYOUT.md`](docs/STORE_LAYOUT.md) — Gen3 store layout and database structure
+- [`docs/SUTRA_GUIDE.md`](docs/SUTRA_GUIDE.md) — Sutra and tool dispatch reference
 - [`INSTALL.md`](INSTALL.md) — source build, store setup, optional model layer
 - [`skill.md`](skill.md) — five-minute agent onboarding
 - [`llms.txt`](llms.txt) — machine-readable index
 - [`docs/CHARTER.md`](docs/CHARTER.md) — binding constitutional core
-- [`docs/NUCLEUS.md`](docs/NUCLEUS.md) — frozen nucleus snapshot
 - [`continuity-receipt`](https://github.com/lbailey94/continuity-receipt) — signed, offline-verifiable records of governed tasks (separate spec repo, Apache-2.0)
 - [`CHANGELOG.md`](CHANGELOG.md) — release notes
 - [`SECURITY.md`](SECURITY.md) — reporting vulnerabilities
@@ -324,13 +325,13 @@ override selects the destination.
 
 - [`whitemagic`](https://github.com/lbailey94/whitemagic) — local-first memory and session continuity for AI agents
 - [`continuity-receipt`](https://github.com/lbailey94/continuity-receipt) — portable, offline-verifiable evidence for governed tasks (Apache-2.0)
-- [`mandalaos-gate-lite`](https://github.com/lbailey94/mandalaos-gate-lite) — bounded agent execution that emits receipts (review snapshot)
+- [`mandala`](https://github.com/lbailey94/mandala) — bounded agent execution and Landlock LSM governance kernel
 - [`whitemagic-plugins`](https://github.com/lbailey94/whitemagic-plugins) — client integrations and adapters
 
-Each repository stands on its own: WhiteMagic does not require MandalaOS, and
+Each repository stands on its own: WhiteMagic does not require Mandala, and
 Continuity Receipt does not require WhiteMagic. Three entrances — **use it** →
 `whitemagic`; **review a protocol** → `continuity-receipt`; **attack the
-security architecture** → `mandalaos-gate-lite`.
+security architecture** → `mandala`.
 
 ## License
 
