@@ -7395,16 +7395,13 @@ fn cognitive_tier_name(tier: wm_gen3_core::tripartite_router::CognitiveTier) -> 
 }
 
 /// Run the trained Valkyrie-L0.5 routing organ as a shadow alongside the live
-/// TripartiteRouter decision, appending one comparison line to
-/// `<store>/routing_shadow.jsonl` (OATS precedent: agreement evidence accrues
-/// until the shadow earns promotion). Returns the response-side shadow block;
-/// every failure degrades to `{"available": false}` — the live route never
-/// waits on or inherits shadow faults.
+/// TripartiteRouter decision. Returns the response-side shadow block;
+/// initialization failures degrade to `{"available": false}`. This call may
+/// initialize the local model; it has no hard inference-time deadline.
 fn shadow_route_l05(
     inquiry: &str,
     context: Option<&str>,
     decision: &wm_gen3_core::tripartite_router::RoutingDecision,
-    store_path: &Path,
 ) -> Value {
     static MODEL2VEC: OnceLock<Result<wm_gen3_zeropointfive::System05, String>> = OnceLock::new();
     let m2v = MODEL2VEC.get_or_init(|| {
@@ -7485,28 +7482,6 @@ fn shadow_route_l05(
     let shadow_us = start.elapsed().as_micros() as u64;
 
     let agree = result.tier == decision.tier;
-    let entry = json!({
-        "ts": now_epoch_secs(),
-        "inquiry": inquiry.chars().take(160).collect::<String>(),
-        "context": context.map(|c| c.chars().take(160).collect::<String>()),
-        "tripartite_tier": cognitive_tier_name(decision.tier),
-        "tripartite_confidence": decision.confidence,
-        "l05_tier": cognitive_tier_name(result.tier),
-        "l05_confidence": result.confidence,
-        "l05_used_semantic_organ": result.used_semantic_organ,
-        "l05_used_hybrid_projection": used_hybrid,
-        "l05_primary_gana_id": result.primary_gana_id,
-        "agree": agree,
-        "shadow_latency_us": shadow_us,
-    });
-    if let Ok(mut file) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(store_path.join("routing_shadow.jsonl"))
-    {
-        let _ = writeln!(file, "{entry}");
-    }
-
     json!({
         "available": true,
         "tier": cognitive_tier_name(result.tier),
@@ -7521,6 +7496,14 @@ fn shadow_route_l05(
 
 fn handle_sutra_route(args: &Value, store_path: &Path) -> Result<Value, String> {
     reject_unknown_args("sutra.route", args)?;
+    let promote_l05 = routing_switch(
+        std::env::var("WM_PROMOTE_VALKYRIE_L05").ok().as_deref(),
+        "WM_PROMOTE_VALKYRIE_L05",
+    )?;
+    let metrics_enabled = routing_switch(
+        std::env::var("WM_ROUTING_METRICS").ok().as_deref(),
+        "WM_ROUTING_METRICS",
+    )?;
     let inquiry = args
         .get("inquiry")
         .and_then(Value::as_str)
@@ -7542,12 +7525,35 @@ fn handle_sutra_route(args: &Value, store_path: &Path) -> Result<Value, String> 
     let start = std::time::Instant::now();
     let decision = wm_gen3_core::tripartite_router::TripartiteRouter::route(inquiry, None);
     let latency_us = start.elapsed().as_micros();
-    let shadow = shadow_route_l05(inquiry, context, &decision, store_path);
+    let shadow = shadow_route_l05(inquiry, context, &decision);
 
-    // Promoted-by-default: Valkyrie-L0.5 hybrid routing organ is active as primary
-    // unless explicitly suppressed (`WM_PROMOTE_VALKYRIE_L05=0`). Degrades to Tripartite if unavailable.
-    let promote_l05 =
-        std::env::var("WM_PROMOTE_VALKYRIE_L05").unwrap_or_else(|_| "1".to_string()) != "0";
+    let mut response = sutra_route_response(inquiry, &decision, shadow, promote_l05, latency_us);
+    response["metrics_logging"] = if metrics_enabled {
+        match append_routing_metrics(store_path, &response, 1024 * 1024) {
+            Ok(()) => json!("recorded"),
+            Err(_) => json!("failed"),
+        }
+    } else {
+        json!("disabled")
+    };
+    Ok(response)
+}
+
+fn routing_switch(value: Option<&str>, name: &str) -> Result<bool, String> {
+    match value {
+        None | Some("0") | Some("false") => Ok(false),
+        Some("1") | Some("true") => Ok(true),
+        Some(_) => Err(format!("{name} must be 0, 1, false, or true")),
+    }
+}
+
+fn sutra_route_response(
+    inquiry: &str,
+    decision: &wm_gen3_core::tripartite_router::RoutingDecision,
+    shadow: Value,
+    promote_l05: bool,
+    latency_us: u128,
+) -> Value {
     let (active_tier, active_confidence, is_graduated) = if promote_l05
         && shadow["available"].as_bool() == Some(true)
         && shadow["used_hybrid_projection"].as_bool() == Some(true)
@@ -7569,7 +7575,15 @@ fn handle_sutra_route(args: &Value, store_path: &Path) -> Result<Value, String> 
         )
     };
 
-    Ok(json!({
+    let tripartite = json!({
+        "tier": cognitive_tier_name(decision.tier),
+        "confidence": decision.confidence,
+        "rationale": decision.rationale,
+        "selected_glyph": decision.selected_glyph.map(|c| c.to_string()),
+        "catuskoti": decision.catuskoti.map(|c| format!("{c:?}")),
+        "bound_skeleton_id": decision.skeleton_id,
+    });
+    json!({
         "status": "ok",
         "inquiry": inquiry,
         "tier": active_tier,
@@ -7577,12 +7591,59 @@ fn handle_sutra_route(args: &Value, store_path: &Path) -> Result<Value, String> 
         "tripartite_tier": cognitive_tier_name(decision.tier),
         "latency_micros": latency_us,
         "confidence": active_confidence,
-        "rationale": decision.rationale,
-        "selected_glyph": decision.selected_glyph.map(|c| c.to_string()),
-        "catuskoti": decision.catuskoti.map(|c| format!("{c:?}")),
-        "bound_skeleton_id": decision.skeleton_id,
+        "rationale": if is_graduated {
+            format!("Valkyrie L0.5 hybrid selected {active_tier}; its tier/confidence are reported here. Tripartite explanation is separate.")
+        } else { decision.rationale.clone() },
+        "selected_glyph": if is_graduated { Value::Null } else { tripartite["selected_glyph"].clone() },
+        "catuskoti": if is_graduated { Value::Null } else { tripartite["catuskoti"].clone() },
+        "bound_skeleton_id": if is_graduated { Value::Null } else { tripartite["bound_skeleton_id"].clone() },
+        "tripartite": tripartite,
+        "promotion_enabled": promote_l05,
         "shadow": shadow,
-    }))
+    })
+}
+
+fn append_routing_metrics(
+    store_path: &Path,
+    response: &Value,
+    max_bytes: u64,
+) -> Result<(), String> {
+    static LOG_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _guard = LOG_LOCK
+        .lock()
+        .map_err(|_| "routing metrics lock".to_string())?;
+    // Explicit content-free projection: never persist inquiry/context or rationale.
+    let line = format!(
+        "{}\n",
+        json!({
+            "ts": now_epoch_secs(),
+            "primary_router": response["primary_router"],
+            "tier": response["tier"],
+            "tripartite_tier": response["tripartite_tier"],
+            "l05_tier": response["shadow"]["tier"],
+            "agree": response["shadow"]["agree"],
+        })
+    );
+    if line.len() as u64 > max_bytes {
+        return Err("routing metric exceeds file budget".to_string());
+    }
+    let path = store_path.join("routing_metrics.jsonl");
+    let existing = std::fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
+    if existing + line.len() as u64 > max_bytes {
+        std::fs::rename(&path, store_path.join("routing_metrics.previous.jsonl"))
+            .map_err(|error| error.to_string())?;
+    }
+    let mut options = std::fs::OpenOptions::new();
+    options.create(true).append(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    options
+        .open(path)
+        .and_then(|mut file| file.write_all(line.as_bytes()))
+        .map_err(|error| error.to_string())
 }
 
 fn handle_sutra_contract(args: &Value) -> Result<Value, String> {
@@ -12307,7 +12368,7 @@ mod routing_shadow_tests {
     use super::*;
 
     #[test]
-    fn sutra_route_logs_shadow_comparison() {
+    fn sutra_route_returns_shadow_without_persisting_request_text() {
         let dir = std::env::temp_dir().join(format!("wm-shadow-{}", Uuid::new_v4()));
         std::fs::create_dir_all(&dir).expect("temp dir");
 
@@ -12324,24 +12385,79 @@ mod routing_shadow_tests {
         // The live tier is untouched by the shadow.
         assert!(result["tier"].is_string());
 
-        let log = std::fs::read_to_string(dir.join("routing_shadow.jsonl")).expect("shadow log");
-        let line: Value =
-            serde_json::from_str(log.lines().next().expect("one line")).expect("valid jsonl");
-        assert_eq!(
-            line["inquiry"],
-            "summarize the session history and what changed"
-        );
-        assert_eq!(line["tripartite_tier"], result["tripartite_tier"]);
-        assert_eq!(line["l05_tier"], shadow["tier"]);
-        assert_eq!(line["agree"], shadow["agree"]);
-        assert!(line["shadow_latency_us"].is_number());
-        if result["primary_router"] == "valkyrie_l05_hybrid" {
-            assert_eq!(result["tier"], shadow["tier"]);
-        } else {
-            assert_eq!(result["tier"], line["tripartite_tier"]);
-        }
+        assert!(!dir.join("routing_shadow.jsonl").exists());
+        assert!(!dir.join("routing_metrics.jsonl").exists());
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn promotion_is_explicit_and_invalid_switches_refuse() {
+        assert_eq!(routing_switch(None, "switch"), Ok(false));
+        for value in ["0", "false"] {
+            assert_eq!(routing_switch(Some(value), "switch"), Ok(false));
+        }
+        for value in ["1", "true"] {
+            assert_eq!(routing_switch(Some(value), "switch"), Ok(true));
+        }
+        for value in ["", "yes", "FALSE", "2"] {
+            assert!(routing_switch(Some(value), "switch").is_err());
+        }
+    }
+
+    #[test]
+    fn promoted_disagreement_does_not_inherit_another_routers_explanation() {
+        let decision = wm_gen3_core::tripartite_router::RoutingDecision {
+            tier: wm_gen3_core::tripartite_router::CognitiveTier::System0Sutra,
+            confidence: 0.9,
+            rationale: "Tripartite-only rationale".into(),
+            selected_glyph: Some('行'),
+            skeleton_id: Some("tripartite-only-skeleton".into()),
+            catuskoti: None,
+            routing_latency_ns: 1,
+        };
+        let shadow = json!({"available":true,"used_hybrid_projection":true,
+            "tier":"System2FrontierCloud","confidence":0.75,"agree":false});
+        let ordinary =
+            sutra_route_response("sensitive question", &decision, shadow.clone(), false, 1);
+        assert_eq!(ordinary["tier"], "System0Sutra");
+        assert_eq!(ordinary["rationale"], decision.rationale);
+        let active = sutra_route_response("sensitive question", &decision, shadow, true, 1);
+        assert_eq!(active["tier"], "System2FrontierCloud");
+        assert!(
+            active["rationale"]
+                .as_str()
+                .unwrap()
+                .contains("System2FrontierCloud")
+        );
+        assert!(active["selected_glyph"].is_null());
+        assert!(active["bound_skeleton_id"].is_null());
+        assert_eq!(
+            active["tripartite"]["bound_skeleton_id"],
+            "tripartite-only-skeleton"
+        );
+
+        let dir = std::env::temp_dir().join(format!("wm-metrics-{}", Uuid::new_v4()));
+        std::fs::create_dir(&dir).unwrap();
+        for _ in 0..6 {
+            append_routing_metrics(&dir, &active, 512).unwrap();
+        }
+        for name in ["routing_metrics.jsonl", "routing_metrics.previous.jsonl"] {
+            let path = dir.join(name);
+            let text = std::fs::read_to_string(&path).unwrap();
+            assert!(text.len() <= 512);
+            assert!(!text.contains("sensitive"));
+            assert!(!text.contains("rationale"));
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                assert_eq!(
+                    std::fs::metadata(path).unwrap().permissions().mode() & 0o777,
+                    0o600
+                );
+            }
+        }
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }
 

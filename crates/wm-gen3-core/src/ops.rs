@@ -9138,6 +9138,37 @@ mod cache_boundary_tests {
         assert_eq!(cont_latest.record_id, 2);
         assert_eq!(cont_latest.session_id, "sess-beta");
 
+        // A larger horizon survives reopen without a newer other-project
+        // record shadowing earlier checkpoints from the requested session.
+        drop(substrate);
+        let substrate = Substrate::open(&path, None, default_view()).expect("reopen");
+        let horizon = substrate
+            .session_continuities(Some("sess-alpha"), 10)
+            .unwrap();
+        assert_eq!(horizon.len(), 2);
+        assert_eq!(
+            horizon
+                .iter()
+                .map(|view| view.record_id)
+                .collect::<Vec<_>>(),
+            vec![id2, id1]
+        );
+        assert!(horizon.iter().all(|view| view.session_id == "sess-alpha"));
+        assert_eq!(
+            substrate
+                .session_continuities(Some("sess-al"), 10)
+                .unwrap()
+                .len(),
+            0
+        );
+        assert_eq!(
+            substrate
+                .session_continuities(Some("sess-alpha"), 1)
+                .unwrap()
+                .len(),
+            1
+        );
+
         // 7. List sessions -> ["sess-alpha", "sess-beta"]
         let sessions = substrate.session_list().unwrap();
         assert_eq!(
