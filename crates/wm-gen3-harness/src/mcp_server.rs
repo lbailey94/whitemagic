@@ -1011,13 +1011,7 @@ pub fn serve_network(backend: McpBackend, bind: SocketAddr, transport: NetworkTr
         match listener.accept() {
             Ok((stream, _peer)) => {
                 if ctx.active.load(Ordering::SeqCst) >= MAX_CONNECTIONS {
-                    let mut stream = stream;
-                    let _ = write_response(
-                        &mut stream,
-                        "503 Service Unavailable",
-                        "application/json",
-                        br#"{"error":"connection limit reached"}"#,
-                    );
+                    reject_over_capacity(stream);
                     continue;
                 }
                 ctx.active.fetch_add(1, Ordering::SeqCst);
@@ -1323,6 +1317,20 @@ fn write_response(
     content_type: &str,
     body: &[u8],
 ) -> io::Result<()> {
+    write_response_frame(stream, status, content_type, body)?;
+    // Closing with unread request bytes can reset TCP and erase the client's
+    // response buffer (RFC 9112 section 9.6). Half-close first, then discard a
+    // bounded remainder. Never parse it, trust its framing, or dispatch it.
+    drain_http_close(stream, MAX_HTTP_CLOSE_DRAIN, HTTP_CLOSE_DRAIN_TIMEOUT);
+    Ok(())
+}
+
+fn write_response_frame(
+    stream: &mut TcpStream,
+    status: &str,
+    content_type: &str,
+    body: &[u8],
+) -> io::Result<()> {
     let head = format!(
         "HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
         body.len()
@@ -1330,12 +1338,20 @@ fn write_response(
     stream.write_all(head.as_bytes())?;
     stream.write_all(body)?;
     stream.flush()?;
-    // Closing with unread request bytes can reset TCP and erase the client's
-    // response buffer (RFC 9112 section 9.6). Half-close first, then discard a
-    // bounded remainder. Never parse it, trust its framing, or dispatch it.
-    stream.shutdown(Shutdown::Write)?;
-    drain_http_close(stream, MAX_HTTP_CLOSE_DRAIN, HTTP_CLOSE_DRAIN_TIMEOUT);
-    Ok(())
+    stream.shutdown(Shutdown::Write)
+}
+
+fn reject_over_capacity(mut stream: TcpStream) {
+    // This runs on the accept loop, outside the admitted worker budget. Never
+    // wait for writes or drain input here, and never spawn another worker.
+    if stream.set_nonblocking(true).is_ok() {
+        let _ = write_response_frame(
+            &mut stream,
+            "503 Service Unavailable",
+            "application/json",
+            br#"{"error":"connection limit reached"}"#,
+        );
+    }
 }
 
 fn drain_http_close(stream: &mut TcpStream, mut byte_budget: usize, timeout: Duration) {
@@ -1922,6 +1938,31 @@ mod tests {
     }
 
     #[test]
+    fn over_capacity_refusals_do_not_wait_for_open_write_halves() {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+        let mut clients = Vec::new();
+        let started = Instant::now();
+        for _ in 0..16 {
+            clients
+                .push(TcpStream::connect(listener.local_addr().expect("addr")).expect("connect"));
+            let (server, _) = listener.accept().expect("accept");
+            reject_over_capacity(server);
+        }
+        assert!(
+            started.elapsed() < Duration::from_secs(1),
+            "saturation responses must not wait on client write halves"
+        );
+        for mut client in clients {
+            client
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .expect("response timeout");
+            let mut response = String::new();
+            client.read_to_string(&mut response).expect("503 response");
+            assert!(response.starts_with("HTTP/1.1 503 Service Unavailable"));
+        }
+    }
+
+    #[test]
     fn http_close_drain_stops_at_its_byte_budget() {
         let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
         let mut client = TcpStream::connect(listener.local_addr().expect("addr")).expect("connect");
@@ -1937,28 +1978,43 @@ mod tests {
     fn http_close_drain_deadline_cannot_be_extended_by_trickle_input() {
         let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
         let mut client = TcpStream::connect(listener.local_addr().expect("addr")).expect("connect");
+        client.set_nodelay(true).expect("prompt trickle delivery");
         let (mut server, _) = listener.accept().expect("accept");
         server.shutdown(Shutdown::Write).expect("half-close");
         let (done, completed) = mpsc::channel();
-        let server_handle = std::thread::spawn(move || {
-            drain_http_close(&mut server, MAX_HTTP_CLOSE_DRAIN, Duration::from_millis(30));
-            done.send(()).expect("report close completion");
-        });
+        let (ready, primed) = mpsc::channel();
         let stop = Arc::new(AtomicBool::new(false));
+        let sent = Arc::new(AtomicUsize::new(0));
         let writer_stop = Arc::clone(&stop);
+        let writer_sent = Arc::clone(&sent);
         let writer = std::thread::spawn(move || {
+            client.write_all(b"x").expect("prime trickle input");
+            writer_sent.fetch_add(1, Ordering::SeqCst);
+            ready.send(()).expect("report ready writer");
             let deadline = Instant::now() + Duration::from_secs(2);
             while !writer_stop.load(Ordering::SeqCst) && Instant::now() < deadline {
                 if client.write_all(b"x").is_err() {
                     break;
                 }
+                writer_sent.fetch_add(1, Ordering::SeqCst);
                 std::thread::sleep(Duration::from_millis(5));
             }
+        });
+        primed
+            .recv_timeout(Duration::from_secs(1))
+            .expect("writer ready before drain begins");
+        let server_handle = std::thread::spawn(move || {
+            drain_http_close(&mut server, MAX_HTTP_CLOSE_DRAIN, HTTP_CLOSE_DRAIN_TIMEOUT);
+            done.send(()).expect("report close completion");
         });
         let result = completed.recv_timeout(Duration::from_secs(1));
         stop.store(true, Ordering::SeqCst);
         writer.join().expect("trickle client");
         server_handle.join().expect("draining server");
+        assert!(
+            sent.load(Ordering::SeqCst) >= 2,
+            "trickle input was not active"
+        );
         assert!(result.is_ok(), "trickle input extended the close deadline");
     }
 
