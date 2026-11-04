@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Make hybrid routing an explicit opt-in and report the selected router's tier, confidence and rationale without fabricating a Tripartite glyph.
 - Stop automatically logging raw inquiry/context snippets. Optional content-free metrics use bounded local files with restrictive permissions; this is not a multiprocess retention protocol.
 - Exercise durable multihorizon ordering and exact session isolation after reopening the store.
+- Half-close one-shot HTTP responses before bounded opaque input discard, avoiding premature TCP resets on early refusals without trusting malformed request framing or dispatching rejected input.
 
 ### Release scope
 - Experimental Gen3 preview. Stable Gen2 remains a separate installation choice at 9.3.4; this patch does not promote experimental routing or replace 10.7.0 assets.

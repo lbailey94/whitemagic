@@ -11,7 +11,7 @@
 
 use std::collections::HashMap;
 use std::io::{self, Read, Write};
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
@@ -54,6 +54,8 @@ const HTTP_SINGLETON_HEADERS: &[&str] = &[
 const MAX_CONNECTIONS: usize = 64;
 const SSE_KEEPALIVE: Duration = Duration::from_secs(15);
 const IO_TIMEOUT: Duration = Duration::from_secs(30);
+const HTTP_CLOSE_DRAIN_TIMEOUT: Duration = Duration::from_millis(100);
+const MAX_HTTP_CLOSE_DRAIN: usize = MAX_HTTP_HEAD + MAX_HTTP_BODY;
 
 /// Network transports served over TCP.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1327,7 +1329,33 @@ fn write_response(
     );
     stream.write_all(head.as_bytes())?;
     stream.write_all(body)?;
-    stream.flush()
+    stream.flush()?;
+    // Closing with unread request bytes can reset TCP and erase the client's
+    // response buffer (RFC 9112 section 9.6). Half-close first, then discard a
+    // bounded remainder. Never parse it, trust its framing, or dispatch it.
+    stream.shutdown(Shutdown::Write)?;
+    drain_http_close(stream, MAX_HTTP_CLOSE_DRAIN, HTTP_CLOSE_DRAIN_TIMEOUT);
+    Ok(())
+}
+
+fn drain_http_close(stream: &mut TcpStream, mut byte_budget: usize, timeout: Duration) {
+    let deadline = Instant::now() + timeout;
+    let mut buffer = [0u8; 4096];
+    while byte_budget > 0 {
+        let Some(time_left) = deadline.checked_duration_since(Instant::now()) else {
+            break;
+        };
+        if time_left.is_zero() || stream.set_read_timeout(Some(time_left)).is_err() {
+            break;
+        }
+        let read_len = byte_budget.min(buffer.len());
+        match stream.read(&mut buffer[..read_len]) {
+            Ok(0) => break,
+            Ok(bytes) => byte_budget -= bytes,
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+            Err(_) => break,
+        }
+    }
 }
 
 fn is_allowed_local_origin(origin: &str) -> bool {
@@ -1891,6 +1919,47 @@ mod tests {
                 .expect("store epoch"),
             McpBackend::Legacy { .. } => unreachable!("test requires Gen3 store"),
         }
+    }
+
+    #[test]
+    fn http_close_drain_stops_at_its_byte_budget() {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+        let mut client = TcpStream::connect(listener.local_addr().expect("addr")).expect("connect");
+        let (mut server, _) = listener.accept().expect("accept");
+        client.write_all(b"abcdef").expect("write remainder");
+        drain_http_close(&mut server, 3, Duration::from_secs(1));
+        let mut remainder = [0u8; 3];
+        server.read_exact(&mut remainder).expect("undrained bytes");
+        assert_eq!(&remainder, b"def");
+    }
+
+    #[test]
+    fn http_close_drain_deadline_cannot_be_extended_by_trickle_input() {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+        let mut client = TcpStream::connect(listener.local_addr().expect("addr")).expect("connect");
+        let (mut server, _) = listener.accept().expect("accept");
+        server.shutdown(Shutdown::Write).expect("half-close");
+        let (done, completed) = mpsc::channel();
+        let server_handle = std::thread::spawn(move || {
+            drain_http_close(&mut server, MAX_HTTP_CLOSE_DRAIN, Duration::from_millis(30));
+            done.send(()).expect("report close completion");
+        });
+        let stop = Arc::new(AtomicBool::new(false));
+        let writer_stop = Arc::clone(&stop);
+        let writer = std::thread::spawn(move || {
+            let deadline = Instant::now() + Duration::from_secs(2);
+            while !writer_stop.load(Ordering::SeqCst) && Instant::now() < deadline {
+                if client.write_all(b"x").is_err() {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        });
+        let result = completed.recv_timeout(Duration::from_secs(1));
+        stop.store(true, Ordering::SeqCst);
+        writer.join().expect("trickle client");
+        server_handle.join().expect("draining server");
+        assert!(result.is_ok(), "trickle input extended the close deadline");
     }
 
     #[test]
