@@ -7588,7 +7588,11 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                 for (idx, view) in views.iter().enumerate() {
                     println!("==================================================");
                     if views.len() > 1 {
-                        println!("     WhiteMagic Session Continuity [{}/{}]        ", idx + 1, views.len());
+                        println!(
+                            "     WhiteMagic Session Continuity [{}/{}]        ",
+                            idx + 1,
+                            views.len()
+                        );
                     } else {
                         println!("         WhiteMagic Session Continuity            ");
                     }
@@ -7634,48 +7638,48 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                     }
                 }
 
-                    let insights_path = store_path.join("dream_insights.jsonl");
-                    if insights_path.exists() {
-                        if let Ok(file) = std::fs::File::open(&insights_path) {
-                            use std::io::{BufRead, BufReader};
-                            let reader = BufReader::new(file);
-                            let mut insights: Vec<wm_gen3_core::dream::DreamInsight> = Vec::new();
-                            // flatten() keeps scanning after an unreadable line; map_while would drop the rest.
-                            #[allow(clippy::lines_filter_map_ok)]
-                            for line in reader.lines().flatten() {
-                                let trimmed = line.trim();
-                                if !trimmed.is_empty() {
-                                    if let Ok(ins) = serde_json::from_str::<
-                                        wm_gen3_core::dream::DreamInsight,
-                                    >(trimmed)
-                                    {
-                                        insights.push(ins);
-                                    }
-                                }
-                            }
-                            if !insights.is_empty() {
-                                println!("\nActive Dream Insights (Consolidated Offline):");
-                                let start = insights.len().saturating_sub(3);
-                                for ins in &insights[start..] {
-                                    println!(
-                                        "  - ✦ [{}] {} (Utility: {:.3})",
-                                        ins.id, ins.relation_type, ins.utility_score
-                                    );
-                                    println!(
-                                        "      Bridge: \"{}\" (#{}) ⇄ \"{}\" (#{})",
-                                        ins.source_concept,
-                                        ins.source_id,
-                                        ins.target_concept,
-                                        ins.target_id
-                                    );
-                                    println!("      Action: {}", ins.actionable_recommendation);
+                let insights_path = store_path.join("dream_insights.jsonl");
+                if insights_path.exists() {
+                    if let Ok(file) = std::fs::File::open(&insights_path) {
+                        use std::io::{BufRead, BufReader};
+                        let reader = BufReader::new(file);
+                        let mut insights: Vec<wm_gen3_core::dream::DreamInsight> = Vec::new();
+                        // flatten() keeps scanning after an unreadable line; map_while would drop the rest.
+                        #[allow(clippy::lines_filter_map_ok)]
+                        for line in reader.lines().flatten() {
+                            let trimmed = line.trim();
+                            if !trimmed.is_empty() {
+                                if let Ok(ins) = serde_json::from_str::<
+                                    wm_gen3_core::dream::DreamInsight,
+                                >(trimmed)
+                                {
+                                    insights.push(ins);
                                 }
                             }
                         }
+                        if !insights.is_empty() {
+                            println!("\nActive Dream Insights (Consolidated Offline):");
+                            let start = insights.len().saturating_sub(3);
+                            for ins in &insights[start..] {
+                                println!(
+                                    "  - ✦ [{}] {} (Utility: {:.3})",
+                                    ins.id, ins.relation_type, ins.utility_score
+                                );
+                                println!(
+                                    "      Bridge: \"{}\" (#{}) ⇄ \"{}\" (#{})",
+                                    ins.source_concept,
+                                    ins.source_id,
+                                    ins.target_concept,
+                                    ins.target_id
+                                );
+                                println!("      Action: {}", ins.actionable_recommendation);
+                            }
+                        }
                     }
-                    println!("==================================================");
                 }
+                println!("==================================================");
             }
+        }
         SessionCommands::List => {
             let substrate =
                 match Substrate::open_readonly(store_path, Some(&journal_path), default_view()) {
