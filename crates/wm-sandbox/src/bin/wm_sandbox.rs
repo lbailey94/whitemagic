@@ -1,6 +1,73 @@
+use serde::{Deserialize, Deserializer};
 use std::env;
 use std::path::PathBuf;
 use wm_sandbox::{SandboxBuilder, probe_sandbox_status, run_self_test};
+
+const ENVELOPE_SCHEMA: &str = "wm-sandbox-exec-v1";
+
+fn default_schema() -> String {
+    ENVELOPE_SCHEMA.to_string()
+}
+
+fn present_string<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<String>, D::Error> {
+    String::deserialize(deserializer).map(Some)
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExecutionEnvelope {
+    #[serde(default = "default_schema")]
+    schema: String,
+    program: String,
+    #[serde(default)]
+    args: Vec<String>,
+    #[serde(default)]
+    net: bool,
+    #[serde(default, deserialize_with = "present_string")]
+    workspace: Option<String>,
+    #[serde(default)]
+    rw: bool,
+    #[serde(default)]
+    egress: Vec<String>,
+}
+
+impl ExecutionEnvelope {
+    fn parse(json: &str) -> Result<Self, String> {
+        let envelope: Self = serde_json::from_str(json).map_err(|error| error.to_string())?;
+        if envelope.schema != ENVELOPE_SCHEMA {
+            return Err("unsupported envelope schema".to_string());
+        }
+        if envelope.program.is_empty() || envelope.program.contains('\0') {
+            return Err("program must be nonempty and contain no NUL".to_string());
+        }
+        if envelope.args.iter().any(|arg| arg.contains('\0')) {
+            return Err("args must contain no NUL".to_string());
+        }
+        if let Some(workspace) = &envelope.workspace {
+            if workspace.is_empty() || workspace.contains('\0') {
+                return Err("workspace must be nonempty and contain no NUL".to_string());
+            }
+        } else if envelope.rw {
+            return Err("rw requires a workspace".to_string());
+        }
+        if !envelope.egress.is_empty() {
+            return Err("destination egress allowlists are unsupported by this runner".to_string());
+        }
+        Ok(envelope)
+    }
+
+    fn configure(self, builder: &mut SandboxBuilder) -> (String, Vec<String>) {
+        builder.allow_net = self.net;
+        if let Some(workspace) = self.workspace {
+            if self.rw {
+                builder.rw_paths.push(workspace.into());
+            } else {
+                builder.ro_paths.push(workspace.into());
+            }
+        }
+        (self.program, self.args)
+    }
+}
 
 fn print_help() {
     println!(
@@ -13,7 +80,8 @@ USAGE:
     wm-sandbox --test
 
 OPTIONS:
-    --exec '<json>'     Execute JSON envelope (schema: wm-sandbox-exec-v1)
+    --exec '<json>'     Execute a strict wm-sandbox-exec-v1 JSON envelope
+                        Nonempty destination egress allowlists are unsupported
     --ro <paths>        Colon-delimited paths granted Read-Only access
                         Default: /usr:/lib:/lib64:/bin:/sbin:/etc:/proc:/dev/urandom:/dev/null:/dev/zero
     --rw <paths>        Colon-delimited paths granted Read-Write access
@@ -65,48 +133,11 @@ fn main() {
             "--exec" => {
                 if i + 1 < args.len() {
                     let envelope_str = &args[i + 1];
-                    let envelope: serde_json::Value = serde_json::from_str(envelope_str)
-                        .unwrap_or_else(|e| {
-                            eprintln!("[wm-sandbox] ERROR: invalid JSON envelope: {e}");
-                            std::process::exit(64);
-                        });
-                    let program = envelope
-                        .get("program")
-                        .and_then(serde_json::Value::as_str)
-                        .filter(|p| !p.is_empty())
-                        .unwrap_or_else(|| {
-                            eprintln!("[wm-sandbox] ERROR: envelope missing 'program'");
-                            std::process::exit(64);
-                        })
-                        .to_string();
-                    let exec_args: Vec<String> = envelope
-                        .get("args")
-                        .and_then(serde_json::Value::as_array)
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.as_str().map(String::from))
-                                .collect()
-                        })
-                        .unwrap_or_default();
-                    let net = envelope
-                        .get("net")
-                        .and_then(serde_json::Value::as_bool)
-                        .unwrap_or(false);
-                    builder.allow_net = net;
-                    if let Some(ws) = envelope
-                        .get("workspace")
-                        .and_then(serde_json::Value::as_str)
-                    {
-                        let is_rw = envelope
-                            .get("rw")
-                            .and_then(serde_json::Value::as_bool)
-                            .unwrap_or(false);
-                        if is_rw {
-                            builder.rw_paths.push(PathBuf::from(ws));
-                        } else {
-                            builder.ro_paths.push(PathBuf::from(ws));
-                        }
-                    }
+                    let envelope = ExecutionEnvelope::parse(envelope_str).unwrap_or_else(|e| {
+                        eprintln!("[wm-sandbox] ERROR: invalid JSON envelope: {e}");
+                        std::process::exit(64);
+                    });
+                    let (program, exec_args) = envelope.configure(&mut builder);
                     builder.execute_sandboxed(&program, &exec_args);
                 } else {
                     eprintln!("[wm-sandbox] ERROR: --exec requires a JSON envelope argument");
@@ -177,4 +208,49 @@ fn main() {
     let target_args = &args[cmd_idx + 1..];
 
     builder.execute_sandboxed(target_cmd, target_args);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn envelope_preserves_literal_arguments_and_applies_explicit_builder_flags() {
+        for net in [false, true] {
+            for rw in [false, true] {
+                let json = serde_json::json!({
+                    "schema": ENVELOPE_SCHEMA,
+                    "program": "/usr/bin/printf",
+                    "args": ["", "a b", "--net", "雪", "$HOME"],
+                    "workspace": "/tmp/workspace with spaces",
+                    "rw": rw,
+                    "net": net,
+                    "egress": [],
+                });
+                let mut builder = SandboxBuilder::new();
+                let (program, args) = ExecutionEnvelope::parse(&json.to_string())
+                    .unwrap()
+                    .configure(&mut builder);
+                assert_eq!(program, "/usr/bin/printf");
+                assert_eq!(args, ["", "a b", "--net", "雪", "$HOME"]);
+                assert_eq!(builder.allow_net, net);
+                let workspace = PathBuf::from("/tmp/workspace with spaces");
+                assert_eq!(builder.rw_paths.contains(&workspace), rw);
+                assert_eq!(builder.ro_paths.contains(&workspace), !rw);
+                // Envelope workspace access adds to the runner's default paths.
+                assert!(builder.rw_paths.contains(&PathBuf::from("/tmp")));
+            }
+        }
+    }
+
+    #[test]
+    fn omitted_optional_fields_keep_existing_defaults() {
+        let mut builder = SandboxBuilder::new().allow_net(true);
+        let (program, args) = ExecutionEnvelope::parse(r#"{"program":"echo"}"#)
+            .unwrap()
+            .configure(&mut builder);
+        assert_eq!(program, "echo");
+        assert!(args.is_empty());
+        assert!(!builder.allow_net);
+    }
 }

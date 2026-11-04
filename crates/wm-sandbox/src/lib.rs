@@ -499,7 +499,7 @@ pub fn run_self_test() -> bool {
                 let sock = libc::socket(libc::AF_INET, libc::SOCK_STREAM, 0);
                 if sock >= 0 {
                     let mut addr: libc::sockaddr_in = std::mem::zeroed();
-                    addr.sin_family = libc::AF_INET as u16;
+                    addr.sin_family = libc::AF_INET as libc::sa_family_t;
                     addr.sin_port = 80u16.to_be();
                     addr.sin_addr.s_addr = 0x01010101; // 1.1.1.1
                     let res = libc::connect(

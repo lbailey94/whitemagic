@@ -35,8 +35,8 @@ a receipt signature does *not* establish. Security posture in
 
 | Verification / Benchmark Surface | Scope & Artifact | Verified Outcome |
 | :--- | :--- | :--- |
-| **IETF SCITT Standards Profile** | [`draft-bailey-scitt-agent-session-receipt-00`](https://datatracker.ietf.org/doc/draft-bailey-scitt-agent-session-receipt/) | Published active Internet-Draft on the IETF Datatracker |
-| **W3C Agent Memory Integrity (`agmi`)** | [`agent-memory-integrity#10`](https://github.com/tech4biz-yasha/agent-memory-integrity/pull/10) (`vectors/26*`) | **10 / 10** storage-level tampering & erasure-resurrection attacks rejected on read |
+| **Individual SCITT-related Internet-Draft** | [`draft-bailey-scitt-agent-session-receipt-00`](https://datatracker.ietf.org/doc/draft-bailey-scitt-agent-session-receipt/) | Linked individual draft; this is not a claim of working-group adoption or an IETF standard |
+| **Agent Memory Integrity (`agmi`) contribution** | [`agent-memory-integrity#10`](https://github.com/tech4biz-yasha/agent-memory-integrity/pull/10) (`vectors/26*`) | Local adapter/fixture controls, contribution under upstream review. Plaintext+anchor rows and the no-KEK ciphertext audit have different detection scopes; an audit report is not a verified plaintext read refusal. |
 | **v1.2 assisted development replay** | 105 reused/authored items; expected states enter delivery, and failed or incomplete model outputs receive fixture-derived replacements | Retained debugging result only. Its reported 105/105 is not a clean answer-quality or unseen-holdout result; citation membership does not establish factual support. |
 | **Temporal As-Of & Knowledge-Cutoff Suite** | 256 queries across 32 project streams (`temporal_assert` / `temporal_query`) | **256 / 256 (`100.0%`)** reference parity in **206.75 ms** (`0.81 ms/query` vs `192/256` naive latest-write control) |
 | **Valkyrie-2 Tricameral CPU Organ** | 512-D Sutra Canon + 653 real 384-D X bookmarks (`29.16 KB` model) | **100.0%** Sutra / **98.8%** Choice / **91.1%** 384-D accuracy at **~10 µs (`10,310 ns`)** mean CPU latency |

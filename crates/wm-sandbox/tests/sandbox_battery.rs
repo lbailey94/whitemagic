@@ -1,3 +1,5 @@
+#![cfg(target_os = "linux")]
+
 use std::fs;
 use std::process::Command;
 use wm_sandbox::{SandboxBuilder, probe_sandbox_status, run_self_test};
