@@ -5,6 +5,19 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.7.1] — 2026-11-04
+
+### Fixed
+- Reject duplicate, unknown, mistyped, NUL-containing and unsupported execution authority fields before spawning a workload, while retaining valid literal argv bytes.
+- Use the platform-native socket-family type in the sandbox self-test and run native macOS workspace CI on the supported ARM runner.
+- Make hybrid routing an explicit opt-in and report the selected router's tier, confidence and rationale without fabricating a Tripartite glyph.
+- Stop automatically logging raw inquiry/context snippets. Optional content-free metrics use bounded local files with restrictive permissions; this is not a multiprocess retention protocol.
+- Exercise durable multihorizon ordering and exact session isolation after reopening the store.
+
+### Release scope
+- Experimental Gen3 preview. Stable Gen2 remains a separate installation choice at 9.3.4; this patch does not promote experimental routing or replace 10.7.0 assets.
+- Source fixtures and CI are implementation evidence. This patch adds no new frozen answer-quality benchmark, independent operator adoption, complete workload containment, payment-finality or SCITT-registration claim.
+
 ## [10.7.0] — 2026-11-03
 
 ### Added
