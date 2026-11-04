@@ -5,6 +5,13 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Fleet Consolidation & Institutional Standard Alignment** — Streamlined public documentation and unified core specifications across WhiteMagic, Causal Provenance Receipts (CPR 0.5.4), and Mandala OS kernel governance.
+- **Landlock Kernel Confinement & Zero-Egress Sandboxing** — Hardened execution boundaries in `wm-sandbox` with POSIX descriptor-relative I/O and strict filesystem isolation.
+- **Strict RFC 3339 Calendar Bounds & Wire Verification** — Integrated CPR 0.5.4 calendar validation and tamper-resistant attestation checks.
+
 ## [10.6.2] — 2026-11-02
 
 ### Added
