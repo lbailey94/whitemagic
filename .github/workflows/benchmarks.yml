@@ -101,6 +101,10 @@ jobs:
         uses: softprops/action-gh-release@5113cdc90fd4d541c801c55356214017bf5ae34b # v3
         with:
           files: benchmark-release-artifacts/benchmark_results.txt
+          # This attachment can arrive before the owning Release workflow.
+          # Match its preview classification, but never promote a selector.
+          prerelease: ${{ contains(github.ref_name, '-') || startsWith(github.ref_name, 'v10.') }}
+          make_latest: "false"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
