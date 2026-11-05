@@ -106,7 +106,7 @@ class SanghaTruthGuardTests(unittest.TestCase):
         self.assertIn('WHITEMAGIC_SANGHA_SCRIPT', source)
         self.assertIn('exec "$(dirname "$0")/wm" sangha "$@"', installer)
         self.assertNotIn("/home/lucas/SharedWorkspace/sangha.py", source)
-        self.assertNotIn("/home/lucas/Desktop/front burner/WHITEMAGIC/worktrees/continuity-receipt", source)
+        self.assertNotIn("/home/lucas/Desktop/front burner/repos/WHITEMAGIC/worktrees/continuity-receipt", source)
         self.assertIn("WHITEMAGIC_CPR_ROOT", source)
 
 

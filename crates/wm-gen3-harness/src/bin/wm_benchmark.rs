@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let model_dir = PathBuf::from("/home/lucas/.local/share/whitemagic/system05/potion-base-32M");
     let catalogs_candidates = [
-        PathBuf::from("/home/lucas/Desktop/front burner/WHITEMAGIC/WMv10/catalogs"),
+        PathBuf::from("/home/lucas/Desktop/front burner/repos/WHITEMAGIC/WMv10/catalogs"),
         PathBuf::from("/home/lucas/Desktop/WHITEMAGIC/WMv10/catalogs"),
         PathBuf::from("catalogs"),
     ];

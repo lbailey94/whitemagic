@@ -384,7 +384,7 @@ fi
 
 # ── site sync (facts, gates, push master) ────────────────────────────────
 banner "SITE SYNC"
-SITE_DIR="${WM_SITE_DIR:-$HOME/Desktop/front burner/WHITEMAGIC/whitemagic-site}"
+SITE_DIR="${WM_SITE_DIR:-$HOME/Desktop/front burner/repos/WHITEMAGIC/whitemagic-site}"
 if $SKIP_SITE; then
   echo "site sync skipped (--skip-site); defer until the rendered site preview is reviewed"
 elif [ "$RELEASE_FAMILY" = "gen3" ]; then
