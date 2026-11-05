@@ -14,12 +14,11 @@
 # After install, the `wm` binary is at ~/.local/bin/wm.
 # Add ~/.local/bin to your PATH if it isn't already.
 #
-# Install gate: Linux (x86-64, aarch64), macOS (arm64, x86_64), and Windows
-# x86_64 are install-gated — every gated path is certified on the tagged
-# release by CI (install.sh on Linux/macOS, install.ps1 on Windows), each
-# checksum-verified before install. This POSIX script refuses Windows rather
-# than guessing: use scripts/install.ps1 there (the wm-windows-x86_64.exe
-# asset ships with a .sha256 sidecar for manual installs).
+# Gen3's active install matrix is Linux x86-64/aarch64 and macOS arm64.
+# Windows x86_64 and Intel macOS use the separate stable Gen2 release.
+# CI certifies the active paths against each selected release's published
+# artifacts, checksum-verified before install. This POSIX script refuses
+# Windows: use scripts/install.ps1 there to select a Windows-bearing release.
 # On Linux the fully static (musl) build is preferred when the target
 # release provides it; the dynamically linked glibc build requires glibc 2.39+.
 # Linux aarch64 is selected automatically when the release ships it; older
@@ -111,10 +110,9 @@ fi
 
 echo "Installing WhiteMagic ${VERSION} for ${TARGET}..."
 
-# Map target to artifact name. The gate matrix (one story across README,
-# QUICKSTART, SECURITY, grimoire): Linux x86-64 / aarch64 and macOS
-# arm64 / x86_64 are install-gated; Windows is install-gated through
-# scripts/install.ps1 and refused here rather than pointed at a POSIX path.
+# Map target to artifact name. Availability belongs to the selected release:
+# Gen3 publishes Linux x86-64/aarch64 and macOS arm64; stable Gen2 also provides
+# Intel macOS and Windows. Windows uses scripts/install.ps1, not this POSIX path.
 # On Linux the static musl build wins when present; otherwise
 # fall back to the glibc build after verifying the local glibc meets its
 # minimum.

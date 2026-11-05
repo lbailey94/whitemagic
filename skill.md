@@ -43,10 +43,10 @@ Claude Desktop, Cursor, Codex, Gemini CLI, opencode — any MCP client:
 }
 ```
 
-`cyberbrain` is the default profile (12 lean tools); `--profile full` exposes
-the 40-route curated catalog plus any feature-gated routes the build registered
-(`wm contract --json` reports the exact set). Explicit routes are the dependable
-surface.
+`cyberbrain` is the default lean MCP profile; `--profile full` exposes the
+extended catalog plus any feature-gated routes the build registered. The
+running server's `tools/list` and `wm contract --json` report their respective
+surfaces. Explicit routes are the dependable surface.
 
 ## First useful actions
 

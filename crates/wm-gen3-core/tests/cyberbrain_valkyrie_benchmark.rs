@@ -5,6 +5,11 @@
 //! Layer 0.5: Semantic Router (Model2Vec/SRHT 64-D + Top-2 Gana + Conformal confidence vs. keyword regex)
 //! Layer 1: Epistemic Recall (Catuṣkoṭi K3->K1 temporal supersession & conflict resolution)
 //! Layer 1.5: Counterfactual Navigator (Tsao 15 Hz Working-Memory Ring fallback & VictorTaelinSuperoptimizer)
+//!
+//! Development protocol v2: semantic intake outcomes are correctness gates;
+//! directory file lengths and timings are host-dependent observations only.
+//! See benchmarks/CYBERBRAIN_DEVELOPMENT_PROTOCOL.md. This is not a frozen
+//! answer-quality holdout or independent operator qualification.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -72,7 +77,9 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
         "\n========================================================================================"
     );
     println!("  WHITE MAGIC GEN3: CYBERBRAIN VALKYRIE-2 SPECIALIZED FLEET BENCHMARK");
-    println!("  Evaluating 4-Layer Before (Baseline Heuristic) vs. After (Valkyrie-2) Deltas");
+    println!(
+        "  Development protocol v2: semantic controls plus report-only byte/time observations"
+    );
     println!(
         "  Mode: {}",
         if is_debug {
@@ -147,8 +154,10 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
             source: format!("session_{:03}", i % 10),
             kind: ImportKind::Reported,
         };
-        let _ = base_sub.remember_batch(&[item_base]);
-        base_ingested += 1;
+        for result in base_sub.remember_batch(&[item_base]) {
+            result.expect("baseline fixture insert must succeed");
+            base_ingested += 1;
+        }
     }
     let base_intake_time = t_base_start.elapsed();
 
@@ -222,7 +231,21 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     });
     let valk_intake_time = t_valk_start.elapsed();
     let valk_ingested = gated_results.iter().filter(|r| r.is_ok()).count();
-    let _ = gated_dropped;
+    assert_eq!(base_ingested, num_raw, "all baseline inserts must succeed");
+    assert!(
+        gated_results.iter().all(Result::is_ok),
+        "retained fixture inserts must not contain errors: {gated_results:?}"
+    );
+    assert_eq!(
+        gated_dropped,
+        noise_filtered + antibodies_blocked,
+        "dropped inputs must match the sentinel's classification"
+    );
+    assert_eq!(
+        valk_ingested + gated_dropped,
+        num_raw,
+        "every fixture input must be retained or deliberately dropped"
+    );
 
     let base_bytes = dir_size(base_temp.path());
     let valk_bytes = dir_size(valk_temp.path());
@@ -246,10 +269,9 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
         noise_filtered, pii_redactions, antibodies_blocked
     );
     println!(
-        "  -> LMDB Storage Savings: {:.1}% footprint reduction\n",
+        "  -> Directory file-length reduction: {:.1}% (report-only; raw sizes above)\n",
         storage_saved_pct
     );
-    assert!(storage_saved_pct > 5.0);
     assert!(antibodies_blocked > 0);
     assert!(pii_redactions > 0);
 
@@ -741,15 +763,15 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
         nav_report.original_glyph_count
     );
     println!(
-        "  Superoptimized Glyphs:       {} glyphs ({:.1}% contraction, {:.2}x speedup)",
+        "  Superoptimized Glyphs:       {} glyphs ({:.1}% contraction, {:.2}x reported glyph ratio)",
         nav_report.reduced_glyph_count, glyph_reduction_pct, nav_report.speedup_factor
     );
     println!(
         "  Counterfactual Fallback:     {} (Latency: {} ns)\n",
         if nav_report.used_counterfactual_fallback {
-            "SAFE PATH RESTORED"
+            "COUNTERFACTUAL SELECTED"
         } else {
-            "PRIMARY EXECUTED"
+            "PRIMARY SELECTED"
         },
         nav_report.switch_latency_ns
     );
@@ -779,21 +801,24 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     );
     println!(
         "  {:<32} | {:<22} | {:<24} | {:<12}",
-        "L0 Intake Storage Footprint",
+        "L0 Directory File Lengths",
         format!("{:.1} KB", base_bytes as f64 / 1024.0),
         format!("{:.1} KB", valk_bytes as f64 / 1024.0),
-        format!("-{:.1}% noise", storage_saved_pct)
+        format!("{:.1}% observed reduction", storage_saved_pct)
     );
     println!(
         "  {:<32} | {:<22} | {:<24} | {:<12}",
-        "L0 Citadel Antibody Immunity", "0% blocked (blind)", "100% blocked (<5 ns)", "Protected"
+        "L0 Antibody Fixture Verdicts",
+        "not classified",
+        format!("{} blocked", antibodies_blocked),
+        "Counted verdicts"
     );
     println!(
         "  {:<32} | {:<22} | {:<24} | {:<12}",
         "L0 PII / Secret Redaction",
-        "0 scrubbed",
+        "not classified",
         format!("{} tokens redacted", pii_redactions),
-        "Zero-Egress"
+        "Fixture verdicts"
     );
     println!(
         "  {:<32} | {:<22} | {:<24} | {:<12}",
@@ -804,10 +829,10 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     );
     println!(
         "  {:<32} | {:<22} | {:<24} | {:<12}",
-        "L0.5 Unnecessary Cloud Calls",
+        "L0.5 Cloud-Tier Routing",
         format!("{}/{}", base_cloud_escalations, held_out.len()),
         format!("{}/{}", valk_cloud_escalations, held_out.len()),
-        "Cost Reduced"
+        "Simulation only"
     );
     println!(
         "  {:<32} | {:<22} | {:<24} | {:<12}",
@@ -826,26 +851,26 @@ fn test_cyberbrain_valkyrie_fleet_benchmark_suite() {
     println!(
         "  {:<32} | {:<22} | {:<24} | {:<12}",
         "L1.5 Macro Superoptimization",
-        "8 glyphs unreduced",
+        format!("{} glyphs", nav_report.original_glyph_count),
         format!(
             "{} glyphs (-{:.0}%)",
             nav_report.reduced_glyph_count, glyph_reduction_pct
         ),
-        format!("{:.1}x Speedup", nav_report.speedup_factor)
+        format!("{:.1}x reported glyph ratio", nav_report.speedup_factor)
     );
     println!(
         "  {:<32} | {:<22} | {:<24} | {:<12}",
         "L1.5 Counterfactual Fallback",
-        "None (Fails closed)",
-        format!("Safe in {} ns", nav_report.switch_latency_ns),
+        "not selected",
+        format!("Selected in {} ns", nav_report.switch_latency_ns),
         format!("{:.1} us", nav_report.switch_latency_ns as f64 / 1000.0)
     );
     println!(
         "  {:<32} | {:<22} | {:<24} | {:<12}",
-        "Total Fleet RAM Footprint",
-        "N/A (Multi-GB cloud)",
+        "Reported Fleet Struct Footprint",
+        "not measured",
         format!("{:.1} KB total", fleet_footprint_kb),
-        "100% L2 Cache"
+        "Not process RSS"
     );
     println!(
         "========================================================================================\n"

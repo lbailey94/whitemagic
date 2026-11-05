@@ -4,7 +4,7 @@
   "display_name": "WhiteMagic",
   "version": "10.7.1",
   "description": "Persistent local memory and session continuity for AI coding agents. Runs entirely on your machine over MCP.",
-  "long_description": "WhiteMagic gives an AI coding agent durable project memory over MCP: record important context, find it after restart, and carry useful decisions into the next session \u2014 without sending your memory store to any hosted service. The bundled launcher fetches the checksum-verified static `wm` binary from the GitHub release and runs it over stdio. No account; no telemetry by default.",
+  "long_description": "WhiteMagic gives an AI coding agent durable project memory over MCP: record important context, find it after restart, and carry useful decisions into the next session \u2014 without sending your memory store to any hosted service. The bundled launcher fetches the checksum-verified `wm` binary from the GitHub release and runs it over stdio. This Gen3 preview supports Linux x86-64/arm64 with glibc 2.39+ and macOS arm64; Windows and Intel macOS use the separate stable Gen2 line. No account; no telemetry by default.",
   "author": {
     "name": "Lucas Bailey",
     "email": "lbailey94@protonmail.com",
@@ -24,19 +24,18 @@
       "command": "node",
       "args": [
         "${__dirname}/bin/cli.mjs",
-        "serve"
-      ],
-      "env": {
-        "WM_TOOL_PROFILE": "${user_config.profile}"
-      }
+        "serve",
+        "--profile",
+        "${user_config.profile}"
+      ]
     }
   },
   "user_config": {
     "profile": {
       "type": "string",
       "title": "Tool profile",
-      "description": "Tool surface profile: curated (default, product surface), minimal (recall-only), or full (research archive).",
-      "default": "curated",
+      "description": "Tool surface profile: cyberbrain (default, lean agent surface) or full (extended catalog). The running server's tools/list reports the exact tools available.",
+      "default": "cyberbrain",
       "required": false
     }
   }

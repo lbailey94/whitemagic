@@ -5,7 +5,7 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [10.7.1] — 2026-11-04
+## [10.7.1] — 2026-11-05 (UTC)
 
 ### Fixed
 - Reject duplicate, unknown, mistyped, NUL-containing and unsupported execution authority fields before spawning a workload, while retaining valid literal argv bytes.
@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stop automatically logging raw inquiry/context snippets. Optional content-free metrics use bounded local files with restrictive permissions; this is not a multiprocess retention protocol.
 - Exercise durable multihorizon ordering and exact session isolation after reopening the store.
 - Half-close one-shot HTTP responses before bounded opaque input discard, avoiding premature TCP resets on early refusals without trusting malformed request framing or dispatching rejected input.
+- Make supported macOS ARM CI mandatory, and replace a development fixture's platform-dependent LMDB directory-size floor with successful-intake and classification-accounting invariants. Directory byte/time observations remain report-only; retained failed measurements are not rescored.
+- Package all MCPB launcher dependencies and forward the selected profile in argv. Keep the historical static Smithery catalog out of generated bundles until its exact runtime/profile metadata is qualified.
 
 ### Release scope
 - Experimental Gen3 preview. Stable Gen2 remains a separate installation choice at 9.3.4; this patch does not promote experimental routing or replace 10.7.0 assets.

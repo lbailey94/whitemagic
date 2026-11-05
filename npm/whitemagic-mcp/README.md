@@ -1,7 +1,7 @@
 # whitemagic-mcp
 
 Persistent memory and session continuity for AI coding agents, over MCP.
-[WhiteMagic](https://whitemagic.dev) is one static Rust binary — local-first,
+[WhiteMagic](https://whitemagic.dev) is one Rust binary — local-first,
 no telemetry by default, MIT — and every handoff can be signed as a
 verifiable [continuity receipt](https://www.whitemagic.dev/trust).
 
@@ -21,7 +21,7 @@ checksum-verifies the official `wm` binary on first run. Use the `@next`
 dist-tag: npm `@latest` still resolves the stable v9 line.
 
 ```bash
-npx -y whitemagic-mcp@next serve --profile curated
+npx -y whitemagic-mcp@next serve --profile cyberbrain
 ```
 
 MCP client config:
@@ -31,7 +31,7 @@ MCP client config:
   "mcpServers": {
     "whitemagic": {
       "command": "npx",
-      "args": ["-y", "whitemagic-mcp@next", "serve", "--profile", "curated"]
+      "args": ["-y", "whitemagic-mcp@next", "serve", "--profile", "cyberbrain"]
     }
   }
 }
@@ -72,12 +72,24 @@ local, full-write path.
 
 ## Platforms
 
-Linux x86-64 (static musl), Linux arm64 (static musl), macOS arm64 + x64,
-and Windows x64 are install-gated (CI certifies each installer against the
-published release). Downloads prefer the compressed `.gz`
+The Gen3 preview publishes Linux x86-64 and arm64 binaries requiring glibc
+2.39+, plus macOS arm64. Its active installers are certified against the
+published release in CI. Windows x64 and Intel macOS use the separate stable
+Gen2 line (`whitemagic-mcp@latest`); they are not in this preview's asset matrix.
+Downloads prefer the compressed `.gz`
 distributable when the release ships one (~58% smaller) and fall back to the
 raw binary otherwise. No asset for your platform? Build from source:
 https://github.com/lbailey94/whitemagic#install
+
+## MCPB bundle
+
+Build the dynamic MCPB bundle with `mcpb/build.sh` from this package directory.
+It includes the complete launcher and lets the client select `cyberbrain` or
+`full` through actual server arguments. Live `tools/list` owns discovery.
+
+The old static Smithery catalog is retained as historical source and is not
+emitted as a release variant. It needs qualification against an exact runtime
+version and selected profile before it can describe this Gen3 bundle.
 
 ## Privacy
 

@@ -204,16 +204,17 @@ with the expanded path, for example the output of
 
 The server communicates over stdio. Two profiles exist:
 
-- **`cyberbrain` (default)** — 18 lean MCP tools, including `memory_recall`,
+- **`cyberbrain` (default)** — the lean MCP surface, including `memory_recall`,
   `memory_remember`, `memory_get`, `memory_stats`, the `wm` meta-tool
   (explicit `route=` dispatch to the catalog), `session_checkpoint`,
   `session_continuity`, `session_record`, `session_list`, `galaxy_list`,
   `galaxy_fork`, `mesh_sync`.
-- **`full`** — 61 curated routes covering memory CRUD, search, sessions,
+- **`full`** — the extended MCP catalog covering memory CRUD, search, sessions,
   receipts, galaxies, mandala, gnosis, sangha, and mesh; optional features add
   gated routes (`decision.shortlist`, `decision.deliberate`,
   `decision.outcome`, `systemone.decide`) when compiled in. The route count is
-  whatever the running binary registered; `wm contract --json` is the authority.
+  whatever the running binary registered; its `tools/list` response and
+  `wm contract --json` are the authorities for their respective surfaces.
 
 Explicit routing is the dependable contract:
 
