@@ -184,6 +184,35 @@ esac
         self.assertNotIn("docker tag ", docker_step)
         self.assertNotIn("docker push ", docker_step)
 
+    def test_benchmark_attachment_preserves_release_owner_classification(self) -> None:
+        release = (ROOT / ".github/workflows/release.yml").read_text()
+        benchmark = (ROOT / ".github/workflows/benchmarks.yml").read_text()
+        owner = release.split("      - name: Create release\n", 1)[1].split(
+            "\n      - ", 1
+        )[0]
+        attachment = benchmark.split(
+            "      - name: Attach benchmark evidence to release tag\n", 1
+        )[1].split("\n      - ", 1)[0]
+
+        # Two independent workflows can create/update the same tagged release.
+        # Whichever arrives first must use the owner's classification; an
+        # evidence attachment never owns the public latest-selector decision.
+        def action_input(step: str, name: str) -> str:
+            match = re.search(rf"(?m)^          {name}:\s*(.+)$", step)
+            self.assertIsNotNone(match, f"release attachment must set {name}")
+            assert match is not None
+            return match.group(1).strip().strip("\"'")
+
+        self.assertEqual(
+            action_input(attachment, "prerelease"),
+            action_input(owner, "prerelease"),
+            "an early benchmark upload must not classify a preview as stable",
+        )
+        self.assertEqual(
+            action_input(attachment, "make_latest"), "false",
+            "benchmark publication must never advance the latest selector",
+        )
+
     def test_incomplete_misflagged_release_cannot_publish_or_move_npm_selectors(self) -> None:
         text = WORKFLOW.read_text()
         marker = "      - name: Retry npm (if lagging)\n"
