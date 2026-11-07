@@ -387,6 +387,7 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "council.deliberate" | "council_deliberate" | "zodiac.deliberate" => "council.deliberate",
         "dhumavati.check" | "dhumavati_check" => "dhumavati.check",
         "wave2.benchmark" | "wave2_benchmark" | "wave2-benchmark" => "wave2.benchmark",
+        "wave3.benchmark" | "wave3_benchmark" | "wave3-benchmark" => "wave3.benchmark",
         "seed.status" | "seed_status" | "seed.regenerate" | "seed_regenerate" => "seed.status",
         _ => return None,
     })
@@ -436,6 +437,7 @@ fn allowed_profile_keys(profile: McpProfile) -> &'static HashSet<&'static str> {
             keys.insert("council.deliberate");
             keys.insert("dhumavati.check");
             keys.insert("wave2.benchmark");
+            keys.insert("wave3.benchmark");
             keys.insert("seed.status");
             keys
         }),
@@ -452,6 +454,7 @@ fn allowed_profile_keys(profile: McpProfile) -> &'static HashSet<&'static str> {
             keys.insert("council.deliberate");
             keys.insert("dhumavati.check");
             keys.insert("wave2.benchmark");
+            keys.insert("wave3.benchmark");
             keys.insert("seed.status");
             keys
         }),
@@ -2007,6 +2010,10 @@ pub fn execute_hybrid_tool_call(
         "wave2.benchmark" | "wave2_benchmark" | "wave2-benchmark" => {
             let report = wm_gen3_core::wave2_braid::run_wave2_full_benchmark_suite();
             serde_json::to_value(report).map_err(|e| format!("wave2.benchmark serialize error: {e}"))
+        }
+        "wave3.benchmark" | "wave3_benchmark" | "wave3-benchmark" => {
+            let report = wm_gen3_core::wave3_braid::run_wave3_full_benchmark_suite();
+            serde_json::to_value(report).map_err(|e| format!("wave3.benchmark serialize error: {e}"))
         }
         "seed.status" | "seed_status" | "seed.regenerate" | "seed_regenerate" => {
             let seed =

@@ -100,3 +100,25 @@ law prodrug_receptor_exclusivity:
   for epoch_valid: Bool
   for seal_valid: Bool
   {WM.cleave_prodrug(False{}, epoch_valid, seal_valid) == False{} : Bool}
+
+# LAW 14 (Wave 3 W3-P17 — Y1 Hysteresis WM_ACTUATION=0 Global Disarm Invariant):
+# When WM_ACTUATION is disabled (`wm_actuation_enabled == False`), Y1 actuation is unconditionally False.
+law y1_disarm_overrides_thresholds:
+  for currently_armed: Bool
+  for above_enter: Bool
+  for above_exit: Bool
+  {WM.y1_actuate(False{}, currently_armed, above_enter, above_exit) == False{} : Bool}
+
+# LAW 15 (Wave 3 W3-P23/P24 — Runner Class Non-Conflation & Egress Truth Discipline):
+# A non-strict runner (`runner_is_strict == False`) can never claim strict OS isolation.
+law runner_non_conflation_truth:
+  for os_egress_active: Bool
+  for landlock_enforced: Bool
+  {WM.claim_strict_os_isolation(False{}, os_egress_active, landlock_enforced) == False{} : Bool}
+
+# LAW 16 (Wave 3 W3-P26/P27 — CPR 0.6 Authority Grant & Chain-Head Truncation Guard):
+# Any side-effecting receipt missing an explicit authority_grant (`authority_grant_present == False`) is rejected.
+law cpr06_authority_grant_required:
+  for chain_head_matches: Bool
+  for pq_sig_valid: Bool
+  {WM.ratify_cpr06_receipt(False{}, chain_head_matches, pq_sig_valid) == False{} : Bool}

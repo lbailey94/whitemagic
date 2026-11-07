@@ -170,3 +170,12 @@ def Laws.mmmbaby_non_compensatory_veto(f1, f2, f4, f5, f6):
 
 def Laws.prodrug_receptor_exclusivity(epoch_valid, seal_valid):
   {==}
+
+def Laws.y1_disarm_overrides_thresholds(currently_armed, above_enter, above_exit):
+  {==}
+
+def Laws.runner_non_conflation_truth(os_egress_active, landlock_enforced):
+  {==}
+
+def Laws.cpr06_authority_grant_required(chain_head_matches, pq_sig_valid):
+  {==}

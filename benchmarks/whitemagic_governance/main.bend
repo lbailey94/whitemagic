@@ -122,6 +122,42 @@ def cleave_prodrug(node_matches: Bool, epoch_valid: Bool, seal_valid: Bool) -> B
     case True{}:
       epoch_valid && seal_valid
 
+# 10. Wave 3 Law 14: Y1 Hysteresis WM_ACTUATION=0 Global Disarm Invariant
+def y1_actuate(wm_actuation_enabled: Bool, currently_armed: Bool, above_enter: Bool, above_exit: Bool) -> Bool:
+  match wm_actuation_enabled:
+    case False{}:
+      False{}
+    case True{}:
+      match currently_armed:
+        case False{}:
+          above_enter
+        case True{}:
+          above_exit
+
+# 11. Wave 3 Law 15: Runner Class Non-Conflation & Egress Truth Discipline
+def claim_strict_os_isolation(runner_is_strict: Bool, os_egress_active: Bool, landlock_enforced: Bool) -> Bool:
+  match runner_is_strict:
+    case False{}:
+      False{}
+    case True{}:
+      match os_egress_active:
+        case False{}:
+          False{}
+        case True{}:
+          landlock_enforced
+
+# 12. Wave 3 Law 16: CPR 0.6 Authority Grant & Chain-Head Truncation Guard
+def ratify_cpr06_receipt(authority_grant_present: Bool, chain_head_matches: Bool, pq_sig_valid: Bool) -> Bool:
+  match authority_grant_present:
+    case False{}:
+      False{}
+    case True{}:
+      match chain_head_matches:
+        case False{}:
+          False{}
+        case True{}:
+          pq_sig_valid
+
 def check_read_cap(tok: ScopeToken) -> Bool:
   match tok:
     case Scope{read, write, exec, net}:

@@ -681,6 +681,12 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Run the Unified Wave 3 Deep Synthesis Benchmark Suite (Clusters W3-I..W3-VI, W3-P1..W3-P30)
+    Wave3Benchmark {
+        /// Emit structured JSON benchmark report
+        #[arg(long)]
+        json: bool,
+    },
     /// Manage the Planarian <64KB Stone Pillar Morphogen Seed (status, export, verify, regenerate)
     Seed {
         /// Subcommand action: status (default), export, verify, regenerate
@@ -2011,11 +2017,14 @@ fn main() {
 
             match substrate.recall(&q) {
                 Ok(hits) => {
+                    let intent_class =
+                        wm_gen3_core::wave3_braid::classify_query_intent_zero_token(&query);
                     println!(
-                        "Query: \"{}\" ({} results, mode: {})",
+                        "Query: \"{}\" ({} results, mode: {}, intent: {:?})",
                         query,
                         hits.len(),
-                        recall_mode
+                        recall_mode,
+                        intent_class
                     );
                     for (i, hit) in hits.iter().enumerate() {
                         let superseded = hit
@@ -2590,6 +2599,40 @@ fn main() {
                                 &stone_seed.seed_sha256[..16]
                             );
                         }
+                        let mut akashic_seeds = vec![wm_gen3_core::wave3_braid::AkashicDormantSeed {
+                            seed_id: format!("seed-epoch-{cur_epoch}"),
+                            bloom_keyword: "void".to_string(),
+                            min_coherence: 0.75,
+                            required_quadrant: "Qi".to_string(),
+                            potency: 0.94,
+                            payload: "Synthesize cross-quadrant bridge over 0-After-9 curiosity void".to_string(),
+                            bloomed: false,
+                        }];
+                        let bloomed_ids = wm_gen3_core::wave3_braid::evaluate_akashic_seed_bloom(
+                            &mut akashic_seeds,
+                            "void synthesis",
+                            0.91,
+                            "Qi",
+                        );
+                        let drq_audit =
+                            wm_gen3_core::wave3_braid::run_drq_purple_sandbox_and_connection_audit(
+                                12,
+                                &["ipc:shm_ring", "mcp:stdio"],
+                                &["ipc:shm_ring", "mcp:stdio"],
+                            );
+                        let yin_state = wm_gen3_core::wave3_braid::evaluate_yin_and_level4_emergence(
+                            telemetry.candidates_generated.max(1),
+                            telemetry.candidates_committed.max(1),
+                            &[0.25, 0.25, 0.25],
+                            1.35,
+                            cur_epoch,
+                        );
+                        println!(
+                            "  [Phase 6: Wave 3 Akashic, Yin & DRQ] Bloomed: {} | DRQ Nash Defense: {:.1}% | Synergy: {:.2}x",
+                            bloomed_ids.len(),
+                            drq_audit.final_nash_defense_rate * 100.0,
+                            yin_state.synergy_gain_ratio,
+                        );
                     }
                 }
 
@@ -4469,6 +4512,9 @@ fn main() {
         Commands::Wave2Benchmark { json } => {
             run_wave2_benchmark_command(json);
         }
+        Commands::Wave3Benchmark { json } => {
+            run_wave3_benchmark_command(json);
+        }
         Commands::Seed { action, json } => {
             run_seed_command(&store_path, &action, json);
         }
@@ -4702,6 +4748,127 @@ fn run_wave2_benchmark_command(json: bool) {
             "  • Dhumavati Bardo Drag:      {} tokens | Failure Recall: {:.1}%",
             report.cluster_f.dhumavati_bardo_active_token_drag,
             report.cluster_f.dhumavati_failure_recall_rate * 100.0
+        );
+        println!("==================================================================");
+    }
+}
+
+fn run_wave3_benchmark_command(json: bool) {
+    let report = wm_gen3_core::wave3_braid::run_wave3_full_benchmark_suite();
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&report).unwrap_or_default()
+        );
+    } else {
+        println!("==================================================================");
+        println!("  WhiteMagic Gen3 — Wave 3 Braided Benchmark Suite (W3-P1..P30)   ");
+        println!("==================================================================");
+        println!("Total Pillars Verified: {} / 30", report.total_pillars_verified);
+        println!("Suite Execution Time:   {} µs", report.execution_time_us);
+        println!("------------------------------------------------------------------");
+        println!("Cluster W3-I (28 Garden-Gana Triads & 108-Cycle Da'at Resonance):");
+        println!(
+            "  • Garden-Gana Triads:        {} / 28 verified",
+            report.cluster_i.garden_gana_triads_verified
+        );
+        println!(
+            "  • 108-Cycle Da'at Kuramoto:  r = {:.4} (Phase-Locked: {})",
+            report.cluster_i.daat_108_kuramoto_r, report.cluster_i.daat_phase_locked
+        );
+        println!("------------------------------------------------------------------");
+        println!("Cluster W3-II (Zero-Token LongMemEval, HRR, Spreading & CLS Oblio):");
+        println!(
+            "  • Zero-Token Intent Acc:     {:.1}% | Doctor Synonym: {} | Implicit Pref: {}",
+            report.cluster_ii.zero_token_intent_accuracy_pct,
+            report.cluster_ii.doctor_synonym_facet_recovered,
+            report.cluster_ii.implicit_preference_facet_extracted
+        );
+        println!(
+            "  • HRR Circular Unbind Sim:   {:.3} | 3-Hop Spreading Nodes: {}",
+            report.cluster_ii.hrr_unbind_cosine_similarity,
+            report.cluster_ii.spreading_activation_3hop_nodes
+        );
+        println!(
+            "  • VoE Surprise Spike:        {} | CLS Oblio LTD/LTP Ratio: {:.2}:1",
+            report.cluster_ii.voe_surprise_spike_triggered,
+            report.cluster_ii.cls_oblio_ltd_ltp_ratio
+        );
+        println!("------------------------------------------------------------------");
+        println!("Cluster W3-III (2-Layer SMoTE, Akashic Seeds, Yin & Level-4 Synergy):");
+        println!(
+            "  • SMoTE Layer-1 Edge Exit:   {} | Layer-2 Cautious Veto: {} ({:.1}% saved)",
+            report.cluster_iii.smote_layer1_zero_token_exit,
+            report.cluster_iii.smote_layer2_cautious_veto_honored,
+            report.cluster_iii.smote_tokens_saved_pct
+        );
+        println!(
+            "  • Akashic Seeds Bloomed:     {} | Yin Stillness Triggered: {}",
+            report.cluster_iii.akashic_dormant_seeds_bloomed,
+            report.cluster_iii.yin_stillness_triggered_on_overdrive
+        );
+        println!(
+            "  • Level-4 Emergence Synergy: {:.2}x | Symbiotic Loosh Scalar: {:.3}",
+            report.cluster_iii.level4_emergence_synergy_ratio,
+            report.cluster_iii.loosh_symbiotic_scalar
+        );
+        println!("------------------------------------------------------------------");
+        println!("Cluster W3-IV (DRQ Purple Nash, Cache-Timing, Fuller & CyberBrain):");
+        println!(
+            "  • DRQ Nash Blue Defense:     {:.1}% | Shadow Handles Quarantined: {}",
+            report.cluster_iv.drq_nash_blue_defense_rate * 100.0,
+            report.cluster_iv.forgotten_shadow_handles_quarantined
+        );
+        println!(
+            "  • Cache-Timing Detected:     {} | 2-Bit Rowhammer Blocked: {}",
+            report.cluster_iv.cache_timing_covert_channel_detected,
+            report.cluster_iv.neuron_lens_2bit_flip_blocked
+        );
+        println!(
+            "  • Fuller Ephemeralization:   {:.1}x ({}) | Reflex Recovery: {}",
+            report.cluster_iv.fuller_ephemeralization_index,
+            report.cluster_iv.fuller_best_trim_tab,
+            report.cluster_iv.cyberbrain_reflex_recovery_verified
+        );
+        println!("------------------------------------------------------------------");
+        println!("Cluster W3-V (Lived-Time, Dual-Tree, 7D Harmony, Y1, Zodiac & Ashby):");
+        println!(
+            "  • 30d Idle Lived Retention:  {:.1}% (vs Wall-Clock {:.2}%) | Sparks: {}",
+            report.cluster_v.lived_time_30day_idle_retention * 100.0,
+            report.cluster_v.wall_clock_30day_idle_retention * 100.0,
+            report.cluster_v.dual_tree_sparks_redeemed
+        );
+        println!(
+            "  • 7D Harmony Cold-Start:     {:.2} | Y1 Chatter Suppressed: {} | Disarm=0: {}",
+            report.cluster_v.harmony_7d_cold_start_value,
+            report.cluster_v.y1_hysteresis_chatter_suppressed,
+            report.cluster_v.wm_actuation_zero_disarm_verified
+        );
+        println!(
+            "  • Wu Xing Max Dominance:     {:.2} | Cantrip Avadhuti: {:.3} | Ashby Speedup: {:.1}x",
+            report.cluster_v.zodiacal_wuxing_max_dominance,
+            report.cluster_v.cantrip_avadhuti_convergence,
+            report.cluster_v.ashby_ultrastable_speedup_factor
+        );
+        println!("------------------------------------------------------------------");
+        println!("Cluster W3-VI (Engram O(1), GAM, 64k RTS, Z80, Satkona, Valmere & CPR0.6):");
+        println!(
+            "  • Engram O(1) Fast-Lane:     {} | GAM JIT Fidelity: {:.3} | 64k RTS Avoidance: {:.2}%",
+            report.cluster_vi.engram_o1_fast_lane_hit,
+            report.cluster_vi.gam_jit_researcher_fidelity,
+            report.cluster_vi.rts_all_to_all_chatter_avoided_pct
+        );
+        println!(
+            "  • Z80 Golden Pass Rate:      {:.1}% | Satkona NOTEARS Residual: {:.2e} (MPC: {})",
+            report.cluster_vi.z80_clean_room_golden_pass_rate * 100.0,
+            report.cluster_vi.satkona_v4_notears_residual,
+            report.cluster_vi.satkona_v4_mpc_completed
+        );
+        println!(
+            "  • Valmere 3-Path & PageCurve:{} | Runner Non-Conflation: {} | CPR 0.6 PQ+Gnosis: {}",
+            report.cluster_vi.valmere_3path_and_page_curve_ok,
+            report.cluster_vi.gate_runner_conflation_blocked,
+            report.cluster_vi.cpr06_pq_and_gnosis_laws_verified
         );
         println!("==================================================================");
     }
