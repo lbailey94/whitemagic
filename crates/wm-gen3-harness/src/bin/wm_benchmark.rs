@@ -570,6 +570,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         nvme_free_gb: 28.0,
         metabolism_mode: MetabolismMode::CriticalHibernation,
         probe_latency_ns: 480.0,
+        ashby_chambers: Default::default(),
     };
     let dec_stressed = TripartiteRouter::route(long_query, Some(&bio_critical));
     assert_eq!(dec_stressed.tier, CognitiveTier::System1LocalOrgan);
@@ -632,6 +633,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         nvme_free_gb: 42.0,
         metabolism_mode: MetabolismMode::NominalSynthesis,
         probe_latency_ns: 410.0,
+        ashby_chambers: Default::default(),
     };
     let rep_hyper = vault.autopoietic_morphogenesis(&bio_hyper);
 
@@ -647,6 +649,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         nvme_free_gb: 34.0,
         metabolism_mode: MetabolismMode::ThermalThrottled,
         probe_latency_ns: 440.0,
+        ashby_chambers: Default::default(),
     };
     let rep_stressed = vault.autopoietic_morphogenesis(&bio_stressed);
 

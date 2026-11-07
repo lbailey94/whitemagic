@@ -52,7 +52,7 @@ SURFACES = [
     "scripts/install.sh",
 ]
 
-VERSION_RE = re.compile(r"\bv?(?:10\.\d+(?:\.\d+)?(?:-alpha(?:\.\d+)?)?|9\.\d+\.\d+)\b")
+VERSION_RE = re.compile(r"\bv?(?:11\.\d+(?:\.\d+)?(?:-alpha(?:\.\d+)?)?|10\.\d+(?:\.\d+)?(?:-alpha(?:\.\d+)?)?|9\.\d+\.\d+)\b")
 WORKSPACE_RE = re.compile(r'(?m)^version = "([^"]+)"')
 SEMVER_RE = re.compile(r"\d+\.\d+(\.\d+)?(-[a-zA-Z0-9.]+)?")
 

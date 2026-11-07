@@ -5,6 +5,15 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [11.0.0] — 2026-11-07 (UTC)
+
+### Added
+- **Unified CPR 0.5 Hybrid Session Bundles**: Emit RFC 8785 JCS Ed25519-signed 5-record chains (`authority` -> `policy` -> `execution` -> `output` -> `close`) for session and state transitions, interoperable across Gen2, Gen3, and hosted verifiers.
+- **Store Path Resolution**: Decouple runtime store lookup to respect `$WM_STORE`, `$WM_STORE_PATH`, and default to `~/.local/share/whitemagic/gen3`.
+- **Zero-Write `grimoire --plan`**: Ensure planning invocations remain strictly read-only without initializing LMDB stores.
+- **Full Memory & Session Parity**: Surface `created_at`, `content_hash`, and checkpoint discovery across all CLI and MCP routes.
+- **MMMBABY v2 Index**: Biomimetic macro-micro planetary objective function model and accounting framework.
+
 ## [10.7.1] — 2026-11-05 (UTC)
 
 ### Fixed
