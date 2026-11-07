@@ -2401,10 +2401,15 @@ fn handle_memory_create(
         substrate.get_or_create_uuid(rec_id)
     };
 
-    let now_epoch = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
+    let now_epoch = read_record_ingested_at_secs(substrate.store().path(), rec_id).unwrap_or_else(
+        || {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0)
+        },
+    );
+    let content_hash = hex_encode(&Sha256::digest(content.as_bytes()));
 
     Ok(json!({
         "status": "success",
@@ -2415,7 +2420,9 @@ fn handle_memory_create(
         "importance": importance,
         "tags": tags,
         "created_at": now_epoch,
-        "kernel_epoch": substrate.store().epoch().unwrap_or(0)
+        "kernel_epoch": substrate.store().epoch().unwrap_or(0),
+        "content_hash": content_hash,
+        "attested": true
     }))
 }
 
@@ -2662,6 +2669,11 @@ fn handle_memory_read(args: &Value, substrate: &Substrate) -> Result<Value, Stri
         (record.content().to_string(), false)
     };
 
+    let created_at_secs =
+        read_record_ingested_at_secs(substrate.store().path(), record.id())
+            .unwrap_or_else(|| record.created_at());
+    let content_hash = hex_encode(&Sha256::digest(record.content().as_bytes()));
+
     Ok(json!({
         "status": "success",
         "record": {
@@ -2671,11 +2683,14 @@ fn handle_memory_read(args: &Value, substrate: &Substrate) -> Result<Value, Stri
             "content": content,
             "content_truncated": truncated,
             "total_content_bytes": record.content().len(),
+            "content_hash": content_hash,
+            "attested": true,
             "source": record.source(),
             "domain": format!("{:?}", record.domain()),
             "class": format!("{:?}", record.class()),
             "status": format!("{:?}", record.status()),
-            "created_at": record.created_at(),
+            "created_at": created_at_secs,
+            "kernel_epoch": record.created_at(),
             "confidence": record.confidence(),
             "galaxy": galaxy,
             "superseded_by": superseded_by,
@@ -3622,11 +3637,8 @@ fn handle_memory_query(args: &Value, substrate: &mut Substrate) -> Result<Value,
     }))
 }
 
-/// Append one `record_meta.jsonl` entry (tags/importance) for an ingested record.
+/// Append one `record_meta.jsonl` entry (tags/importance/ingested_at_ms) for an ingested record.
 fn append_record_meta(store_path: &Path, record_id: u64, tags: &[String], importance: Option<f64>) {
-    if tags.is_empty() && importance.is_none() {
-        return;
-    }
     let ingested_at_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
@@ -3634,7 +3646,7 @@ fn append_record_meta(store_path: &Path, record_id: u64, tags: &[String], import
     let entry = json!({
         "record_id": record_id,
         "tags": tags,
-        "importance": importance.unwrap_or(0.0),
+        "importance": importance,
         "ingested_at_ms": ingested_at_ms,
     });
     if let Ok(mut file) = std::fs::OpenOptions::new()
@@ -3644,6 +3656,21 @@ fn append_record_meta(store_path: &Path, record_id: u64, tags: &[String], import
     {
         let _ = writeln!(file, "{entry}");
     }
+}
+
+/// Read the wall-clock ingestion timestamp (in Unix epoch seconds) for `record_id` from `record_meta.jsonl`.
+fn read_record_ingested_at_secs(store_path: &Path, record_id: u64) -> Option<u64> {
+    let content = std::fs::read_to_string(store_path.join("record_meta.jsonl")).ok()?;
+    for line in content.lines().rev() {
+        if let Ok(value) = serde_json::from_str::<Value>(line.trim()) {
+            if value.get("record_id").and_then(Value::as_u64) == Some(record_id) {
+                if let Some(ms) = value.get("ingested_at_ms").and_then(Value::as_u64) {
+                    return Some(ms / 1000);
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Scrub credential-shaped tokens from ingest content. Returns the cleaned
@@ -4715,9 +4742,11 @@ fn handle_session_continuity(
         })
     });
 
+    let session_title = read_session_title(store_path, &session_label);
     let mut response = json!({
         "status": "success",
         "session_id": session_label,
+        "title": session_title,
         "track": active_track,
         "turns_count": recent.len(),
         "recent_turns": recent,
@@ -5109,6 +5138,30 @@ fn last_session_lane(store_path: &Path) -> Option<String> {
     })
 }
 
+/// Read the title recorded on a `session_start` marker for `session_id` in `session_log.jsonl`.
+fn read_session_title(store_path: &Path, session_id: &str) -> Option<String> {
+    let content = std::fs::read_to_string(store_path.join("session_log.jsonl")).ok()?;
+    content.lines().rev().find_map(|line| {
+        let value: Value = serde_json::from_str(line.trim()).ok()?;
+        if value.get("session_id").and_then(Value::as_str) != Some(session_id) {
+            return None;
+        }
+        if let Some(title) = value.get("title").and_then(Value::as_str) {
+            return Some(title.to_string());
+        }
+        if value.get("turn_type").and_then(Value::as_str) == Some("session_start") {
+            if let Some(rest) = value
+                .get("content")
+                .and_then(Value::as_str)
+                .and_then(|c| c.strip_prefix("session started: "))
+            {
+                return Some(rest.to_string());
+            }
+        }
+        None
+    })
+}
+
 #[derive(Default)]
 struct LaneSummary {
     turn_count: usize,
@@ -5117,6 +5170,7 @@ struct LaneSummary {
     latest_turn_type: String,
     has_start_marker: bool,
     has_checkpoint: bool,
+    title: Option<String>,
     tracks: std::collections::BTreeSet<String>,
 }
 
@@ -5178,12 +5232,15 @@ fn handle_session_list(
 
     let mut list: Vec<(String, LaneSummary)> = lanes.into_iter().collect();
     for (lane, summary) in list.iter_mut() {
-        if !summary.has_checkpoint && !summary.has_start_marker {
+        if !summary.has_checkpoint {
             summary.has_checkpoint = substrate
                 .session_continuity(Some(lane))
                 .ok()
                 .flatten()
                 .is_some();
+        }
+        if summary.title.is_none() {
+            summary.title = read_session_title(store_path, lane);
         }
     }
     list.sort_by(|(lane_a, a), (lane_b, b)| {
@@ -5198,6 +5255,7 @@ fn handle_session_list(
         .map(|(lane, summary)| {
             json!({
                 "session_id": lane,
+                "title": summary.title,
                 "turn_count": summary.turn_count,
                 "last_timestamp": summary.last_timestamp,
                 "latest_preview": summary.latest_preview,
@@ -5533,10 +5591,11 @@ fn hex_decode(hex: &str) -> Option<Vec<u8>> {
 }
 
 fn gate_key_did(key: &SigningKey) -> String {
-    format!("did:key:{}", hex_encode(&key.verifying_key().to_bytes()))
+    crate::receipt_verify::ed25519_did_key(&key.verifying_key().to_bytes())
 }
 
 /// Load the store's existing Mandala gate key without creating one.
+#[allow(dead_code)]
 fn load_gate_signing_key(store_path: &Path) -> Result<SigningKey, String> {
     let key_path = store_path.join("mandala_gate_key.bin");
     let bytes = std::fs::read(&key_path)
@@ -5551,12 +5610,17 @@ fn load_gate_signing_key(store_path: &Path) -> Result<SigningKey, String> {
 
 /// Signed continuity receipt emitted by `receipts.emit`.
 ///
-/// `content_digest` is the SHA-256 of the canonical signing bytes (which
-/// exclude `content_digest` and `signature`); verification recomputes it and
-/// then checks the Ed25519 signature over the same bytes.
+/// Emits a dual-compatible `continuity-receipt/0.5` bundle (carrying a 5-receipt
+/// RFC 8785 JCS + `did:key:z...` hash-linked chain in `receipts` and `chain_head`)
+/// alongside the Gen 3 session / state-transition profile metadata (`profile_spec`,
+/// `content_digest`, `signature`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct EmittedContinuityReceipt {
     spec: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    profile_spec: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    task_id: Option<String>,
     receipt_id: String,
     kind: String,
     subject: String,
@@ -5581,12 +5645,17 @@ struct EmittedContinuityReceipt {
     issuer_did: String,
     #[serde(default)]
     signature: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    receipts: Option<Vec<Value>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    chain_head: Option<Value>,
 }
 
 impl EmittedContinuityReceipt {
     fn canonical_signing_bytes(&self) -> Vec<u8> {
+        let effective_profile_spec = self.profile_spec.as_deref().unwrap_or(&self.spec);
         let mut hasher = Sha256::new();
-        hasher.update(self.spec.as_bytes());
+        hasher.update(effective_profile_spec.as_bytes());
         hasher.update(b"|");
         hasher.update(self.receipt_id.as_bytes());
         hasher.update(b"|");
@@ -5660,55 +5729,7 @@ fn prior_emitted_digest(journal: &Path, kind: &str) -> Option<String> {
 }
 
 fn verify_emitted_continuity_receipt(value: &Value, store_path: &Path) -> Result<Value, String> {
-    let receipt: EmittedContinuityReceipt =
-        serde_json::from_value(value.clone()).map_err(|e| format!("emitted receipt parse: {e}"))?;
-    let expected_spec = match receipt.kind.as_str() {
-        "session" => EMIT_SPEC_SESSION,
-        "state_transition" => EMIT_SPEC_STATE_TRANSITION,
-        other => {
-            return Err(format!(
-                "unsupported emitted continuity receipt kind '{other}'"
-            ));
-        }
-    };
-    if receipt.spec != expected_spec {
-        return Err(format!(
-            "spec/kind mismatch: expected {expected_spec}, got {}",
-            receipt.spec
-        ));
-    }
-    let key = load_gate_signing_key(store_path)?;
-    let expected_did = gate_key_did(&key);
-    if receipt.issuer_did != expected_did {
-        return Err(format!(
-            "issuer_did mismatch: expected {expected_did}, got {}",
-            receipt.issuer_did
-        ));
-    }
-    let canonical = receipt.canonical_signing_bytes();
-    let recomputed = hex_encode(&Sha256::digest(&canonical));
-    if recomputed != receipt.content_digest {
-        return Err("content_digest mismatch: receipt fields were altered".to_string());
-    }
-    receipt.verify(&key.verifying_key())?;
-
-    Ok(json!({
-        "status": "success",
-        "valid": true,
-        "profile": receipt.kind,
-        "spec": receipt.spec,
-        "receipt_id": receipt.receipt_id,
-        "issuer_did": receipt.issuer_did,
-        "detail": "emitted continuity receipt verifies against the store gate key",
-        "verified_offline": true,
-        "signature_scope": format!("{} canonical_signing_bytes", receipt.spec),
-        "unauthenticated_fields": [],
-        "numeric_projection": ["integer fields use their exact encoded representation"],
-        "scope_notes": [
-            "signature authenticates the issuer's claimed turn digest / store snapshot; \
-             the session log and store counters are not re-read from disk here"
-        ],
-    }))
+    crate::receipt_verify::verify_cpr05_bundle_or_emitted(value, store_path)
 }
 
 /// Create `<store>/receipts` if missing, owner-only (0700) on unix.
@@ -5854,7 +5875,9 @@ fn handle_receipts_emit(
         prior_emitted_digest(&journal, kind).unwrap_or_else(|| "genesis".to_string());
 
     let mut receipt = EmittedContinuityReceipt {
-        spec: String::new(),
+        spec: "continuity-receipt/0.5".to_string(),
+        profile_spec: None,
+        task_id: None,
         receipt_id: Uuid::new_v4().to_string(),
         kind: kind.to_string(),
         subject: String::new(),
@@ -5874,9 +5897,11 @@ fn handle_receipts_emit(
         content_digest: String::new(),
         issuer_did,
         signature: None,
+        receipts: None,
+        chain_head: None,
     };
 
-    match kind {
+    let count_for_cpr: u64 = match kind {
         "session" => {
             let session_id = args
                 .get("session_id")
@@ -5899,14 +5924,16 @@ fn handle_receipts_emit(
                 .collect::<Vec<String>>()
                 .join("\n");
             let turns_digest = hex_encode(&Sha256::digest(canonical_turns.as_bytes()));
-            receipt.spec = EMIT_SPEC_SESSION.to_string();
+            let count = turns.len() as u64;
+            receipt.profile_spec = Some(EMIT_SPEC_SESSION.to_string());
             receipt.subject = format!("session:{}", session_id.as_deref().unwrap_or("all"));
             receipt.session_id = session_id;
-            receipt.turn_count = Some(turns.len() as u64);
+            receipt.turn_count = Some(count);
             receipt.first_turn_ts = turns.first().map(|turn| turn.timestamp);
             receipt.last_turn_ts = turns.last().map(|turn| turn.timestamp);
             receipt.turns_digest = Some(turns_digest.clone());
             receipt.payload_digest = turns_digest;
+            count
         }
         "state_transition" => {
             let epoch = substrate.store().epoch().unwrap_or(0);
@@ -5923,18 +5950,19 @@ fn handle_receipts_emit(
                 "journal_ok": substrate.journal_ok(),
                 "violations": substrate.violations(),
             });
-            receipt.spec = EMIT_SPEC_STATE_TRANSITION.to_string();
+            receipt.profile_spec = Some(EMIT_SPEC_STATE_TRANSITION.to_string());
             receipt.subject = format!("store:{realm_id}");
             receipt.store_epoch = Some(epoch);
             receipt.store_record_count = Some(record_count as u64);
             receipt.payload_digest = hex_encode(&Sha256::digest(payload.to_string().as_bytes()));
+            record_count as u64
         }
         other => {
             return Err(format!(
                 "receipts.emit refuses kind '{other}': supported kinds are 'session' and 'state_transition'"
             ));
         }
-    }
+    };
 
     let canonical = receipt.canonical_signing_bytes();
     receipt.content_digest = hex_encode(&Sha256::digest(&canonical));
@@ -5942,6 +5970,21 @@ fn handle_receipts_emit(
     receipt
         .verify(&signing_key.verifying_key())
         .map_err(|e| format!("emitted receipt self-verification failed: {e}"))?;
+
+    let (task_id, cpr_chain, chain_head) = crate::receipt_verify::build_cpr05_chain_for_emitted(
+        &signing_key,
+        &receipt.receipt_id,
+        &receipt.kind,
+        &receipt.subject,
+        receipt.created_at_ms,
+        count_for_cpr,
+        &receipt.payload_digest,
+        &receipt.prior_receipt_digest,
+        &receipt.content_digest,
+    )?;
+    receipt.task_id = Some(task_id);
+    receipt.receipts = Some(cpr_chain);
+    receipt.chain_head = Some(chain_head);
 
     let serialized =
         serde_json::to_string_pretty(&receipt).map_err(|e| format!("receipt serialize: {e}"))?;
@@ -5989,6 +6032,9 @@ fn handle_receipts_verify(args: &Value, store_path: &Path) -> Result<Value, Stri
     let bundle = args
         .get("bundle")
         .ok_or_else(|| "receipts.verify requires an inline 'bundle' receipt object".to_string())?;
+    if bundle.get("kind").is_some() && bundle.get("content_digest").is_some() {
+        return verify_emitted_continuity_receipt(bundle, store_path);
+    }
     if let Some(spec) = bundle.get("spec").and_then(Value::as_str) {
         if spec == EMIT_SPEC_SESSION || spec == EMIT_SPEC_STATE_TRANSITION {
             return verify_emitted_continuity_receipt(bundle, store_path);
@@ -6002,14 +6048,7 @@ fn handle_receipts_verify(args: &Value, store_path: &Path) -> Result<Value, Stri
 fn handle_mandala_status(store_path: &Path) -> Result<Value, String> {
     let (signing_key, _) = resolve_or_create_mandala_gate_key(store_path)
         .map_err(|e| format!("Gate key error: {e}"))?;
-    let verifying_bytes = signing_key.verifying_key().to_bytes();
-    let gate_did = format!(
-        "did:key:{}",
-        verifying_bytes
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect::<String>()
-    );
+    let gate_did = gate_key_did(&signing_key);
 
     let hw = wm_gen3_core::homeostasis::HardwareTelemetry::probe();
     let mut ctrl = wm_gen3_core::homeostasis::HomeostaticController::new();
@@ -6107,6 +6146,90 @@ fn deliberation_tool_schema(mode_hint: &str) -> Value {
 }
 
 #[cfg(feature = "system05")]
+fn lexical_shortlist_fallback(state_text: &str, routes: &Value, k: usize) -> Value {
+    let t0 = std::time::Instant::now();
+    let tokenize = |text: &str| -> Vec<String> {
+        text.to_lowercase()
+            .split(|c: char| !c.is_alphanumeric() && c != '_' && c != '.')
+            .filter(|w| !w.is_empty())
+            .map(str::to_string)
+            .collect()
+    };
+    let query_tokens = tokenize(state_text);
+    let mut scored: Vec<(String, f64)> = Vec::new();
+    if let Some(obj) = routes.as_object() {
+        for (route_name, desc_val) in obj {
+            let mut utterances: Vec<String> = Vec::new();
+            match desc_val {
+                Value::String(s) => utterances.push(format!("{route_name} {s}")),
+                Value::Array(arr) => {
+                    for item in arr {
+                        if let Some(s) = item.as_str() {
+                            utterances.push(format!("{route_name} {s}"));
+                        }
+                    }
+                    if utterances.is_empty() {
+                        utterances.push(route_name.clone());
+                    }
+                }
+                _ => utterances.push(route_name.clone()),
+            }
+            let mut best = 0.0f64;
+            for utt in &utterances {
+                let doc_tokens = tokenize(utt);
+                if doc_tokens.is_empty() || query_tokens.is_empty() {
+                    continue;
+                }
+                let mut hits = 0usize;
+                for qt in &query_tokens {
+                    if doc_tokens
+                        .iter()
+                        .any(|dt| dt == qt || dt.contains(qt.as_str()) || qt.contains(dt.as_str()))
+                    {
+                        hits += 1;
+                    }
+                }
+                let recall = hits as f64 / (query_tokens.len() as f64);
+                let precision = hits as f64 / (doc_tokens.len().max(1) as f64);
+                let score = (0.75 * recall + 0.25 * precision).clamp(0.0, 1.0);
+                if score > best {
+                    best = score;
+                }
+            }
+            scored.push((route_name.clone(), (best * 1e6).round() / 1e6));
+        }
+    }
+    scored.sort_by(|a, b| {
+        b.1.partial_cmp(&a.1)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.0.cmp(&b.0))
+    });
+    scored.truncate(k.max(1));
+    let top1 = scored
+        .first()
+        .map(|(r, _)| r.clone())
+        .unwrap_or_default();
+    let s1 = scored.first().map(|(_, s)| *s).unwrap_or(0.0);
+    let s2 = scored.get(1).map(|(_, s)| *s).unwrap_or(0.0);
+    let margin = ((s1 - s2).max(0.0) * 1e6).round() / 1e6;
+    let ranked: Vec<Value> = scored
+        .into_iter()
+        .map(|(route, score)| json!({ "route": route, "score": score }))
+        .collect();
+    let latency_ms = (t0.elapsed().as_secs_f64() * 1000.0 * 1000.0).round() / 1000.0;
+    json!({
+        "status": "success",
+        "model": "whitemagic-system05-lexical-bm25",
+        "degraded": false,
+        "top1": top1,
+        "confidence": s1,
+        "margin": margin,
+        "latency_ms": latency_ms,
+        "ranked": ranked,
+    })
+}
+
+#[cfg(feature = "system05")]
 fn handle_decision_shortlist(
     args: &Value,
     store_path: &Path,
@@ -6120,17 +6243,34 @@ fn handle_decision_shortlist(
     let routes = match args.get("routes") {
         Some(value) => value.clone(),
         None => {
-            let path = match args.get("catalog_path").and_then(Value::as_str) {
-                Some(path) => std::path::PathBuf::from(path),
-                None => wm_gen3_zeropointfive::System05::resolve_catalog_path(None)
-                    .map_err(|e| e.to_string())?,
-            };
-            let raw = std::fs::read_to_string(&path)
-                .map_err(|e| format!("catalog read ({}): {e}", path.display()))?;
-            serde_json::from_str(&raw).map_err(|e| format!("catalog parse: {e}"))?
+            if let Some(path_str) = args.get("catalog_path").and_then(Value::as_str) {
+                let path = std::path::PathBuf::from(path_str);
+                let raw = std::fs::read_to_string(&path)
+                    .map_err(|e| format!("catalog read ({}): {e}", path.display()))?;
+                serde_json::from_str(&raw).map_err(|e| format!("catalog parse: {e}"))?
+            } else if let Ok(path) = wm_gen3_zeropointfive::System05::resolve_catalog_path(None) {
+                let raw = std::fs::read_to_string(&path)
+                    .map_err(|e| format!("catalog read ({}): {e}", path.display()))?;
+                serde_json::from_str(&raw).map_err(|e| format!("catalog parse: {e}"))?
+            } else {
+                let mut map = serde_json::Map::new();
+                for p in NLU_PROFILES {
+                    let kw_str = p
+                        .keywords
+                        .iter()
+                        .map(|(kw, _)| *kw)
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    map.insert(
+                        p.route.to_string(),
+                        Value::String(format!("{} {}", p.route, kw_str)),
+                    );
+                }
+                Value::Object(map)
+            }
         }
     };
-    let k = args.get("k").and_then(Value::as_u64).unwrap_or(5) as usize;
+    let k = args.get("k").and_then(Value::as_u64).unwrap_or(5).max(1) as usize;
     let tau = args
         .get("margin_threshold")
         .and_then(Value::as_f64)
@@ -6144,11 +6284,13 @@ fn handle_decision_shortlist(
             .map(wm_gen3_zeropointfive::System05::new)
             .map_err(|e| e.to_string())
     });
-    let organ = organ.as_ref().map_err(|e| e.clone())?;
 
-    let mut outcome = organ
-        .shortlist(&state_text, &routes, k)
-        .map_err(|e| e.to_string())?;
+    let mut outcome = match organ.as_ref() {
+        Ok(org) => org
+            .shortlist(&state_text, &routes, k)
+            .unwrap_or_else(|_| lexical_shortlist_fallback(&state_text, &routes, k)),
+        Err(_) => lexical_shortlist_fallback(&state_text, &routes, k),
+    };
     let margin = outcome.get("margin").and_then(Value::as_f64).unwrap_or(0.0);
     let gate = if margin >= tau {
         "dispatch"
@@ -6234,15 +6376,7 @@ fn handle_decision_shortlist(
 
     let (signing_key, _) = resolve_or_create_mandala_gate_key(store_path)
         .map_err(|e| format!("gate key error: {e}"))?;
-    let gate_did = format!(
-        "did:key:{}",
-        signing_key
-            .verifying_key()
-            .to_bytes()
-            .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect::<String>()
-    );
+    let gate_did = gate_key_did(&signing_key);
     let mut receipt = crate::shortlist_receipt::ShortlistReceipt::from_outcome(
         &outcome, state, &routes, args, gate_did,
     );

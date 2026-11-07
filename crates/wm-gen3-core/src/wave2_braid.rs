@@ -591,6 +591,44 @@ pub fn compute_mmmbaby_vitality_index(floors: [f64; 6], weights: [f64; 6]) -> (f
     (geometric_prod, arithmetic_sum)
 }
 
+/// MMMBABY v2 Planetary & Regional Vitality Index (Muse Handoff Packet v2 Formula Fix):
+/// Replaces the unnormalized product over $R$ regions with the population/volume-weighted
+/// geometric mean $M_{\text{macro}}(t) = \prod_{r=1}^R s_r(t)^{v_r}$ ($\sum_r v_r = 1$)
+/// and normalized planetary-boundary excess:
+/// $$I_{\text{v2}}(t) = G_{\text{human}}(t) \cdot B_{\text{bio}}(t) \cdot M_{\text{macro}}(t)
+///   \cdot \exp\left(-\frac{1}{9}\sum_{j=1}^9 \lambda_j \max(0, x_j(t)-1)^2\right)$$
+/// where any regional sacrifice zone ($s_r \le 0$) still collapses $I_{\text{v2}}(t) \to 0$,
+/// while baseline $t_0$ calibrates to $I_{\text{v2}}(t_0) \approx 0.12$ independent of $R$.
+#[must_use]
+pub fn compute_mmmbaby_v2_planetary_index(
+    g_human: f64,
+    b_bio: f64,
+    regional_scores: &[f64],
+    regional_weights: &[f64],
+    boundary_ratios_x: &[f64; 9],
+    boundary_lambdas: &[f64; 9],
+) -> f64 {
+    if g_human <= 0.0 || b_bio <= 0.0 || regional_scores.is_empty() {
+        return 0.0;
+    }
+    let weight_sum: f64 = regional_weights.iter().copied().sum::<f64>().max(1e-9);
+    let mut m_macro = 1.0f64;
+    for (idx, &s_r) in regional_scores.iter().enumerate() {
+        if s_r <= 1e-9 {
+            return 0.0;
+        }
+        let v_r = regional_weights.get(idx).copied().unwrap_or(1.0) / weight_sum;
+        m_macro *= s_r.clamp(0.0, 1.0).powf(v_r);
+    }
+    let mut boundary_excess = 0.0f64;
+    for j in 0..9 {
+        let excess = (boundary_ratios_x[j] - 1.0).max(0.0);
+        boundary_excess += boundary_lambdas[j].max(0.0) * excess * excess;
+    }
+    let penalty = (-boundary_excess / 9.0).exp();
+    g_human.clamp(0.0, 1.0) * b_bio.clamp(0.0, 1.0) * m_macro * penalty
+}
+
 /// *Huíguāng* (Turning the Light Around) Meta-Attention Thruster Damper (`W2-P6`),
 /// Veteran OODA-Stress Telemetry (`W2-P21`), & Operator `1/3 MG` Sacral Handshake (`W2-P33`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1887,6 +1925,42 @@ mod tests {
         assert!(report.cluster_b.conformal_shift_detected);
         assert!(report.cluster_b.mmmbaby_sacrifice_veto_verified);
         assert!(report.cluster_b.huiguang_damping_triggered);
+
+        // Verify MMMBABY v2 planetary calibration (baseline I(t_0) ~ 0.12, scale-invariant in R)
+        let boundary_x = [1.45, 1.60, 1.35, 1.25, 1.15, 1.20, 0.95, 0.90, 1.10];
+        let lambdas = [2.2; 9];
+        let i_r10 = compute_mmmbaby_v2_planetary_index(
+            0.52,
+            0.42,
+            &vec![0.68; 10],
+            &vec![1.0; 10],
+            &boundary_x,
+            &lambdas,
+        );
+        let i_r200 = compute_mmmbaby_v2_planetary_index(
+            0.52,
+            0.42,
+            &vec![0.68; 200],
+            &vec![1.0; 200],
+            &boundary_x,
+            &lambdas,
+        );
+        assert!((i_r10 - i_r200).abs() < 1e-12, "scale-invariant across R=10 vs R=200");
+        assert!((i_r200 - 0.12).abs() < 0.03, "calibrates to I(t_0) ~ 0.12: got {i_r200}");
+        let mut sacrifice = vec![0.68; 200];
+        sacrifice[42] = 0.0;
+        assert_eq!(
+            compute_mmmbaby_v2_planetary_index(
+                0.52,
+                0.42,
+                &sacrifice,
+                &vec![1.0; 200],
+                &boundary_x,
+                &lambdas
+            ),
+            0.0,
+            "any regional sacrifice zone collapses I_v2 to 0.0"
+        );
     }
 
     #[test]

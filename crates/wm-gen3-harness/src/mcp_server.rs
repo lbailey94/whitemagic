@@ -269,6 +269,9 @@ impl McpBackend {
                 }
             }),
             ("ping", _) if !modern => json!({ "jsonrpc": "2.0", "id": id, "result": {} }),
+            ("notifications/initialized" | "initialized", _) if !modern => {
+                json!({ "jsonrpc": "2.0", "id": id, "result": {} })
+            }
             (
                 "tools/list",
                 Self::Gen3 {

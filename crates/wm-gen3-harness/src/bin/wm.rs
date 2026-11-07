@@ -714,6 +714,25 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Create a verified snapshot backup of the store directory with SHA256SUMS manifest
+    Backup {
+        /// Destination backup directory
+        dest: PathBuf,
+        /// Emit structured JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Restore a store snapshot from a backup directory after verifying SHA256SUMS
+    Restore {
+        /// Source backup directory
+        src: PathBuf,
+        /// Overwrite existing store files if destination is non-empty
+        #[arg(long)]
+        force: bool,
+        /// Emit structured JSON output
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1469,20 +1488,29 @@ fn resolve_store_path(cli_store: Option<&PathBuf>) -> PathBuf {
         return p.clone();
     }
     if let Ok(p) = std::env::var("WM_STORE") {
-        return PathBuf::from(p);
+        let trimmed = p.trim();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed);
+        }
+    }
+    if let Ok(p) = std::env::var("WM_STORE_PATH") {
+        let trimmed = p.trim();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed);
+        }
     }
     if let Ok(home) = std::env::var("HOME") {
-        let gen3_dir = PathBuf::from(&home).join(".local/share/whitemagic/gen3");
-        if gen3_dir.exists() {
+        let trimmed = home.trim();
+        if !trimmed.is_empty() {
+            let gen3_dir = PathBuf::from(trimmed).join(".local/share/whitemagic/gen3");
+            if gen3_dir.exists() {
+                return gen3_dir;
+            }
+            let legacy_dir = PathBuf::from(trimmed).join(".local/share/whitemagic/lmdb");
+            if legacy_dir.exists() {
+                return legacy_dir;
+            }
             return gen3_dir;
-        }
-        let legacy_dir = PathBuf::from(&home).join(".local/share/whitemagic/lmdb");
-        if legacy_dir.exists() {
-            return legacy_dir;
-        }
-        let default_dir = PathBuf::from(&home).join(".local/share/whitemagic");
-        if default_dir.exists() {
-            return default_dir;
         }
     }
     PathBuf::from("gen3-store")
@@ -4552,7 +4580,205 @@ fn main() {
         Commands::Seed { action, json } => {
             run_seed_command(&store_path, &action, json);
         }
+        Commands::Backup { dest, json } => {
+            let code = run_backup_command(&store_path, &dest, json);
+            if code != 0 {
+                std::process::exit(code);
+            }
+        }
+        Commands::Restore { src, force, json } => {
+            let code = run_restore_command(&src, &store_path, force, json);
+            if code != 0 {
+                std::process::exit(code);
+            }
+        }
     }
+}
+
+fn sha256_file_hex(path: &Path) -> std::io::Result<String> {
+    use sha2::{Digest, Sha256};
+    let bytes = std::fs::read(path)?;
+    let mut hasher = Sha256::new();
+    hasher.update(&bytes);
+    let digest = hasher.finalize();
+    Ok(digest.iter().map(|b| format!("{b:02x}")).collect())
+}
+
+fn run_backup_command(store_path: &Path, dest: &Path, json: bool) -> i32 {
+    if !store_path.exists() {
+        eprintln!("Error: store path {} does not exist", store_path.display());
+        return 1;
+    }
+    if let Err(e) = std::fs::create_dir_all(dest) {
+        eprintln!("Error creating backup directory {}: {e}", dest.display());
+        return 1;
+    }
+    let mut copied_files = Vec::new();
+    let mut manifest_lines = Vec::new();
+    let entries = match std::fs::read_dir(store_path) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("Error reading store directory {}: {e}", store_path.display());
+            return 1;
+        }
+    };
+    let mut file_names: Vec<String> = entries
+        .filter_map(Result::ok)
+        .filter(|e| e.path().is_file())
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|name| name != "lock.mdb" && name != "SHA256SUMS")
+        .collect();
+    file_names.sort();
+
+    for name in file_names {
+        let src_file = store_path.join(&name);
+        let dst_file = dest.join(&name);
+        if let Err(e) = std::fs::copy(&src_file, &dst_file) {
+            eprintln!("Error copying {} to {}: {e}", src_file.display(), dst_file.display());
+            return 1;
+        }
+        match sha256_file_hex(&dst_file) {
+            Ok(digest) => {
+                manifest_lines.push(format!("{digest}  {name}"));
+                copied_files.push(serde_json::json!({
+                    "file": name,
+                    "sha256": digest,
+                }));
+            }
+            Err(e) => {
+                eprintln!("Error hashing {}: {e}", dst_file.display());
+                return 1;
+            }
+        }
+    }
+    let manifest_path = dest.join("SHA256SUMS");
+    let manifest_content = format!("{}\n", manifest_lines.join("\n"));
+    if let Err(e) = std::fs::write(&manifest_path, manifest_content) {
+        eprintln!("Error writing {}: {e}", manifest_path.display());
+        return 1;
+    }
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "status": "ok",
+                "store": store_path.display().to_string(),
+                "backup_dir": dest.display().to_string(),
+                "manifest": manifest_path.display().to_string(),
+                "files_copied": copied_files.len(),
+                "files": copied_files,
+            }))
+            .unwrap_or_default()
+        );
+    } else {
+        println!(
+            "Backup complete: {} files copied from {} to {} (SHA256SUMS written)",
+            copied_files.len(),
+            store_path.display(),
+            dest.display()
+        );
+    }
+    0
+}
+
+fn run_restore_command(src: &Path, store_path: &Path, force: bool, json: bool) -> i32 {
+    let manifest_path = src.join("SHA256SUMS");
+    if !manifest_path.is_file() {
+        eprintln!(
+            "Error: backup manifest {} not found",
+            manifest_path.display()
+        );
+        return 1;
+    }
+    if store_path.exists() && !force {
+        let non_empty = std::fs::read_dir(store_path)
+            .map(|mut d| d.next().is_some())
+            .unwrap_or(false);
+        if non_empty {
+            eprintln!(
+                "Error: destination store {} is non-empty (pass --force to overwrite)",
+                store_path.display()
+            );
+            return 1;
+        }
+    }
+    let manifest_raw = match std::fs::read_to_string(&manifest_path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error reading {}: {e}", manifest_path.display());
+            return 1;
+        }
+    };
+    let mut entries_to_restore = Vec::new();
+    for line in manifest_raw.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let mut parts = trimmed.splitn(2, char::is_whitespace);
+        let expected_hash = parts.next().unwrap_or("").trim();
+        let file_name = parts.next().unwrap_or("").trim();
+        if expected_hash.is_empty() || file_name.is_empty() {
+            eprintln!("Error: malformed line in SHA256SUMS: {trimmed}");
+            return 1;
+        }
+        let src_file = src.join(file_name);
+        if !src_file.is_file() {
+            eprintln!("Error: backup file missing: {}", src_file.display());
+            return 1;
+        }
+        let actual_hash = match sha256_file_hex(&src_file) {
+            Ok(h) => h,
+            Err(e) => {
+                eprintln!("Error hashing {}: {e}", src_file.display());
+                return 1;
+            }
+        };
+        if !actual_hash.eq_ignore_ascii_case(expected_hash) {
+            eprintln!(
+                "Error: SHA-256 mismatch for {}: expected {}, got {}",
+                file_name, expected_hash, actual_hash
+            );
+            return 1;
+        }
+        entries_to_restore.push((file_name.to_string(), expected_hash.to_string()));
+    }
+    if let Err(e) = std::fs::create_dir_all(store_path) {
+        eprintln!("Error creating store directory {}: {e}", store_path.display());
+        return 1;
+    }
+    for (file_name, _) in &entries_to_restore {
+        let src_file = src.join(file_name);
+        let dst_file = store_path.join(file_name);
+        if let Err(e) = std::fs::copy(&src_file, &dst_file) {
+            eprintln!(
+                "Error restoring {} to {}: {e}",
+                src_file.display(),
+                dst_file.display()
+            );
+            return 1;
+        }
+    }
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "status": "ok",
+                "backup_dir": src.display().to_string(),
+                "store": store_path.display().to_string(),
+                "files_restored": entries_to_restore.len(),
+                "sha256_verified": true,
+            }))
+            .unwrap_or_default()
+        );
+    } else {
+        println!(
+            "Restore complete: {} files verified against SHA256SUMS and restored to {}",
+            entries_to_restore.len(),
+            store_path.display()
+        );
+    }
+    0
 }
 
 fn run_seed_command(store_path: &Path, action: &str, json: bool) {

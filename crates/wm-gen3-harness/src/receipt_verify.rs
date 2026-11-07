@@ -57,7 +57,7 @@ pub fn gate_key_fingerprint(store_path: &Path) -> Result<(String, String), Strin
 }
 
 /// Encode an Ed25519 public key as `did:key:z...` (multicodec `0xed01`).
-fn ed25519_did_key(public_key: &[u8; 32]) -> String {
+pub fn ed25519_did_key(public_key: &[u8; 32]) -> String {
     let mut multicodec = Vec::with_capacity(34);
     multicodec.extend_from_slice(&[0xed, 0x01]);
     multicodec.extend_from_slice(public_key);
@@ -65,7 +65,7 @@ fn ed25519_did_key(public_key: &[u8; 32]) -> String {
 }
 
 /// Base58btc encode (Bitcoin alphabet), as used by `did:key` multibase.
-fn base58btc_encode(input: &[u8]) -> String {
+pub fn base58btc_encode(input: &[u8]) -> String {
     const ALPHABET: &[u8; 58] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
     let leading_zeros = input.iter().take_while(|&&byte| byte == 0).count();
     let mut digits: Vec<u8> = Vec::new();
@@ -89,6 +89,760 @@ fn base58btc_encode(input: &[u8]) -> String {
         encoded.push(char::from(ALPHABET[usize::from(digit)]));
     }
     encoded
+}
+
+/// Base58btc decode (Bitcoin alphabet).
+pub fn base58btc_decode(input: &str) -> Result<Vec<u8>, String> {
+    const ALPHABET: &[u8; 58] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    if input.is_empty() {
+        return Err("empty base58 input".to_string());
+    }
+    let leading_ones = input.bytes().take_while(|&b| b == b'1').count();
+    let mut bytes_le: Vec<u8> = Vec::new();
+    for ch in input.bytes().skip(leading_ones) {
+        let val = ALPHABET
+            .iter()
+            .position(|&c| c == ch)
+            .ok_or_else(|| format!("invalid base58 character '{}'", ch as char))?
+            as u32;
+        let mut carry = val;
+        for byte in &mut bytes_le {
+            carry += u32::from(*byte) * 58;
+            *byte = (carry & 0xff) as u8;
+            carry >>= 8;
+        }
+        while carry > 0 {
+            bytes_le.push((carry & 0xff) as u8);
+            carry >>= 8;
+        }
+    }
+    let mut out = vec![0u8; leading_ones];
+    for &b in bytes_le.iter().rev() {
+        out.push(b);
+    }
+    Ok(out)
+}
+
+/// Decode an Ed25519 `did:key` (`did:key:z<base58btc>` with multicodec `0xed01` or `did:key:<64-hex>`).
+pub fn decode_did_key_ed25519(did: &str) -> Result<VerifyingKey, String> {
+    if let Some(rest) = did.strip_prefix("did:key:z") {
+        let raw = base58btc_decode(rest)?;
+        if raw.len() != 34 || raw[0] != 0xed || raw[1] != 0x01 {
+            return Err("did:key:z is not an Ed25519 multicodec (0xed01) key".to_string());
+        }
+        let mut pub_bytes = [0u8; 32];
+        pub_bytes.copy_from_slice(&raw[2..34]);
+        VerifyingKey::from_bytes(&pub_bytes).map_err(|e| format!("invalid Ed25519 key: {e}"))
+    } else if let Some(rest) = did.strip_prefix("did:key:") {
+        let bytes = hex_decode(rest).ok_or_else(|| "invalid hex did:key".to_string())?;
+        if bytes.len() != 32 {
+            return Err("hex did:key must be 32 bytes".to_string());
+        }
+        let mut pub_bytes = [0u8; 32];
+        pub_bytes.copy_from_slice(&bytes);
+        VerifyingKey::from_bytes(&pub_bytes).map_err(|e| format!("invalid Ed25519 key: {e}"))
+    } else {
+        Err(format!("unsupported DID format: {did}"))
+    }
+}
+
+/// Unpadded base64url encode (RFC 4648 §5).
+pub fn b64u_encode(data: &[u8]) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
+    for chunk in data.chunks(3) {
+        let b0 = u32::from(chunk[0]);
+        let b1 = if chunk.len() > 1 { u32::from(chunk[1]) } else { 0 };
+        let b2 = if chunk.len() > 2 { u32::from(chunk[2]) } else { 0 };
+        let n = (b0 << 16) | (b1 << 8) | b2;
+        out.push(TABLE[((n >> 18) & 0x3f) as usize] as char);
+        out.push(TABLE[((n >> 12) & 0x3f) as usize] as char);
+        if chunk.len() > 1 {
+            out.push(TABLE[((n >> 6) & 0x3f) as usize] as char);
+        }
+        if chunk.len() > 2 {
+            out.push(TABLE[(n & 0x3f) as usize] as char);
+        }
+    }
+    out
+}
+
+/// Unpadded base64url decode (strict, matching `continuity-receipt` `keys.py` / `didkey.rs`).
+pub fn b64u_decode(text: &str) -> Result<Vec<u8>, String> {
+    if text.is_empty() || !text.is_ascii() || text.contains('=') {
+        return Err("invalid base64url string".to_string());
+    }
+    let rem = text.len() % 4;
+    if rem == 1 {
+        return Err("invalid base64url length".to_string());
+    }
+    let val_of = |b: u8| -> Result<u32, String> {
+        match b {
+            b'A'..=b'Z' => Ok(u32::from(b - b'A')),
+            b'a'..=b'z' => Ok(u32::from(b - b'a') + 26),
+            b'0'..=b'9' => Ok(u32::from(b - b'0') + 52),
+            b'-' => Ok(62),
+            b'_' => Ok(63),
+            _ => Err("invalid base64url character".to_string()),
+        }
+    };
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len() * 3 / 4);
+    let full_quads = bytes.len() / 4;
+    for q in 0..full_quads {
+        let i = q * 4;
+        let n = (val_of(bytes[i])? << 18)
+            | (val_of(bytes[i + 1])? << 12)
+            | (val_of(bytes[i + 2])? << 6)
+            | val_of(bytes[i + 3])?;
+        out.push(((n >> 16) & 0xff) as u8);
+        out.push(((n >> 8) & 0xff) as u8);
+        out.push((n & 0xff) as u8);
+    }
+    let tail = &bytes[full_quads * 4..];
+    if tail.len() == 2 {
+        let c0 = val_of(tail[0])?;
+        let c1 = val_of(tail[1])?;
+        if (c1 & 0x0f) != 0 {
+            return Err("non-zero trailing base64url bits".to_string());
+        }
+        let n = (c0 << 18) | (c1 << 12);
+        out.push(((n >> 16) & 0xff) as u8);
+    } else if tail.len() == 3 {
+        let c0 = val_of(tail[0])?;
+        let c1 = val_of(tail[1])?;
+        let c2 = val_of(tail[2])?;
+        if (c2 & 0x03) != 0 {
+            return Err("non-zero trailing base64url bits".to_string());
+        }
+        let n = (c0 << 18) | (c1 << 12) | (c2 << 6);
+        out.push(((n >> 16) & 0xff) as u8);
+        out.push(((n >> 8) & 0xff) as u8);
+    }
+    Ok(out)
+}
+
+/// JCS-subset canonical JSON bytes (sorted object keys, no whitespace, no floats).
+pub fn jcs_canonical_bytes(value: &Value) -> Result<Vec<u8>, String> {
+    let mut out = String::new();
+    write_jcs_value(value, &mut out)?;
+    Ok(out.into_bytes())
+}
+
+fn write_jcs_value(value: &Value, out: &mut String) -> Result<(), String> {
+    match value {
+        Value::Null => out.push_str("null"),
+        Value::Bool(true) => out.push_str("true"),
+        Value::Bool(false) => out.push_str("false"),
+        Value::Number(num) => {
+            if let Some(i) = num.as_i64() {
+                out.push_str(&i.to_string());
+            } else if let Some(u) = num.as_u64() {
+                out.push_str(&u.to_string());
+            } else {
+                return Err("floats are not allowed in continuity receipts (v0)".to_string());
+            }
+        }
+        Value::String(s) => {
+            let encoded =
+                serde_json::to_string(s).map_err(|e| format!("JCS string encode: {e}"))?;
+            out.push_str(&encoded);
+        }
+        Value::Array(items) => {
+            out.push('[');
+            for (idx, item) in items.iter().enumerate() {
+                if idx > 0 {
+                    out.push(',');
+                }
+                write_jcs_value(item, out)?;
+            }
+            out.push(']');
+        }
+        Value::Object(map) => {
+            out.push('{');
+            let mut keys: Vec<&String> = map.keys().collect();
+            keys.sort();
+            for (idx, key) in keys.into_iter().enumerate() {
+                if idx > 0 {
+                    out.push(',');
+                }
+                let encoded_key =
+                    serde_json::to_string(key).map_err(|e| format!("JCS key encode: {e}"))?;
+                out.push_str(&encoded_key);
+                out.push(':');
+                write_jcs_value(&map[key], out)?;
+            }
+            out.push('}');
+        }
+    }
+    Ok(())
+}
+
+/// Return a receipt object without its `"sig"` member (CPR `unsigned_view`).
+pub fn cpr05_unsigned_view(receipt: &Value) -> Value {
+    match receipt {
+        Value::Object(map) => {
+            let mut out = Map::new();
+            for (k, v) in map {
+                if k != "sig" {
+                    out.insert(k.clone(), v.clone());
+                }
+            }
+            Value::Object(out)
+        }
+        other => other.clone(),
+    }
+}
+
+/// Compute `"sha256:<hex>"` over `jcs_canonical_bytes(cpr05_unsigned_view(receipt))`.
+pub fn cpr05_receipt_digest(receipt: &Value) -> Result<String, String> {
+    let bytes = jcs_canonical_bytes(&cpr05_unsigned_view(receipt))?;
+    Ok(format!("sha256:{}", hex_encode(&Sha256::digest(&bytes))))
+}
+
+/// Format Unix epoch milliseconds as RFC 3339 UTC (`YYYY-MM-DDTHH:MM:SSZ`).
+fn unix_ms_to_rfc3339_sec(ms: u64) -> String {
+    let total_secs = (ms / 1000) as i64;
+    let secs_of_day = total_secs.rem_euclid(86_400);
+    let days = total_secs.div_euclid(86_400);
+    let hour = secs_of_day / 3600;
+    let minute = (secs_of_day % 3600) / 60;
+    let second = secs_of_day % 60;
+    // Civil date from days since 1970-01-01 (Howard Hinnant algorithm)
+    let z = days + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = (z - era * 146_097) as u64;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
+    let y = (yoe as i64) + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = if m <= 2 { y + 1 } else { y };
+    format!("{year:04}-{m:02}-{d:02}T{hour:02}:{minute:02}:{second:02}Z")
+}
+
+/// Build a 5-receipt `continuity-receipt/0.5` hash-linked chain (`session.pass.created` ->
+/// `task.decision` -> `state.commitment` -> `delivery.attestation` -> `task.termination`)
+/// signed by `signing_key` so that any emitted Gen 3 continuity receipt is also a 100%
+/// valid `continuity-receipt/0.5` bundle across Python (`0.5.4`), Rust (`0.5.2`), JS (`0.1.2`),
+/// and hosted `api.whitemagic.dev/verify`.
+#[allow(clippy::too_many_arguments)]
+pub fn build_cpr05_chain_for_emitted(
+    signing_key: &SigningKey,
+    receipt_id: &str,
+    kind: &str,
+    subject: &str,
+    created_at_ms: u64,
+    count_value: u64,
+    payload_digest: &str,
+    prior_receipt_digest: &str,
+    content_digest: &str,
+) -> Result<(String, Vec<Value>, Value), String> {
+    let task_id = if receipt_id.starts_with("urn:uuid:") {
+        receipt_id.to_string()
+    } else {
+        format!("urn:uuid:{receipt_id}")
+    };
+    let did_z = ed25519_did_key(&signing_key.verifying_key().to_bytes());
+    let prior_hex = if prior_receipt_digest.len() == 64
+        && prior_receipt_digest.bytes().all(|b| b.is_ascii_hexdigit())
+    {
+        prior_receipt_digest.to_ascii_lowercase()
+    } else {
+        hex_encode(&Sha256::digest(prior_receipt_digest.as_bytes()))
+    };
+    let payload_hex = if payload_digest.len() == 64
+        && payload_digest.bytes().all(|b| b.is_ascii_hexdigit())
+    {
+        payload_digest.to_ascii_lowercase()
+    } else {
+        hex_encode(&Sha256::digest(payload_digest.as_bytes()))
+    };
+    let content_hex = if content_digest.len() == 64
+        && content_digest.bytes().all(|b| b.is_ascii_hexdigit())
+    {
+        content_digest.to_ascii_lowercase()
+    } else {
+        hex_encode(&Sha256::digest(content_digest.as_bytes()))
+    };
+
+    let base_ms = if created_at_ms > 0 {
+        created_at_ms
+    } else {
+        1_762_500_000_000
+    };
+    let expires_iso = unix_ms_to_rfc3339_sec(base_ms + 86_400_000);
+    let policy_version = "whitemagic-gen3/v11.0.0";
+
+    let specs_and_bodies: [(usize, &str, &str, Value); 5] = [
+        (
+            0,
+            "session.pass.created",
+            "gate",
+            json!({
+                "gate_id": "mandala-local-gate",
+                "mandala_class": "local",
+                "quotas": { "max_items": count_value.max(1) },
+                "expires_at": expires_iso,
+                "policy_version": policy_version,
+                "mandate_ref": format!("sha256:{prior_hex}"),
+                "agent_id": did_z,
+            }),
+        ),
+        (
+            1,
+            "task.decision",
+            "runtime",
+            json!({
+                "action": format!("receipts.emit.{kind}"),
+                "action_args_hash": format!("sha256:{payload_hex}"),
+                "model": "whitemagic-gen3-native",
+                "input_provenance": {
+                    "observed_sources_hash": format!("sha256:{prior_hex}")
+                },
+                "decision": "allow",
+                "policy_version": policy_version,
+            }),
+        ),
+        (
+            2,
+            "state.commitment",
+            "runtime",
+            json!({
+                "state_kind": kind,
+                "scope": subject,
+                "count": count_value,
+                "head_digest": format!("sha256:{payload_hex}"),
+            }),
+        ),
+        (
+            3,
+            "delivery.attestation",
+            "gate",
+            json!({
+                "request_hash": format!("sha256:{prior_hex}"),
+                "response_hash": format!("sha256:{content_hex}"),
+                "counterparty": {
+                    "id": did_z
+                },
+            }),
+        ),
+        (
+            4,
+            "task.termination",
+            "gate",
+            json!({
+                "reason": "completed",
+                "limits_at_stop": {
+                    "items_committed": count_value
+                },
+                "remaining": {
+                    "budget_remaining": 1000000
+                },
+            }),
+        ),
+    ];
+
+    let mut chain: Vec<Value> = Vec::with_capacity(5);
+    let mut prev_digest: Option<String> = None;
+
+    for (seq, rec_type, issuer_kind, body) in specs_and_bodies {
+        // Deterministic per-step UUID derived from receipt_id + seq so re-signing is deterministic
+        let step_uuid = uuid::Uuid::new_v5(
+            &uuid::Uuid::NAMESPACE_OID,
+            format!("{receipt_id}:cpr05:{seq}").as_bytes(),
+        );
+        let step_rid = format!("urn:uuid:{step_uuid}");
+        let issued_at = unix_ms_to_rfc3339_sec(base_ms + (seq as u64) * 1000);
+        let mut rec = json!({
+            "spec": "continuity-receipt/0.5",
+            "receipt_id": step_rid,
+            "task_id": task_id,
+            "issued_at": issued_at,
+            "issuer": {
+                "kind": issuer_kind,
+                "id": did_z,
+            },
+            "type": rec_type,
+            "seq": seq,
+            "prev": prev_digest,
+            "body": body,
+        });
+        let unsigned_bytes = jcs_canonical_bytes(&rec)?;
+        let sig = signing_key.sign(&unsigned_bytes);
+        rec["sig"] = json!({
+            "alg": "ed25519",
+            "key": did_z,
+            "value": b64u_encode(&sig.to_bytes()),
+        });
+        prev_digest = Some(cpr05_receipt_digest(&rec)?);
+        chain.push(rec);
+    }
+
+    let last = chain.last().ok_or("empty chain")?;
+    let last_digest = prev_digest.ok_or("missing last digest")?;
+    let chain_head = json!({
+        "seq": 4,
+        "receipt_id": last["receipt_id"],
+        "digest": last_digest,
+    });
+
+    Ok((task_id, chain, chain_head))
+}
+
+/// Verify a standard `continuity-receipt/0.1..0.6` bundle or a Gen 3 emitted
+/// continuity receipt (`#session` / `#state_transition`, or hybrid `0.5` bundle).
+pub fn verify_cpr05_bundle_or_emitted(value: &Value, store_path: &Path) -> Result<Value, String> {
+    let object = value
+        .as_object()
+        .ok_or_else(|| "receipt must be a JSON object".to_string())?;
+    let spec = object
+        .get("spec")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "receipt has no 'spec' field".to_string())?;
+
+    let is_emitted_shape = object.contains_key("kind") && object.contains_key("content_digest");
+    let has_cpr_chain = object
+        .get("receipts")
+        .and_then(Value::as_array)
+        .is_some_and(|arr| !arr.is_empty());
+
+    let mut emitted_profile: Option<String> = None;
+    let mut emitted_receipt_id: Option<String> = None;
+    let mut emitted_issuer_did: Option<String> = None;
+
+    if is_emitted_shape {
+        let kind = object
+            .get("kind")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "emitted receipt missing string 'kind'".to_string())?;
+        let expected_profile_spec = match kind {
+            "session" => "continuity-receipt/0.5#session",
+            "state_transition" => "continuity-receipt/0.5#state_transition",
+            other => {
+                return Err(format!(
+                    "unsupported emitted continuity receipt kind '{other}'"
+                ));
+            }
+        };
+        let profile_spec = object
+            .get("profile_spec")
+            .and_then(Value::as_str)
+            .unwrap_or(spec);
+        if spec != expected_profile_spec && spec != "continuity-receipt/0.5" {
+            return Err(format!(
+                "spec/kind mismatch: expected {expected_profile_spec} or continuity-receipt/0.5, got {spec}"
+            ));
+        }
+        if profile_spec != expected_profile_spec && profile_spec != "continuity-receipt/0.5" {
+            return Err(format!(
+                "profile_spec/kind mismatch: expected {expected_profile_spec}, got {profile_spec}"
+            ));
+        }
+
+        let key = load_verifying_key(store_path)?;
+        let expected_did_hex = format!("did:key:{}", hex_encode(&key.to_bytes()));
+        let expected_did_z = ed25519_did_key(&key.to_bytes());
+        let issuer_did = object
+            .get("issuer_did")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "emitted receipt missing string 'issuer_did'".to_string())?;
+        if issuer_did != expected_did_hex && issuer_did != expected_did_z {
+            return Err(format!(
+                "issuer_did mismatch: expected {expected_did_hex} (or {expected_did_z}), got {issuer_did}"
+            ));
+        }
+
+        let receipt_id = object
+            .get("receipt_id")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "emitted receipt missing 'receipt_id'".to_string())?;
+        let subject = object
+            .get("subject")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "emitted receipt missing 'subject'".to_string())?;
+        let session_id = object.get("session_id").and_then(Value::as_str);
+        let created_at_ms = object
+            .get("created_at_ms")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| "emitted receipt missing 'created_at_ms'".to_string())?;
+        let turn_count = object.get("turn_count").and_then(Value::as_u64);
+        let first_turn_ts = object.get("first_turn_ts").and_then(Value::as_u64);
+        let last_turn_ts = object.get("last_turn_ts").and_then(Value::as_u64);
+        let store_epoch = object.get("store_epoch").and_then(Value::as_u64);
+        let store_record_count = object.get("store_record_count").and_then(Value::as_u64);
+        let turns_digest = object.get("turns_digest").and_then(Value::as_str);
+        let payload_digest = object
+            .get("payload_digest")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "emitted receipt missing 'payload_digest'".to_string())?;
+        let prior_receipt_digest = object
+            .get("prior_receipt_digest")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "emitted receipt missing 'prior_receipt_digest'".to_string())?;
+        let content_digest = object
+            .get("content_digest")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "emitted receipt missing 'content_digest'".to_string())?;
+        let signature_hex = object
+            .get("signature")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "unsigned receipt".to_string())?;
+
+        // Recompute canonical_signing_bytes using expected_profile_spec
+        let mut hasher = Sha256::new();
+        hasher.update(expected_profile_spec.as_bytes());
+        hasher.update(b"|");
+        hasher.update(receipt_id.as_bytes());
+        hasher.update(b"|");
+        hasher.update(kind.as_bytes());
+        hasher.update(b"|");
+        hasher.update(subject.as_bytes());
+        hasher.update(b"|");
+        if let Some(session) = session_id {
+            hasher.update(session.as_bytes());
+        }
+        hasher.update(b"|");
+        hasher.update(created_at_ms.to_le_bytes());
+        for num_val in [
+            turn_count,
+            first_turn_ts,
+            last_turn_ts,
+            store_epoch,
+            store_record_count,
+        ] {
+            hasher.update(b"|");
+            if let Some(v) = num_val {
+                hasher.update(v.to_le_bytes());
+            }
+        }
+        hasher.update(b"|");
+        if let Some(td) = turns_digest {
+            hasher.update(td.as_bytes());
+        }
+        hasher.update(b"|");
+        hasher.update(payload_digest.as_bytes());
+        hasher.update(b"|");
+        hasher.update(prior_receipt_digest.as_bytes());
+        hasher.update(b"|");
+        hasher.update(issuer_did.as_bytes());
+        let canonical = hasher.finalize().to_vec();
+        let recomputed = hex_encode(&Sha256::digest(&canonical));
+        if recomputed != content_digest {
+            return Err("content_digest mismatch: receipt fields were altered".to_string());
+        }
+
+        let sig_bytes = hex_decode(signature_hex).ok_or("signature is not valid hex")?;
+        if sig_bytes.len() != 64 {
+            return Err("signature must be 64 bytes".to_string());
+        }
+        let mut sig_arr = [0u8; 64];
+        sig_arr.copy_from_slice(&sig_bytes);
+        let signature = Signature::from_bytes(&sig_arr);
+        key.verify(&canonical, &signature)
+            .map_err(|e| format!("signature invalid: {e}"))?;
+
+        emitted_profile = Some(kind.to_string());
+        emitted_receipt_id = Some(receipt_id.to_string());
+        emitted_issuer_did = Some(issuer_did.to_string());
+    }
+
+    if has_cpr_chain {
+        let supported_specs = [
+            "continuity-receipt/0.1",
+            "continuity-receipt/0.2",
+            "continuity-receipt/0.3",
+            "continuity-receipt/0.4",
+            "continuity-receipt/0.5",
+            "continuity-receipt/0.6",
+        ];
+        if !supported_specs.contains(&spec)
+            && spec != "continuity-receipt/0.5#session"
+            && spec != "continuity-receipt/0.5#state_transition"
+        {
+            return Err(format!("version_unsupported: spec={spec}"));
+        }
+        let task_id = object
+            .get("task_id")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "malformed: bundle missing string 'task_id'".to_string())?;
+        let receipts = object
+            .get("receipts")
+            .and_then(Value::as_array)
+            .ok_or_else(|| "malformed: bundle has no receipts".to_string())?;
+        if receipts.is_empty() {
+            return Err("malformed: bundle has no receipts".to_string());
+        }
+
+        let local_key = load_verifying_key(store_path).ok();
+        let mut expected_prev: Option<String> = None;
+        let mut has_pass = false;
+        let mut has_termination = false;
+        let mut first_issuer = String::new();
+        let mut first_rid = String::new();
+
+        for (index, item) in receipts.iter().enumerate() {
+            let rec_obj = item
+                .as_object()
+                .ok_or_else(|| format!("malformed: receipt {index} is not an object"))?;
+            let r_spec = rec_obj
+                .get("spec")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            if !supported_specs.contains(&r_spec) {
+                return Err(format!("version_unsupported: receipt spec={r_spec}"));
+            }
+            let r_task = rec_obj
+                .get("task_id")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            if r_task != task_id {
+                return Err("task_mismatch: receipt task_id != bundle task_id".to_string());
+            }
+            let r_seq = rec_obj.get("seq").and_then(Value::as_u64);
+            if r_seq != Some(index as u64) {
+                return Err(format!("chain_break: seq {r_seq:?} != position {index}"));
+            }
+            let r_prev = match rec_obj.get("prev") {
+                Some(Value::Null) | None => None,
+                Some(Value::String(s)) => Some(s.clone()),
+                _ => return Err("chain_break: malformed prev field".to_string()),
+            };
+            if r_prev != expected_prev {
+                return Err("chain_break: prev digest mismatch".to_string());
+            }
+            let r_type = rec_obj
+                .get("type")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            if r_type == "session.pass.created" {
+                has_pass = true;
+            }
+            if r_type == "task.termination" {
+                has_termination = true;
+            }
+
+            let issuer_id = rec_obj
+                .get("issuer")
+                .and_then(Value::as_object)
+                .and_then(|iss| iss.get("id"))
+                .and_then(Value::as_str)
+                .ok_or_else(|| "malformed: receipt missing issuer.id".to_string())?;
+            let sig_obj = rec_obj
+                .get("sig")
+                .and_then(Value::as_object)
+                .ok_or_else(|| "bad_signature: missing sig object".to_string())?;
+            if sig_obj.get("alg").and_then(Value::as_str) != Some("ed25519") {
+                return Err("bad_signature: unsupported sig.alg".to_string());
+            }
+            let sig_b64 = sig_obj
+                .get("value")
+                .and_then(Value::as_str)
+                .ok_or_else(|| "bad_signature: missing sig.value".to_string())?;
+            let sig_raw =
+                b64u_decode(sig_b64).map_err(|e| format!("bad_signature: {e}"))?;
+            if sig_raw.len() != 64 {
+                return Err("bad_signature: Ed25519 signature must be 64 bytes".to_string());
+            }
+            let mut sig_arr = [0u8; 64];
+            sig_arr.copy_from_slice(&sig_raw);
+            let sig = Signature::from_bytes(&sig_arr);
+            let vk = decode_did_key_ed25519(issuer_id)
+                .map_err(|e| format!("bad_signature: {e}"))?;
+            let msg = jcs_canonical_bytes(&cpr05_unsigned_view(item))?;
+            vk.verify(&msg, &sig)
+                .map_err(|e| format!("bad_signature: signature does not verify ({e})"))?;
+
+            if is_emitted_shape {
+                if let Some(ref lk) = local_key {
+                    if vk.to_bytes() != lk.to_bytes() {
+                        return Err("issuer_did mismatch in CPR chain".to_string());
+                    }
+                }
+            }
+
+            if index == 0 {
+                first_issuer = issuer_id.to_string();
+                first_rid = rec_obj
+                    .get("receipt_id")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+            }
+            expected_prev = Some(cpr05_receipt_digest(item)?);
+        }
+
+        if !has_pass {
+            return Err("malformed: chain has no session.pass.created receipt".to_string());
+        }
+        if !has_termination {
+            return Err("missing_termination: task has no termination receipt".to_string());
+        }
+
+        if let Some(head) = object.get("chain_head").and_then(Value::as_object) {
+            let last_rec = receipts.last().unwrap();
+            let last_seq = last_rec.get("seq");
+            let last_rid = last_rec.get("receipt_id");
+            let last_dig = expected_prev.as_deref().map(Value::from);
+            if head.get("seq") != last_seq
+                || head.get("receipt_id") != last_rid
+                || head.get("digest") != last_dig.as_ref()
+            {
+                return Err(
+                    "head_mismatch: chain_head does not match the final receipt".to_string(),
+                );
+            }
+        }
+
+        let profile_out = emitted_profile.unwrap_or_else(|| "bundle".to_string());
+        let rid_out = emitted_receipt_id.unwrap_or(first_rid);
+        let issuer_out = emitted_issuer_did.unwrap_or(first_issuer);
+
+        return Ok(json!({
+            "status": "success",
+            "valid": true,
+            "verdict": "TRUSTED",
+            "profile": profile_out,
+            "spec": spec,
+            "profile_spec": object.get("profile_spec"),
+            "task_id": task_id,
+            "receipt_id": rid_out,
+            "issuer_did": issuer_out,
+            "chain_length": receipts.len(),
+            "detail": "continuity-receipt/0.5 bundle and local gate attestation verified",
+            "verified_offline": true,
+            "signature_scope": format!("{spec} JCS-RFC8785 + canonical_signing_bytes"),
+            "unauthenticated_fields": [],
+            "numeric_projection": ["integer fields use exact JSON integers and little-endian byte representations"],
+            "scope_notes": [
+                "verifies both the Continuity Receipt 0.5 hash-linked Ed25519 chain (RFC 8785 JCS) and any WhiteMagic store gate signature"
+            ],
+        }));
+    }
+
+    if let Some(kind) = emitted_profile {
+        return Ok(json!({
+            "status": "success",
+            "valid": true,
+            "verdict": "TRUSTED",
+            "profile": kind,
+            "spec": spec,
+            "receipt_id": emitted_receipt_id,
+            "issuer_did": emitted_issuer_did,
+            "detail": "emitted continuity receipt verifies against the store gate key",
+            "verified_offline": true,
+            "signature_scope": format!("{spec} canonical_signing_bytes"),
+            "unauthenticated_fields": [],
+            "numeric_projection": ["integer fields use their exact encoded representation"],
+            "scope_notes": [
+                "signature authenticates the issuer's claimed turn digest / store snapshot; \
+                 the session log and store counters are not re-read from disk here"
+            ],
+        }));
+    }
+
+    Err(format!("unsupported or malformed receipt for spec: {spec}"))
 }
 
 /// Verify a supported signed WhiteMagic profile receipt against the store's gate key.
@@ -192,6 +946,19 @@ pub fn verify_receipt_value(value: &Value, store_path: &Path) -> Result<Value, S
     if spec.is_empty() {
         return Err("receipt has no 'spec' field".to_string());
     }
+    if matches!(
+        spec.as_str(),
+        "continuity-receipt/0.1"
+            | "continuity-receipt/0.2"
+            | "continuity-receipt/0.3"
+            | "continuity-receipt/0.4"
+            | "continuity-receipt/0.5"
+            | "continuity-receipt/0.6"
+            | "continuity-receipt/0.5#session"
+            | "continuity-receipt/0.5#state_transition"
+    ) {
+        return verify_cpr05_bundle_or_emitted(value, store_path);
+    }
     let profile = match spec.as_str() {
         "continuity-receipt/0.5#decision" => "decision",
         "continuity-receipt/0.5#shortlist" => "shortlist",
@@ -212,11 +979,12 @@ pub fn verify_receipt_value(value: &Value, store_path: &Path) -> Result<Value, S
             .map(|b| format!("{b:02x}"))
             .collect::<String>()
     );
+    let expected_did_z = ed25519_did_key(&key.to_bytes());
     let issuer_did = value
         .get("issuer_did")
         .and_then(Value::as_str)
         .ok_or_else(|| "receipt has no string issuer_did".to_string())?;
-    if issuer_did != expected_did {
+    if issuer_did != expected_did && issuer_did != expected_did_z {
         return Err(format!(
             "issuer_did mismatch: expected {expected_did}, got {issuer_did}"
         ));

@@ -6,9 +6,9 @@ are in [`STORE_AND_DATA_HYGIENE.md`](STORE_AND_DATA_HYGIENE.md); this document
 is the byte-level map: LMDB DBIs, sidecar files, observed sizes, backup
 coverage and known gaps.
 
-Default store: `~/.local/share/whitemagic/gen3` (resolution order:
-`--store` → `$WM_STORE` → `.../gen3` → legacy `.../lmdb` →
-`.../whitemagic` → `./gen3-store`, see `wm.rs::resolve_store_path`).
+Default store: `~/.local/share/whitemagic/gen3` (resolution order in `wm 11.0.0+`:
+`--store` → `$WM_STORE` → `$WM_STORE_PATH` → `~/.local/share/whitemagic/gen3`
+(or legacy `~/.local/share/whitemagic/lmdb` if present without `gen3`) → `./gen3-store` only when `$HOME` is unset; see `wm.rs::resolve_store_path`. Note: earlier `v10.7.1` builds fell back to `./gen3-store` when `~/.local/share/whitemagic/gen3` did not yet exist).
 
 ## 1. LMDB environment (`data.mdb`)
 
@@ -105,5 +105,4 @@ repository — treat the CHANGELOG entry as the in-repo reference.
    and no alert before `MDB_MAP_FULL`; sizes above are manual snapshots.
 3. **Full hydration on open** was flagged as a load risk in ops notes; it is
    not quantified here.
-4. Backup verification is manual/fleet-side; the binary has no `backup` /
-   `restore` command in the 10.2 alpha line.
+4. In `wm 11.0.0+`, `wm backup <dest> [--json]` and `wm restore <src> [--force] [--json]` create and verify a full store snapshot with a `SHA256SUMS` manifest (earlier `10.2–10.7` alpha lines relied on manual/fleet-side backups).

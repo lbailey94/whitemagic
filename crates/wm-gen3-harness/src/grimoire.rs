@@ -176,53 +176,75 @@ pub fn run_grimoire_with_home(
     // ----------------------------------------------------
     let t1 = Instant::now();
     let store_existed = store_path.exists();
-    if !store_existed {
+    if !store_existed && !plan_configs {
         std::fs::create_dir_all(store_path)
             .map_err(|e| format!("Failed to create store dir: {e}"))?;
     }
 
     let journal_path = store_path.join("journal.jsonl");
 
-    // Diagnostic resilience: if the store already exists, attempt read-only first
-    // to prevent blocking if active AI agent MCP servers hold the writer lock.
-    let (mut substrate, was_readonly) = if store_existed {
+    // Diagnostic resilience: in --plan mode, never create or mutate the store;
+    // if the store already exists, attempt read-only first.
+    let (mut substrate_opt, was_readonly) = if plan_configs {
+        if store_existed && store_path.join("data.mdb").exists() {
+            match Substrate::open_readonly(store_path, Some(&journal_path), default_view()) {
+                Ok(ro_sub) => (Some(ro_sub), true),
+                Err(_) => (None, true),
+            }
+        } else {
+            (None, true)
+        }
+    } else if store_existed {
         match Substrate::open_readonly(store_path, Some(&journal_path), default_view()) {
             Ok(ro_sub) => {
                 let cnt = ro_sub.store().record_count().unwrap_or(0);
                 if cnt > 0 {
-                    (ro_sub, true)
+                    (Some(ro_sub), true)
                 } else {
                     drop(ro_sub);
                     let rw = Substrate::open(store_path, Some(&journal_path), default_view())
                         .map_err(|e| {
                             format!("Failed to open substrate store for initialization: {e}")
                         })?;
-                    (rw, false)
+                    (Some(rw), false)
                 }
             }
             Err(_) => {
                 let rw = Substrate::open(store_path, Some(&journal_path), default_view())
                     .map_err(|e| format!("Failed to open substrate store: {e}"))?;
-                (rw, false)
+                (Some(rw), false)
             }
         }
     } else {
         let rw = Substrate::open(store_path, Some(&journal_path), default_view())
             .map_err(|e| format!("Failed to open new substrate store: {e}"))?;
-        (rw, false)
+        (Some(rw), false)
     };
 
-    let initial_count = substrate.store().record_count().unwrap_or(0);
+    let initial_count = substrate_opt
+        .as_ref()
+        .and_then(|s| s.store().record_count().ok())
+        .unwrap_or(0);
+    let current_epoch = substrate_opt
+        .as_ref()
+        .and_then(|s| s.store().epoch().ok())
+        .unwrap_or(0);
     steps.push(GrimoireStep {
         name: "substrate",
         status: StepStatus::Ok,
-        summary: "Sovereign LMDB substrate active".to_string(),
+        summary: if plan_configs && substrate_opt.is_none() {
+            "Sovereign LMDB substrate planned (read-only dry run)".to_string()
+        } else {
+            "Sovereign LMDB substrate active".to_string()
+        },
         detail: format!(
             "Path: {} (Epoch {}, Records: {}, Mode: {})",
             store_path.display(),
-            substrate.store().epoch().unwrap_or(0),
+            current_epoch,
             initial_count,
-            if was_readonly {
+            if plan_configs {
+                "PlanOnly/ReadOnly"
+            } else if was_readonly {
                 "ReadOnly/Shared"
             } else {
                 "ReadWrite"
@@ -236,12 +258,17 @@ pub fn run_grimoire_with_home(
     // ----------------------------------------------------
     let t2 = Instant::now();
     let mut seeded = 0;
-    if !was_readonly && initial_count == 0 {
-        seeded = seed_starter_guide_if_empty(&mut substrate)
-            .map_err(|e| format!("Failed seeding starter guide: {e}"))?;
+    if !plan_configs && !was_readonly && initial_count == 0 {
+        if let Some(ref mut substrate) = substrate_opt {
+            seeded = seed_starter_guide_if_empty(substrate)
+                .map_err(|e| format!("Failed seeding starter guide: {e}"))?;
+        }
     }
 
-    let galaxies = list_galaxies(&substrate).unwrap_or_default();
+    let galaxies = substrate_opt
+        .as_ref()
+        .and_then(|s| list_galaxies(s).ok())
+        .unwrap_or_default();
     let guide_galaxy = galaxies.iter().find(|g| g.name == "guide");
 
     let (guide_status, guide_summary, guide_detail) = if let Some(g) = guide_galaxy {
@@ -259,6 +286,12 @@ pub fn run_grimoire_with_home(
                     g.record_count
                 )
             },
+        )
+    } else if plan_configs {
+        (
+            StepStatus::Skip,
+            "Starter 'guide' galaxy planned (skipped in --plan mode)".to_string(),
+            "Run 'wm grimoire' without --plan to seed starter guide records.".to_string(),
         )
     } else {
         (
@@ -327,7 +360,10 @@ pub fn run_grimoire_with_home(
     };
 
     let verify_start = Instant::now();
-    let hits = substrate.recall(&q).unwrap_or_default();
+    let hits = substrate_opt
+        .as_mut()
+        .and_then(|s| s.recall(&q).ok())
+        .unwrap_or_default();
     let verify_us = verify_start.elapsed().as_micros();
 
     let (verif_status, verif_summary, verif_detail) = if !hits.is_empty() {
@@ -479,11 +515,13 @@ mod tests {
             original,
             "plan mode must not modify existing client configs"
         );
+        assert!(!store.exists(), "plan mode must not create missing store directory");
         assert!(!store.join("galaxy.html").exists());
 
         let no_plan =
             run_grimoire_with_home(&store, false, false, Some(&home)).expect("grimoire plain run");
         assert!(no_plan.planned_clients.is_empty());
+        assert!(store.exists(), "non-plan mode creates and seeds the store");
 
         std::fs::remove_dir_all(root).ok();
     }
