@@ -81,6 +81,7 @@ pub mod transport;
 pub mod tripartite_router;
 pub mod tuple_space;
 pub mod valkyrie;
+pub mod wave2_braid;
 pub mod zodiac_arcana;
 
 pub use hexagram::{Hexagram, HexagramMeta, Trigram, WuXing};

@@ -3451,6 +3451,7 @@ pub mod tests {
             nvme_free_gb: 40.0,
             metabolism_mode: MetabolismMode::NominalSynthesis,
             probe_latency_ns: 400.0,
+            ashby_chambers: Default::default(),
         };
         let rep_hyper = vault.autopoietic_morphogenesis(&bio_hyper);
         assert_eq!(rep_hyper.regime, HomeostaticRegime::Nominal);
@@ -3471,6 +3472,7 @@ pub mod tests {
             nvme_free_gb: 35.0,
             metabolism_mode: MetabolismMode::ThermalThrottled,
             probe_latency_ns: 450.0,
+            ashby_chambers: Default::default(),
         };
         let rep_stressed = vault.autopoietic_morphogenesis(&bio_stressed);
         assert_eq!(rep_stressed.regime, HomeostaticRegime::Stressed);
@@ -3501,6 +3503,7 @@ pub mod tests {
             nvme_free_gb: 25.0,
             metabolism_mode: MetabolismMode::CriticalHibernation,
             probe_latency_ns: 500.0,
+            ashby_chambers: Default::default(),
         };
         let rep_critical = vault.autopoietic_morphogenesis(&bio_critical);
         assert_eq!(rep_critical.regime, HomeostaticRegime::Critical);
@@ -3555,6 +3558,7 @@ pub mod tests {
             nvme_free_gb: 30.0,
             metabolism_mode: MetabolismMode::ThermalThrottled,
             probe_latency_ns: 400.0,
+            ashby_chambers: Default::default(),
         };
         let skel_stressed =
             vault.find_best_skeleton_with_bio("deep code search", Some(&bio_stressed));

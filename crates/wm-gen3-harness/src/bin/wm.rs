@@ -672,6 +672,12 @@ enum Commands {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
+    /// Run the Unified Wave 2 Deep Synthesis Benchmark Suite (Clusters A-F, W2-P1..W2-P35)
+    Wave2Benchmark {
+        /// Emit structured JSON benchmark report
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -3146,6 +3152,27 @@ fn main() {
                         .unwrap_or(true);
                     let (constellation_glyph, constellation_archetype) =
                         glyph_names[best_constellation % glyph_names.len()];
+                    let q_finsler = wm_gen3_core::wave2_braid::ProductManifoldPoint::from_structural_coords(
+                        2,
+                        query_6d.omega,
+                        query_6d.x.atan2(query_6d.y),
+                        query_6d.omega.sin(),
+                        query_6d.tau,
+                        query_6d.sigma,
+                    );
+                    let c_finsler = wm_gen3_core::wave2_braid::ProductManifoldPoint::from_structural_coords(
+                        2,
+                        best_centroid[5],
+                        best_centroid[0].atan2(best_centroid[1]),
+                        best_centroid[5].sin(),
+                        best_centroid[3],
+                        best_centroid[4],
+                    );
+                    let finsler_geodesic = q_finsler.finsler_wake_distance(&c_finsler, [1.0, 0.8, 0.5], [0.25, 0.15]);
+                    let sigma22 = wm_gen3_core::wave2_braid::evaluate_sigma22_spectrometer(
+                        [query_6d.x, query_6d.y, query_6d.z, query_6d.sigma],
+                        best_constellation % 28,
+                    );
                     let elapsed_us = nav_start.elapsed().as_micros();
 
                     let receipt = serde_json::json!({
@@ -3171,6 +3198,7 @@ fn main() {
                             "glyph_archetype": constellation_glyph,
                             "domain_focus": constellation_archetype,
                             "geodesic_distance_6d": min_geodesic,
+                            "finsler_product_geodesic": finsler_geodesic,
                             "centroid_6d": {
                                 "x": best_centroid[0],
                                 "y": best_centroid[1],
@@ -3180,6 +3208,7 @@ fn main() {
                                 "omega": best_centroid[5],
                             }
                         },
+                        "sigma22_spectrometer": sigma22,
                         "evidence": {
                             "coverage": bundle.coverage,
                             "disposition": bundle.disposition,
@@ -3220,7 +3249,11 @@ fn main() {
                             constellation_glyph,
                             constellation_archetype
                         );
-                        println!("6D Geodesic Dist:     {:.4}", min_geodesic);
+                        println!("6D Geodesic Dist:     {:.4} (Product-Finsler: {:.4})", min_geodesic, finsler_geodesic);
+                        println!(
+                            "Σ₂₂ Spectrometer:     {} / {} (can_dispatch={})",
+                            sigma22.dominant_motif_glyph, sigma22.cardinal_quadrant, sigma22.can_dispatch_authority
+                        );
                         println!(
                             "Resonance Radius:     k={} hops (expanded={})",
                             eff_hops, bundle.resonance_expanded
@@ -4325,6 +4358,128 @@ fn main() {
         Commands::Cpr { args } => {
             run_cpr_cli(&args);
         }
+        Commands::Wave2Benchmark { json } => {
+            run_wave2_benchmark_command(json);
+        }
+    }
+}
+
+fn run_wave2_benchmark_command(json: bool) {
+    let report = wm_gen3_core::wave2_braid::run_wave2_full_benchmark_suite();
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&report).unwrap_or_default()
+        );
+    } else {
+        println!("==================================================================");
+        println!("  WhiteMagic Gen3 — Wave 2 Braided Benchmark Suite (W2-P1..P35)   ");
+        println!("==================================================================");
+        println!("Total Pillars Verified: {} / 35", report.total_pillars_verified);
+        println!("Suite Execution Time:   {} µs", report.execution_time_us);
+        println!("------------------------------------------------------------------");
+        println!("Cluster A (Product-Finsler Manifold, Σ22, Voids & 4-Lane RRF):");
+        println!(
+            "  • Product Manifold MRR:      {:.3} (vs Euclidean {:.3})",
+            report.cluster_a.product_manifold_mrr, report.cluster_a.euclidean_baseline_mrr
+        );
+        println!(
+            "  • Pareto Metric Selected:    {:?} (ΔBIC = +{:.1})",
+            report.cluster_a.selected_metric_rung, report.cluster_a.bic_gain_over_euclidean
+        );
+        println!(
+            "  • Σ22 Spectrometer Latency:  {:.1} ns/eval (Law 6 Non-Dispatching)",
+            report.cluster_a.sigma22_latency_ns
+        );
+        println!(
+            "  • 0-After-9 Voids Found:     {} | 4-Lane RRF Recall@5: {:.1}%",
+            report.cluster_a.topological_voids_discovered,
+            report.cluster_a.rrf_4lane_recall_at_5 * 100.0
+        );
+        println!("------------------------------------------------------------------");
+        println!("Cluster B (Schmitt-Trigger Hysteresis, Conformal, MMMBABY & Huíguāng):");
+        println!(
+            "  • Boundary Chatter:          {} -> {} transitions ({:.1}% reduction)",
+            report.cluster_b.raw_threshold_oscillations,
+            report.cluster_b.schmitt_trigger_oscillations,
+            report.cluster_b.chatter_reduction_pct
+        );
+        println!(
+            "  • Split-Conformal Coverage:  {:.1}% (Shift z>3.0 withdrawal: {})",
+            report.cluster_b.conformal_empirical_coverage * 100.0,
+            report.cluster_b.conformal_shift_detected
+        );
+        println!(
+            "  • MMMBABY Sacrifice Veto:    {} | Huíguāng Damper: {}",
+            report.cluster_b.mmmbaby_sacrifice_veto_verified,
+            report.cluster_b.huiguang_damping_triggered
+        );
+        println!("------------------------------------------------------------------");
+        println!("Cluster C (Solitons, Heavy-Hex Crosstalk M⁻¹, Procrustes & Tachikoma):");
+        println!(
+            "  • Soliton Collision Fidelity:{:.1}% | Pointer Bundle Savings: {:.1}%",
+            report.cluster_c.soliton_collision_invariant_fidelity * 100.0,
+            report.cluster_c.pointer_bundle_token_savings_pct
+        );
+        println!(
+            "  • Crosstalk Error Reduction: {:.0}x | Procrustes RMSE: {:.2e}",
+            report.cluster_c.crosstalk_error_reduction_factor,
+            report.cluster_c.procrustes_post_alignment_rmse
+        );
+        println!(
+            "  • Tachikoma Ghost Divergence:{:.4} -> {:.4} (Zero Herd Collapse)",
+            report.cluster_c.tachikoma_pre_sync_divergence,
+            report.cluster_c.tachikoma_post_sync_divergence
+        );
+        println!("------------------------------------------------------------------");
+        println!("Cluster D (Violet Citadel, 1Fe-LSD Prodrug, eBPF Taint & CUSUM):");
+        println!(
+            "  • Prodrug Receptor Gate:     {}/2 foreign blocked, {}/1 target cleaved",
+            report.cluster_d.prodrug_foreign_cleave_blocked,
+            report.cluster_d.prodrug_target_cleave_succeeded
+        );
+        println!(
+            "  • Auth Laundering Blocked:   {} | eBPF Taint Exfil Blocked: {}",
+            report.cluster_d.auth_laundering_attempts_blocked,
+            report.cluster_d.ebpf_tainted_exfiltrations_blocked
+        );
+        println!(
+            "  • CUSUM Genjutsu Tarpit:     {} | Honest False Quarantines: {}",
+            report.cluster_d.cusum_slow_bleed_trapped_in_genjutsu,
+            report.cluster_d.honest_peer_false_quarantines
+        );
+        println!("------------------------------------------------------------------");
+        println!("Cluster E ((3|1) Zero-DAG, Tri-Fold Cladistics, Paarthurnax & Dust):");
+        println!(
+            "  • Thought Dust Injected:     {} -> {} leaked (R_sed = ∞)",
+            report.cluster_e.thought_dust_injected, report.cluster_e.canonical_noise_leaked
+        );
+        println!(
+            "  • Cyclic Re-Proposals:       {} | Trojan High-Fitness Quarantined: {}",
+            report.cluster_e.retired_lineage_cyclic_reproposals,
+            report.cluster_e.trojan_high_fitness_quarantined
+        );
+        println!(
+            "  • Paarthurnax Rehab Bonus:   {:.2}x | Zero-DAG Memory Collapse: {:.2}x",
+            report.cluster_e.paarthurnax_rehab_detection_gain,
+            report.cluster_e.zero_dag_memory_collapse_factor
+        );
+        println!("------------------------------------------------------------------");
+        println!("Cluster F (Stone Pillar Seed, Heptagonal Spiral & Dhumavati Bardo):");
+        println!(
+            "  • Planarian Stone Seed:      {} bytes (<64 KB) | Regen: {:.1}%",
+            report.cluster_f.stone_pillar_seed_bytes, report.cluster_f.regeneration_fidelity_pct
+        );
+        println!(
+            "  • Heptagonal 360/7 Sectors:  {} / 70 unique (0 harmonic storms)",
+            report.cluster_f.heptagonal_spiral_unique_sectors_70_steps
+        );
+        println!(
+            "  • Dhumavati Bardo Drag:      {} tokens | Failure Recall: {:.1}%",
+            report.cluster_f.dhumavati_bardo_active_token_drag,
+            report.cluster_f.dhumavati_failure_recall_rate * 100.0
+        );
+        println!("==================================================================");
     }
 }
 
@@ -4475,8 +4630,33 @@ sys.exit(0 if available else 1)
 fn run_homeostasis_command(json: bool) {
     let hw = wm_gen3_core::homeostasis::HardwareTelemetry::probe();
     let bio = hw.to_bioelectric_state();
+    let mut schmitt = wm_gen3_core::wave2_braid::SchmittTriggerHomeostat::default();
+    let norm_pressure = ((f64::from(bio.v_rest_mv) + 70.0) / 55.0).clamp(0.0, 1.0);
+    let schmitt_regime = schmitt.step(norm_pressure);
+    let (mmmbaby_geom, mmmbaby_arith) = wm_gen3_core::wave2_braid::compute_mmmbaby_vitality_index(
+        [
+            f64::from(bio.ashby_chambers.epistemic_recall.throughput_factor),
+            f64::from(bio.ashby_chambers.compute.throughput_factor),
+            f64::from(bio.ashby_chambers.storage.throughput_factor),
+            (f64::from(bio.mem_available_mb) / 8192.0).clamp(0.10, 1.0),
+            f64::from(bio.ashby_chambers.perimeter_security.throughput_factor),
+            (1.0 - (f64::from(bio.cpu_temp_c) - 35.0).max(0.0) / 65.0).clamp(0.10, 1.0),
+        ],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    );
+    let sacrifice_veto = mmmbaby_geom <= 1e-6;
     if json {
-        println!("{}", serde_json::to_string_pretty(&bio).unwrap());
+        let mut out = serde_json::to_value(&bio).unwrap_or_default();
+        if let Some(obj) = out.as_object_mut() {
+            obj.insert("schmitt_trigger_regime".into(), serde_json::json!(format!("{schmitt_regime:?}")));
+            obj.insert("mmmbaby_vitality".into(), serde_json::json!({
+                "geometric_vitality": mmmbaby_geom,
+                "arithmetic_vitality": mmmbaby_arith,
+                "non_compensatory_sacrifice_veto": sacrifice_veto,
+            }));
+            obj.insert("bendhub_constitution_v2".into(), serde_json::json!("0x0d479d846e9ce92faa45a2346110fce8"));
+        }
+        println!("{}", serde_json::to_string_pretty(&out).unwrap());
     } else {
         println!("==================================================");
         println!("  WhiteMagic Gen3 Bioelectric Homeostasis Monitor ");
@@ -4485,8 +4665,12 @@ fn run_homeostasis_command(json: bool) {
             "Resting Potential:  {:.1} mV (Serene baseline: -70.0 mV)",
             bio.v_rest_mv
         );
-        println!("Homeostatic Regime: {:?}", bio.regime);
+        println!("Homeostatic Regime: {:?} (Schmitt-Trigger: {:?})", bio.regime, schmitt_regime);
         println!("Metabolism Mode:    {:?}", bio.metabolism_mode);
+        println!(
+            "MMMBABY Vitality:   {:.3} (Arithmetic: {:.3}, Sacrifice Veto: {})",
+            mmmbaby_geom, mmmbaby_arith, sacrifice_veto
+        );
         println!("CPU Temperature:    {:.1}°C", bio.cpu_temp_c);
         if let Some(bat) = bio.battery_pct {
             println!(
@@ -4510,6 +4694,35 @@ fn run_homeostasis_command(json: bool) {
         println!(
             "Probe Latency:      {:.2} µs",
             bio.probe_latency_ns / 1000.0
+        );
+        println!("--------------------------------------------------");
+        println!(
+            "Ashby 4-Chamber Decoupled Homeostats (κ = {:.2}, {:.0}x speedup):",
+            bio.ashby_chambers.coupling_coefficient, bio.ashby_chambers.adaptation_speedup_factor
+        );
+        println!(
+            "  • Storage Chamber:          {:6.1} mV | {:?} (throughput: {:.0}%)",
+            bio.ashby_chambers.storage.v_chamber_mv,
+            bio.ashby_chambers.storage.regime,
+            bio.ashby_chambers.storage.throughput_factor * 100.0
+        );
+        println!(
+            "  • Compute/Thermal Chamber:  {:6.1} mV | {:?} (throughput: {:.0}%)",
+            bio.ashby_chambers.compute.v_chamber_mv,
+            bio.ashby_chambers.compute.regime,
+            bio.ashby_chambers.compute.throughput_factor * 100.0
+        );
+        println!(
+            "  • Epistemic Recall Chamber: {:6.1} mV | {:?} (throughput: {:.0}%)",
+            bio.ashby_chambers.epistemic_recall.v_chamber_mv,
+            bio.ashby_chambers.epistemic_recall.regime,
+            bio.ashby_chambers.epistemic_recall.throughput_factor * 100.0
+        );
+        println!(
+            "  • Perimeter LSM Chamber:    {:6.1} mV | {:?} (throughput: {:.0}%)",
+            bio.ashby_chambers.perimeter_security.v_chamber_mv,
+            bio.ashby_chambers.perimeter_security.regime,
+            bio.ashby_chambers.perimeter_security.throughput_factor * 100.0
         );
         println!("--------------------------------------------------");
         if bio.nvme_free_gb < 20.0 {

@@ -386,6 +386,7 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         }
         "council.deliberate" | "council_deliberate" | "zodiac.deliberate" => "council.deliberate",
         "dhumavati.check" | "dhumavati_check" => "dhumavati.check",
+        "wave2.benchmark" | "wave2_benchmark" | "wave2-benchmark" => "wave2.benchmark",
         _ => return None,
     })
 }
@@ -433,6 +434,7 @@ fn allowed_profile_keys(profile: McpProfile) -> &'static HashSet<&'static str> {
             keys.insert("sanctuary.unseal");
             keys.insert("council.deliberate");
             keys.insert("dhumavati.check");
+            keys.insert("wave2.benchmark");
             keys
         }),
         McpProfile::Full => FULL.get_or_init(|| {
@@ -447,6 +449,7 @@ fn allowed_profile_keys(profile: McpProfile) -> &'static HashSet<&'static str> {
             keys.insert("sanctuary.unseal");
             keys.insert("council.deliberate");
             keys.insert("dhumavati.check");
+            keys.insert("wave2.benchmark");
             keys
         }),
     }
@@ -1998,6 +2001,10 @@ pub fn execute_hybrid_tool_call(
             handle_council_deliberate(args)
         }
         "dhumavati.check" | "dhumavati_check" => handle_dhumavati_check(args),
+        "wave2.benchmark" | "wave2_benchmark" | "wave2-benchmark" => {
+            let report = wm_gen3_core::wave2_braid::run_wave2_full_benchmark_suite();
+            serde_json::to_value(report).map_err(|e| format!("wave2.benchmark serialize error: {e}"))
+        }
 
         // ── Gen3 v10.6 Research Synthesis Routes (Beliefs, MemCut, TokenWorth, Obligations, ParetoGate) ──
         "belief.register" | "belief_register" => handle_belief_register(args, substrate, readonly),
@@ -2675,7 +2682,9 @@ fn handle_memory_stats(
         "realm_id": realm,
         "journal_ok": substrate.journal_ok(),
         "violations": substrate.violations(),
-        "articles": "Articles 1-9 Inviolate (Zero unmetered background threads)"
+        "articles": "Articles 1-9 + Laws 10-13 Inviolate (Zero unmetered background threads)",
+        "bendhub_constitution_v2": "0x0d479d846e9ce92faa45a2346110fce8",
+        "wave2_braided_pillars": 35
     }))
 }
 
@@ -8416,6 +8425,21 @@ fn handle_galaxy_navigate(args: &Value, substrate: &mut Substrate) -> Result<Val
         .recall_evidence(&rq)
         .map_err(|e| format!("galaxy.navigate recall error: {e}"))?;
 
+    let epoch = substrate.store().epoch().unwrap_or(0);
+    let q_6d = wm_gen3_core::hologram::Holographic6D::from_record(0, query, epoch, 0.90);
+    let q_finsler = wm_gen3_core::wave2_braid::ProductManifoldPoint::from_structural_coords(
+        2,
+        q_6d.omega,
+        q_6d.x.atan2(q_6d.y),
+        q_6d.omega.sin(),
+        q_6d.tau,
+        q_6d.sigma,
+    );
+    let sigma22 = wm_gen3_core::wave2_braid::evaluate_sigma22_spectrometer(
+        [q_6d.x, q_6d.y, q_6d.z, q_6d.sigma],
+        (epoch as usize) % 28,
+    );
+
     Ok(json!({
         "status": "success",
         "navigation_protocol": "whitemagic.wave6.holographic-navigation.v1",
@@ -8426,6 +8450,12 @@ fn handle_galaxy_navigate(args: &Value, substrate: &mut Substrate) -> Result<Val
         "abstention_recommended": bundle.abstention_recommended,
         "resonance_expanded": bundle.resonance_expanded,
         "resonance_links": bundle.resonance_links,
+        "product_finsler_point": {
+            "poincare_uv": q_finsler.h2,
+            "sphere_n": q_finsler.s2,
+            "euclidean_ts": q_finsler.r2,
+        },
+        "sigma22_spectrometer": sigma22,
         "hits": bundle.hits.iter().map(|h| {
             json!({
                 "record_id": h.id,

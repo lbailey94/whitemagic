@@ -1,0 +1,155 @@
+main.Cap.arms : ∀x0 : <main.CapRead, main.CapWrite, main.CapExec, main.CapNet> -> *(.Q2) =
+  λ{.main.CapRead: <()>; λ{.main.CapWrite: <()>; λ{.main.CapExec: <()>; λ{.main.CapNet: <()>; λ{}}}}}
+
+main.Cap : *(.Q2) =
+  Σx0 : <main.CapRead, main.CapWrite, main.CapExec, main.CapNet> -> (main.Cap.arms x0)
+
+main.ScopeToken.arms : ∀x0 : <main.Scope> -> *(.Q2) =
+  λ{.main.Scope: Σx0 : Bool -> Σx1 : Bool -> Σx2 : Bool -> Σx3 : Bool -> <()>; λ{}}
+
+main.ScopeToken : *(.Q2) =
+  Σx0 : <main.Scope> -> (main.ScopeToken.arms x0)
+
+main.PassSlot.arms : ∀x0 : <main.Slot> -> *(.Q2) =
+  λ{.main.Slot: Σx0 : Bool -> Σx1 : Nat -> <()>; λ{}}
+
+main.PassSlot : *(.Q2) =
+  Σx0 : <main.Slot> -> (main.PassSlot.arms x0)
+
+main.Fate.arms : ∀x0 : <main.Promote, main.Retire, main.Quarantine> -> *(.Q2) =
+  λ{.main.Promote: <()>; λ{.main.Retire: <()>; λ{.main.Quarantine: <()>; λ{}}}}
+
+main.Fate : *(.Q2) =
+  Σx0 : <main.Promote, main.Retire, main.Quarantine> -> (main.Fate.arms x0)
+
+main.Hexagram6.arms : ∀x0 : <main.Hex> -> *(.Q2) =
+  λ{.main.Hex: Σx0 : Bool -> Σx1 : Bool -> Σx2 : Bool -> Σx3 : Bool -> Σx4 : Bool -> Σx5 : Bool -> <()>; λ{}}
+
+main.Hexagram6 : *(.Q2) =
+  Σx0 : <main.Hex> -> (main.Hexagram6.arms x0)
+
+main.PrayMask.arms : ∀x0 : <main.Pray> -> *(.Q2) =
+  λ{.main.Pray: Σx0 : Bool -> Σx1 : Bool -> Σx2 : Bool -> Σx3 : Bool -> <()>; λ{}}
+
+main.PrayMask : *(.Q2) =
+  Σx0 : <main.Pray> -> (main.PrayMask.arms x0)
+
+Bool.and : ∀x0 : Bool -> ∀x1 : Bool -> Bool =
+  λ{(,): λ{.False: λ{(): λx0 => (.False, ()); λ{}}; λ{.True: λ{(): λx0 => x0; λ{}}; λ{}}}}
+
+main.attenuate : ∀x0 : main.ScopeToken -> ∀x1 : main.ScopeToken -> main.ScopeToken =
+  λ{(,): λ{.main.Scope: λ{(,): λx0 => λ{(,): λx1 => λ{(,): λx2 => λ{(,): λx3 => λ{(): λ{(,): λ{.main.Scope: λ{(,): λx4 => λ{(,): λx5 => λ{(,): λx6 => λ{(,): λx7 => λ{(): (.main.Scope, ((Bool.and x0 x4), ((Bool.and x1 x5), ((Bool.and x2 x6), ((Bool.and x3 x7), ()))))); λ{}}}}}}; λ{}}}; λ{}}}}}}; λ{}}}
+
+Nat.add : ∀x0 : Nat -> ∀x1 : Nat -> Nat =
+  λ{(,): λ{.Zero: λ{(): λx0 => x0; λ{}}; λ{.Succ: λ{(,): λx0 => λ{(): λx1 => (.Succ, ((Nat.add x0 x1), ())); λ{}}}; λ{}}}}
+
+main.consume_pass : ∀x0 : main.PassSlot -> main.PassSlot =
+  λ{(,): λ{.main.Slot: λ{(,): λ{(,): λ{.True: λ{(): λ{(,): λx0 => λ{(): (.main.Slot, ((.True, ()), (x0, ()))); λ{}}}; λ{}}; λ{.False: λ{(): λ{(,): λx0 => λ{(): (.main.Slot, ((.True, ()), ((Nat.add (.Succ, ((.Zero, ()), ())) x0), ()))); λ{}}}; λ{}}; λ{}}}}}; λ{}}}
+
+main.adjudicate : ∀x0 : Bool -> ∀x1 : Bool -> ∀x2 : Bool -> main.Fate =
+  λ{(,): λ{.True: λ{(): λx0 => λx1 => (.main.Quarantine, ()); λ{}}; λ{.False: λ{(): λ{(,): λ{.True: λ{(): λ{(,): λ{.True: λ{(): (.main.Promote, ()); λ{}}; λ{.False: λ{(): (.main.Quarantine, ()); λ{}}; λ{}}}}; λ{}}; λ{.False: λ{(): λ{(,): λ{.True: λ{(): (.main.Retire, ()); λ{}}; λ{.False: λ{(): (.main.Quarantine, ()); λ{}}; λ{}}}}; λ{}}; λ{}}}}; λ{}}; λ{}}}}
+
+Bool.not : ∀x0 : Bool -> Bool =
+  λ{(,): λ{.False: λ{(): (.True, ()); λ{}}; λ{.True: λ{(): (.False, ()); λ{}}; λ{}}}}
+
+main.flip_line : ∀x0 : Bool -> Bool =
+  λx0 => (Bool.not x0)
+
+main.invert_hex : ∀x0 : main.Hexagram6 -> main.Hexagram6 =
+  λ{(,): λ{.main.Hex: λ{(,): λx0 => λ{(,): λx1 => λ{(,): λx2 => λ{(,): λx3 => λ{(,): λx4 => λ{(,): λx5 => λ{(): (.main.Hex, ((main.flip_line x0), ((main.flip_line x1), ((main.flip_line x2), ((main.flip_line x3), ((main.flip_line x4), ((main.flip_line x5), ()))))))); λ{}}}}}}}}; λ{}}}
+
+Bool.or : ∀x0 : Bool -> ∀x1 : Bool -> Bool =
+  λ{(,): λ{.False: λ{(): λx0 => x0; λ{}}; λ{.True: λ{(): λx0 => (.True, ()); λ{}}; λ{}}}}
+
+main.merge_pray : ∀x0 : main.PrayMask -> ∀x1 : main.PrayMask -> main.PrayMask =
+  λ{(,): λ{.main.Pray: λ{(,): λx0 => λ{(,): λx1 => λ{(,): λx2 => λ{(,): λx3 => λ{(): λ{(,): λ{.main.Pray: λ{(,): λx4 => λ{(,): λx5 => λ{(,): λx6 => λ{(,): λx7 => λ{(): (.main.Pray, ((Bool.or x0 x4), ((Bool.or x1 x5), ((Bool.or x2 x6), ((Bool.or x3 x7), ()))))); λ{}}}}}}; λ{}}}; λ{}}}}}}; λ{}}}
+
+main.superopt_step : ∀x0 : main.PrayMask -> ∀x1 : main.PrayMask -> main.PrayMask =
+  λx0 => λx1 => (main.merge_pray x0 x1)
+
+main.advance_epoch : ∀x0 : Nat -> Nat =
+  λx0 => (Nat.add x0 (.Succ, ((.Zero, ()), ())))
+
+main.check_read_cap : ∀x0 : main.ScopeToken -> Bool =
+  λ{(,): λ{.main.Scope: λ{(,): λx0 => λ{(,): λx1 => λ{(,): λx2 => λ{(,): λx3 => λ{(): x0; λ{}}}}}}; λ{}}}
+
+main.check_unconsumed : ∀x0 : main.PassSlot -> Bool =
+  λ{(,): λ{.main.Slot: λ{(,): λx0 => λ{(,): λx1 => λ{(): (Bool.not x0); λ{}}}}; λ{}}}
+
+main.check_promoted : ∀x0 : main.Fate -> Bool =
+  λ{(,): λ{.main.Promote: λ{(): (.True, ()); λ{}}; λ{.main.Retire: λ{(): (.False, ()); λ{}}; λ{.main.Quarantine: λ{(): (.False, ()); λ{}}; λ{}}}}}
+
+main.bool_to_nat : ∀x0 : Bool -> Nat =
+  λ{(,): λ{.True: λ{(): (.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Succ, ((.Zero, ()), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())), ())); λ{}}; λ{.False: λ{(): (.Zero, ()); λ{}}; λ{}}}}
+
+main.main : Nat =
+  !x0 = (main.attenuate (.main.Scope, ((.True, ()), ((.True, ()), ((.True, ()), ((.False, ()), ()))))) (.main.Scope, ((.True, ()), ((.False, ()), ((.True, ()), ((.True, ()), ())))))); !x1 = (main.consume_pass (.main.Slot, ((.False, ()), ((.Zero, ()), ())))); !x2 = (main.adjudicate (.True, ()) (.True, ()) (.True, ())); (main.bool_to_nat (Bool.and (main.check_read_cap x0) (Bool.and (Bool.not (main.check_unconsumed x1)) (Bool.not (main.check_promoted x2)))))
+
+SPEC.has_cap : ∀x0 : main.ScopeToken -> ∀x1 : main.Cap -> Bool =
+  λ{(,): λ{.main.Scope: λ{(,): λx0 => λ{(,): λx1 => λ{(,): λx2 => λ{(,): λx3 => λ{(): λ{(,): λ{.main.CapRead: λ{(): x0; λ{}}; λ{.main.CapWrite: λ{(): x1; λ{}}; λ{.main.CapExec: λ{(): x2; λ{}}; λ{.main.CapNet: λ{(): x3; λ{}}; λ{}}}}}}; λ{}}}}}}; λ{}}}
+
+SPEC.implies : ∀x0 : Bool -> ∀x1 : Bool -> Bool =
+  λx0 => λx1 => (Bool.or (Bool.not x0) x1)
+
+SPEC.can_execute : ∀x0 : main.PassSlot -> Bool =
+  λ{(,): λ{.main.Slot: λ{(,): λx0 => λ{(,): λx1 => λ{(): (Bool.not x0); λ{}}}}; λ{}}}
+
+SPEC.is_promoted : ∀x0 : main.Fate -> Bool =
+  λ{(,): λ{.main.Promote: λ{(): (.True, ()); λ{}}; λ{.main.Retire: λ{(): (.False, ()); λ{}}; λ{.main.Quarantine: λ{(): (.False, ()); λ{}}; λ{}}}}}
+
+SPEC.expected_next_epoch : ∀x0 : Nat -> Nat =
+  λx0 => (.Succ, ((Nat.add x0 (.Zero, ())), ()))
+
+and_implies_left : ∀x0 : Bool -> ∀x1 : Bool -> {(SPEC.implies (Bool.and x0 x1) x0) == (.True, ()) : Bool} =
+  λ{(,): λ{.True: λ{(): λ{(,): λ{.True: λ{(): {==}; λ{}}; λ{.False: λ{(): {==}; λ{}}; λ{}}}}; λ{}}; λ{.False: λ{(): λx0 => {==}; λ{}}; λ{}}}}
+
+and_idem : ∀x0 : Bool -> {(Bool.and x0 x0) == x0 : Bool} =
+  λ{(,): λ{.True: λ{(): {==}; λ{}}; λ{.False: λ{(): {==}; λ{}}; λ{}}}}
+
+LAWS.capability_attenuation_monotone : ∀+x0 : main.ScopeToken -> ∀+x1 : main.ScopeToken -> ∀+x2 : main.Cap -> !x3 = (main.attenuate x0 x1); {(SPEC.implies (SPEC.has_cap x3 x2) (SPEC.has_cap x0 x2)) == (.True, ()) : Bool} =
+  λ{(,): λ{.main.Scope: λ{(,): λ+x0 => λ{(,): λ+x1 => λ{(,): λ+x2 => λ{(,): λ+x3 => λ{(): λ{(,): λ{.main.Scope: λ{(,): λ+x4 => λ{(,): λ+x5 => λ{(,): λ+x6 => λ{(,): λ+x7 => λ{(): λ{(,): λ{.main.CapRead: λ{(): (and_implies_left x0 x4); λ{}}; λ{.main.CapWrite: λ{(): (and_implies_left x1 x5); λ{}}; λ{.main.CapExec: λ{(): (and_implies_left x2 x6); λ{}}; λ{.main.CapNet: λ{(): (and_implies_left x3 x7); λ{}}; λ{}}}}}}; λ{}}}}}}; λ{}}}; λ{}}}}}}; λ{}}}
+
+LAWS.attenuation_idempotent : ∀+x0 : main.ScopeToken -> {(main.attenuate x0 x0) == x0 : main.ScopeToken} =
+  λ{(,): λ{.main.Scope: λ{(,): λ+x0 => λ{(,): λ+x1 => λ{(,): λ+x2 => λ{(,): λ+x3 => λ{(): %(and_idem x0) : x4, x5 => {(.main.Scope, ((Bool.and x0 x0), ((Bool.and x1 x1), ((Bool.and x2 x2), ((Bool.and x3 x3), ()))))) == (.main.Scope, (x4, (x1, (x2, (x3, ()))))) : main.ScopeToken}; %(and_idem x1) : x4, x5 => {(.main.Scope, ((Bool.and x0 x0), ((Bool.and x1 x1), ((Bool.and x2 x2), ((Bool.and x3 x3), ()))))) == (.main.Scope, ((Bool.and x0 x0), (x4, (x2, (x3, ()))))) : main.ScopeToken}; %(and_idem x2) : x4, x5 => {(.main.Scope, ((Bool.and x0 x0), ((Bool.and x1 x1), ((Bool.and x2 x2), ((Bool.and x3 x3), ()))))) == (.main.Scope, ((Bool.and x0 x0), ((Bool.and x1 x1), (x4, (x3, ()))))) : main.ScopeToken}; %(and_idem x3) : x4, x5 => {(.main.Scope, ((Bool.and x0 x0), ((Bool.and x1 x1), ((Bool.and x2 x2), ((Bool.and x3 x3), ()))))) == (.main.Scope, ((Bool.and x0 x0), ((Bool.and x1 x1), ((Bool.and x2 x2), (x4, ()))))) : main.ScopeToken}; {==}; λ{}}}}}}; λ{}}}
+
+LAWS.jti_replay_rejected : ∀x0 : main.PassSlot -> !x1 = (main.consume_pass x0); {(SPEC.can_execute x1) == (.False, ()) : Bool} =
+  λ{(,): λ{.main.Slot: λ{(,): λ{(,): λ{.True: λ{(): λ{(,): λx0 => λ{(): {==}; λ{}}}; λ{}}; λ{.False: λ{(): λ{(,): λx0 => λ{(): {==}; λ{}}}; λ{}}; λ{}}}}}; λ{}}}
+
+LAWS.pareto_never_promotes_regression : ∀x0 : Bool -> ∀x1 : Bool -> !x2 = (main.adjudicate (.True, ()) x0 x1); {(SPEC.is_promoted x2) == (.False, ()) : Bool} =
+  λx0 => λx1 => {==}
+
+LAWS.pareto_dominance_promotes : !x0 = (main.adjudicate (.False, ()) (.True, ()) (.True, ())); {(SPEC.is_promoted x0) == (.True, ()) : Bool} =
+  {==}
+
+not_not : ∀x0 : Bool -> {(main.flip_line (main.flip_line x0)) == x0 : Bool} =
+  λ{(,): λ{.True: λ{(): {==}; λ{}}; λ{.False: λ{(): {==}; λ{}}; λ{}}}}
+
+LAWS.hexagram_involution : ∀x0 : main.Hexagram6 -> {(main.invert_hex (main.invert_hex x0)) == x0 : main.Hexagram6} =
+  λ{(,): λ{.main.Hex: λ{(,): λx0 => λ{(,): λx1 => λ{(,): λx2 => λ{(,): λx3 => λ{(,): λx4 => λ{(,): λx5 => λ{(): %(not_not x0) : x6, x7 => {(.main.Hex, ((main.flip_line (main.flip_line x0)), ((main.flip_line (main.flip_line x1)), ((main.flip_line (main.flip_line x2)), ((main.flip_line (main.flip_line x3)), ((main.flip_line (main.flip_line x4)), ((main.flip_line (main.flip_line x5)), ()))))))) == (.main.Hex, (x6, (x1, (x2, (x3, (x4, (x5, ()))))))) : main.Hexagram6}; %(not_not x1) : x6, x7 => {(.main.Hex, ((main.flip_line (main.flip_line x0)), ((main.flip_line (main.flip_line x1)), ((main.flip_line (main.flip_line x2)), ((main.flip_line (main.flip_line x3)), ((main.flip_line (main.flip_line x4)), ((main.flip_line (main.flip_line x5)), ()))))))) == (.main.Hex, ((main.flip_line (main.flip_line x0)), (x6, (x2, (x3, (x4, (x5, ()))))))) : main.Hexagram6}; %(not_not x2) : x6, x7 => {(.main.Hex, ((main.flip_line (main.flip_line x0)), ((main.flip_line (main.flip_line x1)), ((main.flip_line (main.flip_line x2)), ((main.flip_line (main.flip_line x3)), ((main.flip_line (main.flip_line x4)), ((main.flip_line (main.flip_line x5)), ()))))))) == (.main.Hex, ((main.flip_line (main.flip_line x0)), ((main.flip_line (main.flip_line x1)), (x6, (x3, (x4, (x5, ()))))))) : main.Hexagram6}; %(not_not x3) : x6, x7 => {(.main.Hex, ((main.flip_line (main.flip_line x0)), ((main.flip_line (main.flip_line x1)), ((main.flip_line (main.flip_line x2)), ((main.flip_line (main.flip_line x3)), ((main.flip_line (main.flip_line x4)), ((main.flip_line (main.flip_line x5)), ()))))))) == (.main.Hex, ((main.flip_line (main.flip_line x0)), ((main.flip_line (main.flip_line x1)), ((main.flip_line (main.flip_line x2)), (x6, (x4, (x5, ()))))))) : main.Hexagram6}; %(not_not x4) : x6, x7 => {(.main.Hex, ((main.flip_line (main.flip_line x0)), ((main.flip_line (main.flip_line x1)), ((main.flip_line (main.flip_line x2)), ((main.flip_line (main.flip_line x3)), ((main.flip_line (main.flip_line x4)), ((main.flip_line (main.flip_line x5)), ()))))))) == (.main.Hex, ((main.flip_line (main.flip_line x0)), ((main.flip_line (main.flip_line x1)), ((main.flip_line (main.flip_line x2)), ((main.flip_line (main.flip_line x3)), (x6, (x5, ()))))))) : main.Hexagram6}; %(not_not x5) : x6, x7 => {(.main.Hex, ((main.flip_line (main.flip_line x0)), ((main.flip_line (main.flip_line x1)), ((main.flip_line (main.flip_line x2)), ((main.flip_line (main.flip_line x3)), ((main.flip_line (main.flip_line x4)), ((main.flip_line (main.flip_line x5)), ()))))))) == (.main.Hex, ((main.flip_line (main.flip_line x0)), ((main.flip_line (main.flip_line x1)), ((main.flip_line (main.flip_line x2)), ((main.flip_line (main.flip_line x3)), ((main.flip_line (main.flip_line x4)), (x6, ()))))))) : main.Hexagram6}; {==}; λ{}}}}}}}}; λ{}}}
+
+or_idem : ∀x0 : Bool -> ∀x1 : Bool -> {(Bool.or x0 (Bool.or x0 x1)) == (Bool.or x0 x1) : Bool} =
+  λ{(,): λ{.True: λ{(): λx0 => {==}; λ{}}; λ{.False: λ{(): λx0 => {==}; λ{}}; λ{}}}}
+
+LAWS.superopt_idempotent_absorption : ∀+x0 : main.PrayMask -> ∀+x1 : main.PrayMask -> {(main.superopt_step x0 (main.superopt_step x0 x1)) == (main.superopt_step x0 x1) : main.PrayMask} =
+  λ{(,): λ{.main.Pray: λ{(,): λ+x0 => λ{(,): λ+x1 => λ{(,): λ+x2 => λ{(,): λ+x3 => λ{(): λ{(,): λ{.main.Pray: λ{(,): λ+x4 => λ{(,): λ+x5 => λ{(,): λ+x6 => λ{(,): λ+x7 => λ{(): %(or_idem x0 x4) : x8, x9 => {(.main.Pray, ((Bool.or x0 (Bool.or x0 x4)), ((Bool.or x1 (Bool.or x1 x5)), ((Bool.or x2 (Bool.or x2 x6)), ((Bool.or x3 (Bool.or x3 x7)), ()))))) == (.main.Pray, (x8, ((Bool.or x1 x5), ((Bool.or x2 x6), ((Bool.or x3 x7), ()))))) : main.PrayMask}; %(or_idem x1 x5) : x8, x9 => {(.main.Pray, ((Bool.or x0 (Bool.or x0 x4)), ((Bool.or x1 (Bool.or x1 x5)), ((Bool.or x2 (Bool.or x2 x6)), ((Bool.or x3 (Bool.or x3 x7)), ()))))) == (.main.Pray, ((Bool.or x0 (Bool.or x0 x4)), (x8, ((Bool.or x2 x6), ((Bool.or x3 x7), ()))))) : main.PrayMask}; %(or_idem x2 x6) : x8, x9 => {(.main.Pray, ((Bool.or x0 (Bool.or x0 x4)), ((Bool.or x1 (Bool.or x1 x5)), ((Bool.or x2 (Bool.or x2 x6)), ((Bool.or x3 (Bool.or x3 x7)), ()))))) == (.main.Pray, ((Bool.or x0 (Bool.or x0 x4)), ((Bool.or x1 (Bool.or x1 x5)), (x8, ((Bool.or x3 x7), ()))))) : main.PrayMask}; %(or_idem x3 x7) : x8, x9 => {(.main.Pray, ((Bool.or x0 (Bool.or x0 x4)), ((Bool.or x1 (Bool.or x1 x5)), ((Bool.or x2 (Bool.or x2 x6)), ((Bool.or x3 (Bool.or x3 x7)), ()))))) == (.main.Pray, ((Bool.or x0 (Bool.or x0 x4)), ((Bool.or x1 (Bool.or x1 x5)), ((Bool.or x2 (Bool.or x2 x6)), (x8, ()))))) : main.PrayMask}; {==}; λ{}}}}}}; λ{}}}; λ{}}}}}}; λ{}}}
+
+or_comm : ∀x0 : Bool -> ∀x1 : Bool -> {(Bool.or x0 x1) == (Bool.or x1 x0) : Bool} =
+  λ{(,): λ{.True: λ{(): λ{(,): λ{.True: λ{(): {==}; λ{}}; λ{.False: λ{(): {==}; λ{}}; λ{}}}}; λ{}}; λ{.False: λ{(): λ{(,): λ{.True: λ{(): {==}; λ{}}; λ{.False: λ{(): {==}; λ{}}; λ{}}}}; λ{}}; λ{}}}}
+
+LAWS.pray_mask_commutative : ∀+x0 : main.PrayMask -> ∀+x1 : main.PrayMask -> {(main.merge_pray x0 x1) == (main.merge_pray x1 x0) : main.PrayMask} =
+  λ{(,): λ{.main.Pray: λ{(,): λ+x0 => λ{(,): λ+x1 => λ{(,): λ+x2 => λ{(,): λ+x3 => λ{(): λ{(,): λ{.main.Pray: λ{(,): λ+x4 => λ{(,): λ+x5 => λ{(,): λ+x6 => λ{(,): λ+x7 => λ{(): %(or_comm x0 x4) : x8, x9 => {(.main.Pray, ((Bool.or x0 x4), ((Bool.or x1 x5), ((Bool.or x2 x6), ((Bool.or x3 x7), ()))))) == (.main.Pray, (x8, ((Bool.or x5 x1), ((Bool.or x6 x2), ((Bool.or x7 x3), ()))))) : main.PrayMask}; %(or_comm x1 x5) : x8, x9 => {(.main.Pray, ((Bool.or x0 x4), ((Bool.or x1 x5), ((Bool.or x2 x6), ((Bool.or x3 x7), ()))))) == (.main.Pray, ((Bool.or x0 x4), (x8, ((Bool.or x6 x2), ((Bool.or x7 x3), ()))))) : main.PrayMask}; %(or_comm x2 x6) : x8, x9 => {(.main.Pray, ((Bool.or x0 x4), ((Bool.or x1 x5), ((Bool.or x2 x6), ((Bool.or x3 x7), ()))))) == (.main.Pray, ((Bool.or x0 x4), ((Bool.or x1 x5), (x8, ((Bool.or x7 x3), ()))))) : main.PrayMask}; %(or_comm x3 x7) : x8, x9 => {(.main.Pray, ((Bool.or x0 x4), ((Bool.or x1 x5), ((Bool.or x2 x6), ((Bool.or x3 x7), ()))))) == (.main.Pray, ((Bool.or x0 x4), ((Bool.or x1 x5), ((Bool.or x2 x6), (x8, ()))))) : main.PrayMask}; {==}; λ{}}}}}}; λ{}}}; λ{}}}}}}; λ{}}}
+
+LAWS.crystal_anti_rollback_monotonicity : ∀x0 : Nat -> {(main.advance_epoch x0) == (SPEC.expected_next_epoch x0) : Nat} =
+  λ{(,): λ{.Zero: λ{(): {==}; λ{}}; λ{.Succ: λ{(,): λx0 => λ{(): %(LAWS.crystal_anti_rollback_monotonicity x0) : x1, x2 => {(.Succ, ((Nat.add x0 (.Succ, ((.Zero, ()), ()))), ())) == (.Succ, (x1, ())) : Nat}; {==}; λ{}}}; λ{}}}}
+
+Nat.arms : ∀x0 : <Zero, Succ> -> *(.Q2) =
+  λ{.Zero: <()>; λ{.Succ: Σx0 : Nat -> <()>; λ{}}}
+
+Nat : *(.Q2) =
+  Σx0 : <Zero, Succ> -> (Nat.arms x0)
+
+Bool.arms : ∀x0 : <False, True> -> *(.Q2) =
+  λ{.False: <()>; λ{.True: <()>; λ{}}}
+
+Bool : *(.Q2) =
+  Σx0 : <False, True> -> (Bool.arms x0)

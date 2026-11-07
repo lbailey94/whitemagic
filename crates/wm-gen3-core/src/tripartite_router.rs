@@ -406,6 +406,7 @@ mod tests {
             nvme_free_gb: 30.0,
             metabolism_mode: crate::homeostasis::MetabolismMode::CriticalHibernation,
             probe_latency_ns: 500.0,
+            ashby_chambers: Default::default(),
         };
 
         // Long query that would normally escalate to System 2:
