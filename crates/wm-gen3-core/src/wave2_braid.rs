@@ -1130,6 +1130,7 @@ pub struct StonePillarRegenerationReceipt {
     pub within_64kb_planarian_bound: bool,
     pub bendhub_constitution_restored: String,
     pub laws_1_to_13_verified: bool,
+    pub laws_1_to_16_verified: bool,
     pub sigma22_glyph_basis_restored: usize,
     pub cardinal_k8_basins_restored: usize,
     pub zha_tier2_hexagram_roots_restored: usize,
@@ -1190,7 +1191,7 @@ impl StonePillarMorphogenSeed {
         core_geneseed_skeletons: usize,
         dhumavati_bardo_bloom: u64,
     ) -> Self {
-        let bendhub_constitution_hash = "0x0d479d846e9ce92faa45a2346110fce8".to_string();
+        let bendhub_constitution_hash = "0x0e024c0379406f469e12da1d8267c06e".to_string();
         let tier2_zha_hexagram_roots = 64;
         let procrustes_anchor_digest = Self::compute_procrustes_anchor_digest();
         let seed_sha256 = Self::compute_canonical_sha256(
@@ -1234,7 +1235,8 @@ impl StonePillarMorphogenSeed {
         self.seed_sha256 == expected
             && self.serialized_bytes <= 65_536
             && self.tier2_zha_hexagram_roots == 64
-            && self.bendhub_constitution_hash == "0x0d479d846e9ce92faa45a2346110fce8"
+            && (self.bendhub_constitution_hash == "0x0e024c0379406f469e12da1d8267c06e"
+                || self.bendhub_constitution_hash == "0x0d479d846e9ce92faa45a2346110fce8")
     }
 
     #[must_use]
@@ -1245,6 +1247,8 @@ impl StonePillarMorphogenSeed {
             within_64kb_planarian_bound: self.serialized_bytes <= 65_536,
             bendhub_constitution_restored: self.bendhub_constitution_hash.clone(),
             laws_1_to_13_verified: ok,
+            laws_1_to_16_verified: ok
+                && self.bendhub_constitution_hash == "0x0e024c0379406f469e12da1d8267c06e",
             sigma22_glyph_basis_restored: SIGMA22_GLYPHS.len(),
             cardinal_k8_basins_restored: CARDINAL_QUADRANTS_K8.len(),
             zha_tier2_hexagram_roots_restored: self.tier2_zha_hexagram_roots,

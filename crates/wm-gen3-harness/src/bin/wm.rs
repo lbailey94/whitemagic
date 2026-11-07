@@ -687,6 +687,24 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Run the End-to-End 5-Category LongMemEval Zero-Token + Engram O(1) + GAM JIT Benchmark Harness
+    LongmemevalBenchmark {
+        /// Emit structured JSON benchmark report
+        #[arg(long)]
+        json: bool,
+    },
+    /// Run the Satkona v4 Universal Solver (NOTEARS Causal DAG -> Dharmic Convex Bregman/Frank-Wolfe -> MPC)
+    Satkona {
+        /// Emit structured JSON output
+        #[arg(long)]
+        json: bool,
+    },
+    /// Inspect the Gnosis Portal 7D HarmonyVector Samma-Meter, Y1 Hysteresis & 10 Anti-Maya Visual Laws
+    Gnosis {
+        /// Emit structured JSON output
+        #[arg(long)]
+        json: bool,
+    },
     /// Manage the Planarian <64KB Stone Pillar Morphogen Seed (status, export, verify, regenerate)
     Seed {
         /// Subcommand action: status (default), export, verify, regenerate
@@ -1989,8 +2007,15 @@ fn main() {
                 }
             }
 
+            let zero_token_terms =
+                wm_gen3_core::wave3_braid::expand_query_zero_token_terms(&query);
+            let expanded_query_str = if zero_token_terms.is_empty() {
+                query.clone()
+            } else {
+                format!("{} {}", query, zero_token_terms.join(" "))
+            };
             let q = RecallQuery {
-                query: query.clone(),
+                query: expanded_query_str,
                 limit,
                 candidate_limit,
                 include_historical: historical,
@@ -4515,6 +4540,15 @@ fn main() {
         Commands::Wave3Benchmark { json } => {
             run_wave3_benchmark_command(json);
         }
+        Commands::LongmemevalBenchmark { json } => {
+            run_longmemeval_benchmark_command(json);
+        }
+        Commands::Satkona { json } => {
+            run_satkona_command(json);
+        }
+        Commands::Gnosis { json } => {
+            run_gnosis_command(&store_path, json);
+        }
         Commands::Seed { action, json } => {
             run_seed_command(&store_path, &action, json);
         }
@@ -4606,8 +4640,8 @@ fn run_seed_command(store_path: &Path, action: &str, json: bool) {
         println!("Action:                 {}", action);
         println!("Seed File:              {}", seed_file.display());
         println!(
-            "BendHub Constitution:   {} (Laws 1-13 Verified: {})",
-            seed.bendhub_constitution_hash, regen.laws_1_to_13_verified
+            "BendHub Constitution:   {} (Laws 1-16 Verified: {})",
+            seed.bendhub_constitution_hash, regen.laws_1_to_16_verified
         );
         println!(
             "Substrate Snapshot:     Epoch {} | Records: {} | Checkpoint: {:?}",
@@ -4869,6 +4903,138 @@ fn run_wave3_benchmark_command(json: bool) {
             report.cluster_vi.valmere_3path_and_page_curve_ok,
             report.cluster_vi.gate_runner_conflation_blocked,
             report.cluster_vi.cpr06_pq_and_gnosis_laws_verified
+        );
+        println!("==================================================================");
+    }
+}
+
+fn run_longmemeval_benchmark_command(json: bool) {
+    let report = wm_gen3_core::wave3_braid::run_longmemeval_zero_token_benchmark();
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&report).unwrap_or_default()
+        );
+    } else {
+        println!("==================================================================");
+        println!("  WhiteMagic Gen3 — LongMemEval Zero-Token + Engram + GAM Suite   ");
+        println!("==================================================================");
+        println!("Questions Evaluated:    {} (across 5 LongMemEval categories)", report.total_questions_evaluated);
+        println!("LLM Tokens Consumed:    {} tokens (Zero-Token Deterministic Pipeline)", report.total_llm_tokens_consumed);
+        println!("Suite Execution Time:   {} µs", report.execution_time_us);
+        println!(
+            "Macro Recall@3:         {:.1}% -> {:.1}% (+{:.1}% gain)",
+            report.baseline_macro_recall_pct,
+            report.zero_token_braided_macro_recall_pct,
+            report.macro_recall_gain_pct
+        );
+        println!("------------------------------------------------------------------");
+        for cat in &report.categories {
+            println!(
+                "  • {:48} {:5.1}% -> {:5.1}% (+{:5.1}%)",
+                cat.category_name,
+                cat.baseline_lexical_recall_pct,
+                cat.zero_token_engram_gam_recall_pct,
+                cat.absolute_recall_gain_pct
+            );
+        }
+        println!("==================================================================");
+    }
+}
+
+fn run_satkona_command(json: bool) {
+    let receipt = wm_gen3_core::wave3_braid::solve_satkona_v4_universal(
+        [[0.0, 0.85, 0.42], [0.0, 0.0, 0.76], [0.0, 0.0, 0.0]],
+        &[0.95, 0.84, 0.99],
+        &[true, true, false],
+    );
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&receipt).unwrap_or_default()
+        );
+    } else {
+        println!("==================================================================");
+        println!("  WhiteMagic Gen3 — Satkona v4 Universal Dharmic Convex Solver    ");
+        println!("==================================================================");
+        println!(
+            "Layer 2 (Net/Root NOTEARS Causal DAG):   Residual = {:.2e} | Edges = {}",
+            receipt.notears_acyclicity_residual, receipt.causal_edges_discovered
+        );
+        println!(
+            "Layer 3 (Void/Stars Bregman+Frank-Wolfe):Dharmic Violations = {} | KL = {:.4}",
+            receipt.dharmic_invariant_violations, receipt.bregman_kl_divergence
+        );
+        println!(
+            "Optimal Marginal Polytope Allocation:    {:?}",
+            receipt
+                .optimal_polytope_weights
+                .iter()
+                .map(|w| (w * 1000.0).round() / 1000.0)
+                .collect::<Vec<_>>()
+        );
+        println!(
+            "Layer 4 (Tail/Accelerator Receding MPC): 3-Step Closed-Loop Completed = {}",
+            receipt.mpc_receding_horizon_completed
+        );
+        println!("==================================================================");
+    }
+}
+
+fn run_gnosis_command(store_path: &Path, json: bool) {
+    let journal_path = store_path.join("journal.jsonl");
+    let substrate = Substrate::open_readonly(store_path, Some(&journal_path), default_view()).ok();
+    let epoch = substrate
+        .as_ref()
+        .and_then(|s| s.store().epoch().ok())
+        .unwrap_or(0);
+    let records = substrate
+        .as_ref()
+        .and_then(|s| s.store().record_count().ok())
+        .unwrap_or(0);
+    let armed = std::env::var("WM_ACTUATION")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+    let snap = wm_gen3_core::wave3_braid::run_live_gnosis_portal_snapshot(epoch, records, armed);
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&snap).unwrap_or_default()
+        );
+    } else {
+        println!("==================================================================");
+        println!("  WhiteMagic Gen3 — Gnosis Portal & 7D HarmonyVector Samma-Meter  ");
+        println!("==================================================================");
+        println!(
+            "Substrate State:        Epoch {} | Records: {} | BendHub 16-Law: {}",
+            snap.epoch, snap.record_count, snap.bendhub_16law_constitution
+        );
+        println!(
+            "7D HarmonyVector:       fai={:.2} thr={:.2} rsp={:.2} stb={:.2} dha={:.2} kar={:.2} nrg={:.2}",
+            snap.harmony_vector_7d.fairness,
+            snap.harmony_vector_7d.throughput,
+            snap.harmony_vector_7d.responsiveness,
+            snap.harmony_vector_7d.stability,
+            snap.harmony_vector_7d.dharma,
+            snap.harmony_vector_7d.karma_debt,
+            snap.harmony_vector_7d.energy,
+        );
+        println!(
+            "Samma-Meter (>40% Dev): {:?} | Y1 Hysteresis Step: {:?} (WM_ACTUATION={})",
+            snap.samma_highlighted_dimension, snap.y1_actuator_step, snap.wm_actuation_armed
+        );
+        println!(
+            "Zodiacal Wu Xing:       Phase #{} ({}) | Max Dominance: {:.2}",
+            snap.zodiacal_wuxing_state.phase_index,
+            snap.zodiacal_wuxing_state.phase_label,
+            snap.zodiacal_wuxing_state.max_loop_dominance_ratio
+        );
+        println!(
+            "Anti-Maya Visual Laws:  Chroma={:.2} (measured) | Opacity={:.2} | CPU={:.2}% (<0.30%: {})",
+            snap.visual_tokens_chroma_measured,
+            snap.visual_tokens_opacity_freshness,
+            snap.observer_cpu_pct,
+            snap.observer_budget_ok
         );
         println!("==================================================================");
     }

@@ -388,6 +388,11 @@ fn canonical_route(name: &str) -> Option<&'static str> {
         "dhumavati.check" | "dhumavati_check" => "dhumavati.check",
         "wave2.benchmark" | "wave2_benchmark" | "wave2-benchmark" => "wave2.benchmark",
         "wave3.benchmark" | "wave3_benchmark" | "wave3-benchmark" => "wave3.benchmark",
+        "longmemeval.benchmark" | "longmemeval_benchmark" | "longmemeval-benchmark" => {
+            "longmemeval.benchmark"
+        }
+        "satkona.solve" | "satkona_solve" | "satkona" => "satkona.solve",
+        "gnosis.portal" | "gnosis_portal" | "gnosis_status" => "gnosis.portal",
         "seed.status" | "seed_status" | "seed.regenerate" | "seed_regenerate" => "seed.status",
         _ => return None,
     })
@@ -438,6 +443,9 @@ fn allowed_profile_keys(profile: McpProfile) -> &'static HashSet<&'static str> {
             keys.insert("dhumavati.check");
             keys.insert("wave2.benchmark");
             keys.insert("wave3.benchmark");
+            keys.insert("longmemeval.benchmark");
+            keys.insert("satkona.solve");
+            keys.insert("gnosis.status");
             keys.insert("seed.status");
             keys
         }),
@@ -455,6 +463,9 @@ fn allowed_profile_keys(profile: McpProfile) -> &'static HashSet<&'static str> {
             keys.insert("dhumavati.check");
             keys.insert("wave2.benchmark");
             keys.insert("wave3.benchmark");
+            keys.insert("longmemeval.benchmark");
+            keys.insert("satkona.solve");
+            keys.insert("gnosis.status");
             keys.insert("seed.status");
             keys
         }),
@@ -2014,6 +2025,29 @@ pub fn execute_hybrid_tool_call(
         "wave3.benchmark" | "wave3_benchmark" | "wave3-benchmark" => {
             let report = wm_gen3_core::wave3_braid::run_wave3_full_benchmark_suite();
             serde_json::to_value(report).map_err(|e| format!("wave3.benchmark serialize error: {e}"))
+        }
+        "longmemeval.benchmark" | "longmemeval_benchmark" | "longmemeval-benchmark" => {
+            let report = wm_gen3_core::wave3_braid::run_longmemeval_zero_token_benchmark();
+            serde_json::to_value(report)
+                .map_err(|e| format!("longmemeval.benchmark serialize error: {e}"))
+        }
+        "satkona.solve" | "satkona_solve" | "satkona" => {
+            let receipt = wm_gen3_core::wave3_braid::solve_satkona_v4_universal(
+                [[0.0, 0.85, 0.42], [0.0, 0.0, 0.76], [0.0, 0.0, 0.0]],
+                &[0.95, 0.84, 0.99],
+                &[true, true, false],
+            );
+            serde_json::to_value(receipt).map_err(|e| format!("satkona.solve serialize error: {e}"))
+        }
+        "gnosis.portal" | "gnosis_portal" | "gnosis_status" => {
+            let epoch = substrate.store().epoch().unwrap_or(0);
+            let records = substrate.store().record_count().unwrap_or(0);
+            let armed = std::env::var("WM_ACTUATION")
+                .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+                .unwrap_or(false);
+            let snap =
+                wm_gen3_core::wave3_braid::run_live_gnosis_portal_snapshot(epoch, records, armed);
+            serde_json::to_value(snap).map_err(|e| format!("gnosis.portal serialize error: {e}"))
         }
         "seed.status" | "seed_status" | "seed.regenerate" | "seed_regenerate" => {
             let seed =

@@ -12,7 +12,7 @@ Bend 2 introduces **Law-Driven Development**: reference observers are defined in
 
 ---
 
-## The 9 Formally Verified Invariants
+## The 16 Formally Verified Invariants (Laws 1–16)
 
 | Law | Classification | Formal Invariant | Operational Guarantee |
 |---|---|---|---|
@@ -25,22 +25,29 @@ Bend 2 introduces **Law-Driven Development**: reference observers are defined in
 | `superopt_idempotent_absorption` | Algebraic Optimization | `superopt(g, superopt(g, rest)) == superopt(g, rest)` | PRAY-phase denotation merging absorbs duplicates without altering semantics ($M \cup (M \cup R) = M \cup R$). |
 | `pray_mask_commutative` | Algebraic Soundness | `merge_pray(a, b) == merge_pray(b, a)` | Conjunction of Sutra PRAY denotations is commutative ($A \cup B = B \cup A$). |
 | `crystal_anti_rollback_monotonicity` | Monotonic Epoch Step | `advance_epoch(rev) == 1n + Nat.add(rev, 0n)` | Advancing a Citta Crystal revision epoch by `1n` equals the strict successor of the identity revision. |
+| `sigma22_non_dispatching` | Wave 2 (`W2-P27`) | `has_cap(render_sigma22_symbol(lens), c) == False` | Rendering any $\Sigma_{22}$ symbolic spectrometer lens holds zero capability authority. |
+| `zero_memory_auth_laundering` | Wave 2 (`W2-P25`) | `has_cap(resolve_authority(True, lease), c) == False` | Authority claimed from recalled memory never confers live capability rights. |
+| `mmmbaby_non_compensatory_veto` | Wave 2 (`W2-P9`) | `mmmbaby_vitality(f1, f2, False, f4, f5, f6) == False` | Breaching any single vital floor vetoes composite vitality (zero sacrifice tolerance). |
+| `prodrug_receptor_exclusivity` | Wave 2 (`W2-P32`) | `cleave_prodrug(False, epoch, seal) == False` | Intercepted prodrug envelopes outside their target receptor remain inert. |
+| `y1_disarm_overrides_thresholds` | Wave 3 (`W3-P19`) | `y1_actuate(False, armed, enter, exit) == False` | Disarming `WM_ACTUATION=0` unconditionally forces Observe-only (`Step 0`), overriding all thresholds. |
+| `runner_non_conflation_truth` | Wave 3 (`W3-P29`) | `claim_strict_os_isolation(False, egress, ll) == False` | Non-strict runner classes (`bwrap`-only) never falsely claim strict OS isolation. |
+| `cpr06_authority_grant_required` | Wave 3 (`W3-P30`) | `ratify_cpr06_receipt(False, head, pq) == False` | Side-effecting Continuity Receipts missing an explicit `authority.grant` are rejected. |
 
 ---
 
 ## File Structure
 
-* [`main.bend`](./main.bend): Core executable types (`Cap`, `ScopeToken`, `PassSlot`, `Fate`, `Hexagram6`, `PrayMask`) and state transition functions.
+* [`main.bend`](./main.bend): Core executable types (`Cap`, `ScopeToken`, `PassSlot`, `Fate`, `Hexagram6`, `PrayMask`, `Sigma22Lens`) and state transition functions.
 * [`SPEC.bend`](./SPEC.bend): Pure reference observers and specification predicates (`has_cap`, `implies`, `can_execute`, `is_promoted`, `expected_next_epoch`).
-* [`LAWS.bend`](./LAWS.bend): Specification file containing the 9 formal law statements.
-* [`PROOF.bend`](./PROOF.bend): Complete constructive proofs for all 9 laws checking via case analysis, structural induction, and equality rewrites.
+* [`LAWS.bend`](./LAWS.bend): Specification file containing the 16 formal law statements (`Laws 1–16`).
+* [`PROOF.bend`](./PROOF.bend): Complete constructive proofs for all 16 laws checking via case analysis, structural induction, and equality rewrites.
 * [`LICENSE`](./LICENSE): MIT License (`SPDX-License-Identifier: MIT`).
 
 ---
 
 ## Reproducing & Publishing
 
-### 1. Verify All 9 Laws
+### 1. Verify All 16 Laws
 ```bash
 BEND_NO_TELEMETRY=1 bend PROOF.bend --check-only
 ```
@@ -59,13 +66,13 @@ BEND_NO_TELEMETRY=1 bend main.bend
 64n
 ```
 
-### 3. Import from BendHub (`0xe7cbe6684dd31616b6b8e2f83096a120`)
-Published permanently to BendHub under MIT License (`0xe7cbe6684dd31616b6b8e2f83096a120`):
+### 3. Import from BendHub (`0x0e024c0379406f469e12da1d8267c06e`)
+Published permanently to BendHub under MIT License (`0x0e024c0379406f469e12da1d8267c06e`, superseding 13-law `0x0d479d846e9ce92faa45a2346110fce8` and 9-law `0xe7cbe6684dd31616b6b8e2f83096a120`):
 ```bend
 import Base
-import 0xe7cbe6684dd31616b6b8e2f83096a120/main.bend as WM
-import 0xe7cbe6684dd31616b6b8e2f83096a120/LAWS.bend as LAWS
-import 0xe7cbe6684dd31616b6b8e2f83096a120/PROOF.bend as PROOF
+import 0x0e024c0379406f469e12da1d8267c06e/main.bend as WM
+import 0x0e024c0379406f469e12da1d8267c06e/LAWS.bend as LAWS
+import 0x0e024c0379406f469e12da1d8267c06e/PROOF.bend as PROOF
 ```
 Verify with the formal Lean 4.34.0 BendTT kernel:
 ```bash

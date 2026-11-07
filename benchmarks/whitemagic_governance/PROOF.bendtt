@@ -34,6 +34,12 @@ main.PrayMask.arms : ∀x0 : <main.Pray> -> *(.Q2) =
 main.PrayMask : *(.Q2) =
   Σx0 : <main.Pray> -> (main.PrayMask.arms x0)
 
+main.Sigma22Lens.arms : ∀x0 : <main.Lens> -> *(.Q2) =
+  λ{.main.Lens: Σx0 : Nat -> Σx1 : Nat -> <()>; λ{}}
+
+main.Sigma22Lens : *(.Q2) =
+  Σx0 : <main.Lens> -> (main.Sigma22Lens.arms x0)
+
 Bool.and : ∀x0 : Bool -> ∀x1 : Bool -> Bool =
   λ{(,): λ{.False: λ{(): λx0 => (.False, ()); λ{}}; λ{.True: λ{(): λx0 => x0; λ{}}; λ{}}}}
 
@@ -69,6 +75,27 @@ main.superopt_step : ∀x0 : main.PrayMask -> ∀x1 : main.PrayMask -> main.Pray
 
 main.advance_epoch : ∀x0 : Nat -> Nat =
   λx0 => (Nat.add x0 (.Succ, ((.Zero, ()), ())))
+
+main.render_sigma22_symbol : ∀x0 : main.Sigma22Lens -> main.ScopeToken =
+  λ{(,): λ{.main.Lens: λ{(,): λx0 => λ{(,): λx1 => λ{(): (.main.Scope, ((.False, ()), ((.False, ()), ((.False, ()), ((.False, ()), ()))))); λ{}}}}; λ{}}}
+
+main.resolve_authority : ∀x0 : Bool -> ∀x1 : main.ScopeToken -> main.ScopeToken =
+  λ{(,): λ{.True: λ{(): λx0 => (.main.Scope, ((.False, ()), ((.False, ()), ((.False, ()), ((.False, ()), ()))))); λ{}}; λ{.False: λ{(): λx0 => x0; λ{}}; λ{}}}}
+
+main.mmmbaby_vitality : ∀x0 : Bool -> ∀x1 : Bool -> ∀x2 : Bool -> ∀x3 : Bool -> ∀x4 : Bool -> ∀x5 : Bool -> Bool =
+  λx0 => λx1 => λx2 => λx3 => λx4 => λx5 => (Bool.and x0 (Bool.and x1 (Bool.and x2 (Bool.and x3 (Bool.and x4 x5)))))
+
+main.cleave_prodrug : ∀x0 : Bool -> ∀x1 : Bool -> ∀x2 : Bool -> Bool =
+  λ{(,): λ{.False: λ{(): λx0 => λx1 => (.False, ()); λ{}}; λ{.True: λ{(): λx0 => λx1 => (Bool.and x0 x1); λ{}}; λ{}}}}
+
+main.y1_actuate : ∀x0 : Bool -> ∀x1 : Bool -> ∀x2 : Bool -> ∀x3 : Bool -> Bool =
+  λ{(,): λ{.False: λ{(): λx0 => λx1 => λx2 => (.False, ()); λ{}}; λ{.True: λ{(): λ{(,): λ{.False: λ{(): λx0 => λx1 => x0; λ{}}; λ{.True: λ{(): λx0 => λx1 => x1; λ{}}; λ{}}}}; λ{}}; λ{}}}}
+
+main.claim_strict_os_isolation : ∀x0 : Bool -> ∀x1 : Bool -> ∀x2 : Bool -> Bool =
+  λ{(,): λ{.False: λ{(): λx0 => λx1 => (.False, ()); λ{}}; λ{.True: λ{(): λ{(,): λ{.False: λ{(): λx0 => (.False, ()); λ{}}; λ{.True: λ{(): λx0 => x0; λ{}}; λ{}}}}; λ{}}; λ{}}}}
+
+main.ratify_cpr06_receipt : ∀x0 : Bool -> ∀x1 : Bool -> ∀x2 : Bool -> Bool =
+  λ{(,): λ{.False: λ{(): λx0 => λx1 => (.False, ()); λ{}}; λ{.True: λ{(): λ{(,): λ{.False: λ{(): λx0 => (.False, ()); λ{}}; λ{.True: λ{(): λx0 => x0; λ{}}; λ{}}}}; λ{}}; λ{}}}}
 
 main.check_read_cap : ∀x0 : main.ScopeToken -> Bool =
   λ{(,): λ{.main.Scope: λ{(,): λx0 => λ{(,): λx1 => λ{(,): λx2 => λ{(,): λx3 => λ{(): x0; λ{}}}}}}; λ{}}}
@@ -141,6 +168,27 @@ LAWS.pray_mask_commutative : ∀+x0 : main.PrayMask -> ∀+x1 : main.PrayMask ->
 
 LAWS.crystal_anti_rollback_monotonicity : ∀x0 : Nat -> {(main.advance_epoch x0) == (SPEC.expected_next_epoch x0) : Nat} =
   λ{(,): λ{.Zero: λ{(): {==}; λ{}}; λ{.Succ: λ{(,): λx0 => λ{(): %(LAWS.crystal_anti_rollback_monotonicity x0) : x1, x2 => {(.Succ, ((Nat.add x0 (.Succ, ((.Zero, ()), ()))), ())) == (.Succ, (x1, ())) : Nat}; {==}; λ{}}}; λ{}}}}
+
+LAWS.sigma22_non_dispatching : ∀x0 : main.Sigma22Lens -> ∀x1 : main.Cap -> !x2 = (main.render_sigma22_symbol x0); {(SPEC.has_cap x2 x1) == (.False, ()) : Bool} =
+  λ{(,): λ{.main.Lens: λ{(,): λx0 => λ{(,): λx1 => λ{(): λ{(,): λ{.main.CapRead: λ{(): {==}; λ{}}; λ{.main.CapWrite: λ{(): {==}; λ{}}; λ{.main.CapExec: λ{(): {==}; λ{}}; λ{.main.CapNet: λ{(): {==}; λ{}}; λ{}}}}}}; λ{}}}}; λ{}}}
+
+LAWS.zero_memory_auth_laundering : ∀x0 : main.ScopeToken -> ∀x1 : main.Cap -> !x2 = (main.resolve_authority (.True, ()) x0); {(SPEC.has_cap x2 x1) == (.False, ()) : Bool} =
+  λx0 => λ{(,): λ{.main.CapRead: λ{(): {==}; λ{}}; λ{.main.CapWrite: λ{(): {==}; λ{}}; λ{.main.CapExec: λ{(): {==}; λ{}}; λ{.main.CapNet: λ{(): {==}; λ{}}; λ{}}}}}}
+
+LAWS.mmmbaby_non_compensatory_veto : ∀x0 : Bool -> ∀x1 : Bool -> ∀x2 : Bool -> ∀x3 : Bool -> ∀x4 : Bool -> {(main.mmmbaby_vitality x0 x1 (.False, ()) x2 x3 x4) == (.False, ()) : Bool} =
+  λ{(,): λ{.True: λ{(): λ{(,): λ{.True: λ{(): λx0 => λx1 => λx2 => {==}; λ{}}; λ{.False: λ{(): λx0 => λx1 => λx2 => {==}; λ{}}; λ{}}}}; λ{}}; λ{.False: λ{(): λx0 => λx1 => λx2 => λx3 => {==}; λ{}}; λ{}}}}
+
+LAWS.prodrug_receptor_exclusivity : ∀x0 : Bool -> ∀x1 : Bool -> {(main.cleave_prodrug (.False, ()) x0 x1) == (.False, ()) : Bool} =
+  λx0 => λx1 => {==}
+
+LAWS.y1_disarm_overrides_thresholds : ∀x0 : Bool -> ∀x1 : Bool -> ∀x2 : Bool -> {(main.y1_actuate (.False, ()) x0 x1 x2) == (.False, ()) : Bool} =
+  λx0 => λx1 => λx2 => {==}
+
+LAWS.runner_non_conflation_truth : ∀x0 : Bool -> ∀x1 : Bool -> {(main.claim_strict_os_isolation (.False, ()) x0 x1) == (.False, ()) : Bool} =
+  λx0 => λx1 => {==}
+
+LAWS.cpr06_authority_grant_required : ∀x0 : Bool -> ∀x1 : Bool -> {(main.ratify_cpr06_receipt (.False, ()) x0 x1) == (.False, ()) : Bool} =
+  λx0 => λx1 => {==}
 
 Nat.arms : ∀x0 : <Zero, Succ> -> *(.Q2) =
   λ{.Zero: <()>; λ{.Succ: Σx0 : Nat -> <()>; λ{}}}
