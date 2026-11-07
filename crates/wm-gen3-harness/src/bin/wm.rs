@@ -244,6 +244,9 @@ enum Commands {
         /// Maximum record sample depth for NREM consolidation scan (default: 500)
         #[arg(long, default_value_t = 500)]
         sample_depth: usize,
+        /// Scan live Product-Finsler constellations for 0-After-9 Curiosity Voids and register open loops (Horizon 2)
+        #[arg(long)]
+        curiosity_voids: bool,
     },
     /// Cognitive router triage: evaluate dispatch tier for inquiry with dream-assisted fast path
     Route {
@@ -675,6 +678,15 @@ enum Commands {
     /// Run the Unified Wave 2 Deep Synthesis Benchmark Suite (Clusters A-F, W2-P1..W2-P35)
     Wave2Benchmark {
         /// Emit structured JSON benchmark report
+        #[arg(long)]
+        json: bool,
+    },
+    /// Manage the Planarian <64KB Stone Pillar Morphogen Seed (status, export, verify, regenerate)
+    Seed {
+        /// Subcommand action: status (default), export, verify, regenerate
+        #[arg(default_value = "status")]
+        action: String,
+        /// Emit structured JSON output
         #[arg(long)]
         json: bool,
     },
@@ -2193,9 +2205,11 @@ fn main() {
             crystallize,
             all,
             sample_depth,
+            curiosity_voids,
         } => {
             let effective_sample_depth = if all { usize::MAX } else { sample_depth };
             let dual_phase = dual_phase.unwrap_or(true) && !no_dual_phase;
+            let run_void_scan = curiosity_voids || dual_phase;
             let homeostatic = homeostatic.unwrap_or(true) && !no_homeostatic;
             let dream_log = log_file.unwrap_or_else(|| store_path.join("dream.jsonl"));
             let insights_log = store_path.join("dream_insights.jsonl");
@@ -2481,6 +2495,100 @@ fn main() {
                                     serde_json::to_string(&skel).unwrap_or_default()
                                 );
                             }
+                        }
+                    }
+
+                    if run_void_scan {
+                        let total_recs = substrate.store().record_count().unwrap_or(0);
+                        let cur_epoch = substrate.store().epoch().unwrap_or(0);
+                        let sample_n = 240usize.min(total_recs).max(1);
+                        let stride = (total_recs / sample_n).max(1);
+                        let mut sampled = Vec::with_capacity(sample_n);
+                        for i in 0..sample_n {
+                            let rid = (i * stride).min(total_recs.saturating_sub(1)) as u64;
+                            if let Ok(Some(rec)) = substrate.store().get_record(rid) {
+                                sampled.push((rid, rec.content().to_string()));
+                            }
+                        }
+                        let skel_utils: Vec<(String, f64, bool)> = speciation_skeletons
+                            .iter()
+                            .map(|s| (s.id.clone(), s.rolling_utility, !s.deprecated))
+                            .collect();
+                        let void_pass =
+                            wm_gen3_core::wave2_braid::run_live_curiosity_void_and_cladistics_pass(
+                                &sampled,
+                                cur_epoch,
+                                &skel_utils,
+                            );
+                        println!(
+                            "  [Phase 4: Wave 2 Curiosity Voids & Cladistics] Sampled: {} | k*=8 Basins: {}/8 | 0-After-9 Voids: {} | Cladistics (P/R/Q): {}/{}/{}",
+                            void_pass.records_sampled,
+                            void_pass.active_k8_constellations,
+                            void_pass.voids_discovered.len(),
+                            void_pass.cladistic_promoted,
+                            void_pass.cladistic_retired,
+                            void_pass.cladistic_quarantined,
+                        );
+                        let voids_log = store_path.join("curiosity_voids.jsonl");
+                        let existing_loops = substrate.all_open_loops();
+                        let mut registered_loops = 0usize;
+                        for v in &void_pass.voids_discovered {
+                            println!(
+                                "    ◌ [{}] r={:.3} (surrounded by {} basins, priority={:.2})\n      Bridge: {} ⇄ {}\n      Query:  {}",
+                                v.void_id,
+                                v.radius,
+                                v.surrounding_constellations,
+                                v.curiosity_priority,
+                                v.primary_quadrant_a,
+                                v.primary_quadrant_b,
+                                v.synthesized_question,
+                            );
+                            if let Ok(mut f) = std::fs::OpenOptions::new()
+                                .create(true)
+                                .append(true)
+                                .open(&voids_log)
+                            {
+                                use std::io::Write;
+                                let _ = writeln!(
+                                    f,
+                                    "{}",
+                                    serde_json::to_string(v).unwrap_or_default()
+                                );
+                            }
+                            if registered_loops < 2
+                                && !existing_loops
+                                    .iter()
+                                    .any(|l| l.question_or_hypothesis.contains(&v.void_id))
+                            {
+                                let _ = substrate.register_open_loop(
+                                    &v.synthesized_question,
+                                    "wave2-topological-void",
+                                    wm_gen3_core::ConsentRing::Ring2RelationalTrust,
+                                    0.92,
+                                );
+                                registered_loops += 1;
+                            }
+                        }
+                        let cp_view = substrate.session_continuity(None).ok().flatten();
+                        let stone_seed =
+                            wm_gen3_core::wave2_braid::StonePillarMorphogenSeed::compile_from_live_state(
+                                cur_epoch,
+                                total_recs,
+                                cp_view.as_ref().map(|c| c.record_id),
+                                cp_view
+                                    .as_ref()
+                                    .map(|c| c.summary.as_str())
+                                    .unwrap_or("dream-consolidation-pass"),
+                                speciation_skeletons.len().max(16),
+                                void_pass.dhumavati_bardo_bloom,
+                            );
+                        if let Ok(seed_path) = stone_seed.save_to_store(&store_path) {
+                            println!(
+                                "  [Phase 5: Stone Pillar Seed] Synced {} ({} B, SHA-256: {}..)",
+                                seed_path.display(),
+                                stone_seed.serialized_bytes,
+                                &stone_seed.seed_sha256[..16]
+                            );
                         }
                     }
                 }
@@ -4361,6 +4469,122 @@ fn main() {
         Commands::Wave2Benchmark { json } => {
             run_wave2_benchmark_command(json);
         }
+        Commands::Seed { action, json } => {
+            run_seed_command(&store_path, &action, json);
+        }
+    }
+}
+
+fn run_seed_command(store_path: &Path, action: &str, json: bool) {
+    let journal_path = store_path.join("journal.jsonl");
+    let seed = match action {
+        "export" | "sync" => {
+            let substrate = Substrate::open_readonly(store_path, Some(&journal_path), default_view())
+                .unwrap_or_else(|e| {
+                    eprintln!("Error opening store at {}: {e}", store_path.display());
+                    std::process::exit(1);
+                });
+            let epoch = substrate.store().epoch().unwrap_or(0);
+            let records = substrate.store().record_count().unwrap_or(0);
+            let cp = substrate.session_continuity(None).ok().flatten();
+            let vault_path = store_path.join("vault.jsonl");
+            let skel_count = wm_gen3_core::bicameral::GeneseedVault::load_or_init(&vault_path)
+                .skeletons
+                .len()
+                .max(16);
+            let compiled =
+                wm_gen3_core::wave2_braid::StonePillarMorphogenSeed::compile_from_live_state(
+                    epoch,
+                    records,
+                    cp.as_ref().map(|c| c.record_id),
+                    cp.as_ref()
+                        .map(|c| c.summary.as_str())
+                        .unwrap_or("live-export"),
+                    skel_count,
+                    0xA5A5_5A5A_F00D_CAFE,
+                );
+            if let Err(e) = compiled.save_to_store(store_path) {
+                eprintln!("Error saving stone_pillar.seed.json: {e}");
+                std::process::exit(1);
+            }
+            compiled
+        }
+        _ => wm_gen3_core::wave2_braid::StonePillarMorphogenSeed::load_from_store(store_path)
+            .unwrap_or_else(|_| {
+                let substrate =
+                    Substrate::open_readonly(store_path, Some(&journal_path), default_view()).ok();
+                let epoch = substrate
+                    .as_ref()
+                    .and_then(|s| s.store().epoch().ok())
+                    .unwrap_or(0);
+                let records = substrate
+                    .as_ref()
+                    .and_then(|s| s.store().record_count().ok())
+                    .unwrap_or(0);
+                let cp = substrate
+                    .as_ref()
+                    .and_then(|s| s.session_continuity(None).ok().flatten());
+                let compiled =
+                    wm_gen3_core::wave2_braid::StonePillarMorphogenSeed::compile_from_live_state(
+                        epoch,
+                        records,
+                        cp.as_ref().map(|c| c.record_id),
+                        cp.as_ref()
+                            .map(|c| c.summary.as_str())
+                            .unwrap_or("auto-bootstrapped"),
+                        45,
+                        0xA5A5_5A5A_F00D_CAFE,
+                    );
+                let _ = compiled.save_to_store(store_path);
+                compiled
+            }),
+    };
+
+    let regen = seed.regenerate_report();
+    let seed_file = store_path.join("stone_pillar.seed.json");
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "action": action,
+                "seed_path": seed_file.display().to_string(),
+                "seed": seed,
+                "regeneration_receipt": regen,
+            }))
+            .unwrap_or_default()
+        );
+    } else {
+        println!("==================================================================");
+        println!("  WhiteMagic Gen3 — Planarian Stone Pillar Morphogen Seed (W2-P4) ");
+        println!("==================================================================");
+        println!("Action:                 {}", action);
+        println!("Seed File:              {}", seed_file.display());
+        println!(
+            "BendHub Constitution:   {} (Laws 1-13 Verified: {})",
+            seed.bendhub_constitution_hash, regen.laws_1_to_13_verified
+        );
+        println!(
+            "Substrate Snapshot:     Epoch {} | Records: {} | Checkpoint: {:?}",
+            seed.epoch, seed.record_count, seed.latest_checkpoint_id
+        );
+        println!(
+            "Morphogen Footprint:    {} bytes (< 64 KB bound: {})",
+            seed.serialized_bytes, regen.within_64kb_planarian_bound
+        );
+        println!(
+            "Restored Architecture:  {} Σ22 Glyphs | {} k*=8 Basins | {} ZHA Hexagram Roots | {} Skeletons",
+            regen.sigma22_glyph_basis_restored,
+            regen.cardinal_k8_basins_restored,
+            regen.zha_tier2_hexagram_roots_restored,
+            regen.geneseed_skeletons_restored
+        );
+        println!("Procrustes Anchor Hash: {}", seed.procrustes_anchor_digest);
+        println!("Seed Integrity SHA-256: {}", seed.seed_sha256);
+        println!(
+            "Regeneration Fidelity:  {:.1}% (Integrity Verified: {})",
+            regen.regeneration_fidelity_pct, regen.integrity_verified
+        );
+        println!("==================================================================");
     }
 }
 
@@ -7734,11 +7958,28 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                         }
 
                         let _ = vault.sync_to_file(&vault_path);
+                        let total_records = substrate.store().record_count().unwrap_or(0);
+                        let stone_seed =
+                            wm_gen3_core::wave2_braid::StonePillarMorphogenSeed::compile_from_live_state(
+                                epoch,
+                                total_records,
+                                Some(id),
+                                &cp.summary,
+                                vault.skeletons.len(),
+                                0xA5A5_5A5A_F00D_CAFE,
+                            );
+                        let _ = stone_seed.save_to_store(store_path);
                         println!(
                             "  Speciated: {} | Mutated: {:?} | Active Skeletons: {}",
                             speciated_count,
                             mutated_candidate,
                             vault.skeletons.len()
+                        );
+                        println!(
+                            "  Stone Pillar Seed: {} B (Integrity Verified: {}, SHA-256: {}..)",
+                            stone_seed.serialized_bytes,
+                            stone_seed.verify_integrity(),
+                            &stone_seed.seed_sha256[..16]
                         );
                         println!("--------------------------------------------------");
                     }

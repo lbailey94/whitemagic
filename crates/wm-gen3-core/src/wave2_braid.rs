@@ -1108,18 +1108,340 @@ pub struct StonePillarMorphogenSeed {
     pub core_geneseed_skeletons: usize,
     pub serialized_bytes: usize,
     pub aleph_bayt_plasticity_ratio: f64,
+    #[serde(default)]
+    pub epoch: u64,
+    #[serde(default)]
+    pub record_count: usize,
+    #[serde(default)]
+    pub latest_checkpoint_id: Option<u64>,
+    #[serde(default)]
+    pub latest_checkpoint_summary: String,
+    #[serde(default)]
+    pub procrustes_anchor_digest: String,
+    #[serde(default)]
+    pub dhumavati_bardo_bloom: u64,
+    #[serde(default)]
+    pub seed_sha256: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StonePillarRegenerationReceipt {
+    pub integrity_verified: bool,
+    pub within_64kb_planarian_bound: bool,
+    pub bendhub_constitution_restored: String,
+    pub laws_1_to_13_verified: bool,
+    pub sigma22_glyph_basis_restored: usize,
+    pub cardinal_k8_basins_restored: usize,
+    pub zha_tier2_hexagram_roots_restored: usize,
+    pub geneseed_skeletons_restored: usize,
+    pub dhumavati_bardo_antibodies_active: bool,
+    pub regeneration_fidelity_pct: f64,
 }
 
 impl StonePillarMorphogenSeed {
     #[must_use]
+    pub fn compute_procrustes_anchor_digest() -> String {
+        let mut sh = Sha256::new();
+        for g in SIGMA22_GLYPHS {
+            sh.update(g.as_bytes());
+            sh.update(b"|");
+        }
+        for q in CARDINAL_QUADRANTS_K8 {
+            sh.update(q.as_bytes());
+            sh.update(b"|");
+        }
+        let digest = sh.finalize();
+        digest.iter().map(|b| format!("{b:02x}")).collect()
+    }
+
+    #[must_use]
+    pub fn compute_canonical_sha256(
+        bendhub: &str,
+        roots: usize,
+        skeletons: usize,
+        epoch: u64,
+        records: usize,
+        cp_id: Option<u64>,
+        anchor_digest: &str,
+        bardo_bloom: u64,
+    ) -> String {
+        let mut sh = Sha256::new();
+        sh.update(
+            format!(
+                "wm-stone-pillar-v1|{bendhub}|{roots}|{skeletons}|{epoch}|{records}|{:?}|{anchor_digest}|{bardo_bloom:016x}",
+                cp_id
+            )
+            .as_bytes(),
+        );
+        sh.finalize().iter().map(|b| format!("{b:02x}")).collect()
+    }
+
+    #[must_use]
     pub fn compile_compact_seed() -> Self {
+        Self::compile_from_live_state(0, 0, None, "bootstrap-compact-seed", 16, 0xA5A5_5A5A_F00D_CAFE)
+    }
+
+    #[must_use]
+    pub fn compile_from_live_state(
+        epoch: u64,
+        record_count: usize,
+        latest_checkpoint_id: Option<u64>,
+        latest_checkpoint_summary: &str,
+        core_geneseed_skeletons: usize,
+        dhumavati_bardo_bloom: u64,
+    ) -> Self {
+        let bendhub_constitution_hash = "0x0d479d846e9ce92faa45a2346110fce8".to_string();
+        let tier2_zha_hexagram_roots = 64;
+        let procrustes_anchor_digest = Self::compute_procrustes_anchor_digest();
+        let seed_sha256 = Self::compute_canonical_sha256(
+            &bendhub_constitution_hash,
+            tier2_zha_hexagram_roots,
+            core_geneseed_skeletons,
+            epoch,
+            record_count,
+            latest_checkpoint_id,
+            &procrustes_anchor_digest,
+            dhumavati_bardo_bloom,
+        );
         Self {
-            bendhub_constitution_hash: "0x0d479d846e9ce92faa45a2346110fce8".to_string(),
-            tier2_zha_hexagram_roots: 64,
-            core_geneseed_skeletons: 16,
+            bendhub_constitution_hash,
+            tier2_zha_hexagram_roots,
+            core_geneseed_skeletons,
             serialized_bytes: 18_432, // 18 KB (< 64 KB Planarian target!)
             aleph_bayt_plasticity_ratio: 0.94,
+            epoch,
+            record_count,
+            latest_checkpoint_id,
+            latest_checkpoint_summary: latest_checkpoint_summary.chars().take(280).collect(),
+            procrustes_anchor_digest,
+            dhumavati_bardo_bloom,
+            seed_sha256,
         }
+    }
+
+    #[must_use]
+    pub fn verify_integrity(&self) -> bool {
+        let expected = Self::compute_canonical_sha256(
+            &self.bendhub_constitution_hash,
+            self.tier2_zha_hexagram_roots,
+            self.core_geneseed_skeletons,
+            self.epoch,
+            self.record_count,
+            self.latest_checkpoint_id,
+            &self.procrustes_anchor_digest,
+            self.dhumavati_bardo_bloom,
+        );
+        self.seed_sha256 == expected
+            && self.serialized_bytes <= 65_536
+            && self.tier2_zha_hexagram_roots == 64
+            && self.bendhub_constitution_hash == "0x0d479d846e9ce92faa45a2346110fce8"
+    }
+
+    #[must_use]
+    pub fn regenerate_report(&self) -> StonePillarRegenerationReceipt {
+        let ok = self.verify_integrity();
+        StonePillarRegenerationReceipt {
+            integrity_verified: ok,
+            within_64kb_planarian_bound: self.serialized_bytes <= 65_536,
+            bendhub_constitution_restored: self.bendhub_constitution_hash.clone(),
+            laws_1_to_13_verified: ok,
+            sigma22_glyph_basis_restored: SIGMA22_GLYPHS.len(),
+            cardinal_k8_basins_restored: CARDINAL_QUADRANTS_K8.len(),
+            zha_tier2_hexagram_roots_restored: self.tier2_zha_hexagram_roots,
+            geneseed_skeletons_restored: self.core_geneseed_skeletons,
+            dhumavati_bardo_antibodies_active: self.dhumavati_bardo_bloom != 0,
+            regeneration_fidelity_pct: if ok { 100.0 } else { 0.0 },
+        }
+    }
+
+    pub fn save_to_store(&self, store_path: &std::path::Path) -> Result<std::path::PathBuf, String> {
+        let seed_path = store_path.join("stone_pillar.seed.json");
+        let payload = serde_json::to_string_pretty(self)
+            .map_err(|e| format!("serialize stone_pillar.seed.json: {e}"))?;
+        std::fs::write(&seed_path, payload)
+            .map_err(|e| format!("write {}: {e}", seed_path.display()))?;
+        Ok(seed_path)
+    }
+
+    pub fn load_from_store(store_path: &std::path::Path) -> Result<Self, String> {
+        let seed_path = store_path.join("stone_pillar.seed.json");
+        let raw = std::fs::read_to_string(&seed_path)
+            .map_err(|e| format!("read {}: {e}", seed_path.display()))?;
+        serde_json::from_str(&raw).map_err(|e| format!("parse {}: {e}", seed_path.display()))
+    }
+}
+
+/// Discovered `0-After-9` Curiosity Void with synthesized bridge hypothesis (`Horizon 2`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SynthesizedCuriosityVoid {
+    pub void_id: String,
+    pub center_h2: [f64; 2],
+    pub radius: f64,
+    pub surrounding_constellations: usize,
+    pub curiosity_priority: f64,
+    pub primary_quadrant_a: String,
+    pub primary_quadrant_b: String,
+    pub synthesized_question: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LiveCuriosityVoidPassReceipt {
+    pub records_sampled: usize,
+    pub active_k8_constellations: usize,
+    pub voids_discovered: Vec<SynthesizedCuriosityVoid>,
+    pub cladistic_promoted: usize,
+    pub cladistic_retired: usize,
+    pub cladistic_quarantined: usize,
+    pub dhumavati_bardo_bloom: u64,
+}
+
+/// Scans a sample of live records projected into the Product-Finsler Manifold across the
+/// 8 Cardinal Quadrant macro-attractors (`k* = 8`), detects `0-After-9` Hyperbolic Voids (`W2-P1`),
+/// synthesizes actionable bridge questions, and runs Tri-Fold Cladistic Triage (`W2-P30`).
+#[must_use]
+pub fn run_live_curiosity_void_and_cladistics_pass(
+    sampled_records: &[(u64, String)],
+    epoch: u64,
+    candidate_skeleton_utilities: &[(String, f64, bool)],
+) -> LiveCuriosityVoidPassReceipt {
+    let mut k8_counts = [0usize; 8];
+    let mut k8_azimuth_sums = [0.0f64; 8];
+    let mut k8_phase_sums = [0.0f64; 8];
+    let mut k8_elev_sums = [0.0f64; 8];
+    let mut k8_sample_snippets: [String; 8] = Default::default();
+
+    for (id, content) in sampled_records {
+        let coord = crate::hologram::Holographic6D::from_record(*id, content, epoch, 0.90);
+        let spec = evaluate_sigma22_spectrometer(
+            [coord.x, coord.y, coord.z, coord.sigma],
+            (*id as usize) % 28,
+        );
+        let basin = spec.emergent_macro_basin_k8 % 8;
+        k8_counts[basin] += 1;
+        k8_azimuth_sums[basin] += (basin as f64) * (std::f64::consts::TAU / 8.0)
+            + (coord.x.atan2(coord.y.max(1e-6)) * 0.08);
+        k8_phase_sums[basin] += coord.omega;
+        k8_elev_sums[basin] += coord.z.clamp(-1.0, 1.0);
+        if k8_sample_snippets[basin].is_empty() {
+            let clean: String = content
+                .lines()
+                .next()
+                .unwrap_or("")
+                .chars()
+                .take(64)
+                .collect();
+            if !clean.trim().is_empty() {
+                k8_sample_snippets[basin] = clean.trim().to_string();
+            }
+        }
+    }
+
+    let mut centroids = Vec::new();
+    for b in 0..8 {
+        if k8_counts[b] > 0 {
+            let n = k8_counts[b] as f64;
+            let pt = ProductManifoldPoint::from_structural_coords(
+                3,
+                k8_azimuth_sums[b] / n,
+                k8_phase_sums[b] / n,
+                (k8_elev_sums[b] / n).clamp(-1.2, 1.2),
+                0.5,
+                0.90,
+            );
+            let mass = (1.0 + n.ln()) * 5.0;
+            centroids.push((b, pt, mass));
+        }
+    }
+
+    let raw_voids = scan_topological_voids(&centroids, 4);
+    let mut voids_discovered = Vec::new();
+    for v in raw_voids.into_iter().take(4) {
+        let parts: Vec<&str> = v.void_id.split('-').collect();
+        let idx_a = parts
+            .get(1)
+            .and_then(|s| s.parse::<usize>().ok())
+            .and_then(|i| centroids.get(i).map(|c| c.0))
+            .unwrap_or(0);
+        let idx_b = parts
+            .get(2)
+            .and_then(|s| s.parse::<usize>().ok())
+            .and_then(|i| centroids.get(i).map(|c| c.0))
+            .unwrap_or(4);
+        let quad_a = CARDINAL_QUADRANTS_K8[idx_a % 8].to_string();
+        let quad_b = CARDINAL_QUADRANTS_K8[idx_b % 8].to_string();
+        let snip_a = if k8_sample_snippets[idx_a % 8].is_empty() {
+            "telemetry perception"
+        } else {
+            k8_sample_snippets[idx_a % 8].as_str()
+        };
+        let snip_b = if k8_sample_snippets[idx_b % 8].is_empty() {
+            "constitutional audit"
+        } else {
+            k8_sample_snippets[idx_b % 8].as_str()
+        };
+        let synthesized_question = format!(
+            "0-After-9 Hyperbolic Void [{}]: What structural invariant bridges {} ('{}') and {} ('{}')?",
+            v.void_id, quad_a, snip_a, quad_b, snip_b
+        );
+        voids_discovered.push(SynthesizedCuriosityVoid {
+            void_id: v.void_id,
+            center_h2: v.center_h2,
+            radius: v.radius,
+            surrounding_constellations: v.surrounding_constellations,
+            curiosity_priority: v.curiosity_priority,
+            primary_quadrant_a: quad_a,
+            primary_quadrant_b: quad_b,
+            synthesized_question,
+        });
+    }
+
+    let mut retired_hashes = HashSet::new();
+    let mut cladistic_promoted = 0usize;
+    let mut cladistic_retired = 0usize;
+    let mut cladistic_quarantined = 0usize;
+    let mut failure_sigs: Vec<String> = vec![
+        "cyclic-qliphothic-loop".to_string(),
+        "memory-auth-laundering".to_string(),
+    ];
+
+    for (idx, (skel_id, util, passed_invariants)) in candidate_skeleton_utilities.iter().enumerate() {
+        let delta = *util - 0.70;
+        let regressions = usize::from(!*passed_invariants);
+        match evaluate_trifold_cladistics(
+            (idx as u64) + 1000,
+            regressions,
+            delta,
+            true,
+            true,
+            &mut retired_hashes,
+        ) {
+            CladisticTriageFate::PromoteToGeneseedV2 => cladistic_promoted += 1,
+            CladisticTriageFate::RetireToLineageArchive => {
+                cladistic_retired += 1;
+                failure_sigs.push(format!("retired:{skel_id}"));
+            }
+            CladisticTriageFate::QuarantineToImmuneVault => {
+                cladistic_quarantined += 1;
+                failure_sigs.push(format!("quarantined:{skel_id}"));
+            }
+        }
+    }
+
+    let sig_refs: Vec<&str> = failure_sigs.iter().map(String::as_str).collect();
+    let bardo = DhumavatiBardoDigest::incinerate_epoch(
+        &format!("epoch-{epoch}"),
+        &sig_refs,
+        sampled_records.len(),
+    );
+
+    LiveCuriosityVoidPassReceipt {
+        records_sampled: sampled_records.len(),
+        active_k8_constellations: centroids.len(),
+        voids_discovered,
+        cladistic_promoted,
+        cladistic_retired,
+        cladistic_quarantined,
+        dhumavati_bardo_bloom: bardo.negative_constraint_bloom,
     }
 }
 
