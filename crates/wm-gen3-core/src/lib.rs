@@ -83,6 +83,7 @@ pub mod tuple_space;
 pub mod valkyrie;
 pub mod wave2_braid;
 pub mod wave3_braid;
+pub mod wave4_takwin;
 pub mod zodiac_arcana;
 
 pub use hexagram::{Hexagram, HexagramMeta, Trigram, WuXing};

@@ -194,6 +194,37 @@ fn run_ecosystem_benchmark_suite(args: &[String]) -> Result<(), Box<dyn std::err
         }
     );
 
+    // ── Wave 4: Takwīn, Trace Shrinking, Holographic Wiki & Mechanistic Shaping ──
+    println!("\n─── [Wave 4] Takwīn: Trace Shrinker, Holographic Wiki & Mechanistic Shaping ────");
+    let w4 = wm_gen3_core::wave4_takwin::run_wave4_full_benchmark_suite();
+    println!(
+        "  ✓ Property-Based Trace Shrink: {} steps ➔ {} minimal steps ({:.0}x compression, PEB-23)",
+        w4.raw_trace_steps, w4.shrunk_counterexample_steps, w4.trace_shrink_compression_x
+    );
+    println!(
+        "  ✓ Holographic Wiki & Mount:    {} records, {} links, {:.1}% telephone loss (PEB-24)",
+        w4.wiki_records_indexed, w4.wiki_associative_links, w4.subagent_telephone_loss_pct
+    );
+    println!(
+        "  ✓ Mechanistic Shaping Monitor: Reliance={} · ProductCode={} · Clean={} ({} µs, PEB-25)",
+        if w4.reliance_shaping_blocked_superseded {
+            "PASS"
+        } else {
+            "FAIL"
+        },
+        if w4.product_code_circumvention_caught {
+            "PASS"
+        } else {
+            "FAIL"
+        },
+        if w4.clean_reasoning_allowed {
+            "PASS"
+        } else {
+            "FAIL"
+        },
+        w4.execution_time_us
+    );
+
     println!("\n╔═══════════════════════════════════════════════════════════════════════════════╗");
     println!("║       ALL 4 LIVING SUBSTRATE PILLARS RATIFIED: 10/10 ACROSS THE BOARD         ║");
     println!("╚═══════════════════════════════════════════════════════════════════════════════╝\n");
