@@ -244,7 +244,7 @@ pub fn evaluate_sigma22_spectrometer(
     let mut max_idx = 0usize;
     let mut max_val = f64::MIN;
 
-    for i in 0..22 {
+    for (i, act_slot) in activations.iter_mut().enumerate() {
         let phase = (i as f64) * std::f64::consts::TAU / 22.0;
         let lin = state_4d[0] * phase.cos()
             + state_4d[1] * phase.sin()
@@ -252,7 +252,7 @@ pub fn evaluate_sigma22_spectrometer(
             - state_4d[3] * (2.0 * phase).sin();
         // Nonlinear Hopfield sharpening \sigma(W x) preventing Perron-Frobenius collapse
         let act = (lin * 1.75).tanh();
-        activations[i] = act;
+        *act_slot = act;
         if act > max_val {
             max_val = act;
             max_idx = i;
@@ -726,9 +726,9 @@ pub fn mitigate_swarm_crosstalk_3node(
     let mut clean = [0.0f64; 3];
     for i in 0..3 {
         let mut val = 0.0;
-        for j in 0..3 {
+        for (j, &sig) in raw_signals.iter().enumerate() {
             let coeff = if i == j { diag } else { off };
-            val += coeff * raw_signals[j];
+            val += coeff * sig;
         }
         // Apply Pauli Twirling roundtrip (sign flip on encode * sign flip on decode = +1 on signal,
         // while decorrelating coherent environmental phase drift)
@@ -867,7 +867,7 @@ impl ProdrugCarrierEnvelope {
             .collect();
 
         let mut seal_hasher = Sha256::new();
-        seal_hasher.update(&mask_key);
+        seal_hasher.update(mask_key);
         seal_hasher.update(&masked_payload);
         let carrier_seal_sha256 = format!("{:x}", seal_hasher.finalize());
 
@@ -899,7 +899,7 @@ impl ProdrugCarrierEnvelope {
         let mask_key = hasher.finalize();
 
         let mut seal_hasher = Sha256::new();
-        seal_hasher.update(&mask_key);
+        seal_hasher.update(mask_key);
         seal_hasher.update(&self.masked_payload);
         let expected_seal = format!("{:x}", seal_hasher.finalize());
         if expected_seal != self.carrier_seal_sha256 {
@@ -1611,7 +1611,14 @@ pub fn run_wave2_full_benchmark_suite() -> Wave2FullBenchmarkReport {
         ),
         (
             2,
-            ProductManifoldPoint::from_structural_coords(3, 3.14, 2.0, 0.1, 0.5, 0.9),
+            ProductManifoldPoint::from_structural_coords(
+                3,
+                std::f64::consts::PI,
+                2.0,
+                0.1,
+                0.5,
+                0.9,
+            ),
             11.0,
         ),
         (
@@ -1983,16 +1990,16 @@ mod tests {
         let i_r10 = compute_mmmbaby_v2_planetary_index(
             0.52,
             0.42,
-            &vec![0.68; 10],
-            &vec![1.0; 10],
+            &[0.68; 10],
+            &[1.0; 10],
             &boundary_x,
             &lambdas,
         );
         let i_r200 = compute_mmmbaby_v2_planetary_index(
             0.52,
             0.42,
-            &vec![0.68; 200],
-            &vec![1.0; 200],
+            &[0.68; 200],
+            &[1.0; 200],
             &boundary_x,
             &lambdas,
         );
@@ -2011,7 +2018,7 @@ mod tests {
                 0.52,
                 0.42,
                 &sacrifice,
-                &vec![1.0; 200],
+                &[1.0; 200],
                 &boundary_x,
                 &lambdas
             ),

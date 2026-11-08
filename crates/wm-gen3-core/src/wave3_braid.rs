@@ -29,7 +29,18 @@ pub struct GardenEngineBias {
     pub speculative_depth: u8,
 }
 
-const GARDEN_GANA_TRIADS: [(u8, &str, &str, &str, f64, f64, f64, u8); 28] = [
+type GardenGanaTriadRow = (
+    u8,
+    &'static str,
+    &'static str,
+    &'static str,
+    f64,
+    f64,
+    f64,
+    u8,
+);
+
+const GARDEN_GANA_TRIADS: [GardenGanaTriadRow; 28] = [
     (0, "gana_horn", "Courage", "Wood", 0.72, 0.85, 0.45, 3),
     (1, "gana_neck", "Stability", "Jing", 0.40, 0.90, 0.75, 2),
     (2, "gana_root", "Foundation", "Jing", 0.35, 0.92, 0.85, 2),
@@ -569,10 +580,10 @@ impl PeerTheoryOfMindModel {
         let mut dot = 0.0;
         let mut n_pred = 0.0;
         let mut n_obs = 0.0;
-        for i in 0..4 {
-            dot += self.belief_vector[i] * observed[i];
-            n_pred += self.belief_vector[i] * self.belief_vector[i];
-            n_obs += observed[i] * observed[i];
+        for (b, &obs) in self.belief_vector.iter().zip(observed.iter()) {
+            dot += b * obs;
+            n_pred += b * b;
+            n_obs += obs * obs;
         }
         let cos = (dot / (n_pred.sqrt() * n_obs.sqrt()).max(1e-12)).clamp(-1.0, 1.0);
         let voe = 1.0 - cos;
@@ -586,8 +597,8 @@ impl PeerTheoryOfMindModel {
         } else {
             0.10
         };
-        for i in 0..4 {
-            self.belief_vector[i] = (1.0 - gain) * self.belief_vector[i] + gain * observed[i];
+        for (b, &obs) in self.belief_vector.iter_mut().zip(observed.iter()) {
+            *b = (1.0 - gain) * (*b) + gain * obs;
         }
         spiked
     }
@@ -1396,7 +1407,7 @@ pub fn evaluate_ashby_ultrastable_and_callosum(
     let p = single_subsystem_stability_prob.clamp(0.1, 0.99);
     let n = subsystem_count.max(1) as f64;
     // Ashby's mathematical law: fully joined takes p^(-N); independent ultrastable takes N / p
-    let fully_joined = p.powf(-(n as f64));
+    let fully_joined = p.powf(-n);
     let loosely_coupled = n / p;
     let speedup = fully_joined / loosely_coupled.max(1e-9);
     let agreement =
@@ -1493,7 +1504,7 @@ pub fn simulate_64k_rts_state_machine_tick(
 ) -> RtsSwarmTickReport {
     let n = total_units.max(64);
     let sq_sz = squad_size.clamp(8, 64);
-    let squads = (n + sq_sz - 1) / sq_sz;
+    let squads = n.div_ceil(sq_sz);
 
     let mut orders = [0usize; 6];
     for s in 0..squads {
@@ -1588,16 +1599,16 @@ pub fn solve_satkona_v4_universal(
     let mut a2 = [[0.0; 3]; 3];
     for i in 0..3 {
         for j in 0..3 {
-            for k in 0..3 {
-                a2[i][j] += a[i][k] * a[k][j];
+            for (k, row_k) in a.iter().enumerate() {
+                a2[i][j] += a[i][k] * row_k[j];
             }
         }
     }
     let mut a3 = [[0.0; 3]; 3];
     for i in 0..3 {
         for j in 0..3 {
-            for k in 0..3 {
-                a3[i][j] += a2[i][k] * a[k][j];
+            for (k, row_k) in a.iter().enumerate() {
+                a3[i][j] += a2[i][k] * row_k[j];
             }
         }
     }
@@ -1821,6 +1832,7 @@ pub struct Cpr06PqGnosisReceipt {
 }
 
 #[must_use]
+#[allow(clippy::too_many_arguments)]
 pub fn evaluate_cpr06_pq_and_gnosis_portal(
     has_authority_ref: bool,
     grant_present_in_bundle: bool,

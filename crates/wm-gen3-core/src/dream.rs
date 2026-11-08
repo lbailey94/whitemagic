@@ -1526,8 +1526,8 @@ impl ZhaGalaxyTree {
                 let mut combined_terms = Vec::new();
                 for &lid in chunk {
                     if let Some(leaf) = leaves.get(&lid) {
-                        for d in 0..6 {
-                            centroid[d] += leaf.coords_6d[d];
+                        for (d, c) in centroid.iter_mut().enumerate() {
+                            *c += leaf.coords_6d[d];
                         }
                         for t in &leaf.salient_terms {
                             if !combined_terms.contains(t) && combined_terms.len() < 64 {
@@ -1572,8 +1572,8 @@ impl ZhaGalaxyTree {
             let mut const_terms = Vec::new();
             for &cid in &cids {
                 if let Some(cl) = clusters.get(&cid) {
-                    for d in 0..6 {
-                        centroid[d] += cl.coords_6d[d];
+                    for (d, c) in centroid.iter_mut().enumerate() {
+                        *c += cl.coords_6d[d];
                     }
                     for t in &cl.salient_terms {
                         if !const_terms.contains(t) && const_terms.len() < 128 {
@@ -1623,10 +1623,10 @@ impl ZhaGalaxyTree {
         let mut dot = 0.0f32;
         let mut norm_a = 0.0f32;
         let mut norm_b = 0.0f32;
-        for i in 0..3 {
-            dot += node.coords_6d[i] * q_coords[i];
-            norm_a += node.coords_6d[i] * node.coords_6d[i];
-            norm_b += q_coords[i] * q_coords[i];
+        for (nc, qc) in node.coords_6d.iter().zip(q_coords.iter()).take(3) {
+            dot += nc * qc;
+            norm_a += nc * nc;
+            norm_b += qc * qc;
         }
         let spatial_sim = if norm_a > 1e-6 && norm_b > 1e-6 {
             dot / (norm_a.sqrt() * norm_b.sqrt())

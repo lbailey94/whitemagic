@@ -1191,7 +1191,7 @@ pub fn reconcile_mesh_gossip_delta(
 
     let mut ingested = 0;
     for packet in incoming_packets {
-        if let Some(_) = reconcile_scitt_gossip_packet(substrate, packet)? {
+        if reconcile_scitt_gossip_packet(substrate, packet)?.is_some() {
             ingested += 1;
         }
     }

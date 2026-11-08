@@ -941,6 +941,7 @@ enum VaultCommands {
 }
 
 #[derive(Subcommand)]
+#[allow(clippy::large_enum_variant)]
 enum SessionCommands {
     /// Ingest a structured compounding session checkpoint
     Checkpoint {
@@ -5526,9 +5527,9 @@ fn run_homeostasis_command(json: bool) {
             f64::from(bio.ashby_chambers.epistemic_recall.throughput_factor),
             f64::from(bio.ashby_chambers.compute.throughput_factor),
             f64::from(bio.ashby_chambers.storage.throughput_factor),
-            (f64::from(bio.mem_available_mb) / 8192.0).clamp(0.10, 1.0),
+            (bio.mem_available_mb / 8192.0).clamp(0.10, 1.0),
             f64::from(bio.ashby_chambers.perimeter_security.throughput_factor),
-            (1.0 - (f64::from(bio.cpu_temp_c) - 35.0).max(0.0) / 65.0).clamp(0.10, 1.0),
+            (1.0 - (bio.cpu_temp_c - 35.0).max(0.0) / 65.0).clamp(0.10, 1.0),
         ],
         [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
     );
