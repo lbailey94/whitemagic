@@ -11,6 +11,14 @@ canonical store stays on this machine.
 
 ## Session rhythm
 
+0. **Pre-Flight Ecosystem Brief (Zero Cold-Start).** When reviewing sessions,
+   repos, VPS/site status, Sangha board, or planning next steps, run
+   `/home/lucas/.local/bin/wm-preflight-brief` (or read
+   `/home/lucas/SharedWorkspace/PREFLIGHT_BRIEF.md`; add `--live-vps` when
+   live VPS funnel stats are needed). This compiles all 14 canonical repo
+   states, 48h cross-IDE presence (Devin, AGY, Codex, Opencode), Sangha board
+   digests, hosted/VPS health, and Gen3 continuity in `<2s` without spawning
+   exploratory subagents.
 1. **Recall first.** Before starting work, call the `wm` meta-tool with
    `route="session.continuity"` — it returns where the previous session left
    off (recent turns, checkpoints, open work).
