@@ -574,6 +574,10 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
             "root",
             "label",
             "data",
+            "lessons",
+            "corrections",
+            "identity_invariants",
+            "relational_context",
         ],
     ),
     (
@@ -947,6 +951,10 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
                     "next_queue": { "type": "array", "items": { "type": "string" }, "description": "Queued action items for next turn / next agent" },
                     "open_flags": { "type": "array", "items": { "type": "string" }, "description": "Open flags, blockers, or warnings" },
                     "context_token": { "type": "string", "description": "Optional ContextCache token for prefix cache stabilization" },
+                    "lessons": { "type": "array", "items": { "type": "string" }, "description": "Distilled episodic lessons from this session" },
+                    "corrections": { "type": "array", "items": { "type": "string" }, "description": "Operator or tool corrections ledger" },
+                    "identity_invariants": { "type": "array", "items": { "type": "string" }, "description": "Identity and behavioral invariants" },
+                    "relational_context": { "type": "string", "description": "Longitudinal relational context with the operator or peer agents" },
                     "crystallize": { "type": "boolean", "description": "Optional: crystallize converged session decisions into a linked codex memory record (default false)" }
                 },
                 "required": ["session_id", "summary"]
@@ -5015,6 +5023,40 @@ fn handle_session_checkpoint(
     // auto-git-capture implementation and is accepted with a warning.
     let label = args.get("label").and_then(Value::as_str);
     let data = args.get("data");
+    let lessons: Vec<String> = args
+        .get("lessons")
+        .and_then(Value::as_array)
+        .map(|a| {
+            a.iter()
+                .filter_map(Value::as_str)
+                .map(String::from)
+                .collect()
+        })
+        .unwrap_or_default();
+    let corrections: Vec<String> = args
+        .get("corrections")
+        .and_then(Value::as_array)
+        .map(|a| {
+            a.iter()
+                .filter_map(Value::as_str)
+                .map(String::from)
+                .collect()
+        })
+        .unwrap_or_default();
+    let identity_invariants: Vec<String> = args
+        .get("identity_invariants")
+        .and_then(Value::as_array)
+        .map(|a| {
+            a.iter()
+                .filter_map(Value::as_str)
+                .map(String::from)
+                .collect()
+        })
+        .unwrap_or_default();
+    let relational_context = args
+        .get("relational_context")
+        .and_then(Value::as_str)
+        .map(String::from);
     let mut deprecated_args: Vec<String> = Vec::new();
     if args.get("root").is_some() {
         deprecated_args.push(
@@ -5033,6 +5075,10 @@ fn handle_session_checkpoint(
         context_token,
         representation: None,
         timestamp_iso: Some(Utc::now().to_rfc3339()),
+        lessons,
+        corrections,
+        identity_invariants,
+        relational_context,
     };
     let meta = json!({
         "track": track,

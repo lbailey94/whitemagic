@@ -73,6 +73,14 @@ required-features = ["operator"]
 name = "gen3_v10_6_research_synthesis_battery"
 required-features = ["operator"]
 
+[[test]]
+name = "gate16_dual_clock_decay"
+required-features = ["operator"]
+
+[[test]]
+name = "gate17_spreading_activation"
+required-features = ["operator"]
+
 [dependencies]
 fastembed = "7.5.0"
 lmdb = "0.8"

@@ -196,7 +196,7 @@ pub struct RememberItem {
 }
 
 /// High-density structured checkpoint for agent session continuity across turns and handoffs.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
 pub struct SessionCheckpoint {
     pub session_id: String,
     pub agent_id: String,
@@ -212,10 +212,18 @@ pub struct SessionCheckpoint {
     pub representation: Option<crate::transport::RepresentationTransport>,
     #[serde(default)]
     pub timestamp_iso: Option<String>,
+    #[serde(default)]
+    pub lessons: Vec<String>,
+    #[serde(default)]
+    pub corrections: Vec<String>,
+    #[serde(default)]
+    pub identity_invariants: Vec<String>,
+    #[serde(default)]
+    pub relational_context: Option<String>,
 }
 
 /// Resolved continuity view returned by Substrate::session_continuity.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
 pub struct SessionContinuityView {
     pub record_id: u64,
     pub epoch: u64,
@@ -243,6 +251,14 @@ pub struct SessionContinuityView {
     pub tests_green: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lease_id: Option<String>,
+    #[serde(default)]
+    pub lessons: Vec<String>,
+    #[serde(default)]
+    pub corrections: Vec<String>,
+    #[serde(default)]
+    pub identity_invariants: Vec<String>,
+    #[serde(default)]
+    pub relational_context: Option<String>,
 }
 
 /// One durable session-log turn (`session_log.jsonl` entry, additive wire form).
@@ -485,6 +501,16 @@ pub struct RecallQuery {
     pub resonance: bool,
     /// Maximum hop radius for associative resonance traversal (default: 2, max: 3).
     pub resonance_hops: usize,
+}
+
+impl RecallQuery {
+    /// Enable multi-hop associative spreading activation with the specified hop radius.
+    #[must_use]
+    pub fn with_resonance(mut self, hops: usize) -> Self {
+        self.resonance = true;
+        self.resonance_hops = hops.clamp(1, 4);
+        self
+    }
 }
 
 impl Default for RecallQuery {
@@ -4185,6 +4211,27 @@ impl Substrate {
         &self.hebbian_coactivations
     }
 
+    /// Promotes volatile Hebbian co-activations into durable `Associates` graph relations.
+    /// Whenever two records fire together at least `min_coactivations` times, an associative
+    /// edge is minted in the store, linking them for permanent spreading activation.
+    pub fn consolidate_hebbian_relations(&mut self, min_coactivations: u32) -> Result<usize, String> {
+        let pairs: Vec<((u64, u64), u32)> = self
+            .hebbian_coactivations
+            .iter()
+            .filter(|&(_, &count)| count >= min_coactivations)
+            .map(|(&pair, &count)| (pair, count))
+            .collect();
+
+        let mut wired = 0;
+        for ((src, dst), count) in pairs {
+            let weight = (0.50 + 0.10 * (count as f32)).min(1.0);
+            if self.add_relation(field::RelationKind::Associates, src, dst, weight).is_ok() {
+                wired += 1;
+            }
+        }
+        Ok(wired)
+    }
+
     /// Authorized relation commitment (Associates, Causal, or Supersedes).
     pub fn add_relation(
         &mut self,
@@ -4344,6 +4391,10 @@ impl Substrate {
                     branch: meta_str("branch"),
                     tests_green,
                     lease_id: meta_str("lease_id"),
+                    lessons: cp.lessons,
+                    corrections: cp.corrections,
+                    identity_invariants: cp.identity_invariants,
+                    relational_context: cp.relational_context,
                 });
             } else {
                 let parts: Vec<&str> = record.source().split(':').collect();
@@ -4369,6 +4420,10 @@ impl Substrate {
                     branch: None,
                     tests_green: None,
                     lease_id: None,
+                    lessons: Vec::new(),
+                    corrections: Vec::new(),
+                    identity_invariants: Vec::new(),
+                    relational_context: None,
                 });
             }
         }
@@ -6448,7 +6503,8 @@ impl Substrate {
         record_id: u64,
         wall_elapsed_days: f32,
     ) -> DualClockDecayReceipt {
-        let current_epoch = self.store.epoch().unwrap_or(0);
+        let n = self.store.record_count().unwrap_or(0) as u64;
+        let current_epoch = self.store.epoch().unwrap_or(n).max(n);
         let record_epoch = self
             .store
             .get_record(record_id)
@@ -6537,6 +6593,106 @@ impl Substrate {
             ),
         }
     }
+
+    /// Scans memory records whose dual-clock retention has decayed below `harvest_threshold`
+    /// (e.g. 0.40) but remains above the constitutional retention floor. Before the episodic record fades,
+    /// it distills the underlying invariant rule, pins it as an immortal Gem record with salience 1.0,
+    /// and binds a Causal provenance relation from the episodic source to the new Gem.
+    pub fn harvest_decaying_wisdom(
+        &mut self,
+        harvest_threshold: f32,
+    ) -> Result<Vec<HarvestedWisdom>, String> {
+        let n = self.store.record_count().unwrap_or(0) as u64;
+        let current_epoch = self.store.epoch().unwrap_or(n).max(n);
+        let records = self.store.iter_records().map_err(|e| e.to_string())?;
+        let cfg = DualClockDecayConfig::default();
+
+        let mut to_harvest: Vec<(u64, String, f32)> = Vec::new();
+
+        for record in records {
+            let content = record.content();
+            if content.starts_with("WISDOM_GEM:") || content.starts_with("WISDOM_GEM [") || record.source().starts_with("wisdom_harvest:") {
+                continue;
+            }
+
+            let delta_lived = current_epoch.saturating_sub(record.created_at().max(record.id()));
+            let worth = self.memory_worth(record.id());
+            let reinforcements = worth.retrievals
+                + worth.positive_outcomes * 2
+                + u64::from(self.usage.get(&record.id()).copied().unwrap_or(0));
+
+            let retention = cfg.retention_factor(delta_lived, 0.0, reinforcements);
+            if retention <= harvest_threshold && retention >= cfg.retention_floor {
+                to_harvest.push((record.id(), content.to_string(), retention));
+            }
+        }
+
+        let mut harvested = Vec::new();
+        for (source_id, content, pre_retention) in to_harvest {
+            let (distilled_rule, category) = distill_invariant_rule(&content);
+            let gem_content = format!("WISDOM_GEM [{}]: {}", category, distilled_rule);
+
+            let ids = self.remember_batch(&[RememberItem {
+                content: gem_content,
+                source: format!("wisdom_harvest:record_{}", source_id),
+                kind: ImportKind::Reported,
+            }]);
+
+            if let Some(Ok(gem_id)) = ids.first() {
+                let _ = self.add_relation(field::RelationKind::Causal, source_id, *gem_id, 0.95);
+                harvested.push(HarvestedWisdom {
+                    source_record_id: source_id,
+                    original_content: content,
+                    distilled_rule,
+                    invariant_category: category,
+                    pre_harvest_retention: pre_retention,
+                    post_harvest_gem_id: *gem_id,
+                    timestamp_epoch: current_epoch,
+                });
+            }
+        }
+
+        Ok(harvested)
+    }
+}
+
+/// Helper function to distill an enduring invariant rule and category from decaying episodic content.
+fn distill_invariant_rule(content: &str) -> (String, String) {
+    let lower = content.to_lowercase();
+    let category = if lower.contains("error") || lower.contains("fail") || lower.contains("panicked") {
+        "DefensiveFailureMode".to_string()
+    } else if lower.contains("invariant") || lower.contains("rule") || lower.contains("must") {
+        "SystemicConstraint".to_string()
+    } else if lower.contains("sandbox") || lower.contains("landlock") || lower.contains("security") {
+        "SubstrateConfinement".to_string()
+    } else if lower.contains("quantum") || lower.contains("kernel") || lower.contains("compiler") {
+        "ArchitecturalKernel".to_string()
+    } else {
+        "EmpiricalLesson".to_string()
+    };
+
+    let clean = content
+        .trim()
+        .replace('\n', " ");
+    let rule = if clean.len() > 180 {
+        format!("{}...", &clean[..180])
+    } else {
+        clean
+    };
+
+    (rule, category)
+}
+
+/// Harvested wisdom distilled from a decaying episodic memory record.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct HarvestedWisdom {
+    pub source_record_id: u64,
+    pub original_content: String,
+    pub distilled_rule: String,
+    pub invariant_category: String,
+    pub pre_harvest_retention: f32,
+    pub post_harvest_gem_id: u64,
+    pub timestamp_epoch: u64,
 }
 
 /// Audit report emitted by [`Substrate::erase_record_certified`] (`MemCut` `arXiv:2610.21405`).
@@ -9313,6 +9469,10 @@ mod cache_boundary_tests {
                 language: Some("en".into()),
             }),
             timestamp_iso: Some("2026-09-25T14:00:00Z".into()),
+            lessons: Vec::new(),
+            corrections: Vec::new(),
+            identity_invariants: Vec::new(),
+            relational_context: None,
         };
         let id1 = substrate.session_checkpoint(&cp1).unwrap();
         assert_eq!(id1, 0);
@@ -9328,6 +9488,10 @@ mod cache_boundary_tests {
             context_token: Some("ctx_hash_456".into()),
             representation: None,
             timestamp_iso: Some("2026-09-25T14:30:00Z".into()),
+            lessons: Vec::new(),
+            corrections: Vec::new(),
+            identity_invariants: Vec::new(),
+            relational_context: None,
         };
         let id2 = substrate.session_checkpoint(&cp2).unwrap();
         assert_eq!(id2, 1);
@@ -10040,6 +10204,10 @@ mod cache_boundary_tests {
             context_token: None,
             representation: None,
             timestamp_iso: Some("2026-10-06T00:00:00Z".into()),
+            lessons: Vec::new(),
+            corrections: Vec::new(),
+            identity_invariants: Vec::new(),
+            relational_context: None,
         };
         let meta = serde_json::json!({
             "track": "mission-a",
@@ -10101,6 +10269,10 @@ mod cache_boundary_tests {
             branch: None,
             tests_green: Some(true),
             lease_id: None,
+            lessons: Vec::new(),
+            corrections: Vec::new(),
+            identity_invariants: Vec::new(),
+            relational_context: None,
         };
         let (markdown, json) = compose_session_digest("lane", &turns, Some(&view));
         assert!(markdown.contains("Session Digest: lane"));

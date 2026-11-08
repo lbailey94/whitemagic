@@ -400,6 +400,10 @@ fn cb_6_compounding_session_continuity_pulse() {
             language: Some("en".into()),
         }),
         timestamp_iso: Some("2026-09-25T14:00:00Z".into()),
+        lessons: Vec::new(),
+        corrections: Vec::new(),
+        identity_invariants: Vec::new(),
+        relational_context: None,
     };
     let id1 = s.session_checkpoint(&cp1).unwrap();
     assert_eq!(id1, 0);
@@ -421,6 +425,10 @@ fn cb_6_compounding_session_continuity_pulse() {
         context_token: Some("ctx_token_beta".into()),
         representation: None,
         timestamp_iso: Some("2026-09-25T14:45:00Z".into()),
+        lessons: Vec::new(),
+        corrections: Vec::new(),
+        identity_invariants: Vec::new(),
+        relational_context: None,
     };
     let id2 = s.session_checkpoint(&cp2).unwrap();
     assert_eq!(id2, 1);

@@ -974,6 +974,18 @@ enum SessionCommands {
         /// Claimed scope lease_id that remains held at this handoff
         #[arg(long)]
         lease_id: Option<String>,
+        /// Distilled episodic lessons from this session
+        #[arg(long = "lesson")]
+        lessons: Vec<String>,
+        /// Operator or tool corrections ledger
+        #[arg(long = "correction")]
+        corrections: Vec<String>,
+        /// Identity and behavioral invariants
+        #[arg(long = "identity-invariant")]
+        identity_invariants: Vec<String>,
+        /// Longitudinal relational context with the operator or peer agents
+        #[arg(long)]
+        relational_context: Option<String>,
         /// Autonomously evolve action skeletons and consolidate dream insights after checkpoint (default: true)
         #[arg(long, num_args = 0..=1, default_missing_value = "true")]
         evolve: Option<bool>,
@@ -8420,6 +8432,10 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
             branch,
             tests_green,
             lease_id,
+            lessons,
+            corrections,
+            identity_invariants,
+            relational_context,
             evolve,
             no_evolve,
         } => {
@@ -8443,6 +8459,10 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                 context_token,
                 representation: None,
                 timestamp_iso: Some(chrono::Utc::now().to_rfc3339()),
+                lessons,
+                corrections,
+                identity_invariants,
+                relational_context,
             };
             let meta = serde_json::json!({
                 "track": track,
@@ -8474,6 +8494,27 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                     }
                     if let Some(lease_id) = &lease_id {
                         println!("Lease ID:        {lease_id}");
+                    }
+                    if let Some(relational) = &cp.relational_context {
+                        println!("Relational:      {relational}");
+                    }
+                    if !cp.identity_invariants.is_empty() {
+                        println!("\nIdentity Invariants:");
+                        for inv in &cp.identity_invariants {
+                            println!("  - 🛡️  {inv}");
+                        }
+                    }
+                    if !cp.lessons.is_empty() {
+                        println!("\nDistilled Lessons:");
+                        for lesson in &cp.lessons {
+                            println!("  - 💡 {lesson}");
+                        }
+                    }
+                    if !cp.corrections.is_empty() {
+                        println!("\nCorrections Ledger:");
+                        for corr in &cp.corrections {
+                            println!("  - 🔧 {corr}");
+                        }
                     }
 
                     if evolve {
@@ -8636,6 +8677,27 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                     }
                     if let Some(lease_id) = &view.lease_id {
                         println!("Lease ID:        {lease_id}");
+                    }
+                    if let Some(relational) = &view.relational_context {
+                        println!("Relational:      {relational}");
+                    }
+                    if !view.identity_invariants.is_empty() {
+                        println!("\nIdentity Invariants:");
+                        for inv in &view.identity_invariants {
+                            println!("  - 🛡️  {inv}");
+                        }
+                    }
+                    if !view.lessons.is_empty() {
+                        println!("\nDistilled Lessons:");
+                        for lesson in &view.lessons {
+                            println!("  - 💡 {lesson}");
+                        }
+                    }
+                    if !view.corrections.is_empty() {
+                        println!("\nCorrections Ledger:");
+                        for corr in &view.corrections {
+                            println!("  - 🔧 {corr}");
+                        }
                     }
                     if !view.next_queue.is_empty() {
                         println!("\nNext Queue:");
@@ -13047,6 +13109,14 @@ mod session_cli_tests {
             "--tests-green",
             "--lease-id",
             "lease-1",
+            "--lesson",
+            "Prefer lived-time decay over real-time sleep clocks",
+            "--correction",
+            "Do not write records past rate budget",
+            "--identity-invariant",
+            "Zero Corrigibility/Rationalist dogma",
+            "--relational-context",
+            "Operator Lucas is driving Gen3 Phase 3 upgrade",
         ])
         .expect("parse checkpoint metadata");
         match cli.command {
@@ -13058,6 +13128,10 @@ mod session_cli_tests {
                         branch,
                         tests_green,
                         lease_id,
+                        lessons,
+                        corrections,
+                        identity_invariants,
+                        relational_context,
                         ..
                     },
             } => {
@@ -13066,6 +13140,10 @@ mod session_cli_tests {
                 assert_eq!(branch.as_deref(), Some("feat/mcp-truth"));
                 assert_eq!(tests_green, Some(true));
                 assert_eq!(lease_id.as_deref(), Some("lease-1"));
+                assert_eq!(lessons, vec!["Prefer lived-time decay over real-time sleep clocks"]);
+                assert_eq!(corrections, vec!["Do not write records past rate budget"]);
+                assert_eq!(identity_invariants, vec!["Zero Corrigibility/Rationalist dogma"]);
+                assert_eq!(relational_context.as_deref(), Some("Operator Lucas is driving Gen3 Phase 3 upgrade"));
             }
             _ => panic!("expected session checkpoint command"),
         }

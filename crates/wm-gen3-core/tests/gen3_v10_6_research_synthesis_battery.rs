@@ -309,6 +309,10 @@ fn p0_3_brain_replacement_continuity_obligations_and_stepgate() {
             context_token: Some("ctx-token-v10.6".into()),
             representation: None,
             timestamp_iso: Some("2026-10-26T20:00:00Z".into()),
+            lessons: Vec::new(),
+            corrections: Vec::new(),
+            identity_invariants: Vec::new(),
+            relational_context: None,
         };
         brain_a
             .session_checkpoint_enriched(
