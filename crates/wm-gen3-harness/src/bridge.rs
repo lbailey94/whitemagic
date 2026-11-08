@@ -10262,6 +10262,7 @@ mod compact_agent_context_tests {
             branch: None,
             tests_green: None,
             lease_id: None,
+            ..Default::default()
         };
         let crystals =
             vec![json!({"record_id":1,"title":"crystal","preview":"crystal ".repeat(500)})];
