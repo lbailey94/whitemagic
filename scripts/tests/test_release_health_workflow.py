@@ -124,6 +124,12 @@ esac
             ("10.6.0", "true", "skip", "10.6.1"),
             ("10.6.0-beta.3", "true", "skip", "10.6.0-beta.4"),
             ("9.3.5", "false", "skip", "9.3.6"),
+            ("11.0.0", "false", "latest"),
+            ("11.1.0", "true", "next"),
+            ("11.2.0", "false", "latest"),
+            ("11.2.0", "false", "latest", "11.1.0"),
+            ("11.1.0", "false", "skip", "11.2.0"),
+            ("9.3.5", "false", "skip", "11.2.0"),
         )
         for case in cases:
             version, prerelease, expected, *current = case

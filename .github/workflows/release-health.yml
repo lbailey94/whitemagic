@@ -400,11 +400,12 @@ jobs:
           [ "$DOCKER_DECISION" != "skip" ] || {
             echo "Docker latest already points to newer ${CURRENT_DOCKER_VERSION}; refusing downgrade to ${VERSION}"; exit 0;
           }
+          MAJOR="${VERSION%%.*}"
           docker buildx imagetools create \
-            --tag lbailey94/whitemagic:9 \
+            --tag "lbailey94/whitemagic:${MAJOR}" \
             --tag lbailey94/whitemagic:latest \
             "$SOURCE"
-          for alias in 9 latest; do
+          for alias in "${MAJOR}" latest; do
             docker buildx imagetools inspect "lbailey94/whitemagic:${alias}"
             docker buildx imagetools inspect --raw "lbailey94/whitemagic:${alias}" > "${alias}-manifest.json"
             cmp -s source-manifest.json "${alias}-manifest.json" || {

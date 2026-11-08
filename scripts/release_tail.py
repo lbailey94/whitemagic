@@ -28,7 +28,7 @@ def family_for_version(version: str) -> str:
     major = int(match.group(1))
     if major == 9:
         return "gen2"
-    if major == 10:
+    if major in (10, 11):
         return "gen3"
     raise ValueError(f"no registered release family for version {normalized}")
 

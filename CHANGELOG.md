@@ -5,6 +5,22 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [11.2.0] — 2026-11-08 (UTC)
+
+### Added
+- **Sangha Collective Dreaming (Gate PEB-20)**: Autonomous multi-agent offline memory consolidation and stigmergic synthesis across distributed agent workspaces.
+- **SCITT Merkle Mesh Gossip (Gate PEB-21)**: Cryptographic tamper-evident receipt verification and Merkle log gossip adhering to IETF SCITT standards.
+- **Turnkey Public Benchmark Suite (Gate PEB-22)**: Headless `wm_benchmark --suite 10of10` ecosystem evaluation emitting standardized markdown comparison reports and deterministic cryptographic JSON receipts.
+- **Channel Selector & Production Promotion Gate**: Promoted Gen3 living substrate v11.x to `latest` on npm (`whitemagic-mcp@latest`) and DockerHub (`whitemagic:latest`).
+
+## [11.1.0] — 2026-11-07 (UTC)
+
+### Added
+- **Dual-Clock Lived-Time Decay & The Wisdom Harvest (Gate PEB-16)**: Biological decay separating lived activity from idle wall-clock sleep (18.9x quiescent SNR advantage over naive aging); pre-eviction wisdom harvesting into immortal Gems.
+- **Sub-5ms Hebbian Spreading Activation (Gate PEB-17)**: Dynamic associative graph resonance across `Associates`, `Causal`, and `Supersedes` edges in sub-5ms with zero token overhead.
+- **Experiential & Relational Identity Stack (Gate PEB-18)**: Tri-part state preservation (lessons, corrections, identity invariants, relational context) rehydrated in under 25ms with 100% field fidelity.
+- **Universal Single-Binary MCP stdio Daemon (Gate PEB-19)**: High-speed native Rust MCP stdio daemon with sub-millisecond cold-start handshake.
+
 ## [11.0.0] — 2026-11-07 (UTC)
 
 ### Added

@@ -25,11 +25,17 @@ def semver_key(version: str) -> tuple[tuple[int, int, int], bool, tuple[tuple[in
 
 
 def npm_selector(version: str, prerelease: bool, current: str | None = None) -> str:
-    """Keep the open-alpha Gen3 line off stable selectors, even if misflagged."""
+    """Channel selector policy for WhiteMagic release promotion.
+
+    Stable production lines (Gen2 v9.x, Gen3 living substrate v11.x+) target
+    'latest' unless flagged as prerelease or superseded by a newer version.
+    Gen3 experimental preview line (v10.x) targets 'next'.
+    """
     match = VERSION_RE.fullmatch(version)
     if not match:
         raise ValueError("version must be a full semantic version")
-    if int(match.group(1)) == 9 and not prerelease and "-" not in version:
+    major = int(match.group(1))
+    if (major == 9 or major >= 11) and not prerelease and "-" not in version:
         selector = "latest"
     else:
         selector = "next"

@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "whitemagic",
   "display_name": "WhiteMagic",
-  "version": "11.0.0",
+  "version": "11.2.0",
   "description": "Persistent local memory and session continuity for AI coding agents. Runs entirely on your machine over MCP.",
   "long_description": "WhiteMagic gives an AI coding agent durable project memory over MCP: record important context, find it after restart, and carry useful decisions into the next session \u2014 without sending your memory store to any hosted service. The bundled launcher fetches the checksum-verified `wm` binary from the GitHub release and runs it over stdio. This Gen3 preview supports Linux x86-64/arm64 with glibc 2.39+ and macOS arm64; Windows and Intel macOS use the separate stable Gen2 line. No account; no telemetry by default.",
   "author": {

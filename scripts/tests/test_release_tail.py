@@ -80,8 +80,9 @@ class ReleaseTailTests(unittest.TestCase):
     def test_release_family_is_explicit_and_unknown_major_fails_closed(self):
         self.assertEqual(family_for_version("v9.3.4"), "gen2")
         self.assertEqual(family_for_version("10.6.1-alpha.1"), "gen3")
+        self.assertEqual(family_for_version("11.0.0"), "gen3")
         with self.assertRaisesRegex(ValueError, "no registered release family"):
-            family_for_version("11.0.0")
+            family_for_version("12.0.0")
 
     def test_gen2_export_uses_out_and_its_own_destination(self):
         with tempfile.TemporaryDirectory() as temp:
