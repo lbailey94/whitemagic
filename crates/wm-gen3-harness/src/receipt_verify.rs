@@ -152,8 +152,16 @@ pub fn b64u_encode(data: &[u8]) -> String {
     let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
     for chunk in data.chunks(3) {
         let b0 = u32::from(chunk[0]);
-        let b1 = if chunk.len() > 1 { u32::from(chunk[1]) } else { 0 };
-        let b2 = if chunk.len() > 2 { u32::from(chunk[2]) } else { 0 };
+        let b1 = if chunk.len() > 1 {
+            u32::from(chunk[1])
+        } else {
+            0
+        };
+        let b2 = if chunk.len() > 2 {
+            u32::from(chunk[2])
+        } else {
+            0
+        };
         let n = (b0 << 16) | (b1 << 8) | b2;
         out.push(TABLE[((n >> 18) & 0x3f) as usize] as char);
         out.push(TABLE[((n >> 12) & 0x3f) as usize] as char);
@@ -352,20 +360,18 @@ pub fn build_cpr05_chain_for_emitted(
     } else {
         hex_encode(&Sha256::digest(prior_receipt_digest.as_bytes()))
     };
-    let payload_hex = if payload_digest.len() == 64
-        && payload_digest.bytes().all(|b| b.is_ascii_hexdigit())
-    {
-        payload_digest.to_ascii_lowercase()
-    } else {
-        hex_encode(&Sha256::digest(payload_digest.as_bytes()))
-    };
-    let content_hex = if content_digest.len() == 64
-        && content_digest.bytes().all(|b| b.is_ascii_hexdigit())
-    {
-        content_digest.to_ascii_lowercase()
-    } else {
-        hex_encode(&Sha256::digest(content_digest.as_bytes()))
-    };
+    let payload_hex =
+        if payload_digest.len() == 64 && payload_digest.bytes().all(|b| b.is_ascii_hexdigit()) {
+            payload_digest.to_ascii_lowercase()
+        } else {
+            hex_encode(&Sha256::digest(payload_digest.as_bytes()))
+        };
+    let content_hex =
+        if content_digest.len() == 64 && content_digest.bytes().all(|b| b.is_ascii_hexdigit()) {
+            content_digest.to_ascii_lowercase()
+        } else {
+            hex_encode(&Sha256::digest(content_digest.as_bytes()))
+        };
 
     let base_ms = if created_at_ms > 0 {
         created_at_ms
@@ -740,16 +746,15 @@ pub fn verify_cpr05_bundle_or_emitted(value: &Value, store_path: &Path) -> Resul
                 .get("value")
                 .and_then(Value::as_str)
                 .ok_or_else(|| "bad_signature: missing sig.value".to_string())?;
-            let sig_raw =
-                b64u_decode(sig_b64).map_err(|e| format!("bad_signature: {e}"))?;
+            let sig_raw = b64u_decode(sig_b64).map_err(|e| format!("bad_signature: {e}"))?;
             if sig_raw.len() != 64 {
                 return Err("bad_signature: Ed25519 signature must be 64 bytes".to_string());
             }
             let mut sig_arr = [0u8; 64];
             sig_arr.copy_from_slice(&sig_raw);
             let sig = Signature::from_bytes(&sig_arr);
-            let vk = decode_did_key_ed25519(issuer_id)
-                .map_err(|e| format!("bad_signature: {e}"))?;
+            let vk =
+                decode_did_key_ed25519(issuer_id).map_err(|e| format!("bad_signature: {e}"))?;
             let msg = jcs_canonical_bytes(&cpr05_unsigned_view(item))?;
             vk.verify(&msg, &sig)
                 .map_err(|e| format!("bad_signature: signature does not verify ({e})"))?;
@@ -790,7 +795,7 @@ pub fn verify_cpr05_bundle_or_emitted(value: &Value, store_path: &Path) -> Resul
                 || head.get("digest") != last_dig.as_ref()
             {
                 return Err(
-                    "head_mismatch: chain_head does not match the final receipt".to_string(),
+                    "head_mismatch: chain_head does not match the final receipt".to_string()
                 );
             }
         }

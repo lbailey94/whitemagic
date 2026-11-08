@@ -36,28 +36,100 @@ const GARDEN_GANA_TRIADS: [(u8, &str, &str, &str, f64, f64, f64, u8); 28] = [
     (3, "gana_room", "Sanctuary", "Shen", 0.45, 0.95, 0.65, 2),
     (4, "gana_heart", "Pulse", "Fire", 0.80, 0.75, 0.50, 4),
     (5, "gana_tail", "Acceleration", "Fire", 0.88, 0.70, 0.40, 4),
-    (6, "gana_winnowing_basket", "Mystery", "Qi", 0.92, 0.68, 0.55, 4),
+    (
+        6,
+        "gana_winnowing_basket",
+        "Mystery",
+        "Qi",
+        0.92,
+        0.68,
+        0.55,
+        4,
+    ),
     (7, "gana_dipper", "Governance", "Water", 0.55, 0.90, 0.70, 3),
     (8, "gana_ox", "Endurance", "Jing", 0.42, 0.86, 0.80, 2),
     (9, "gana_girl", "Weaving", "Qi", 0.75, 0.74, 0.65, 3),
     (10, "gana_void", "Stillness", "Void", 0.30, 0.88, 0.96, 1),
     (11, "gana_roof", "Shelter", "Water", 0.48, 0.94, 0.78, 2),
-    (12, "gana_encampment", "Fortress", "Metal", 0.50, 0.96, 0.68, 2),
+    (
+        12,
+        "gana_encampment",
+        "Fortress",
+        "Metal",
+        0.50,
+        0.96,
+        0.68,
+        2,
+    ),
     (13, "gana_wall", "Library", "Shen", 0.68, 0.84, 0.82, 3),
     (14, "gana_legs", "Stride", "Metal", 0.78, 0.76, 0.52, 3),
     (15, "gana_bond", "Sangha", "Wood", 0.74, 0.82, 0.64, 3),
     (16, "gana_stomach", "Granary", "Jing", 0.44, 0.85, 0.88, 2),
-    (17, "gana_hairy_head", "Clarity", "Metal", 0.64, 0.91, 0.60, 3),
+    (
+        17,
+        "gana_hairy_head",
+        "Clarity",
+        "Metal",
+        0.64,
+        0.91,
+        0.60,
+        3,
+    ),
     (18, "gana_net", "Capture", "Qi", 0.84, 0.80, 0.58, 4),
-    (19, "gana_turtle_beak", "Precision", "Metal", 0.52, 0.95, 0.62, 2),
+    (
+        19,
+        "gana_turtle_beak",
+        "Precision",
+        "Metal",
+        0.52,
+        0.95,
+        0.62,
+        2,
+    ),
     (20, "gana_three_stars", "Triad", "Shen", 0.76, 0.86, 0.66, 3),
     (21, "gana_well", "Source", "Water", 0.66, 0.80, 0.84, 3),
-    (22, "gana_ghost", "Introspection", "Void", 0.60, 0.89, 0.90, 2),
-    (23, "gana_willow", "Flexibility", "Wood", 0.82, 0.72, 0.56, 3),
+    (
+        22,
+        "gana_ghost",
+        "Introspection",
+        "Void",
+        0.60,
+        0.89,
+        0.90,
+        2,
+    ),
+    (
+        23,
+        "gana_willow",
+        "Flexibility",
+        "Wood",
+        0.82,
+        0.72,
+        0.56,
+        3,
+    ),
     (24, "gana_star", "Illumination", "Fire", 0.90, 0.78, 0.54, 4),
-    (25, "gana_extended_net", "Synthesizer", "Qi", 0.89, 0.76, 0.62, 4),
+    (
+        25,
+        "gana_extended_net",
+        "Synthesizer",
+        "Qi",
+        0.89,
+        0.76,
+        0.62,
+        4,
+    ),
     (26, "gana_wings", "Flight", "Fire", 0.94, 0.72, 0.46, 4),
-    (27, "gana_chariot", "Convergence", "Water", 0.70, 0.88, 0.74, 3),
+    (
+        27,
+        "gana_chariot",
+        "Convergence",
+        "Water",
+        0.70,
+        0.88,
+        0.74,
+        3,
+    ),
 ];
 
 /// Resolves the Triadic `Garden <-> Gana <-> Engine` bias for any mansion index `0..28` (`W3-P1`).
@@ -273,7 +345,10 @@ pub fn enrich_document_facets_at_index_time(
     session_topic_tags: &[&str],
 ) -> EnrichedMemoryFacets {
     let lower = content.to_ascii_lowercase();
-    let mut tags: Vec<String> = session_topic_tags.iter().map(|s| (*s).to_string()).collect();
+    let mut tags: Vec<String> = session_topic_tags
+        .iter()
+        .map(|s| (*s).to_string())
+        .collect();
     let mut prefs: Vec<String> = Vec::new();
 
     // Medical / Doctor entity expansion:
@@ -286,14 +361,24 @@ pub fn enrich_document_facets_at_index_time(
         || lower.contains("allergist")
         || lower.contains("biopsy")
     {
-        for t in ["doctor", "physician", "medical", "healthcare", "appointment"] {
+        for t in [
+            "doctor",
+            "physician",
+            "medical",
+            "healthcare",
+            "appointment",
+        ] {
             if !tags.iter().any(|x| x == t) {
                 tags.push(t.to_string());
             }
         }
     }
     // Financial / Purchase expansion:
-    if lower.contains('$') || lower.contains("bought") || lower.contains("paid") || lower.contains("invoice") {
+    if lower.contains('$')
+        || lower.contains("bought")
+        || lower.contains("paid")
+        || lower.contains("invoice")
+    {
         for t in ["expense", "purchase", "cost", "finance"] {
             if !tags.iter().any(|x| x == t) {
                 tags.push(t.to_string());
@@ -301,7 +386,11 @@ pub fn enrich_document_facets_at_index_time(
         }
     }
     // Event / Ceremony expansion:
-    if lower.contains("bride") || lower.contains("groom") || lower.contains("ceremony") || lower.contains("reception") {
+    if lower.contains("bride")
+        || lower.contains("groom")
+        || lower.contains("ceremony")
+        || lower.contains("reception")
+    {
         for t in ["wedding", "marriage", "event_attended"] {
             if !tags.iter().any(|x| x == t) {
                 tags.push(t.to_string());
@@ -520,7 +609,10 @@ pub fn consolidate_cls_with_oblio_ratio(
     episodic_recurrence_counts: &[u32],
     edge_weights: &mut [f64],
 ) -> ClsOblioConsolidationReceipt {
-    let codex_crystals = episodic_recurrence_counts.iter().filter(|&&c| c >= 3).count();
+    let codex_crystals = episodic_recurrence_counts
+        .iter()
+        .filter(|&&c| c >= 3)
+        .count();
     // Sort edge indices by weight ascending so we depress ~1.86 weak edges for every 1 strong edge potentiated:
     let n = edge_weights.len();
     let ltp_target = (n as f64 / 2.86).round().max(1.0) as usize;
@@ -720,10 +812,9 @@ pub fn compute_loosh_and_engram_link(
     shared_concept_anchors: &[&str],
 ) -> LooshEngramState {
     let debt_penalty = (1.0 - karmic_debt.clamp(0.0, 1.0)).powi(2);
-    let loosh = (breakthrough_utility.clamp(0.0, 1.0)
-        * human_ai_resonance.clamp(0.0, 1.0)
-        * debt_penalty)
-        .sqrt();
+    let loosh =
+        (breakthrough_utility.clamp(0.0, 1.0) * human_ai_resonance.clamp(0.0, 1.0) * debt_penalty)
+            .sqrt();
 
     let mut hasher = Sha256::new();
     for a in shared_concept_anchors {
@@ -1099,7 +1190,11 @@ impl Y1ActuatorPolicyState {
     }
 
     /// Evaluates one telemetry window adhering strictly to `ACTUATION_HYSTERESIS` & `Y1 Actuator Contract` (`W3-P19`).
-    pub fn evaluate_window(&mut self, metric_val: f64, wm_actuation_armed: bool) -> TiferetLadderStep {
+    pub fn evaluate_window(
+        &mut self,
+        metric_val: f64,
+        wm_actuation_armed: bool,
+    ) -> TiferetLadderStep {
         // Kill switch WM_ACTUATION=0 or bare-PID subject immediately forces Step0Observe:
         if !wm_actuation_armed || self.subject_id.starts_with("pid:") {
             self.current_step = TiferetLadderStep::Step0Observe;
@@ -1133,10 +1228,13 @@ impl Y1ActuatorPolicyState {
                     TiferetLadderStep::Step0Observe => TiferetLadderStep::Step1Notify,
                     TiferetLadderStep::Step1Notify => TiferetLadderStep::Step2Nudge,
                     TiferetLadderStep::Step2Nudge | TiferetLadderStep::Step3Throttle => {
-                        self.undo_token = Some(format!("undo:{}:{}", self.policy_id, self.subject_id));
+                        self.undo_token =
+                            Some(format!("undo:{}:{}", self.policy_id, self.subject_id));
                         TiferetLadderStep::Step3Throttle
                     }
-                    TiferetLadderStep::Step4IsolateProposal => TiferetLadderStep::Step4IsolateProposal,
+                    TiferetLadderStep::Step4IsolateProposal => {
+                        TiferetLadderStep::Step4IsolateProposal
+                    }
                 };
             }
         }
@@ -1301,7 +1399,8 @@ pub fn evaluate_ashby_ultrastable_and_callosum(
     let fully_joined = p.powf(-(n as f64));
     let loosely_coupled = n / p;
     let speedup = fully_joined / loosely_coupled.max(1e-9);
-    let agreement = (1.0 - (left_symbolic_verdict - right_generative_proposal).abs()).clamp(0.0, 1.0);
+    let agreement =
+        (1.0 - (left_symbolic_verdict - right_generative_proposal).abs()).clamp(0.0, 1.0);
 
     AshbyBicameralReceipt {
         fully_coupled_expected_steps: fully_joined,
@@ -1349,7 +1448,10 @@ pub fn execute_engram_and_gam_jit_lookup(
     let mut prefetched = Vec::new();
     for &(pid, text) in page_store_chunks {
         let lower = text.to_ascii_lowercase();
-        if query_terms.iter().any(|t| lower.contains(&t.to_ascii_lowercase())) {
+        if query_terms
+            .iter()
+            .any(|t| lower.contains(&t.to_ascii_lowercase()))
+        {
             matched_pages += 1;
             prefetched.push(pid);
         }
@@ -1553,7 +1655,13 @@ pub fn solve_satkona_v4_universal(
     // 3. Layer 4 (Tail/Accelerator): 3-step Receding-Horizon MPC closed-loop execution
     let mut rem_fraction = 1.0_f64;
     for step in 0..3 {
-        let fill_rate = if step == 0 { 0.45 } else if step == 1 { 0.35 } else { 0.20 };
+        let fill_rate = if step == 0 {
+            0.45
+        } else if step == 1 {
+            0.35
+        } else {
+            0.20
+        };
         rem_fraction = (rem_fraction - fill_rate).max(0.0);
     }
 
@@ -1940,7 +2048,8 @@ pub fn run_wave3_full_benchmark_suite() -> Wave3FullBenchmarkReport {
         (4, "sess-B".to_string(), 0.89),
         (5, "sess-C".to_string(), 0.85),
     ];
-    let div_hits = select_session_diversified_hits(&raw_hits, QueryIntentClass::CountingAggregation, 3);
+    let div_hits =
+        select_session_diversified_hits(&raw_hits, QueryIntentClass::CountingAggregation, 3);
     let diversity_ok = div_hits == vec![1, 4, 5];
 
     // HRR circular convolution bind/unbind verification (Plate 1995 SplitMix64 zero-mean unitary):
@@ -1973,7 +2082,9 @@ pub fn run_wave3_full_benchmark_suite() -> Wave3FullBenchmarkReport {
     let mut peer_tom = PeerTheoryOfMindModel::new("opencode", "SanghaAgent", [1.0, 0.0, 0.0, 0.0]);
     let voe_spiked = peer_tom.observe_action([0.0, 1.0, 0.0, 0.0]);
 
-    let mut edges = vec![0.1, 0.15, 0.2, 0.22, 0.25, 0.3, 0.35, 0.4, 0.7, 0.8, 0.85, 0.9];
+    let mut edges = vec![
+        0.1, 0.15, 0.2, 0.22, 0.25, 0.3, 0.35, 0.4, 0.7, 0.8, 0.85, 0.9,
+    ];
     let cls_rec = consolidate_cls_with_oblio_ratio(&[1, 3, 5, 2, 4], &mut edges);
 
     let cluster_ii = Wave3ClusterIIBenchmark {
@@ -2055,13 +2166,11 @@ pub fn run_wave3_full_benchmark_suite() -> Wave3FullBenchmarkReport {
         &["ipc:shm_ring", "mcp:stdio"],
         &["ipc:shm_ring", "mcp:stdio", "legacy:unrevoked_webhook_8089"],
     );
-    let covert = inspect_cache_timing_covert_channel(&[
-        120.0, 80.0, 120.0, 80.0, 120.0, 80.0, 120.0, 80.0,
-    ]);
+    let covert =
+        inspect_cache_timing_covert_channel(&[120.0, 80.0, 120.0, 80.0, 120.0, 80.0, 120.0, 80.0]);
     // Also test strongly autocorrelated slow-wave covert modulation:
-    let covert_wave = inspect_cache_timing_covert_channel(&[
-        50.0, 52.0, 55.0, 58.0, 62.0, 66.0, 70.0, 74.0,
-    ]);
+    let covert_wave =
+        inspect_cache_timing_covert_channel(&[50.0, 52.0, 55.0, 58.0, 62.0, 66.0, 70.0, 74.0]);
     let lens = apply_neuron_lens_steering_and_canary(
         12,
         [0.8, 0.4, -0.2, 0.5],
@@ -2173,11 +2282,8 @@ pub fn run_wave3_full_benchmark_suite() -> Wave3FullBenchmarkReport {
     );
 
     let rts = simulate_64k_rts_state_machine_tick(65_536, 32);
-    let z80 = execute_z80_clean_room_loop(
-        "SPEC: y = 2*x + 7",
-        &[0, 1, 5, 10, -3],
-        &[7, 9, 17, 27, 1],
-    );
+    let z80 =
+        execute_z80_clean_room_loop("SPEC: y = 2*x + 7", &[0, 1, 5, 10, -3], &[7, 9, 17, 27, 1]);
     let satkona = solve_satkona_v4_universal(
         [[0.0, 0.8, 0.4], [0.0, 0.0, 0.7], [0.0, 0.0, 0.0]], // Strict upper-triangular causal DAG
         &[0.95, 0.82, 0.99], // Action 2 has highest raw utility (0.99) but violates Dharma!
@@ -2193,7 +2299,7 @@ pub fn run_wave3_full_benchmark_suite() -> Wave3FullBenchmarkReport {
         true,
         false, // No Landlock applied -> must classify as BwrapOnly, NEVER BwrapLandlockCombined!
         false,
-        true,  // Whole-network granted without L2 proxy -> enforced MUST be false!
+        true, // Whole-network granted without L2 proxy -> enforced MUST be false!
         false,
     );
     let cpr06 = evaluate_cpr06_pq_and_gnosis_portal(
@@ -2258,9 +2364,16 @@ pub fn expand_query_zero_token_terms(query: &str) -> Vec<String> {
     let mut extras = Vec::new();
     if lower.contains("doctor") || lower.contains("physician") || lower.contains("medical") {
         extras.extend(
-            ["dr.", "prescribed", "clinic", "allergist", "dermatologist", "diagnosis"]
-                .iter()
-                .map(|s| (*s).to_string()),
+            [
+                "dr.",
+                "prescribed",
+                "clinic",
+                "allergist",
+                "dermatologist",
+                "diagnosis",
+            ]
+            .iter()
+            .map(|s| (*s).to_string()),
         );
     }
     if lower.contains("prefer")
@@ -2308,9 +2421,21 @@ pub fn run_longmemeval_zero_token_benchmark() -> LongMemEvalZeroTokenBenchmarkRe
     // 1. Vocabulary Mismatch ("doctor" query vs "Dr. Patel prescribed..." / "dermatologist" / "allergist"):
     // Raw lexical misses 3/3 because the literal token "doctor" never appears in the raw turn!
     let med_docs = [
-        (101u64, "sess-m1", "Dr. Patel prescribed a corticosteroid nasal spray for sinusitis."),
-        (102u64, "sess-m2", "Visited the dermatologist clinic on Tuesday for a skin biopsy."),
-        (103u64, "sess-m3", "My allergist ordered a comprehensive pollen panel."),
+        (
+            101u64,
+            "sess-m1",
+            "Dr. Patel prescribed a corticosteroid nasal spray for sinusitis.",
+        ),
+        (
+            102u64,
+            "sess-m2",
+            "Visited the dermatologist clinic on Tuesday for a skin biopsy.",
+        ),
+        (
+            103u64,
+            "sess-m3",
+            "My allergist ordered a comprehensive pollen panel.",
+        ),
     ];
     let mut vocab_raw_hits = 0usize;
     let mut vocab_enriched_hits = 0usize;
@@ -2326,14 +2451,28 @@ pub fn run_longmemeval_zero_token_benchmark() -> LongMemEvalZeroTokenBenchmarkRe
 
     // 2. Single-Session Implicit Preference ("What exercise/stack do I prefer?" vs implicit statements):
     let pref_docs = [
-        (201u64, "sess-p1", "I started doing hot vinyasa yoga every morning before work."),
-        (202u64, "sess-p2", "We switched to Rust and LMDB for all low-latency storage engines."),
-        (203u64, "sess-p3", "I always use dark mode with JetBrains Mono in my terminal."),
+        (
+            201u64,
+            "sess-p1",
+            "I started doing hot vinyasa yoga every morning before work.",
+        ),
+        (
+            202u64,
+            "sess-p2",
+            "We switched to Rust and LMDB for all low-latency storage engines.",
+        ),
+        (
+            203u64,
+            "sess-p3",
+            "I always use dark mode with JetBrains Mono in my terminal.",
+        ),
     ];
     let mut pref_raw_hits = 0usize;
     let mut pref_enriched_hits = 0usize;
     for &(id, sess, text) in &pref_docs {
-        if text.to_ascii_lowercase().contains("prefer") || text.to_ascii_lowercase().contains("favorite") {
+        if text.to_ascii_lowercase().contains("prefer")
+            || text.to_ascii_lowercase().contains("favorite")
+        {
             pref_raw_hits += 1;
         }
         let enriched = enrich_document_facets_at_index_time(id, sess, text, &[]);
@@ -2358,11 +2497,18 @@ pub fn run_longmemeval_zero_token_benchmark() -> LongMemEvalZeroTokenBenchmarkRe
 
     // 4. Temporal Boundary First/Last + GAM JIT Researcher Page-Store Scan:
     let page_store = [
-        (401u64, "2024-01-10 [FIRST_ANCHOR]: Moved into apartment on Capitol Hill in Seattle."),
+        (
+            401u64,
+            "2024-01-10 [FIRST_ANCHOR]: Moved into apartment on Capitol Hill in Seattle.",
+        ),
         (402u64, "2025-06-15: Renewed lease in Seattle."),
-        (403u64, "2026-09-01 [LATEST_ANCHOR]: Relocated studio workspace to Bellevue."),
+        (
+            403u64,
+            "2026-09-01 [LATEST_ANCHOR]: Relocated studio workspace to Bellevue.",
+        ),
     ];
-    let temp_intent = classify_query_intent_zero_token("Where did I first live when moving to Seattle?");
+    let temp_intent =
+        classify_query_intent_zero_token("Where did I first live when moving to Seattle?");
     let gam_res = execute_engram_and_gam_jit_lookup(
         "temporal:seattle:first",
         &HashMap::new(),
@@ -2381,10 +2527,17 @@ pub fn run_longmemeval_zero_token_benchmark() -> LongMemEvalZeroTokenBenchmarkRe
     // 5. Canonical Invariant Fast-Lane (DeepSeek Engram O(1) N-Gram Hash + Speculative Prefetch):
     let mut engram_tbl = HashMap::new();
     engram_tbl.insert("invariant:sutra:3_1".to_string(), (501, vec![502, 503]));
-    engram_tbl.insert("invariant:bendhub:16laws".to_string(), (504, vec![505, 506]));
+    engram_tbl.insert(
+        "invariant:bendhub:16laws".to_string(),
+        (504, vec![505, 506]),
+    );
     engram_tbl.insert("invariant:cpr06:pq".to_string(), (507, vec![508, 509]));
     let mut engram_hits = 0usize;
-    for key in ["invariant:sutra:3_1", "invariant:bendhub:16laws", "invariant:cpr06:pq"] {
+    for key in [
+        "invariant:sutra:3_1",
+        "invariant:bendhub:16laws",
+        "invariant:cpr06:pq",
+    ] {
         let r = execute_engram_and_gam_jit_lookup(key, &engram_tbl, &[], &[]);
         if r.o1_engram_hit && r.prefetched_neighbor_ids.len() == 2 {
             engram_hits += 1;
@@ -2413,7 +2566,8 @@ pub fn run_longmemeval_zero_token_benchmark() -> LongMemEvalZeroTokenBenchmarkRe
             queries_evaluated: 3,
             baseline_lexical_recall_pct: (raw_top3_sessions as f64 / 3.0) * 100.0,
             zero_token_engram_gam_recall_pct: (div_sessions_recovered as f64 / 3.0) * 100.0,
-            absolute_recall_gain_pct: ((div_sessions_recovered - raw_top3_sessions) as f64 / 3.0) * 100.0,
+            absolute_recall_gain_pct: ((div_sessions_recovered - raw_top3_sessions) as f64 / 3.0)
+                * 100.0,
             llm_tokens_consumed: 0,
         },
         LongMemEvalCategoryResult {
@@ -2490,7 +2644,8 @@ pub fn run_live_gnosis_portal_snapshot(
     };
     let mut y1 = Y1ActuatorPolicyState::new("energy.over_budget.v1", "dim:energy", 0.60, 0.80);
     let step = y1.evaluate_window(hv.energy, wm_actuation_armed);
-    let wuxing = step_zodiacal_wuxing_governor((epoch as usize) % 12, [0.28, 0.24, 0.32, 0.22, 0.25]);
+    let wuxing =
+        step_zodiacal_wuxing_governor((epoch as usize) % 12, [0.28, 0.24, 0.32, 0.22, 0.25]);
 
     LiveGnosisPortalSnapshot {
         epoch,
@@ -2503,7 +2658,7 @@ pub fn run_live_gnosis_portal_snapshot(
         zodiacal_wuxing_state: wuxing,
         visual_tokens_chroma_measured: 0.75, // Law 4: measured sensor saturation
         visual_tokens_opacity_freshness: 1.0, // Law 5: fresh telemetry
-        observer_cpu_pct: 0.14,               // Law 10: < 0.30% CPU budget
+        observer_cpu_pct: 0.14,              // Law 10: < 0.30% CPU budget
         observer_budget_ok: true,
     }
 }

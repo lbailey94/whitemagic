@@ -316,8 +316,8 @@ impl HardwareTelemetry {
         } else {
             0.0_f32
         };
-        let storage_depol = (55.0 * storage_stress + 15.0 * telem.write_churn.clamp(0.0, 1.0))
-            .clamp(0.0, 60.0);
+        let storage_depol =
+            (55.0 * storage_stress + 15.0 * telem.write_churn.clamp(0.0, 1.0)).clamp(0.0, 60.0);
         let v_storage = (-70.0 + storage_depol).clamp(-70.0, -10.0);
         let (storage_regime, storage_tp) = if v_storage >= -20.0 || self.nvme_free_gb < 12.0 {
             (HomeostaticRegime::Critical, 0.0)

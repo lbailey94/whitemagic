@@ -61,8 +61,12 @@ fn peb18_1_identity_stack_cli_checkpoint_and_continuity_roundtrip() {
     assert!(stdout.contains("Distilled Lessons:"));
     assert!(stdout.contains("Lived-time decay clock preserves SNR over sleep quiescence."));
     assert!(stdout.contains("Corrections Ledger:"));
-    assert!(stdout.contains("Keep per-turn test writes strictly under the 120 writes/min rate limit."));
-    assert!(stdout.contains("Relational:      Lucas (operator) paired on Gen3 10/10 upgrade roadmap."));
+    assert!(
+        stdout.contains("Keep per-turn test writes strictly under the 120 writes/min rate limit.")
+    );
+    assert!(
+        stdout.contains("Relational:      Lucas (operator) paired on Gen3 10/10 upgrade roadmap.")
+    );
 
     // 2. Query Session Continuity via CLI
     let cont_output = Command::new(env!("CARGO_BIN_EXE_wm"))
@@ -85,13 +89,25 @@ fn peb18_1_identity_stack_cli_checkpoint_and_continuity_roundtrip() {
     let cont_stdout = String::from_utf8_lossy(&cont_output.stdout);
     assert!(cont_stdout.contains("WhiteMagic Session Continuity"));
     assert!(cont_stdout.contains("Identity Invariants:"));
-    assert!(cont_stdout.contains("🛡️  Deterministic Linux Landlock confinement, NOT Corrigibility dogma."));
+    assert!(
+        cont_stdout
+            .contains("🛡️  Deterministic Linux Landlock confinement, NOT Corrigibility dogma.")
+    );
     assert!(cont_stdout.contains("Distilled Lessons:"));
     assert!(cont_stdout.contains("💡 Lived-time decay clock preserves SNR over sleep quiescence."));
-    assert!(cont_stdout.contains("💡 Hebbian spreading activation enables lateral recall in under 5ms."));
+    assert!(
+        cont_stdout
+            .contains("💡 Hebbian spreading activation enables lateral recall in under 5ms.")
+    );
     assert!(cont_stdout.contains("Corrections Ledger:"));
-    assert!(cont_stdout.contains("🔧 Keep per-turn test writes strictly under the 120 writes/min rate limit."));
-    assert!(cont_stdout.contains("Relational:      Lucas (operator) paired on Gen3 10/10 upgrade roadmap."));
+    assert!(
+        cont_stdout
+            .contains("🔧 Keep per-turn test writes strictly under the 120 writes/min rate limit.")
+    );
+    assert!(
+        cont_stdout
+            .contains("Relational:      Lucas (operator) paired on Gen3 10/10 upgrade roadmap.")
+    );
 
     let _ = std::fs::remove_dir_all(&store);
 }
@@ -112,16 +128,14 @@ fn peb18_2_substrate_session_continuity_identity_fidelity() {
         context_token: Some("ctx_hash_alpha_99".into()),
         representation: None,
         timestamp_iso: Some("2026-11-08T00:00:00Z".into()),
-        lessons: vec![
-            "Episodic memory decay leaves actionable wisdom intact.".into(),
-        ],
-        corrections: vec![
-            "Never bypass SCITT cryptographic provenance receipts.".into(),
-        ],
+        lessons: vec!["Episodic memory decay leaves actionable wisdom intact.".into()],
+        corrections: vec!["Never bypass SCITT cryptographic provenance receipts.".into()],
         identity_invariants: vec![
             "Homeostatic Ashby stability over arbitrary optimization goals.".into(),
         ],
-        relational_context: Some("Opencode, Sol, and Antigravity operating as unified Sangha.".into()),
+        relational_context: Some(
+            "Opencode, Sol, and Antigravity operating as unified Sangha.".into(),
+        ),
     };
 
     let id = substrate.session_checkpoint(&cp).unwrap();
@@ -167,19 +181,35 @@ fn peb18_3_mcp_bridge_checkpoint_dispatch() {
         &store,
         false,
         McpProfile::Cyberbrain,
-    ).expect("execute hybrid tool call");
+    )
+    .expect("execute hybrid tool call");
 
     assert_eq!(res["status"], "success");
     assert_eq!(res["checkpoint_record_id"], 0);
     assert_eq!(res["session_id"], "sess-mcp-foreign-agent");
 
     // Verify continuity view returned by substrate reflects the MCP call
-    let cont = substrate.session_continuity(Some("sess-mcp-foreign-agent")).unwrap().unwrap();
+    let cont = substrate
+        .session_continuity(Some("sess-mcp-foreign-agent"))
+        .unwrap()
+        .unwrap();
     assert_eq!(cont.agent_id, "cursor-ide");
-    assert_eq!(cont.lessons, vec!["MCP bridge facilitates zero-friction cross-tool handoffs."]);
-    assert_eq!(cont.corrections, vec!["Use standard json parameter naming."]);
-    assert_eq!(cont.identity_invariants, vec!["Zero Corrigibility/Rationalist grant framing."]);
-    assert_eq!(cont.relational_context.as_deref(), Some("Cooperating with operator Lucas."));
+    assert_eq!(
+        cont.lessons,
+        vec!["MCP bridge facilitates zero-friction cross-tool handoffs."]
+    );
+    assert_eq!(
+        cont.corrections,
+        vec!["Use standard json parameter naming."]
+    );
+    assert_eq!(
+        cont.identity_invariants,
+        vec!["Zero Corrigibility/Rationalist grant framing."]
+    );
+    assert_eq!(
+        cont.relational_context.as_deref(),
+        Some("Cooperating with operator Lucas.")
+    );
 
     let _ = std::fs::remove_dir_all(&store);
 }
@@ -197,9 +227,21 @@ fn peb18_4_backward_compatibility_with_legacy_json() {
 
     let cp: SessionCheckpoint = serde_json::from_str(legacy_json).expect("deserialize legacy json");
     assert_eq!(cp.session_id, "legacy-session-v1");
-    assert_eq!(cp.summary, "Pre-v11 legacy checkpoint without identity stack");
+    assert_eq!(
+        cp.summary,
+        "Pre-v11 legacy checkpoint without identity stack"
+    );
     assert!(cp.lessons.is_empty(), "lessons should default to empty");
-    assert!(cp.corrections.is_empty(), "corrections should default to empty");
-    assert!(cp.identity_invariants.is_empty(), "identity_invariants should default to empty");
-    assert_eq!(cp.relational_context, None, "relational_context should default to None");
+    assert!(
+        cp.corrections.is_empty(),
+        "corrections should default to empty"
+    );
+    assert!(
+        cp.identity_invariants.is_empty(),
+        "identity_invariants should default to empty"
+    );
+    assert_eq!(
+        cp.relational_context, None,
+        "relational_context should default to None"
+    );
 }

@@ -2028,11 +2028,13 @@ pub fn execute_hybrid_tool_call(
         "dhumavati.check" | "dhumavati_check" => handle_dhumavati_check(args),
         "wave2.benchmark" | "wave2_benchmark" | "wave2-benchmark" => {
             let report = wm_gen3_core::wave2_braid::run_wave2_full_benchmark_suite();
-            serde_json::to_value(report).map_err(|e| format!("wave2.benchmark serialize error: {e}"))
+            serde_json::to_value(report)
+                .map_err(|e| format!("wave2.benchmark serialize error: {e}"))
         }
         "wave3.benchmark" | "wave3_benchmark" | "wave3-benchmark" => {
             let report = wm_gen3_core::wave3_braid::run_wave3_full_benchmark_suite();
-            serde_json::to_value(report).map_err(|e| format!("wave3.benchmark serialize error: {e}"))
+            serde_json::to_value(report)
+                .map_err(|e| format!("wave3.benchmark serialize error: {e}"))
         }
         "longmemeval.benchmark" | "longmemeval_benchmark" | "longmemeval-benchmark" => {
             let report = wm_gen3_core::wave3_braid::run_longmemeval_zero_token_benchmark();
@@ -2064,14 +2066,17 @@ pub fn execute_hybrid_tool_call(
                         let epoch = substrate.store().epoch().unwrap_or(0);
                         let records = substrate.store().record_count().unwrap_or(0);
                         let cp = substrate.session_continuity(None).ok().flatten();
-                        let s = wm_gen3_core::wave2_braid::StonePillarMorphogenSeed::compile_from_live_state(
-                            epoch,
-                            records,
-                            cp.as_ref().map(|c| c.record_id),
-                            cp.as_ref().map(|c| c.summary.as_str()).unwrap_or("mcp-seed-sync"),
-                            45,
-                            0xA5A5_5A5A_F00D_CAFE,
-                        );
+                        let s =
+                    wm_gen3_core::wave2_braid::StonePillarMorphogenSeed::compile_from_live_state(
+                        epoch,
+                        records,
+                        cp.as_ref().map(|c| c.record_id),
+                        cp.as_ref()
+                            .map(|c| c.summary.as_str())
+                            .unwrap_or("mcp-seed-sync"),
+                        45,
+                        0xA5A5_5A5A_F00D_CAFE,
+                    );
                         if !readonly {
                             let _ = s.save_to_store(store_path);
                         }
@@ -2409,14 +2414,13 @@ fn handle_memory_create(
         substrate.get_or_create_uuid(rec_id)
     };
 
-    let now_epoch = read_record_ingested_at_secs(substrate.store().path(), rec_id).unwrap_or_else(
-        || {
+    let now_epoch =
+        read_record_ingested_at_secs(substrate.store().path(), rec_id).unwrap_or_else(|| {
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|d| d.as_secs())
                 .unwrap_or(0)
-        },
-    );
+        });
     let content_hash = hex_encode(&Sha256::digest(content.as_bytes()));
 
     Ok(json!({
@@ -2677,9 +2681,8 @@ fn handle_memory_read(args: &Value, substrate: &Substrate) -> Result<Value, Stri
         (record.content().to_string(), false)
     };
 
-    let created_at_secs =
-        read_record_ingested_at_secs(substrate.store().path(), record.id())
-            .unwrap_or_else(|| record.created_at());
+    let created_at_secs = read_record_ingested_at_secs(substrate.store().path(), record.id())
+        .unwrap_or_else(|| record.created_at());
     let content_hash = hex_encode(&Sha256::digest(record.content().as_bytes()));
 
     Ok(json!({
@@ -6251,10 +6254,7 @@ fn lexical_shortlist_fallback(state_text: &str, routes: &Value, k: usize) -> Val
             .then_with(|| a.0.cmp(&b.0))
     });
     scored.truncate(k.max(1));
-    let top1 = scored
-        .first()
-        .map(|(r, _)| r.clone())
-        .unwrap_or_default();
+    let top1 = scored.first().map(|(r, _)| r.clone()).unwrap_or_default();
     let s1 = scored.first().map(|(_, s)| *s).unwrap_or(0.0);
     let s2 = scored.get(1).map(|(_, s)| *s).unwrap_or(0.0);
     let margin = ((s1 - s2).max(0.0) * 1e6).round() / 1e6;

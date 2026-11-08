@@ -17,12 +17,7 @@ fn peb19_1_cold_start_handshake_and_tools_lifecycle() {
 
     // Spawn `wm mcp` process over stdio
     let mut child = Command::new(env!("CARGO_BIN_EXE_wm"))
-        .args([
-            "--store",
-            store_str,
-            "mcp",
-            "--no-sweep",
-        ])
+        .args(["--store", store_str, "mcp", "--no-sweep"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -51,7 +46,9 @@ fn peb19_1_cold_start_handshake_and_tools_lifecycle() {
     stdin.flush().unwrap();
 
     let mut init_line = String::new();
-    stdout.read_line(&mut init_line).expect("read initialize response");
+    stdout
+        .read_line(&mut init_line)
+        .expect("read initialize response");
     let init_elapsed = init_start.elapsed();
     println!("Gate PEB-19: MCP Handshake Latency = {:?}", init_elapsed);
 
@@ -60,7 +57,11 @@ fn peb19_1_cold_start_handshake_and_tools_lifecycle() {
     assert_eq!(init_resp["result"]["serverInfo"]["name"], "whitemagic-gen3");
 
     // In native execution, handshake roundtrip over stdio should be <100ms even in debug builds
-    assert!(init_elapsed.as_millis() < 500, "Handshake latency excessive: {:?}", init_elapsed);
+    assert!(
+        init_elapsed.as_millis() < 500,
+        "Handshake latency excessive: {:?}",
+        init_elapsed
+    );
 
     // 2. Initialized notification
     let init_notif = serde_json::json!({
@@ -80,28 +81,56 @@ fn peb19_1_cold_start_handshake_and_tools_lifecycle() {
     stdin.flush().unwrap();
 
     let mut list_line = String::new();
-    stdout.read_line(&mut list_line).expect("read tools/list response");
+    stdout
+        .read_line(&mut list_line)
+        .expect("read tools/list response");
     let list_resp: serde_json::Value = serde_json::from_str(&list_line).expect("parse list resp");
     assert_eq!(list_resp["id"], 2);
 
-    let tools = list_resp["result"]["tools"].as_array().expect("tools array");
-    let tool_names: Vec<&str> = tools
-        .iter()
-        .filter_map(|t| t["name"].as_str())
-        .collect();
+    let tools = list_resp["result"]["tools"]
+        .as_array()
+        .expect("tools array");
+    let tool_names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
 
-    assert!(tool_names.contains(&"memory_remember"), "must include memory_remember");
-    assert!(tool_names.contains(&"memory_recall"), "must include memory_recall");
-    assert!(tool_names.contains(&"session_checkpoint"), "must include session_checkpoint");
-    assert!(tool_names.contains(&"session_continuity"), "must include session_continuity");
+    assert!(
+        tool_names.contains(&"memory_remember"),
+        "must include memory_remember"
+    );
+    assert!(
+        tool_names.contains(&"memory_recall"),
+        "must include memory_recall"
+    );
+    assert!(
+        tool_names.contains(&"session_checkpoint"),
+        "must include session_checkpoint"
+    );
+    assert!(
+        tool_names.contains(&"session_continuity"),
+        "must include session_continuity"
+    );
 
     // Verify session_checkpoint advertises identity fields in schema
-    let cp_tool = tools.iter().find(|t| t["name"] == "session_checkpoint").unwrap();
+    let cp_tool = tools
+        .iter()
+        .find(|t| t["name"] == "session_checkpoint")
+        .unwrap();
     let cp_props = &cp_tool["inputSchema"]["properties"];
-    assert!(cp_props.get("lessons").is_some(), "session_checkpoint must document lessons");
-    assert!(cp_props.get("corrections").is_some(), "session_checkpoint must document corrections");
-    assert!(cp_props.get("identity_invariants").is_some(), "session_checkpoint must document identity_invariants");
-    assert!(cp_props.get("relational_context").is_some(), "session_checkpoint must document relational_context");
+    assert!(
+        cp_props.get("lessons").is_some(),
+        "session_checkpoint must document lessons"
+    );
+    assert!(
+        cp_props.get("corrections").is_some(),
+        "session_checkpoint must document corrections"
+    );
+    assert!(
+        cp_props.get("identity_invariants").is_some(),
+        "session_checkpoint must document identity_invariants"
+    );
+    assert!(
+        cp_props.get("relational_context").is_some(),
+        "session_checkpoint must document relational_context"
+    );
 
     // 4. tools/call: memory_remember
     let remember_req = serde_json::json!({
@@ -120,12 +149,16 @@ fn peb19_1_cold_start_handshake_and_tools_lifecycle() {
     stdin.flush().unwrap();
 
     let mut rem_line = String::new();
-    stdout.read_line(&mut rem_line).expect("read memory_remember response");
+    stdout
+        .read_line(&mut rem_line)
+        .expect("read memory_remember response");
     let rem_resp: serde_json::Value = serde_json::from_str(&rem_line).expect("parse rem resp");
     assert_eq!(rem_resp["id"], 3);
     assert_eq!(rem_resp["result"]["isError"], false);
     let rem_text = rem_resp["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(rem_text.contains("record_id") || rem_text.contains("success") || rem_text.contains("id"));
+    assert!(
+        rem_text.contains("record_id") || rem_text.contains("success") || rem_text.contains("id")
+    );
 
     // 5. tools/call: memory_recall
     let recall_req = serde_json::json!({
@@ -144,12 +177,17 @@ fn peb19_1_cold_start_handshake_and_tools_lifecycle() {
     stdin.flush().unwrap();
 
     let mut rec_line = String::new();
-    stdout.read_line(&mut rec_line).expect("read memory_recall response");
+    stdout
+        .read_line(&mut rec_line)
+        .expect("read memory_recall response");
     let rec_resp: serde_json::Value = serde_json::from_str(&rec_line).expect("parse rec resp");
     assert_eq!(rec_resp["id"], 4);
     assert_eq!(rec_resp["result"]["isError"], false);
     let rec_text = rec_resp["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(rec_text.contains("Ashby"), "recalled text must contain Ashby");
+    assert!(
+        rec_text.contains("Ashby"),
+        "recalled text must contain Ashby"
+    );
 
     // 6. tools/call: session_checkpoint with identity stack
     let cp_call_req = serde_json::json!({
@@ -174,7 +212,9 @@ fn peb19_1_cold_start_handshake_and_tools_lifecycle() {
     stdin.flush().unwrap();
 
     let mut cp_line = String::new();
-    stdout.read_line(&mut cp_line).expect("read session_checkpoint response");
+    stdout
+        .read_line(&mut cp_line)
+        .expect("read session_checkpoint response");
     let cp_resp: serde_json::Value = serde_json::from_str(&cp_line).expect("parse cp resp");
     assert_eq!(cp_resp["id"], 5);
     assert_eq!(cp_resp["result"]["isError"], false);
@@ -195,7 +235,9 @@ fn peb19_1_cold_start_handshake_and_tools_lifecycle() {
     stdin.flush().unwrap();
 
     let mut cont_line = String::new();
-    stdout.read_line(&mut cont_line).expect("read session_continuity response");
+    stdout
+        .read_line(&mut cont_line)
+        .expect("read session_continuity response");
     let cont_resp: serde_json::Value = serde_json::from_str(&cont_line).expect("parse cont resp");
     assert_eq!(cont_resp["id"], 6);
     assert_eq!(cont_resp["result"]["isError"], false);
@@ -242,7 +284,9 @@ fn peb19_2_fallback_store_resolution_via_env() {
     stdin.flush().unwrap();
 
     let mut init_line = String::new();
-    stdout.read_line(&mut init_line).expect("read initialize response");
+    stdout
+        .read_line(&mut init_line)
+        .expect("read initialize response");
     let init_resp: serde_json::Value = serde_json::from_str(&init_line).expect("parse init resp");
     assert_eq!(init_resp["id"], 1);
 
@@ -262,7 +306,9 @@ fn peb19_2_fallback_store_resolution_via_env() {
     stdin.flush().unwrap();
 
     let mut rem_line = String::new();
-    stdout.read_line(&mut rem_line).expect("read memory_remember response");
+    stdout
+        .read_line(&mut rem_line)
+        .expect("read memory_remember response");
     let rem_resp: serde_json::Value = serde_json::from_str(&rem_line).expect("parse rem resp");
     assert_eq!(rem_resp["id"], 2);
     assert_eq!(rem_resp["result"]["isError"], false);
@@ -271,6 +317,9 @@ fn peb19_2_fallback_store_resolution_via_env() {
     let _ = child.wait();
 
     // Verify the store directory was indeed created at the WM_STORE path
-    assert!(store.exists(), "store path specified via WM_STORE must exist");
+    assert!(
+        store.exists(),
+        "store path specified via WM_STORE must exist"
+    );
     let _ = std::fs::remove_dir_all(&store);
 }

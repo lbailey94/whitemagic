@@ -1155,11 +1155,17 @@ pub fn reconcile_scitt_gossip_packet(
     packet.verify()?;
 
     let existing = substrate.store().iter_records().unwrap_or_default();
-    if existing.iter().any(|r| r.content().contains(&packet.gem_invariant)) {
+    if existing
+        .iter()
+        .any(|r| r.content().contains(&packet.gem_invariant))
+    {
         return Ok(None);
     }
 
-    let gem_content = format!("[SCITT GOSSIP GEM #{}] {}", packet.scitt_sequence_id, packet.gem_invariant);
+    let gem_content = format!(
+        "[SCITT GOSSIP GEM #{}] {}",
+        packet.scitt_sequence_id, packet.gem_invariant
+    );
     let ids = substrate.remember_batch(&[RememberItem {
         content: gem_content,
         source: format!("mesh:{}:{}", packet.origin_node_id, packet.source_channel),

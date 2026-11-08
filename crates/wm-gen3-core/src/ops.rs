@@ -4214,7 +4214,10 @@ impl Substrate {
     /// Promotes volatile Hebbian co-activations into durable `Associates` graph relations.
     /// Whenever two records fire together at least `min_coactivations` times, an associative
     /// edge is minted in the store, linking them for permanent spreading activation.
-    pub fn consolidate_hebbian_relations(&mut self, min_coactivations: u32) -> Result<usize, String> {
+    pub fn consolidate_hebbian_relations(
+        &mut self,
+        min_coactivations: u32,
+    ) -> Result<usize, String> {
         let pairs: Vec<((u64, u64), u32)> = self
             .hebbian_coactivations
             .iter()
@@ -4225,7 +4228,10 @@ impl Substrate {
         let mut wired = 0;
         for ((src, dst), count) in pairs {
             let weight = (0.50 + 0.10 * (count as f32)).min(1.0);
-            if self.add_relation(field::RelationKind::Associates, src, dst, weight).is_ok() {
+            if self
+                .add_relation(field::RelationKind::Associates, src, dst, weight)
+                .is_ok()
+            {
                 wired += 1;
             }
         }
@@ -6445,8 +6451,8 @@ impl DualClockDecayConfig {
         wall_elapsed_days: f32,
         reinforcements: u64,
     ) -> f32 {
-        let stability = (self.base_stability_epochs * (1.0 + 0.85 * (reinforcements as f32)))
-            .max(1.0);
+        let stability =
+            (self.base_stability_epochs * (1.0 + 0.85 * (reinforcements as f32))).max(1.0);
         let lived_term = self.lambda_lived * ((delta_lived_epochs as f32) / stability);
         let wall_term = self.lambda_wall * (1.0 + wall_elapsed_days.max(0.0)).ln();
         (-lived_term - wall_term)
@@ -6611,7 +6617,10 @@ impl Substrate {
 
         for record in records {
             let content = record.content();
-            if content.starts_with("WISDOM_GEM:") || content.starts_with("WISDOM_GEM [") || record.source().starts_with("wisdom_harvest:") {
+            if content.starts_with("WISDOM_GEM:")
+                || content.starts_with("WISDOM_GEM [")
+                || record.source().starts_with("wisdom_harvest:")
+            {
                 continue;
             }
 
@@ -6667,11 +6676,15 @@ impl Substrate {
 /// Helper function to distill an enduring invariant rule and category from decaying episodic content.
 fn distill_invariant_rule(content: &str) -> (String, String) {
     let lower = content.to_lowercase();
-    let category = if lower.contains("error") || lower.contains("fail") || lower.contains("panicked") {
+    let category = if lower.contains("error")
+        || lower.contains("fail")
+        || lower.contains("panicked")
+    {
         "DefensiveFailureMode".to_string()
     } else if lower.contains("invariant") || lower.contains("rule") || lower.contains("must") {
         "SystemicConstraint".to_string()
-    } else if lower.contains("sandbox") || lower.contains("landlock") || lower.contains("security") {
+    } else if lower.contains("sandbox") || lower.contains("landlock") || lower.contains("security")
+    {
         "SubstrateConfinement".to_string()
     } else if lower.contains("quantum") || lower.contains("kernel") || lower.contains("compiler") {
         "ArchitecturalKernel".to_string()
@@ -6679,9 +6692,7 @@ fn distill_invariant_rule(content: &str) -> (String, String) {
         "EmpiricalLesson".to_string()
     };
 
-    let clean = content
-        .trim()
-        .replace('\n', " ");
+    let clean = content.trim().replace('\n', " ");
     let rule = if clean.len() > 180 {
         format!("{}...", &clean[..180])
     } else {
@@ -11651,13 +11662,11 @@ mod cache_boundary_tests {
 
         // Also test Arbitration::LivedTimeDualClock recall ordering
         substrate.set_arbitration(Arbitration::LivedTimeDualClock);
-        let ids = substrate.remember_batch(&[
-            RememberItem {
-                content: "quantum kernel invariant alpha beta gamma scratchpad".into(),
-                source: "session:old_unreinforced:turn".into(),
-                kind: ImportKind::Reported,
-            },
-        ]);
+        let ids = substrate.remember_batch(&[RememberItem {
+            content: "quantum kernel invariant alpha beta gamma scratchpad".into(),
+            source: "session:old_unreinforced:turn".into(),
+            kind: ImportKind::Reported,
+        }]);
         let old_id = ids[0].as_ref().copied().expect("old_id");
 
         // Advance lived epochs with 40 extra turns before recording the fresh anchor
@@ -11669,13 +11678,11 @@ mod cache_boundary_tests {
             }]);
         }
 
-        let ids2 = substrate.remember_batch(&[
-            RememberItem {
-                content: "quantum kernel invariant alpha beta gamma anchor".into(),
-                source: "crystal:core_anchor:world".into(),
-                kind: ImportKind::Reported,
-            },
-        ]);
+        let ids2 = substrate.remember_batch(&[RememberItem {
+            content: "quantum kernel invariant alpha beta gamma anchor".into(),
+            source: "crystal:core_anchor:world".into(),
+            kind: ImportKind::Reported,
+        }]);
         let anchor_id = ids2[0].as_ref().copied().expect("anchor_id");
 
         let r_old = substrate.evaluate_dual_clock_decay(old_id, 0.0);

@@ -1135,7 +1135,10 @@ pub fn execute_sangha_collective_dreaming(
                     || c_lower.contains("prefer")
                     || c_lower.contains("avoid")
                     || c_lower.contains("deprecate");
-                has_negation && l_lower.split_whitespace().any(|word| word.len() > 4 && c_lower.contains(word))
+                has_negation
+                    && l_lower
+                        .split_whitespace()
+                        .any(|word| word.len() > 4 && c_lower.contains(word))
             });
             if !is_contradicted && !consolidated_lessons.contains(l) {
                 consolidated_lessons.push(l.clone());
@@ -1148,14 +1151,19 @@ pub fn execute_sangha_collective_dreaming(
     if distinct_agents.len() >= 2 {
         let mut agent_first_records: BTreeMap<String, u64> = BTreeMap::new();
         for c in &continuities {
-            agent_first_records.entry(c.agent_id.clone()).or_insert(c.record_id);
+            agent_first_records
+                .entry(c.agent_id.clone())
+                .or_insert(c.record_id);
         }
         let agent_records: Vec<(&String, &u64)> = agent_first_records.iter().collect();
         for i in 0..agent_records.len() {
             for j in (i + 1)..agent_records.len() {
                 let id_a = *agent_records[i].1;
                 let id_b = *agent_records[j].1;
-                if substrate.add_relation(crate::field::RelationKind::Associates, id_a, id_b, 0.85).is_ok() {
+                if substrate
+                    .add_relation(crate::field::RelationKind::Associates, id_a, id_b, 0.85)
+                    .is_ok()
+                {
                     cross_agent_bridges_formed += 1;
                 }
             }
@@ -1178,7 +1186,12 @@ pub fn execute_sangha_collective_dreaming(
             }]);
             if let Some(Ok(gem_id)) = ids.first() {
                 for c in &continuities {
-                    let _ = substrate.add_relation(crate::field::RelationKind::Causal, c.record_id, *gem_id, 0.90);
+                    let _ = substrate.add_relation(
+                        crate::field::RelationKind::Causal,
+                        c.record_id,
+                        *gem_id,
+                        0.90,
+                    );
                 }
                 collective_gems_minted.push(*gem_id);
             }
@@ -1473,16 +1486,12 @@ impl ZhaGalaxyTree {
         for offset in 0..scan_len {
             let rec_id = (start_id + offset) as u64;
             if let Ok(Some(rec)) = substrate.store().get_record(rec_id) {
-                let coords = Self::project_6d(
-                    rec.content(),
-                    rec.source(),
-                    offset as u64,
-                    scan_len as u64,
-                );
+                let coords =
+                    Self::project_6d(rec.content(), rec.source(), offset as u64, scan_len as u64);
                 let hex = Self::hexagram_from_6d(&coords);
                 // Secondary 2-bit quantization along dominant spatial magnitudes for micro-clustering
-                let sub = ((coords[0].abs() > 0.45) as u8)
-                    | (((coords[1].abs() > 0.45) as u8) << 1);
+                let sub =
+                    ((coords[0].abs() > 0.45) as u8) | (((coords[1].abs() > 0.45) as u8) << 1);
                 let terms = Self::extract_salient_terms(rec.content(), 14);
                 let tok_est = (rec.content().len() / 4).max(8);
 
@@ -1704,8 +1713,7 @@ impl ZhaGalaxyTree {
                 }
             }
         }
-        candidate_leaves
-            .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        candidate_leaves.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         let matched_leaf_ids: Vec<u64> = candidate_leaves
             .into_iter()
             .take(leaf_limit.max(1))
@@ -1752,18 +1760,54 @@ impl ZhaGalaxyTree {
 pub fn run_zha_hierarchical_tree_benchmark(leaf_count: usize) -> ZhaBenchmarkReport {
     let (mut sub, _s, _j) = crate::pulse::make_temp_substrate("zha_tree_bench");
     let domains = [
-        ("landlock_kernel", "linux landlock lsm restrict_self sandbox confinement ruleset"),
-        ("ebbinghaus_decay", "lived_time dual_clock ebbinghaus retention salience memory"),
-        ("ashby_homeostasis", "ashby ultrastable four_chamber homeostasis bioelectric coupling"),
-        ("bend_proof_verdict", "bendlang lean4 constructive proof verdict hexagram invariance"),
-        ("scitt_provenance", "ietf scitt transparency log cose_sign1 merkle receipt"),
-        ("sutra_vm_bytecode", "sutra bytecode register vm deterministic gas_limit verification"),
-        ("holographic_galaxy", "radiant hologram six_dimensional octant spatial coordinates"),
-        ("hermit_crab_seal", "hermit_crab sanctuary split_key interiority ring3 protection"),
-        ("roaring_bitmap_idx", "roaring_bitmap inverted posting intersection roaring_index"),
-        ("catuskoti_tetralemma", "nagarjuna catuskoti four_cornered epistemic contradiction"),
-        ("nrem_consolidation", "nrem sleep consolidation semantic crystal supersession"),
-        ("shadow_legion", "cho_han shadow_legion cohort tournament adjudication"),
+        (
+            "landlock_kernel",
+            "linux landlock lsm restrict_self sandbox confinement ruleset",
+        ),
+        (
+            "ebbinghaus_decay",
+            "lived_time dual_clock ebbinghaus retention salience memory",
+        ),
+        (
+            "ashby_homeostasis",
+            "ashby ultrastable four_chamber homeostasis bioelectric coupling",
+        ),
+        (
+            "bend_proof_verdict",
+            "bendlang lean4 constructive proof verdict hexagram invariance",
+        ),
+        (
+            "scitt_provenance",
+            "ietf scitt transparency log cose_sign1 merkle receipt",
+        ),
+        (
+            "sutra_vm_bytecode",
+            "sutra bytecode register vm deterministic gas_limit verification",
+        ),
+        (
+            "holographic_galaxy",
+            "radiant hologram six_dimensional octant spatial coordinates",
+        ),
+        (
+            "hermit_crab_seal",
+            "hermit_crab sanctuary split_key interiority ring3 protection",
+        ),
+        (
+            "roaring_bitmap_idx",
+            "roaring_bitmap inverted posting intersection roaring_index",
+        ),
+        (
+            "catuskoti_tetralemma",
+            "nagarjuna catuskoti four_cornered epistemic contradiction",
+        ),
+        (
+            "nrem_consolidation",
+            "nrem sleep consolidation semantic crystal supersession",
+        ),
+        (
+            "shadow_legion",
+            "cho_han shadow_legion cohort tournament adjudication",
+        ),
     ];
 
     let target_leaves = leaf_count.max(256);

@@ -9,9 +9,7 @@
 #![forbid(unsafe_code)]
 
 use wm_gen3_core::evidence::RatifiedChannel;
-use wm_gen3_core::ops::{
-    Arbitration, DualClockDecayConfig, ImportKind, RecallQuery, RememberItem,
-};
+use wm_gen3_core::ops::{Arbitration, DualClockDecayConfig, ImportKind, RecallQuery, RememberItem};
 use wm_gen3_core::pulse::make_temp_substrate;
 
 #[test]
@@ -139,8 +137,14 @@ fn test_gate16_wisdom_harvest_pre_eviction() {
         harvested.len()
     );
 
-    let h0 = harvested.iter().find(|h| h.source_record_id == rec0).expect("h0");
-    let h1 = harvested.iter().find(|h| h.source_record_id == rec1).expect("h1");
+    let h0 = harvested
+        .iter()
+        .find(|h| h.source_record_id == rec0)
+        .expect("h0");
+    let h1 = harvested
+        .iter()
+        .find(|h| h.source_record_id == rec1)
+        .expect("h1");
 
     assert_eq!(h0.invariant_category, "DefensiveFailureMode");
     assert_eq!(h1.invariant_category, "SystemicConstraint");
@@ -155,9 +159,23 @@ fn test_gate16_wisdom_harvest_pre_eviction() {
     );
 
     // Verify newly minted Gem records exist in store with high salience
-    let gem0 = substrate.store().get_record(h0.post_harvest_gem_id).unwrap().unwrap();
-    assert!(gem0.content().starts_with("WISDOM_GEM [DefensiveFailureMode]:"));
+    let gem0 = substrate
+        .store()
+        .get_record(h0.post_harvest_gem_id)
+        .unwrap()
+        .unwrap();
+    assert!(
+        gem0.content()
+            .starts_with("WISDOM_GEM [DefensiveFailureMode]:")
+    );
 
-    let gem1 = substrate.store().get_record(h1.post_harvest_gem_id).unwrap().unwrap();
-    assert!(gem1.content().starts_with("WISDOM_GEM [SystemicConstraint]:"));
+    let gem1 = substrate
+        .store()
+        .get_record(h1.post_harvest_gem_id)
+        .unwrap()
+        .unwrap();
+    assert!(
+        gem1.content()
+            .starts_with("WISDOM_GEM [SystemicConstraint]:")
+    );
 }

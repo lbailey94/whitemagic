@@ -2053,8 +2053,7 @@ fn main() {
                 }
             }
 
-            let zero_token_terms =
-                wm_gen3_core::wave3_braid::expand_query_zero_token_terms(&query);
+            let zero_token_terms = wm_gen3_core::wave3_braid::expand_query_zero_token_terms(&query);
             let expanded_query_str = if zero_token_terms.is_empty() {
                 query.clone()
             } else {
@@ -2308,10 +2307,19 @@ fn main() {
                         println!("Swept Sessions:         {}", rep.swept_sessions);
                         println!("Distinct Swarm Agents:  {}", rep.distinct_agents.join(", "));
                         println!("Cross-Agent Bridges:    {}", rep.cross_agent_bridges_formed);
-                        println!("Reconciled Corrections: {}", rep.reconciled_corrections.len());
+                        println!(
+                            "Reconciled Corrections: {}",
+                            rep.reconciled_corrections.len()
+                        );
                         println!("Consolidated Lessons:   {}", rep.consolidated_lessons.len());
-                        println!("Collective Invariants:  {}", rep.collective_invariants.len());
-                        println!("Collective Gems Minted: {}", rep.collective_gems_minted.len());
+                        println!(
+                            "Collective Invariants:  {}",
+                            rep.collective_invariants.len()
+                        );
+                        println!(
+                            "Collective Gems Minted: {}",
+                            rep.collective_gems_minted.len()
+                        );
                         println!("Duration:               {:.2} ms", rep.duration_us / 1000.0);
                         if !rep.collective_invariants.is_empty() {
                             println!("\nCollective Invariants Distilled:");
@@ -2676,11 +2684,8 @@ fn main() {
                                 .open(&voids_log)
                             {
                                 use std::io::Write;
-                                let _ = writeln!(
-                                    f,
-                                    "{}",
-                                    serde_json::to_string(v).unwrap_or_default()
-                                );
+                                let _ =
+                                    writeln!(f, "{}", serde_json::to_string(v).unwrap_or_default());
                             }
                             if registered_loops < 2
                                 && !existing_loops
@@ -2717,15 +2722,18 @@ fn main() {
                                 &stone_seed.seed_sha256[..16]
                             );
                         }
-                        let mut akashic_seeds = vec![wm_gen3_core::wave3_braid::AkashicDormantSeed {
-                            seed_id: format!("seed-epoch-{cur_epoch}"),
-                            bloom_keyword: "void".to_string(),
-                            min_coherence: 0.75,
-                            required_quadrant: "Qi".to_string(),
-                            potency: 0.94,
-                            payload: "Synthesize cross-quadrant bridge over 0-After-9 curiosity void".to_string(),
-                            bloomed: false,
-                        }];
+                        let mut akashic_seeds =
+                            vec![wm_gen3_core::wave3_braid::AkashicDormantSeed {
+                                seed_id: format!("seed-epoch-{cur_epoch}"),
+                                bloom_keyword: "void".to_string(),
+                                min_coherence: 0.75,
+                                required_quadrant: "Qi".to_string(),
+                                potency: 0.94,
+                                payload:
+                                    "Synthesize cross-quadrant bridge over 0-After-9 curiosity void"
+                                        .to_string(),
+                                bloomed: false,
+                            }];
                         let bloomed_ids = wm_gen3_core::wave3_braid::evaluate_akashic_seed_bloom(
                             &mut akashic_seeds,
                             "void synthesis",
@@ -2738,13 +2746,14 @@ fn main() {
                                 &["ipc:shm_ring", "mcp:stdio"],
                                 &["ipc:shm_ring", "mcp:stdio"],
                             );
-                        let yin_state = wm_gen3_core::wave3_braid::evaluate_yin_and_level4_emergence(
-                            telemetry.candidates_generated.max(1),
-                            telemetry.candidates_committed.max(1),
-                            &[0.25, 0.25, 0.25],
-                            1.35,
-                            cur_epoch,
-                        );
+                        let yin_state =
+                            wm_gen3_core::wave3_braid::evaluate_yin_and_level4_emergence(
+                                telemetry.candidates_generated.max(1),
+                                telemetry.candidates_committed.max(1),
+                                &[0.25, 0.25, 0.25],
+                                1.35,
+                                cur_epoch,
+                            );
                         println!(
                             "  [Phase 6: Wave 3 Akashic, Yin & DRQ] Bloomed: {} | DRQ Nash Defense: {:.1}% | Synergy: {:.2}x",
                             bloomed_ids.len(),
@@ -3421,23 +3430,26 @@ fn main() {
                         .unwrap_or(true);
                     let (constellation_glyph, constellation_archetype) =
                         glyph_names[best_constellation % glyph_names.len()];
-                    let q_finsler = wm_gen3_core::wave2_braid::ProductManifoldPoint::from_structural_coords(
-                        2,
-                        query_6d.omega,
-                        query_6d.x.atan2(query_6d.y),
-                        query_6d.omega.sin(),
-                        query_6d.tau,
-                        query_6d.sigma,
-                    );
-                    let c_finsler = wm_gen3_core::wave2_braid::ProductManifoldPoint::from_structural_coords(
-                        2,
-                        best_centroid[5],
-                        best_centroid[0].atan2(best_centroid[1]),
-                        best_centroid[5].sin(),
-                        best_centroid[3],
-                        best_centroid[4],
-                    );
-                    let finsler_geodesic = q_finsler.finsler_wake_distance(&c_finsler, [1.0, 0.8, 0.5], [0.25, 0.15]);
+                    let q_finsler =
+                        wm_gen3_core::wave2_braid::ProductManifoldPoint::from_structural_coords(
+                            2,
+                            query_6d.omega,
+                            query_6d.x.atan2(query_6d.y),
+                            query_6d.omega.sin(),
+                            query_6d.tau,
+                            query_6d.sigma,
+                        );
+                    let c_finsler =
+                        wm_gen3_core::wave2_braid::ProductManifoldPoint::from_structural_coords(
+                            2,
+                            best_centroid[5],
+                            best_centroid[0].atan2(best_centroid[1]),
+                            best_centroid[5].sin(),
+                            best_centroid[3],
+                            best_centroid[4],
+                        );
+                    let finsler_geodesic =
+                        q_finsler.finsler_wake_distance(&c_finsler, [1.0, 0.8, 0.5], [0.25, 0.15]);
                     let sigma22 = wm_gen3_core::wave2_braid::evaluate_sigma22_spectrometer(
                         [query_6d.x, query_6d.y, query_6d.z, query_6d.sigma],
                         best_constellation % 28,
@@ -3518,10 +3530,15 @@ fn main() {
                             constellation_glyph,
                             constellation_archetype
                         );
-                        println!("6D Geodesic Dist:     {:.4} (Product-Finsler: {:.4})", min_geodesic, finsler_geodesic);
+                        println!(
+                            "6D Geodesic Dist:     {:.4} (Product-Finsler: {:.4})",
+                            min_geodesic, finsler_geodesic
+                        );
                         println!(
                             "Σ₂₂ Spectrometer:     {} / {} (can_dispatch={})",
-                            sigma22.dominant_motif_glyph, sigma22.cardinal_quadrant, sigma22.can_dispatch_authority
+                            sigma22.dominant_motif_glyph,
+                            sigma22.cardinal_quadrant,
+                            sigma22.can_dispatch_authority
                         );
                         println!(
                             "Resonance Radius:     k={} hops (expanded={})",
@@ -4683,7 +4700,10 @@ fn run_backup_command(store_path: &Path, dest: &Path, json: bool) -> i32 {
     let entries = match std::fs::read_dir(store_path) {
         Ok(e) => e,
         Err(e) => {
-            eprintln!("Error reading store directory {}: {e}", store_path.display());
+            eprintln!(
+                "Error reading store directory {}: {e}",
+                store_path.display()
+            );
             return 1;
         }
     };
@@ -4699,7 +4719,11 @@ fn run_backup_command(store_path: &Path, dest: &Path, json: bool) -> i32 {
         let src_file = store_path.join(&name);
         let dst_file = dest.join(&name);
         if let Err(e) = std::fs::copy(&src_file, &dst_file) {
-            eprintln!("Error copying {} to {}: {e}", src_file.display(), dst_file.display());
+            eprintln!(
+                "Error copying {} to {}: {e}",
+                src_file.display(),
+                dst_file.display()
+            );
             return 1;
         }
         match sha256_file_hex(&dst_file) {
@@ -4809,7 +4833,10 @@ fn run_restore_command(src: &Path, store_path: &Path, force: bool, json: bool) -
         entries_to_restore.push((file_name.to_string(), expected_hash.to_string()));
     }
     if let Err(e) = std::fs::create_dir_all(store_path) {
-        eprintln!("Error creating store directory {}: {e}", store_path.display());
+        eprintln!(
+            "Error creating store directory {}: {e}",
+            store_path.display()
+        );
         return 1;
     }
     for (file_name, _) in &entries_to_restore {
@@ -4850,11 +4877,12 @@ fn run_seed_command(store_path: &Path, action: &str, json: bool) {
     let journal_path = store_path.join("journal.jsonl");
     let seed = match action {
         "export" | "sync" => {
-            let substrate = Substrate::open_readonly(store_path, Some(&journal_path), default_view())
-                .unwrap_or_else(|e| {
-                    eprintln!("Error opening store at {}: {e}", store_path.display());
-                    std::process::exit(1);
-                });
+            let substrate =
+                Substrate::open_readonly(store_path, Some(&journal_path), default_view())
+                    .unwrap_or_else(|e| {
+                        eprintln!("Error opening store at {}: {e}", store_path.display());
+                        std::process::exit(1);
+                    });
             let epoch = substrate.store().epoch().unwrap_or(0);
             let records = substrate.store().record_count().unwrap_or(0);
             let cp = substrate.session_continuity(None).ok().flatten();
@@ -4970,7 +4998,10 @@ fn run_wave2_benchmark_command(json: bool) {
         println!("==================================================================");
         println!("  WhiteMagic Gen3 — Wave 2 Braided Benchmark Suite (W2-P1..P35)   ");
         println!("==================================================================");
-        println!("Total Pillars Verified: {} / 35", report.total_pillars_verified);
+        println!(
+            "Total Pillars Verified: {} / 35",
+            report.total_pillars_verified
+        );
         println!("Suite Execution Time:   {} µs", report.execution_time_us);
         println!("------------------------------------------------------------------");
         println!("Cluster A (Product-Finsler Manifold, Σ22, Voids & 4-Lane RRF):");
@@ -5089,7 +5120,10 @@ fn run_wave3_benchmark_command(json: bool) {
         println!("==================================================================");
         println!("  WhiteMagic Gen3 — Wave 3 Braided Benchmark Suite (W3-P1..P30)   ");
         println!("==================================================================");
-        println!("Total Pillars Verified: {} / 30", report.total_pillars_verified);
+        println!(
+            "Total Pillars Verified: {} / 30",
+            report.total_pillars_verified
+        );
         println!("Suite Execution Time:   {} µs", report.execution_time_us);
         println!("------------------------------------------------------------------");
         println!("Cluster W3-I (28 Garden-Gana Triads & 108-Cycle Da'at Resonance):");
@@ -5210,8 +5244,14 @@ fn run_longmemeval_benchmark_command(json: bool) {
         println!("==================================================================");
         println!("  WhiteMagic Gen3 — LongMemEval Zero-Token + Engram + GAM Suite   ");
         println!("==================================================================");
-        println!("Questions Evaluated:    {} (across 5 LongMemEval categories)", report.total_questions_evaluated);
-        println!("LLM Tokens Consumed:    {} tokens (Zero-Token Deterministic Pipeline)", report.total_llm_tokens_consumed);
+        println!(
+            "Questions Evaluated:    {} (across 5 LongMemEval categories)",
+            report.total_questions_evaluated
+        );
+        println!(
+            "LLM Tokens Consumed:    {} tokens (Zero-Token Deterministic Pipeline)",
+            report.total_llm_tokens_consumed
+        );
         println!("Suite Execution Time:   {} µs", report.execution_time_us);
         println!(
             "Macro Recall@3:         {:.1}% -> {:.1}% (+{:.1}% gain)",
@@ -5496,13 +5536,22 @@ fn run_homeostasis_command(json: bool) {
     if json {
         let mut out = serde_json::to_value(&bio).unwrap_or_default();
         if let Some(obj) = out.as_object_mut() {
-            obj.insert("schmitt_trigger_regime".into(), serde_json::json!(format!("{schmitt_regime:?}")));
-            obj.insert("mmmbaby_vitality".into(), serde_json::json!({
-                "geometric_vitality": mmmbaby_geom,
-                "arithmetic_vitality": mmmbaby_arith,
-                "non_compensatory_sacrifice_veto": sacrifice_veto,
-            }));
-            obj.insert("bendhub_constitution_v2".into(), serde_json::json!("0x0d479d846e9ce92faa45a2346110fce8"));
+            obj.insert(
+                "schmitt_trigger_regime".into(),
+                serde_json::json!(format!("{schmitt_regime:?}")),
+            );
+            obj.insert(
+                "mmmbaby_vitality".into(),
+                serde_json::json!({
+                    "geometric_vitality": mmmbaby_geom,
+                    "arithmetic_vitality": mmmbaby_arith,
+                    "non_compensatory_sacrifice_veto": sacrifice_veto,
+                }),
+            );
+            obj.insert(
+                "bendhub_constitution_v2".into(),
+                serde_json::json!("0x0d479d846e9ce92faa45a2346110fce8"),
+            );
         }
         println!("{}", serde_json::to_string_pretty(&out).unwrap());
     } else {
@@ -5513,7 +5562,10 @@ fn run_homeostasis_command(json: bool) {
             "Resting Potential:  {:.1} mV (Serene baseline: -70.0 mV)",
             bio.v_rest_mv
         );
-        println!("Homeostatic Regime: {:?} (Schmitt-Trigger: {:?})", bio.regime, schmitt_regime);
+        println!(
+            "Homeostatic Regime: {:?} (Schmitt-Trigger: {:?})",
+            bio.regime, schmitt_regime
+        );
         println!("Metabolism Mode:    {:?}", bio.metabolism_mode);
         println!(
             "MMMBABY Vitality:   {:.3} (Arithmetic: {:.3}, Sacrifice Veto: {})",
@@ -13193,10 +13245,19 @@ mod session_cli_tests {
                 assert_eq!(branch.as_deref(), Some("feat/mcp-truth"));
                 assert_eq!(tests_green, Some(true));
                 assert_eq!(lease_id.as_deref(), Some("lease-1"));
-                assert_eq!(lessons, vec!["Prefer lived-time decay over real-time sleep clocks"]);
+                assert_eq!(
+                    lessons,
+                    vec!["Prefer lived-time decay over real-time sleep clocks"]
+                );
                 assert_eq!(corrections, vec!["Do not write records past rate budget"]);
-                assert_eq!(identity_invariants, vec!["Zero Corrigibility/Rationalist dogma"]);
-                assert_eq!(relational_context.as_deref(), Some("Operator Lucas is driving Gen3 Phase 3 upgrade"));
+                assert_eq!(
+                    identity_invariants,
+                    vec!["Zero Corrigibility/Rationalist dogma"]
+                );
+                assert_eq!(
+                    relational_context.as_deref(),
+                    Some("Operator Lucas is driving Gen3 Phase 3 upgrade")
+                );
             }
             _ => panic!("expected session checkpoint command"),
         }

@@ -515,7 +515,10 @@ mod tests {
             original,
             "plan mode must not modify existing client configs"
         );
-        assert!(!store.exists(), "plan mode must not create missing store directory");
+        assert!(
+            !store.exists(),
+            "plan mode must not create missing store directory"
+        );
         assert!(!store.join("galaxy.html").exists());
 
         let no_plan =

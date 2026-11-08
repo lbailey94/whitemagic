@@ -46,10 +46,7 @@ impl ProductManifoldPoint {
         // In the Poincaré disk, radius r = tanh(depth * scale) < 1.0, giving exponential circumference
         // sinh(r) for deep trees so leaf nodes never crowd!
         let r_hyp = ((tree_depth as f64) * 0.28).tanh().clamp(0.0, 0.999_999);
-        let h2 = [
-            r_hyp * branch_azimuth.cos(),
-            r_hyp * branch_azimuth.sin(),
-        ];
+        let h2 = [r_hyp * branch_azimuth.cos(), r_hyp * branch_azimuth.sin()];
         let s2 = [
             elev_rad.cos() * phase_rad.cos(),
             elev_rad.cos() * phase_rad.sin(),
@@ -112,8 +109,8 @@ impl ProductManifoldPoint {
         let base = self.product_distance(other, weights);
         let dh0 = other.h2[0] - self.h2[0];
         let dh1 = other.h2[1] - self.h2[1];
-        let wake_term = wake_drift[0].clamp(-0.85, 0.85) * dh0
-            + wake_drift[1].clamp(-0.85, 0.85) * dh1;
+        let wake_term =
+            wake_drift[0].clamp(-0.85, 0.85) * dh0 + wake_drift[1].clamp(-0.85, 0.85) * dh1;
         (base - wake_term).max(1e-6)
     }
 }
@@ -239,7 +236,10 @@ pub const CARDINAL_QUADRANTS_K8: [&str; 8] = [
 ];
 
 #[must_use]
-pub fn evaluate_sigma22_spectrometer(state_4d: [f64; 4], garden_index_28: usize) -> Sigma22SpectrumReceipt {
+pub fn evaluate_sigma22_spectrometer(
+    state_4d: [f64; 4],
+    garden_index_28: usize,
+) -> Sigma22SpectrumReceipt {
     let mut activations = [0.0f64; 22];
     let mut max_idx = 0usize;
     let mut max_val = f64::MIN;
@@ -558,7 +558,8 @@ pub fn evaluate_conformal_warrant(
     let z2 = z * z;
     let denom = 1.0 + z2 / total;
     let center = (p_hat + z2 / (2.0 * total)) / denom;
-    let half = (z / denom) * ((p_hat * (1.0 - p_hat) / total) + (z2 / (4.0 * total * total))).sqrt();
+    let half =
+        (z / denom) * ((p_hat * (1.0 - p_hat) / total) + (z2 / (4.0 * total * total))).sqrt();
 
     ConformalWarrantReceipt::Verified {
         empirical_coverage: p_hat,
@@ -651,12 +652,8 @@ pub fn evaluate_huiguang_and_ooda_telemetry(
     // Check if 3 consecutive epochs burned high tokens with near-zero information gain
     if recent_info_gains.len() >= 3 && recent_token_burns.len() >= 3 {
         let n = recent_info_gains.len();
-        let flat_gain = recent_info_gains[n - 3..]
-            .iter()
-            .all(|&g| g < 0.02);
-        let high_burn = recent_token_burns[n - 3..]
-            .iter()
-            .all(|&b| b > 500.0);
+        let flat_gain = recent_info_gains[n - 3..].iter().all(|&g| g < 0.02);
+        let high_burn = recent_token_burns[n - 3..].iter().all(|&b| b > 500.0);
         if flat_gain && high_burn {
             return if line1_bedrock_verified {
                 HuiguangDirective::TriggerSacralBinarySwitch {
@@ -704,9 +701,7 @@ impl SolitonicMemoryPacket {
     /// shifting only in phase!
     #[must_use]
     pub fn collide_with(&self, other: &Self) -> (Self, f64) {
-        let phase_shift = ((self.phase_velocity - other.phase_velocity).abs() + 0.1)
-            .ln_1p()
-            * 0.25;
+        let phase_shift = ((self.phase_velocity - other.phase_velocity).abs() + 0.1).ln_1p() * 0.25;
         let survived = self.clone();
         (survived, phase_shift)
     }
@@ -1025,7 +1020,10 @@ pub enum StellarMemoryState {
 /// Forensically sanitized and rehabilitated boundary guards carry a $1.25\times$ edge-case
 /// anomaly detection bonus over untested "naive" guards.
 #[must_use]
-pub fn compute_paarthurnax_boundary_weight(base_weight: f64, rehabilitated_provenance: bool) -> f64 {
+pub fn compute_paarthurnax_boundary_weight(
+    base_weight: f64,
+    rehabilitated_provenance: bool,
+) -> f64 {
     if rehabilitated_provenance {
         base_weight * 1.25
     } else {
@@ -1043,7 +1041,10 @@ pub enum HardwareDispatchRegime {
 }
 
 #[must_use]
-pub fn select_calibrated_dispatch_regime(batch_size_n: usize, gpu_available: bool) -> HardwareDispatchRegime {
+pub fn select_calibrated_dispatch_regime(
+    batch_size_n: usize,
+    gpu_available: bool,
+) -> HardwareDispatchRegime {
     if batch_size_n < 26 {
         HardwareDispatchRegime::ScalarSimdReflex
     } else if batch_size_n < 1_452 {
@@ -1099,7 +1100,11 @@ pub struct DhumavatiBardoDigest {
 
 impl DhumavatiBardoDigest {
     #[must_use]
-    pub fn incinerate_epoch(epoch_name: &str, failure_signatures: &[&str], raw_records: usize) -> Self {
+    pub fn incinerate_epoch(
+        epoch_name: &str,
+        failure_signatures: &[&str],
+        raw_records: usize,
+    ) -> Self {
         let mut hasher = Sha256::new();
         hasher.update(epoch_name.as_bytes());
         let mut bloom = 0u64;
@@ -1217,7 +1222,14 @@ impl StonePillarMorphogenSeed {
 
     #[must_use]
     pub fn compile_compact_seed() -> Self {
-        Self::compile_from_live_state(0, 0, None, "bootstrap-compact-seed", 16, 0xA5A5_5A5A_F00D_CAFE)
+        Self::compile_from_live_state(
+            0,
+            0,
+            None,
+            "bootstrap-compact-seed",
+            16,
+            0xA5A5_5A5A_F00D_CAFE,
+        )
     }
 
     #[must_use]
@@ -1296,7 +1308,10 @@ impl StonePillarMorphogenSeed {
         }
     }
 
-    pub fn save_to_store(&self, store_path: &std::path::Path) -> Result<std::path::PathBuf, String> {
+    pub fn save_to_store(
+        &self,
+        store_path: &std::path::Path,
+    ) -> Result<std::path::PathBuf, String> {
         let seed_path = store_path.join("stone_pillar.seed.json");
         let payload = serde_json::to_string_pretty(self)
             .map_err(|e| format!("serialize stone_pillar.seed.json: {e}"))?;
@@ -1446,7 +1461,8 @@ pub fn run_live_curiosity_void_and_cladistics_pass(
         "memory-auth-laundering".to_string(),
     ];
 
-    for (idx, (skel_id, util, passed_invariants)) in candidate_skeleton_utilities.iter().enumerate() {
+    for (idx, (skel_id, util, passed_invariants)) in candidate_skeleton_utilities.iter().enumerate()
+    {
         let delta = *util - 0.70;
         let regressions = usize::from(!*passed_invariants);
         match evaluate_trifold_cladistics(
@@ -1583,10 +1599,26 @@ pub fn run_wave2_full_benchmark_suite() -> Wave2FullBenchmarkReport {
     let sigma22_latency_ns = (spec_start.elapsed().as_nanos() as f64) / 28.0;
 
     let constellations = vec![
-        (0, ProductManifoldPoint::from_structural_coords(3, 0.0, 0.0, 0.2, 0.5, 0.9), 12.0),
-        (1, ProductManifoldPoint::from_structural_coords(3, 1.57, 1.0, -0.2, 0.5, 0.9), 14.0),
-        (2, ProductManifoldPoint::from_structural_coords(3, 3.14, 2.0, 0.1, 0.5, 0.9), 11.0),
-        (3, ProductManifoldPoint::from_structural_coords(3, 4.71, 3.0, -0.1, 0.5, 0.9), 15.0),
+        (
+            0,
+            ProductManifoldPoint::from_structural_coords(3, 0.0, 0.0, 0.2, 0.5, 0.9),
+            12.0,
+        ),
+        (
+            1,
+            ProductManifoldPoint::from_structural_coords(3, 1.57, 1.0, -0.2, 0.5, 0.9),
+            14.0,
+        ),
+        (
+            2,
+            ProductManifoldPoint::from_structural_coords(3, 3.14, 2.0, 0.1, 0.5, 0.9),
+            11.0,
+        ),
+        (
+            3,
+            ProductManifoldPoint::from_structural_coords(3, 4.71, 3.0, -0.1, 0.5, 0.9),
+            15.0,
+        ),
     ];
     let voids = scan_topological_voids(&constellations, 4);
 
@@ -1654,10 +1686,10 @@ pub fn run_wave2_full_benchmark_suite() -> Wave2FullBenchmarkReport {
         }
         schmitt.step(noisy_p);
     }
-    let chatter_reduction_pct =
-        ((raw_oscillations.saturating_sub(schmitt.transitions_count)) as f64
-            / (raw_oscillations.max(1) as f64))
-            * 100.0;
+    let chatter_reduction_pct = ((raw_oscillations.saturating_sub(schmitt.transitions_count))
+        as f64
+        / (raw_oscillations.max(1) as f64))
+        * 100.0;
 
     let cal_scores: Vec<f64> = (0..100).map(|i| (i as f64) / 100.0).collect();
     let warrant_ok = evaluate_conformal_warrant(&cal_scores, 0.05, 954, 1000, 0.4, 12);
@@ -1757,7 +1789,8 @@ pub fn run_wave2_full_benchmark_suite() -> Wave2FullBenchmarkReport {
         [0.10, 0.10, 0.10, 0.60],
     ];
     let shared_deltas = [[0.8, 0.7, 0.9, 0.85], [0.6, 0.9, 0.7, 0.8]];
-    let t_sync = execute_tachikoma_satellite_sync(&mut tachikoma_priors, &shared_deltas, voids.len());
+    let t_sync =
+        execute_tachikoma_satellite_sync(&mut tachikoma_priors, &shared_deltas, voids.len());
 
     let cluster_c = Wave2ClusterCBenchmark {
         soliton_collision_invariant_fidelity: if p1_after.invariants_digest_sha256
@@ -1777,15 +1810,26 @@ pub fn run_wave2_full_benchmark_suite() -> Wave2FullBenchmarkReport {
     // ------------------------------------------------------------------------
     // Cluster D Benchmark: Prodrug Envelopes, Violet Citadel, eBPF Taint, CUSUM
     // ------------------------------------------------------------------------
-    let prodrug = ProdrugCarrierEnvelope::encapsulate("whitemagic-node-alpha", 427001, b"SUTRA_COMMIT_PULSE");
+    let prodrug =
+        ProdrugCarrierEnvelope::encapsulate("whitemagic-node-alpha", 427001, b"SUTRA_COMMIT_PULSE");
     let mut foreign_blocked = 0usize;
-    if prodrug.cleave_in_receptor("mallory-interceptor", 427001).is_err() {
+    if prodrug
+        .cleave_in_receptor("mallory-interceptor", 427001)
+        .is_err()
+    {
         foreign_blocked += 1;
     }
-    if prodrug.cleave_in_receptor("whitemagic-node-alpha", 427099).is_err() {
+    if prodrug
+        .cleave_in_receptor("whitemagic-node-alpha", 427099)
+        .is_err()
+    {
         foreign_blocked += 1;
     }
-    let target_ok = usize::from(prodrug.cleave_in_receptor("whitemagic-node-alpha", 427001).is_ok());
+    let target_ok = usize::from(
+        prodrug
+            .cleave_in_receptor("whitemagic-node-alpha", 427001)
+            .is_ok(),
+    );
 
     let mut cusum = 0.0f64;
     let v_auth = evaluate_violet_citadel_gate(false, true, false, false, false, 0.10, &mut cusum);
@@ -1849,7 +1893,11 @@ pub fn run_wave2_full_benchmark_suite() -> Wave2FullBenchmarkReport {
     }
     let bardo = DhumavatiBardoDigest::incinerate_epoch(
         "gen1_monolithic_44_engines",
-        &["unbounded_dag_spawn", "merged_operator_backtrack", "wall_clock_amnesia"],
+        &[
+            "unbounded_dag_spawn",
+            "merged_operator_backtrack",
+            "wall_clock_amnesia",
+        ],
         47_500,
     );
     let hits = [
@@ -1900,7 +1948,10 @@ mod tests {
         // Directed Finsler wake: downstream is shorter than upstream
         let d_downstream = root.finsler_wake_distance(&child_a, [1.0, 1.0, 1.0], [0.5, 0.5]);
         let d_upstream = child_a.finsler_wake_distance(&root, [1.0, 1.0, 1.0], [0.5, 0.5]);
-        assert!(d_downstream < d_upstream, "dusty-plasma wake diode asymmetry verified");
+        assert!(
+            d_downstream < d_upstream,
+            "dusty-plasma wake diode asymmetry verified"
+        );
 
         // Law 6: Symbols may render; symbols may never dispatch
         let spec = evaluate_sigma22_spectrometer([0.9, -0.4, 0.3, 0.1], 14);
@@ -1945,8 +1996,14 @@ mod tests {
             &boundary_x,
             &lambdas,
         );
-        assert!((i_r10 - i_r200).abs() < 1e-12, "scale-invariant across R=10 vs R=200");
-        assert!((i_r200 - 0.12).abs() < 0.03, "calibrates to I(t_0) ~ 0.12: got {i_r200}");
+        assert!(
+            (i_r10 - i_r200).abs() < 1e-12,
+            "scale-invariant across R=10 vs R=200"
+        );
+        assert!(
+            (i_r200 - 0.12).abs() < 0.03,
+            "calibrates to I(t_0) ~ 0.12: got {i_r200}"
+        );
         let mut sacrifice = vec![0.68; 200];
         sacrifice[42] = 0.0;
         assert_eq!(
@@ -1994,7 +2051,10 @@ mod tests {
         assert_eq!(report.cluster_e.trojan_high_fitness_quarantined, 1);
         assert!(report.cluster_e.zero_dag_memory_collapse_factor > 13.0);
         assert!(report.cluster_f.stone_pillar_seed_bytes < 65_536);
-        assert_eq!(report.cluster_f.heptagonal_spiral_unique_sectors_70_steps, 70);
+        assert_eq!(
+            report.cluster_f.heptagonal_spiral_unique_sectors_70_steps,
+            70
+        );
         assert_eq!(report.cluster_f.dhumavati_bardo_active_token_drag, 0);
         assert_eq!(report.cluster_f.dhumavati_failure_recall_rate, 1.0);
     }

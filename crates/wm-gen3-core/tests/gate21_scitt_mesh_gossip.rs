@@ -7,12 +7,12 @@
 
 #![forbid(unsafe_code)]
 
-use std::time::Instant;
 use ed25519_dalek::SigningKey;
+use std::time::Instant;
 use wm_gen3_core::evidence::RatifiedChannel;
 use wm_gen3_core::mesh::{
-    compute_gem_merkle_digest, reconcile_mesh_gossip_delta, reconcile_scitt_gossip_packet,
-    ScittGossipPacket,
+    ScittGossipPacket, compute_gem_merkle_digest, reconcile_mesh_gossip_delta,
+    reconcile_scitt_gossip_packet,
 };
 use wm_gen3_core::pulse::make_temp_substrate;
 
@@ -101,8 +101,12 @@ fn peb21_2_merkle_digest_sub_10ms_delta_reconciliation() {
 
     // 3. Node 2 receives gossip delta from Node 1
     let incoming = vec![new_packet_1.clone(), new_packet_2.clone()];
-    let ingested_count = reconcile_mesh_gossip_delta(&mut sub2, &digest1_updated, &incoming).unwrap();
-    assert_eq!(ingested_count, 2, "Node 2 must ingest exactly the 2 missing delta gems");
+    let ingested_count =
+        reconcile_mesh_gossip_delta(&mut sub2, &digest1_updated, &incoming).unwrap();
+    assert_eq!(
+        ingested_count, 2,
+        "Node 2 must ingest exactly the 2 missing delta gems"
+    );
 
     // Digests must now converge and match again
     let digest2_updated = compute_gem_merkle_digest("node-2", &sub2);

@@ -10,8 +10,8 @@
 #![forbid(unsafe_code)]
 
 use std::time::Instant;
-use wm_gen3_core::field::RelationKind;
 use wm_gen3_core::evidence::RatifiedChannel;
+use wm_gen3_core::field::RelationKind;
 use wm_gen3_core::ops::{ImportKind, RecallQuery, RememberItem};
 use wm_gen3_core::pulse::make_temp_substrate;
 
@@ -54,8 +54,12 @@ fn test_gate17_multi_hop_lateral_recall() {
     assert_eq!(flat_hits[0].id, id0);
 
     // Bind 2-hop causal chain: 0 -> 1 -> 2
-    substrate.add_relation(RelationKind::Causal, id0, id1, 0.90).expect("rel 0->1");
-    substrate.add_relation(RelationKind::Causal, id1, id2, 0.85).expect("rel 1->2");
+    substrate
+        .add_relation(RelationKind::Causal, id0, id1, 0.90)
+        .expect("rel 0->1");
+    substrate
+        .add_relation(RelationKind::Causal, id1, id2, 0.85)
+        .expect("rel 1->2");
 
     // Associative recall with 2 resonance hops
     let start = Instant::now();
@@ -136,5 +140,8 @@ fn test_gate17_hebbian_coactivation_and_consolidation() {
     let associate_rel = relations
         .iter()
         .find(|r| r.kind() == RelationKind::Associates && (r.src() == pair.0 && r.dst() == pair.1));
-    assert!(associate_rel.is_some(), "Durable Associates relation must exist in store");
+    assert!(
+        associate_rel.is_some(),
+        "Durable Associates relation must exist in store"
+    );
 }

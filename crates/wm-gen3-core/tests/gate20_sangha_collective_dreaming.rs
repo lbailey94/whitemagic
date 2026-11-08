@@ -21,7 +21,8 @@ fn peb20_1_cross_agent_bridging() {
         session_id: "antigravity-mcp-lane".into(),
         agent_id: "antigravity".into(),
         checkpoint_type: "milestone".into(),
-        summary: "Engineered single-binary MCP stdio server with sub-25ms cold-start handshake.".into(),
+        summary: "Engineered single-binary MCP stdio server with sub-25ms cold-start handshake."
+            .into(),
         next_queue: vec!["Audit security boundary".into()],
         open_flags: vec!["mcp_ready".into()],
         lessons: vec!["Fast stdio transport removes multi-agent communication friction.".into()],
@@ -35,10 +36,14 @@ fn peb20_1_cross_agent_bridging() {
         session_id: "sol-security-lane".into(),
         agent_id: "sol".into(),
         checkpoint_type: "milestone".into(),
-        summary: "Implemented Linux Landlock LSM file system confinement and system call filtering.".into(),
+        summary:
+            "Implemented Linux Landlock LSM file system confinement and system call filtering."
+                .into(),
         next_queue: vec!["Apply Landlock to MCP server".into()],
         open_flags: vec!["landlock_enforced".into()],
-        lessons: vec!["Kernel-enforced Landlock guarantees security without prompt-only trust.".into()],
+        lessons: vec![
+            "Kernel-enforced Landlock guarantees security without prompt-only trust.".into(),
+        ],
         identity_invariants: vec!["Ashby cybernetic homeostatic stability.".into()],
         ..Default::default()
     };
@@ -53,7 +58,10 @@ fn peb20_1_cross_agent_bridging() {
     assert_eq!(report.distinct_agents.len(), 2);
     assert!(report.distinct_agents.contains(&"antigravity".to_string()));
     assert!(report.distinct_agents.contains(&"sol".to_string()));
-    assert!(report.cross_agent_bridges_formed >= 1, "Must form at least 1 cross-agent bridge relation");
+    assert!(
+        report.cross_agent_bridges_formed >= 1,
+        "Must form at least 1 cross-agent bridge relation"
+    );
 
     // Verify relation exists in the store connecting rec_anti and rec_sol
     let relations = substrate.store().iter_relations().unwrap_or_default();
@@ -61,7 +69,10 @@ fn peb20_1_cross_agent_bridging() {
         (rel.src() == rec_anti && rel.dst() == rec_sol)
             || (rel.src() == rec_sol && rel.dst() == rec_anti)
     });
-    assert!(has_bridge, "Associative bridge must connect distinct agent checkpoints");
+    assert!(
+        has_bridge,
+        "Associative bridge must connect distinct agent checkpoints"
+    );
 }
 
 #[test]
@@ -90,7 +101,8 @@ fn peb20_2_contradiction_resolution_and_lesson_pruning() {
         checkpoint_type: "turn".into(),
         summary: "Identified wall-clock decay amnesia bug.".into(),
         corrections: vec![
-            "Prefer lived-time decay over real-time sleep clocks to prevent quiescent amnesia.".into(),
+            "Prefer lived-time decay over real-time sleep clocks to prevent quiescent amnesia."
+                .into(),
         ],
         ..Default::default()
     };
@@ -102,17 +114,25 @@ fn peb20_2_contradiction_resolution_and_lesson_pruning() {
 
     // The contradicted lesson ("Use real-time clock...") should be pruned
     assert!(
-        !report.consolidated_lessons.iter().any(|l| l.contains("real-time clock")),
+        !report
+            .consolidated_lessons
+            .iter()
+            .any(|l| l.contains("real-time clock")),
         "Contradicted lesson must be pruned during collective dreaming"
     );
     // Uncontradicted lesson ("Keep log lines concise") should be preserved
     assert!(
-        report.consolidated_lessons.contains(&"Keep log lines concise.".to_string()),
+        report
+            .consolidated_lessons
+            .contains(&"Keep log lines concise.".to_string()),
         "Non-contradicted lesson must be preserved"
     );
     // Correction must be preserved
     assert!(
-        report.reconciled_corrections.iter().any(|c| c.contains("Prefer lived-time decay")),
+        report
+            .reconciled_corrections
+            .iter()
+            .any(|c| c.contains("Prefer lived-time decay")),
         "Reconciled correction must be preserved"
     );
 }
@@ -142,9 +162,17 @@ fn peb20_3_collective_gem_distillation_and_idempotence() {
     let gem_id = report1.collective_gems_minted[0];
 
     // Verify Gem in store
-    let gem_rec = substrate.store().get_record(gem_id).unwrap().expect("gem record");
+    let gem_rec = substrate
+        .store()
+        .get_record(gem_id)
+        .unwrap()
+        .expect("gem record");
     assert!(gem_rec.content().starts_with("[SANGHA COLLECTIVE GEM]"));
-    assert!(gem_rec.content().contains("Linux Landlock deterministic kernel confinement"));
+    assert!(
+        gem_rec
+            .content()
+            .contains("Linux Landlock deterministic kernel confinement")
+    );
 
     // Pass 2: Identical state, should be completely idempotent (0 duplicate gems minted)
     let report2 = substrate

@@ -39,7 +39,10 @@ fn peb22_turnkey_public_benchmark_suite_execution() {
     assert!(stdout.contains("ALL 4 LIVING SUBSTRATE PILLARS RATIFIED: 10/10 ACROSS THE BOARD"));
 
     // 1. Verify Markdown report emission
-    assert!(report_file.exists(), "Benchmark report file must be written");
+    assert!(
+        report_file.exists(),
+        "Benchmark report file must be written"
+    );
     let report_content = fs::read_to_string(&report_file).unwrap();
     assert!(report_content.contains("WhiteMagic Gen3: Living Substrate Benchmark Report"));
     assert!(report_content.contains("90-Day Idle Sleep Retention"));
@@ -48,13 +51,26 @@ fn peb22_turnkey_public_benchmark_suite_execution() {
     assert!(report_content.contains("PASS"));
 
     // 2. Verify JSON receipt emission
-    assert!(receipt_file.exists(), "Benchmark receipt file must be written");
+    assert!(
+        receipt_file.exists(),
+        "Benchmark receipt file must be written"
+    );
     let receipt_content = fs::read_to_string(&receipt_file).unwrap();
     let receipt: serde_json::Value = serde_json::from_str(&receipt_content).unwrap();
     assert_eq!(receipt["suite"], "10of10_ecosystem");
     assert_eq!(receipt["status"], "passed");
-    assert!(receipt["metrics"]["hebbian_spreading_latency_ms"].as_f64().unwrap() < 10.0);
-    assert!(receipt["metrics"]["mcp_cold_start_handshake_ms"].as_f64().unwrap() < 50.0);
+    assert!(
+        receipt["metrics"]["hebbian_spreading_latency_ms"]
+            .as_f64()
+            .unwrap()
+            < 10.0
+    );
+    assert!(
+        receipt["metrics"]["mcp_cold_start_handshake_ms"]
+            .as_f64()
+            .unwrap()
+            < 50.0
+    );
     assert_eq!(receipt["metrics"]["identity_field_fidelity"], 1.0);
 
     let _ = fs::remove_dir_all(&tmp_dir);
