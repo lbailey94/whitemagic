@@ -247,6 +247,12 @@ enum Commands {
         /// Scan live Product-Finsler constellations for 0-After-9 Curiosity Voids and register open loops (Horizon 2)
         #[arg(long)]
         curiosity_voids: bool,
+        /// Run cross-agent Sangha collective dreaming across all agent checkpoints
+        #[arg(long)]
+        sangha: bool,
+        /// Number of recent session checkpoints to sweep for collective dreaming (default: 20)
+        #[arg(long, default_value_t = 20)]
+        lookback: usize,
     },
     /// Cognitive router triage: evaluate dispatch tier for inquiry with dream-assisted fast path
     Route {
@@ -2280,7 +2286,54 @@ fn main() {
             all,
             sample_depth,
             curiosity_voids,
+            sangha,
+            lookback,
         } => {
+            if sangha {
+                println!("==================================================");
+                println!("     WhiteMagic Sangha Collective Dreaming        ");
+                println!("==================================================");
+                let journal_path = store_path.join("journal.jsonl");
+                let mut substrate =
+                    match Substrate::open(&store_path, Some(&journal_path), default_view()) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!("Error opening store at {}: {e}", store_path.display());
+                            std::process::exit(1);
+                        }
+                    };
+                substrate.set_intake_authority(RatifiedChannel::mint("wm-cli-dream-sangha"));
+                match substrate.execute_sangha_collective_dreaming(lookback) {
+                    Ok(rep) => {
+                        println!("Swept Sessions:         {}", rep.swept_sessions);
+                        println!("Distinct Swarm Agents:  {}", rep.distinct_agents.join(", "));
+                        println!("Cross-Agent Bridges:    {}", rep.cross_agent_bridges_formed);
+                        println!("Reconciled Corrections: {}", rep.reconciled_corrections.len());
+                        println!("Consolidated Lessons:   {}", rep.consolidated_lessons.len());
+                        println!("Collective Invariants:  {}", rep.collective_invariants.len());
+                        println!("Collective Gems Minted: {}", rep.collective_gems_minted.len());
+                        println!("Duration:               {:.2} ms", rep.duration_us / 1000.0);
+                        if !rep.collective_invariants.is_empty() {
+                            println!("\nCollective Invariants Distilled:");
+                            for inv in &rep.collective_invariants {
+                                println!("  - 🛡️  {inv}");
+                            }
+                        }
+                        if !rep.consolidated_lessons.is_empty() {
+                            println!("\nConsolidated Swarm Lessons:");
+                            for lesson in &rep.consolidated_lessons {
+                                println!("  - 💡 {lesson}");
+                            }
+                        }
+                        println!("==================================================");
+                        return;
+                    }
+                    Err(e) => {
+                        eprintln!("Error executing Sangha collective dreaming: {e}");
+                        std::process::exit(1);
+                    }
+                }
+            }
             let effective_sample_depth = if all { usize::MAX } else { sample_depth };
             let dual_phase = dual_phase.unwrap_or(true) && !no_dual_phase;
             let run_void_scan = curiosity_voids || dual_phase;

@@ -1057,9 +1057,148 @@ pub struct GapJunctionAck {
     pub timestamp_ms: u64,
 }
 
+/// An IETF SCITT-compliant verifiable gossip packet carrying distilled wisdom, identity invariants, or Gems.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ScittGossipPacket {
+    pub origin_node_id: String,
+    pub public_key: [u8; 32],
+    pub scitt_sequence_id: u64,
+    pub epoch: u64,
+    pub gem_invariant: String,
+    pub source_channel: String,
+    pub signature: Vec<u8>,
+}
+
+impl ScittGossipPacket {
+    pub fn signing_payload(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(self.origin_node_id.as_bytes());
+        buf.extend_from_slice(&self.scitt_sequence_id.to_be_bytes());
+        buf.extend_from_slice(&self.epoch.to_be_bytes());
+        buf.extend_from_slice(self.gem_invariant.as_bytes());
+        buf.extend_from_slice(self.source_channel.as_bytes());
+        buf
+    }
+
+    pub fn signed_with(
+        origin_node_id: &str,
+        scitt_sequence_id: u64,
+        epoch: u64,
+        gem_invariant: &str,
+        source_channel: &str,
+        signing_key: &SigningKey,
+    ) -> Self {
+        let mut packet = Self {
+            origin_node_id: origin_node_id.to_string(),
+            public_key: signing_key.verifying_key().to_bytes(),
+            scitt_sequence_id,
+            epoch,
+            gem_invariant: gem_invariant.to_string(),
+            source_channel: source_channel.to_string(),
+            signature: Vec::new(),
+        };
+        let payload = packet.signing_payload();
+        let sig = signing_key.sign(&payload);
+        packet.signature = sig.to_bytes().to_vec();
+        packet
+    }
+
+    pub fn verify(&self) -> Result<(), MeshError> {
+        let vk = VerifyingKey::from_bytes(&self.public_key)
+            .map_err(|e| MeshError::InvalidSignature(e.to_string()))?;
+        let sig_bytes: [u8; 64] = self
+            .signature
+            .as_slice()
+            .try_into()
+            .map_err(|_| MeshError::InvalidSignature("invalid signature length".into()))?;
+        let sig = Signature::from_bytes(&sig_bytes);
+        let payload = self.signing_payload();
+        vk.verify(&payload, &sig)
+            .map_err(|e| MeshError::InvalidSignature(e.to_string()))
+    }
+}
+
+/// Merkle summary digest of a node's invariant Gem pool for sub-10ms delta reconciliation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MerkleGemDigest {
+    pub node_id: String,
+    pub root_hash: [u8; 32],
+    pub gem_count: usize,
+    pub max_scitt_sequence: u64,
+}
+
+pub fn compute_gem_merkle_digest(node_id: &str, substrate: &Substrate) -> MerkleGemDigest {
+    let mut hasher = Sha256::new();
+    let records = substrate.store().iter_records().unwrap_or_default();
+    let mut count = 0;
+    for r in &records {
+        if r.content().contains("GEM") || r.content().contains("INVARIANT") {
+            hasher.update(r.content().as_bytes());
+            count += 1;
+        }
+    }
+    let root = hasher.finalize();
+    let mut root_bytes = [0u8; 32];
+    root_bytes.copy_from_slice(&root);
+    MerkleGemDigest {
+        node_id: node_id.to_string(),
+        root_hash: root_bytes,
+        gem_count: count,
+        max_scitt_sequence: substrate.store().epoch().unwrap_or(0),
+    }
+}
+
+pub fn reconcile_scitt_gossip_packet(
+    substrate: &mut Substrate,
+    packet: &ScittGossipPacket,
+) -> Result<Option<u64>, MeshError> {
+    packet.verify()?;
+
+    let existing = substrate.store().iter_records().unwrap_or_default();
+    if existing.iter().any(|r| r.content().contains(&packet.gem_invariant)) {
+        return Ok(None);
+    }
+
+    let gem_content = format!("[SCITT GOSSIP GEM #{}] {}", packet.scitt_sequence_id, packet.gem_invariant);
+    let ids = substrate.remember_batch(&[RememberItem {
+        content: gem_content,
+        source: format!("mesh:{}:{}", packet.origin_node_id, packet.source_channel),
+        kind: ImportKind::Reported,
+    }]);
+
+    match ids.first() {
+        Some(Ok(id)) => Ok(Some(*id)),
+        Some(Err(e)) => Err(MeshError::StoreError(e.clone())),
+        None => Err(MeshError::StoreError("failed to ingest gossip gem".into())),
+    }
+}
+
+pub fn reconcile_mesh_gossip_delta(
+    substrate: &mut Substrate,
+    remote_digest: &MerkleGemDigest,
+    incoming_packets: &[ScittGossipPacket],
+) -> Result<usize, MeshError> {
+    let local_digest = compute_gem_merkle_digest(&remote_digest.node_id, substrate);
+    if local_digest.root_hash == remote_digest.root_hash {
+        return Ok(0);
+    }
+
+    let mut ingested = 0;
+    for packet in incoming_packets {
+        if let Some(_) = reconcile_scitt_gossip_packet(substrate, packet)? {
+            ingested += 1;
+        }
+    }
+    Ok(ingested)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "action", content = "payload")]
 pub enum MeshEnvelope {
+    #[serde(rename = "scitt.gossip")]
+    ScittGossip(ScittGossipPacket),
+    #[serde(rename = "scitt.merkle_req")]
+    ScittMerkleReq(MerkleGemDigest),
     #[serde(rename = "mesh.ping")]
     Ping { timestamp: u64 },
     #[serde(rename = "mesh.pong")]

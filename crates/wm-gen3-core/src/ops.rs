@@ -6654,6 +6654,14 @@ impl Substrate {
 
         Ok(harvested)
     }
+
+    /// Executes a cross-agent Sangha collective dreaming pass over recent multi-agent checkpoints.
+    pub fn execute_sangha_collective_dreaming(
+        &mut self,
+        lookback_sessions: usize,
+    ) -> Result<crate::dream::SanghaDreamReport, String> {
+        crate::dream::execute_sangha_collective_dreaming(self, lookback_sessions)
+    }
 }
 
 /// Helper function to distill an enduring invariant rule and category from decaying episodic content.

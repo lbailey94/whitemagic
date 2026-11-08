@@ -1077,6 +1077,126 @@ pub fn evaluate_downstream_task(
     }
 }
 
+/// Telemetry and synthesis report emitted by a cross-agent Sangha collective dreaming pass.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct SanghaDreamReport {
+    pub swept_sessions: usize,
+    pub distinct_agents: Vec<String>,
+    pub consolidated_lessons: Vec<String>,
+    pub reconciled_corrections: Vec<String>,
+    pub collective_invariants: Vec<String>,
+    pub cross_agent_bridges_formed: usize,
+    pub collective_gems_minted: Vec<u64>,
+    pub duration_us: f64,
+}
+
+/// Executes a cross-agent collective dreaming pass across recent checkpoints from all swarm agents.
+pub fn execute_sangha_collective_dreaming(
+    substrate: &mut Substrate,
+    lookback_sessions: usize,
+) -> Result<SanghaDreamReport, String> {
+    let start = Instant::now();
+    let continuities = substrate.session_continuities(None, lookback_sessions.max(10))?;
+    if continuities.is_empty() {
+        return Ok(SanghaDreamReport::default());
+    }
+
+    let mut distinct_agents = Vec::new();
+    for c in &continuities {
+        if !distinct_agents.contains(&c.agent_id) {
+            distinct_agents.push(c.agent_id.clone());
+        }
+    }
+
+    let mut reconciled_corrections = Vec::new();
+    let mut collective_invariants = Vec::new();
+
+    for c in &continuities {
+        for corr in &c.corrections {
+            if !reconciled_corrections.contains(corr) {
+                reconciled_corrections.push(corr.clone());
+            }
+        }
+        for inv in &c.identity_invariants {
+            if !collective_invariants.contains(inv) {
+                collective_invariants.push(inv.clone());
+            }
+        }
+    }
+
+    let mut consolidated_lessons = Vec::new();
+    for c in &continuities {
+        for l in &c.lessons {
+            let is_contradicted = reconciled_corrections.iter().any(|corr| {
+                let l_lower = l.to_lowercase();
+                let c_lower = corr.to_lowercase();
+                let has_negation = c_lower.contains("never")
+                    || c_lower.contains("do not")
+                    || c_lower.contains("prefer")
+                    || c_lower.contains("avoid")
+                    || c_lower.contains("deprecate");
+                has_negation && l_lower.split_whitespace().any(|word| word.len() > 4 && c_lower.contains(word))
+            });
+            if !is_contradicted && !consolidated_lessons.contains(l) {
+                consolidated_lessons.push(l.clone());
+            }
+        }
+    }
+
+    // Cross-Agent Hebbian Bridging: link recent checkpoints of distinct agents
+    let mut cross_agent_bridges_formed = 0;
+    if distinct_agents.len() >= 2 {
+        let mut agent_first_records: BTreeMap<String, u64> = BTreeMap::new();
+        for c in &continuities {
+            agent_first_records.entry(c.agent_id.clone()).or_insert(c.record_id);
+        }
+        let agent_records: Vec<(&String, &u64)> = agent_first_records.iter().collect();
+        for i in 0..agent_records.len() {
+            for j in (i + 1)..agent_records.len() {
+                let id_a = *agent_records[i].1;
+                let id_b = *agent_records[j].1;
+                if substrate.add_relation(crate::field::RelationKind::Associates, id_a, id_b, 0.85).is_ok() {
+                    cross_agent_bridges_formed += 1;
+                }
+            }
+        }
+    }
+
+    // Collective Gem Invariant Distillation: commit immortal Gems for consensus invariants
+    let mut collective_gems_minted = Vec::new();
+    let existing_records = substrate.store().iter_records().unwrap_or_default();
+    for inv in &collective_invariants {
+        let already_exists = existing_records.iter().any(|r| {
+            r.content().starts_with("[SANGHA COLLECTIVE GEM]") && r.content().contains(inv.as_str())
+        });
+        if !already_exists {
+            let content = format!("[SANGHA COLLECTIVE GEM] {}", inv);
+            let ids = substrate.remember_batch(&[RememberItem {
+                content,
+                source: "sangha:collective_dream".into(),
+                kind: ImportKind::Reported,
+            }]);
+            if let Some(Ok(gem_id)) = ids.first() {
+                for c in &continuities {
+                    let _ = substrate.add_relation(crate::field::RelationKind::Causal, c.record_id, *gem_id, 0.90);
+                }
+                collective_gems_minted.push(*gem_id);
+            }
+        }
+    }
+
+    Ok(SanghaDreamReport {
+        swept_sessions: continuities.len(),
+        distinct_agents,
+        consolidated_lessons,
+        reconciled_corrections,
+        collective_invariants,
+        cross_agent_bridges_formed,
+        collective_gems_minted,
+        duration_us: start.elapsed().as_micros() as f64,
+    })
+}
+
 /// Executes the full PEB-4 Continuous Dream Transition & Incubation Benchmark.
 pub fn run_peb4_continuous_dream_benchmark(seed: u64) -> Peb4BenchmarkReport {
     let quiescence_steps = vec![0.0f32, 0.25, 0.50, 0.75, 1.0];

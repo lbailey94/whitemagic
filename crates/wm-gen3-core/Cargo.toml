@@ -81,6 +81,14 @@ required-features = ["operator"]
 name = "gate17_spreading_activation"
 required-features = ["operator"]
 
+[[test]]
+name = "gate20_sangha_collective_dreaming"
+required-features = ["operator"]
+
+[[test]]
+name = "gate21_scitt_mesh_gossip"
+required-features = ["operator"]
+
 [dependencies]
 fastembed = "7.5.0"
 lmdb = "0.8"
