@@ -693,6 +693,24 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Run the Unified Wave 4 Takwin & Trace-Shrinking Benchmark Suite (PEB-23..PEB-25)
+    Wave4Benchmark {
+        /// Emit structured JSON benchmark report
+        #[arg(long)]
+        json: bool,
+    },
+    /// Export the live Gen3 store into a Merkle-anchored Holographic Wiki (_index.md + domain pages)
+    Wiki {
+        /// Output directory for the generated wiki markdown files
+        #[arg(long, default_value = "wiki")]
+        out: PathBuf,
+        /// Maximum number of salient records to index (default: 128)
+        #[arg(long, default_value_t = 128)]
+        limit: usize,
+        /// Emit structured JSON summary
+        #[arg(long)]
+        json: bool,
+    },
     /// Run the End-to-End 5-Category LongMemEval Zero-Token + Engram O(1) + GAM JIT Benchmark Harness
     LongmemevalBenchmark {
         /// Emit structured JSON benchmark report
@@ -4651,6 +4669,12 @@ fn main() {
         Commands::Wave3Benchmark { json } => {
             run_wave3_benchmark_command(json);
         }
+        Commands::Wave4Benchmark { json } => {
+            run_wave4_benchmark_command(json);
+        }
+        Commands::Wiki { out, limit, json } => {
+            run_wiki_command(&store_path, &out, limit, json);
+        }
         Commands::LongmemevalBenchmark { json } => {
             run_longmemeval_benchmark_command(json);
         }
@@ -5231,6 +5255,131 @@ fn run_wave3_benchmark_command(json: bool) {
             report.cluster_vi.cpr06_pq_and_gnosis_laws_verified
         );
         println!("==================================================================");
+    }
+}
+
+fn run_wave4_benchmark_command(json: bool) {
+    let report = wm_gen3_core::wave4_takwin::run_wave4_full_benchmark_suite();
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&report).unwrap_or_default()
+        );
+    } else {
+        println!("==================================================================");
+        println!("  WhiteMagic Gen3 — Wave 4 Takwīn & Trace-Shrinking Suite         ");
+        println!("==================================================================");
+        println!("Execution Time:         {} µs", report.execution_time_us);
+        println!(
+            "PEB-23 Trace Shrinker:  {} steps ➔ {} minimal steps ({:.0}x compression)",
+            report.raw_trace_steps,
+            report.shrunk_counterexample_steps,
+            report.trace_shrink_compression_x
+        );
+        println!("  • Replay Blob SHA-256: {}", report.replay_blob_sha256);
+        println!(
+            "PEB-24 Holographic Wiki: {} records, {} links ({:.1}% telephone loss)",
+            report.wiki_records_indexed,
+            report.wiki_associative_links,
+            report.subagent_telephone_loss_pct
+        );
+        println!("  • Wiki Merkle Root:    {}", report.wiki_merkle_root);
+        println!(
+            "PEB-25 Shaping Monitor:  Reliance={} · ProductCode={} · Clean={}",
+            report.reliance_shaping_blocked_superseded,
+            report.product_code_circumvention_caught,
+            report.clean_reasoning_allowed
+        );
+        println!("==================================================================");
+    }
+}
+
+fn run_wiki_command(store_path: &Path, out_dir: &Path, limit: usize, json: bool) {
+    use sha2::{Digest, Sha256};
+    let substrate = match Substrate::open_readonly(store_path, None, default_view()) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error opening store {}: {e}", store_path.display());
+            std::process::exit(1);
+        }
+    };
+    let records = match substrate.store().recent_records(limit.max(1)) {
+        Ok(records) => records,
+        Err(e) => {
+            eprintln!("Error reading recent records: {e}");
+            std::process::exit(1);
+        }
+    };
+    if records.is_empty() {
+        eprintln!("Store {} has no records to export", store_path.display());
+        std::process::exit(1);
+    }
+
+    let mut entries = Vec::with_capacity(records.len());
+    for (idx, rec) in records.iter().enumerate() {
+        let record_id = rec.id();
+        let source = rec.source();
+        let domain = if source.contains("dream") {
+            "dreams"
+        } else if source.starts_with("session") || source.contains("checkpoint") {
+            "sessions"
+        } else if source.contains("tool") || source.contains("exec") {
+            "tools"
+        } else if source.contains("relation") || source.contains("bridge") {
+            "relations"
+        } else {
+            "memory"
+        };
+        let content_preview: String = rec.content().chars().take(280).collect();
+        let mut h = Sha256::new();
+        h.update(rec.content().as_bytes());
+        let sha = format!("{:x}", h.finalize());
+        let next_id = records
+            .get((idx + 1) % records.len())
+            .map_or(record_id, |r| r.id());
+        entries.push(wm_gen3_core::wave4_takwin::WikiMemoryEntry {
+            record_id,
+            constellation_hex: (record_id % 64) as u8,
+            domain: domain.to_string(),
+            title: format!("Record #{} ({})", record_id, source),
+            content: content_preview.replace('\n', " "),
+            content_sha256: sha[..16].to_string(),
+            linked_record_ids: if next_id != record_id {
+                vec![next_id]
+            } else {
+                vec![]
+            },
+        });
+    }
+
+    let bundle = wm_gen3_core::wave4_takwin::compile_holographic_wiki(&entries);
+    if let Err(e) = std::fs::create_dir_all(out_dir) {
+        eprintln!("Error creating wiki output dir {}: {e}", out_dir.display());
+        std::process::exit(1);
+    }
+    let _ = std::fs::write(out_dir.join("_index.md"), &bundle.index_markdown);
+    for (page_name, page_md) in &bundle.pages {
+        let _ = std::fs::write(out_dir.join(page_name), page_md);
+    }
+
+    if json {
+        let out = serde_json::json!({
+            "status": "ok",
+            "out_dir": out_dir.display().to_string(),
+            "records_indexed": bundle.total_records_indexed,
+            "wiki_links": bundle.total_wiki_links,
+            "pages_written": bundle.pages.len() + 1,
+            "wiki_merkle_root": bundle.bundle_merkle_root,
+        });
+        println!("{}", serde_json::to_string_pretty(&out).unwrap_or_default());
+    } else {
+        println!(
+            "Exported Holographic Wiki to {} ({} records, {} links, Merkle root: {})",
+            out_dir.display(),
+            bundle.total_records_indexed,
+            bundle.total_wiki_links,
+            bundle.bundle_merkle_root
+        );
     }
 }
 

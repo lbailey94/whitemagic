@@ -1648,6 +1648,31 @@ impl Store {
         Ok(out)
     }
 
+    /// Return up to `limit` most recently allocated records in ascending ID order.
+    /// Scans the keyspace backward inside one read transaction so callers do not
+    /// decode the full store just to export a salient tail.
+    pub fn recent_records(&self, limit: usize) -> Result<Vec<EvidenceRecord>, StoreError> {
+        if limit == 0 {
+            return Ok(Vec::new());
+        }
+        let txn = self.env.begin_ro_txn()?;
+        let db = self.records;
+        let next_id = read_counter(&txn, self.default, META_NEXT_RECORD)?;
+        let mut out = Vec::with_capacity(limit.min(next_id as usize));
+        for id in (0..next_id).rev() {
+            if out.len() >= limit {
+                break;
+            }
+            match txn.get(db, &bytes_u64(id)) {
+                Ok(bytes) => out.push(self.decode_stored_record(id, bytes)?),
+                Err(lmdb::Error::NotFound) => {}
+                Err(error) => return Err(error.into()),
+            }
+        }
+        out.reverse();
+        Ok(out)
+    }
+
     pub fn record_count(&self) -> Result<usize, StoreError> {
         let txn = self.env.begin_ro_txn()?;
         let next_id = read_counter(&txn, self.default, META_NEXT_RECORD)?;
@@ -2983,6 +3008,35 @@ mod tests {
         assert_eq!(scanned, 1);
         assert_eq!(holes, vec![3]);
         assert_eq!(cursor, Some(3));
+    }
+
+    #[test]
+    fn recent_records_returns_tail_in_ascending_order() {
+        let dir = TempStore::new("recent-records");
+        let store = Store::open(&dir.0).unwrap();
+        let records: Vec<EvidenceRecord> = (0..5)
+            .map(|id| {
+                EvidenceRecord::from_wire(
+                    id,
+                    Domain::World,
+                    Class::Evidence,
+                    format!("record-{id}"),
+                    "test:recent".to_string(),
+                    1.0,
+                    RecordStatus::Persistent,
+                    id,
+                )
+            })
+            .collect();
+        store.seed_records_bulk(&records).unwrap();
+
+        let recent = store.recent_records(3).unwrap();
+        assert_eq!(
+            recent.iter().map(EvidenceRecord::id).collect::<Vec<_>>(),
+            vec![2, 3, 4]
+        );
+        assert!(store.recent_records(0).unwrap().is_empty());
+        assert_eq!(store.recent_records(10).unwrap().len(), 5);
     }
 
     #[test]
