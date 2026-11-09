@@ -486,6 +486,7 @@ const fn hex_val(b: u8) -> Option<u8> {
 }
 
 /// Row layout: `version byte || 24-byte nonce || XChaCha20-Poly1305 ct+tag`.
+#[allow(deprecated)]
 fn wrap(key: &[u8; AT_REST_KEY_LEN], info: &str, plaintext: &[u8]) -> Result<Vec<u8>> {
     let cipher = XChaCha20Poly1305::new(key.into());
     let mut nonce = [0u8; NONCE_LEN];
@@ -508,6 +509,7 @@ fn wrap(key: &[u8; AT_REST_KEY_LEN], info: &str, plaintext: &[u8]) -> Result<Vec
 
 /// Reverse of [`wrap`]; any bitflip in the version byte, nonce, ciphertext,
 /// tag, AAD, or key makes this fail closed.
+#[allow(deprecated)]
 fn unwrap_secret(
     key: &[u8; AT_REST_KEY_LEN],
     info: &str,
@@ -1263,6 +1265,7 @@ pub fn sealed_record_version(blob: &[u8]) -> Option<u64> {
 /// Seal a plaintext record body under the scope DEK. The content version
 /// travels in the (AAD-bound) header so readers can rebuild the AAD before
 /// decrypting.
+#[allow(deprecated)]
 #[must_use = "the sealed bytes are the value to store"]
 pub fn seal_record(
     plaintext: &[u8],
@@ -1296,6 +1299,7 @@ pub fn seal_record(
 /// Open a sealed record body for `galaxy_db_name`/`record_id`. Any wrong
 /// key, wrong identity (transplanted ciphertext), bitflip, or truncation
 /// fails closed.
+#[allow(deprecated)]
 pub fn open_record(
     blob: &[u8],
     key: &[u8; 32],
