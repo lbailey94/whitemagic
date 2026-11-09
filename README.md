@@ -181,6 +181,8 @@ wm selftest                     # install invariant + host health (--json, --str
 wm remember "decision text"     # record a memory (--galaxy, --source, --kind)
 wm recall "query"               # search memories (--limit, --historical, --scope)
 wm session list                 # sessions: checkpoint | record | continuity | list
+wm wiki --out ./wiki --limit 128 # export store to Merkle-anchored Holographic Wiki (_index.md)
+wm wave4-benchmark --json       # run Wave-4 Takwin & trace-shrinking benchmark (PEB-23..25)
 wm backup ./gen3-backup         # snapshot store + SHA256SUMS manifest (--json)
 wm restore ./gen3-backup        # verify SHA256SUMS and restore store (--force, --json)
 wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile cyberbrain

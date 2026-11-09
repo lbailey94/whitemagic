@@ -12,19 +12,22 @@ Local-first memory and session continuity for coding agents, exposed over MCP. A
 curl -fsSL https://www.whitemagic.dev/install.sh?ref=gen3-skill | sh
 wm --version         # expect: wm 11.2.0 (Gen3 line)
 wm --store "$HOME/.local/share/whitemagic/gen3" grimoire --plan
-                     # environment/store check + client-config target preview
-                     # may initialize/seed this store; does not edit client configs
+                     # 100% read-only environment/store check + client-config target preview
+                     # 0 disk writes even on missing or --bare stores; does not edit client configs
 wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile cyberbrain
                      # MCP stdio server using the separate Gen3 store
 wm selftest --json   # install invariant (throwaway store) + host_status/host_health
 wm selftest --strict # exit 1 only when the host verdict is critical
+wm wiki --out ./wiki # export store into a Merkle-anchored Holographic Wiki (_index.md)
+wm backup ./backup   # snapshot store + SHA256SUMS manifest (--json)
+wm restore ./backup  # verify SHA256SUMS and restore store (--force, --json)
 wm ingest --file notes.jsonl --default-source notes:stream   # JSONL stream ('-' = stdin)
 # folder/document harvesting is the MCP `memory.ingest` tool (dry-run-first, redacts by default)
 ```
 
-The v9-only commands (`doctor`, `connect`, `setup`, `quickstart`, `backup`,
-`restore`, `update`, `seal`, `verify`, `trust`, `anchor`) belong to the `wm9`
-binary line, not Gen3 `wm`. Gen3 `grimoire --plan` reports client config targets
+The v9-only commands (`doctor`, `connect`, `setup`, `quickstart`,
+`update`, `seal`, `verify`, `trust`, `anchor`) belong to the `wm9`
+binary line; `wm backup`, `wm restore`, `wm wiki`, and `wm verify-receipt` are natively supported in `wm 11.2.0`. Gen3 `grimoire --plan` reports client config targets
 without writing them; add the `serve` command shown below to the client config.
 Building from source instead: `cargo build --release` in this repository, then install `target/release/wm` onto your `PATH`.
 
@@ -84,10 +87,9 @@ path for anything that matters.
 
 - Trusted, local, single-user operation; Linux Landlock containment
   and firebreak guards are part of the contract.
-- Back up the store directory (copy it while no server runs) before risky
-  operations, and verify with `wm selftest`; `wm backup`/`wm restore` are
-  wm9-line commands, not Gen3.
-- The web surface (https://whitemagic.dev) is a discovery surface,
+- Back up the store directory using `wm backup <dest_dir> --json` (or copy it while no server runs) before risky
+  operations, and verify with `wm selftest` and `wm status`.
+- The web surface (https://www.whitemagic.dev) is a discovery surface,
   not a host: it never holds your memories.
 - Security posture and reporting: [SECURITY.md](SECURITY.md).
 - Privacy: [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
@@ -97,4 +99,4 @@ path for anything that matters.
 - [README.md](README.md) — product overview and supported contract.
 - [CHANGELOG.md](CHANGELOG.md) — release history.
 - [docs/INDEX.md](docs/INDEX.md) — map of the documentation tree.
-- Machine-readable identity: https://whitemagic.dev/ai-agent.json
+- Machine-readable discovery: https://www.whitemagic.dev/.well-known/mcp/server-card.json · https://mcp.whitemagic.dev/.well-known/agent-card.json

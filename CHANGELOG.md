@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [11.2.0] — 2026-11-08 (UTC)
 
 ### Added
+- **Wave-4 Takwīn Synthesis (Gates PEB-23, PEB-24, PEB-25)**:
+  - **PEB-23 Deterministic Trace Shrinker**: shrinks multi-step failure traces (`1,200` steps → `2` minimal counterexample steps, `600x` compression) sealed with a SHA-256 replay digest (`wm wave4-benchmark`).
+  - **PEB-24 Merkle-Anchored Holographic Wiki & Subagent Reset Mount (`wm wiki`)**: exports recent store records (`Store::recent_records`) into a linked Markdown wiki (`_index.md` + domain pages) with `0.0%` multi-hop subagent telephone loss.
+  - **PEB-25 Mechanistic Shaping & Sycophancy Monitor**: blocks superseded/retracted belief reliance and catches product-code test-circumvention patterns while preserving clean reasoning.
 - **Sangha Collective Dreaming (Gate PEB-20)**: Autonomous multi-agent offline memory consolidation and stigmergic synthesis across distributed agent workspaces.
 - **SCITT Merkle Mesh Gossip (Gate PEB-21)**: Cryptographic tamper-evident receipt verification and Merkle log gossip adhering to IETF SCITT standards.
 - **Turnkey Public Benchmark Suite (Gate PEB-22)**: Headless `wm_benchmark --suite 10of10` ecosystem evaluation emitting standardized markdown comparison reports and deterministic cryptographic JSON receipts.
