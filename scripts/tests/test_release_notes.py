@@ -11,6 +11,11 @@ SCRIPT = REPO_ROOT / "scripts" / "release_notes.py"
 
 CHANGELOG = """# Changelog
 
+## [11.0.0] — 2026-11-07
+
+### Changed
+- Gen3 stable release note fixture.
+
 ## [10.6.1] — 2026-10-27
 
 ### Changed
@@ -71,12 +76,23 @@ class ReleaseNotesTest(unittest.TestCase):
         out = result.stdout
         self.assertIn("--version v10.6.1", out)
         self.assertIn("whitemagic-mcp@10.6.1", out)
-        self.assertIn("cargo install whitemagic --version 10.6.1", out)
+        self.assertNotIn("cargo install whitemagic --version 10.6.1", out)
         self.assertIn("lbailey94/whitemagic:10.6.1", out)
         self.assertNotIn("lbailey94/whitemagic:9", out)
         self.assertIn('wm --store "$HOME/.local/share/whitemagic/gen3" grimoire --plan', out)
         self.assertIn('wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile cyberbrain', out)
         for unsupported in ("wm connect", "wm setup", "wm quickstart", "wm doctor", "--profile curated", "grimoire --write"):
+            self.assertNotIn(unsupported, out)
+
+    def test_gen3_11_notes_keep_commands_and_platform_claims_bounded(self):
+        result = self.run_script("--version", "v11.0.0")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        out = result.stdout
+        self.assertIn("--version v11.0.0", out)
+        self.assertIn("serve --profile cyberbrain", out)
+        self.assertIn("Windows x86-64 and Intel macOS native assets are not in this matrix", out)
+        self.assertIn("Check the signed release manifest", out)
+        for unsupported in ("wm connect", "wm setup", "wm quickstart", "--profile curated", "cargo install whitemagic"):
             self.assertNotIn(unsupported, out)
 
     def test_gen2_release_notes_keep_connect_preview_then_write(self):
