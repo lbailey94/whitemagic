@@ -184,7 +184,7 @@ wm session list                 # sessions: checkpoint | record | continuity | l
 wm wiki --out ./wiki --limit 128 # export store to Merkle-anchored Holographic Wiki (_index.md)
 wm wave4-benchmark --json       # run Wave-4 Takwin & trace-shrinking benchmark (PEB-23..25)
 wm backup ./gen3-backup         # snapshot store + SHA256SUMS manifest (--json)
-wm restore ./gen3-backup        # verify SHA256SUMS and restore store (--force, --json)
+wm restore ./gen3-backup        # verify SHA256SUMS and restore to a fresh store (--json)
 wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile cyberbrain
 ```
 
@@ -240,12 +240,21 @@ Explicit routing is the dependable contract:
 
 ## Backup and restore
 
-In `wm 11.2.0+`, use `wm backup <dest_dir> [--json]` and `wm restore <backup_dir> [--force] [--json]`
-to create and verify a full store snapshot with a `SHA256SUMS` manifest (or copy the **whole store directory** while no server is running):
+In this candidate, use `wm backup <dest_dir> [--json]` and `wm restore <backup_dir> [--json]`
+to copy and check store files against a `SHA256SUMS` manifest. The source must
+be quiescent and unchanged for the full backup; this command does not stop or
+coordinate writers. A manifest stored with the backup detects accidental
+changes but does not authenticate its source or establish completeness if
+both files and manifest are altered. Restore requires a fresh destination
+under a private, exclusively controlled parent; `--force` is disabled.
+Neither operation guarantees durability across a crash or resists concurrent
+malicious changes to the source or destination tree.
 
 ```bash
 # Stop any `wm serve` first, then run:
 wm backup /path/to/external/disk/gen3-$(date +%F) --json
+# Restore only to a fresh path beneath an existing private directory:
+wm --store /path/to/private-parent/restored restore /path/to/external/disk/gen3-YYYY-MM-DD --json
 # Or copy the store root directly:
 cp -a ~/.local/share/whitemagic/gen3 /path/to/external/disk/gen3-$(date +%F)
 ```

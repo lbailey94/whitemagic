@@ -5110,6 +5110,18 @@ fn run_restore_command(src: &Path, store_path: &Path, force: bool, json: bool) -
         eprintln!("Error: destination needs an existing private parent");
         return 1;
     };
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if !std::fs::metadata(parent)
+            .is_ok_and(|m| m.is_dir() && m.permissions().mode() & 0o077 == 0)
+        {
+            eprintln!(
+                "Error: restore parent must be an existing directory inaccessible to group and others"
+            );
+            return 1;
+        }
+    }
     let stage = parent.join(format!(".wm-restore-stage-{}", uuid::Uuid::new_v4()));
     let mut stage_builder = std::fs::DirBuilder::new();
     #[cfg(unix)]
@@ -5199,6 +5211,11 @@ mod snapshot_recovery_tests {
         let backup = root.join("backup");
         let restored = root.join("restored");
         std::fs::create_dir_all(live.join("receipts")).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).unwrap();
+        }
         std::fs::write(live.join("data.mdb"), b"test database").unwrap();
         std::fs::write(live.join("lock.mdb"), b"ephemeral lock").unwrap();
         std::fs::write(live.join("receipts/first.json"), b"receipt").unwrap();
@@ -5320,6 +5337,24 @@ mod snapshot_recovery_tests {
         std::fs::write(dst.join("old"), b"preserve").unwrap();
         assert_ne!(run_restore_command(&src, &dst, true, false), 0);
         assert_eq!(std::fs::read(dst.join("old")).unwrap(), b"preserve");
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn restore_rejects_shared_destination_parent() {
+        use std::os::unix::fs::PermissionsExt;
+        let root =
+            std::env::temp_dir().join(format!("wm-snapshot-parent-{}", uuid::Uuid::new_v4()));
+        let source = root.join("source");
+        let destination = root.join("restored");
+        std::fs::create_dir_all(&source).unwrap();
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o755)).unwrap();
+        std::fs::write(source.join("data.mdb"), b"database").unwrap();
+        let hash = sha256_file_hex(&source.join("data.mdb")).unwrap();
+        std::fs::write(source.join("SHA256SUMS"), format!("{hash}  data.mdb\n")).unwrap();
+        assert_ne!(run_restore_command(&source, &destination, false, false), 0);
+        assert!(!destination.exists());
         std::fs::remove_dir_all(root).unwrap();
     }
 }
