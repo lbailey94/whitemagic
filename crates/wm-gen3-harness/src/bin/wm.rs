@@ -750,7 +750,7 @@ enum Commands {
     Restore {
         /// Source backup directory
         src: PathBuf,
-        /// Overwrite existing store files if destination is non-empty
+        /// Disabled: restore requires a fresh destination
         #[arg(long)]
         force: bool,
         /// Emit structured JSON output
@@ -4704,46 +4704,237 @@ fn main() {
 
 fn sha256_file_hex(path: &Path) -> std::io::Result<String> {
     use sha2::{Digest, Sha256};
-    let bytes = std::fs::read(path)?;
+    use std::io::Read;
+    let mut file = std::fs::File::open(path)?;
     let mut hasher = Sha256::new();
-    hasher.update(&bytes);
+    let mut buffer = [0_u8; 64 * 1024];
+    loop {
+        let count = file.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        hasher.update(&buffer[..count]);
+    }
     let digest = hasher.finalize();
     Ok(digest.iter().map(|b| format!("{b:02x}")).collect())
 }
 
+// A backup may contain keys and private memories. Do not copy the source's
+// potentially broad permissions (for example from an exFAT mount).
+fn copy_snapshot_file(src: &Path, dest: &Path) -> std::io::Result<()> {
+    let mut input = std::fs::File::open(src)?;
+    let parent = dest.parent().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "destination has no parent",
+        )
+    })?;
+    let temporary = parent.join(format!(".wm-snapshot-{}.tmp", uuid::Uuid::new_v4()));
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut output = options.open(&temporary)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        output.set_permissions(std::fs::Permissions::from_mode(0o600))?;
+    }
+    std::io::copy(&mut input, &mut output)?;
+    drop(output);
+    std::fs::rename(temporary, dest)?;
+    Ok(())
+}
+
+fn reject_overlapping_snapshot_roots(source: &Path, destination: &Path) -> std::io::Result<()> {
+    use std::path::Component;
+    let source = std::fs::canonicalize(source)?;
+    let destination = std::path::absolute(destination)?;
+    let mut existing = destination.as_path();
+    while !existing.exists() {
+        existing = existing.parent().ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "destination has no existing parent",
+            )
+        })?;
+    }
+    let suffix = destination
+        .strip_prefix(existing)
+        .map_err(std::io::Error::other)?;
+    if !suffix
+        .components()
+        .all(|part| matches!(part, Component::Normal(_)))
+        && !suffix.as_os_str().is_empty()
+    {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "unsafe destination path",
+        ));
+    }
+    let destination = std::fs::canonicalize(existing)?.join(suffix);
+    if source.starts_with(&destination) || destination.starts_with(&source) {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "source and destination overlap",
+        ));
+    }
+    Ok(())
+}
+
+// Snapshot paths are relative and must never traverse links or escape their root.
+// The source and destination must not be modified by another process during restore.
+fn snapshot_path(
+    root: &Path,
+    name: &str,
+    leaf_may_be_missing: bool,
+) -> std::io::Result<std::path::PathBuf> {
+    use std::path::Component;
+    let relative = Path::new(name);
+    if name.is_empty()
+        || name.trim() != name
+        || name.contains(['\n', '\r'])
+        || !relative
+            .components()
+            .all(|c| matches!(c, Component::Normal(_)))
+    {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "unsafe snapshot path",
+        ));
+    }
+    let components: Vec<_> = relative.components().collect();
+    let mut path = root.to_path_buf();
+    for (index, component) in components.iter().enumerate() {
+        path.push(component.as_os_str());
+        match std::fs::symlink_metadata(&path) {
+            Ok(meta) if meta.file_type().is_symlink() => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "snapshot path contains symlink",
+                ));
+            }
+            Ok(meta) if index + 1 < components.len() && !meta.is_dir() => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "snapshot parent is not a directory",
+                ));
+            }
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound && leaf_may_be_missing => {}
+            Err(e) => return Err(e),
+        }
+    }
+    Ok(path)
+}
+
+fn collect_snapshot_files(
+    root: &Path,
+    directory: &Path,
+    files: &mut Vec<String>,
+) -> std::io::Result<()> {
+    for entry in std::fs::read_dir(directory)? {
+        let entry = entry?;
+        let path = entry.path();
+        let file_type = entry.file_type()?;
+        let relative = path.strip_prefix(root).map_err(std::io::Error::other)?;
+        let name = relative.to_str().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, "non-UTF-8 snapshot path")
+        })?;
+        if name == "lock.mdb" || name == "SHA256SUMS" {
+            continue;
+        }
+        snapshot_path(root, name, false)?;
+        if file_type.is_dir() {
+            collect_snapshot_files(root, &path, files)?;
+        } else if file_type.is_file() {
+            files.push(name.to_owned());
+        } else {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "snapshot contains non-regular file",
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn run_backup_command(store_path: &Path, dest: &Path, json: bool) -> i32 {
-    if !store_path.exists() {
-        eprintln!("Error: store path {} does not exist", store_path.display());
+    eprintln!(
+        "Backup requires an immutable, quiescent source; this command does not stop or coordinate writers."
+    );
+    if !std::fs::symlink_metadata(store_path)
+        .is_ok_and(|m| m.is_dir() && !m.file_type().is_symlink())
+    {
+        eprintln!(
+            "Error: store path {} is not a real directory",
+            store_path.display()
+        );
         return 1;
     }
+    if let Err(e) = reject_overlapping_snapshot_roots(store_path, dest) {
+        eprintln!("Error: invalid backup destination: {e}");
+        return 1;
+    }
+    let mut file_names = Vec::new();
+    if let Err(e) = collect_snapshot_files(store_path, store_path, &mut file_names) {
+        eprintln!("Error enumerating snapshot: {e}");
+        return 1;
+    }
+    if !file_names.iter().any(|name| name == "data.mdb") {
+        eprintln!("Error: store has no data.mdb");
+        return 1;
+    }
+    if dest.exists()
+        && std::fs::read_dir(dest)
+            .map(|mut d| d.next().is_some())
+            .unwrap_or(true)
+    {
+        eprintln!("Error: backup destination must be an empty directory");
+        return 1;
+    }
+    if std::fs::symlink_metadata(dest).is_ok_and(|m| m.file_type().is_symlink()) {
+        eprintln!("Error: backup destination must not be a symlink");
+        return 1;
+    }
+    let destination_existed = dest.exists();
     if let Err(e) = std::fs::create_dir_all(dest) {
         eprintln!("Error creating backup directory {}: {e}", dest.display());
         return 1;
     }
-    let mut copied_files = Vec::new();
-    let mut manifest_lines = Vec::new();
-    let entries = match std::fs::read_dir(store_path) {
-        Ok(e) => e,
-        Err(e) => {
-            eprintln!(
-                "Error reading store directory {}: {e}",
-                store_path.display()
-            );
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if !destination_existed {
+            if let Err(e) = std::fs::set_permissions(dest, std::fs::Permissions::from_mode(0o700)) {
+                eprintln!("Error securing backup directory: {e}");
+                return 1;
+            }
+        }
+        if !std::fs::metadata(dest).is_ok_and(|m| m.permissions().mode() & 0o077 == 0) {
+            eprintln!("Error: backup directory must not be accessible to group or others");
             return 1;
         }
-    };
-    let mut file_names: Vec<String> = entries
-        .filter_map(Result::ok)
-        .filter(|e| e.path().is_file())
-        .map(|e| e.file_name().to_string_lossy().into_owned())
-        .filter(|name| name != "lock.mdb" && name != "SHA256SUMS")
-        .collect();
+    }
+    #[cfg(not(unix))]
+    let _ = destination_existed;
+    let mut copied_files = Vec::new();
+    let mut manifest_lines = Vec::new();
     file_names.sort();
 
     for name in file_names {
         let src_file = store_path.join(&name);
         let dst_file = dest.join(&name);
-        if let Err(e) = std::fs::copy(&src_file, &dst_file) {
+        if let Some(parent) = dst_file.parent() {
+            if let Err(e) = std::fs::create_dir_all(parent) {
+                eprintln!("Error creating backup directory: {e}");
+                return 1;
+            }
+        }
+        if let Err(e) = copy_snapshot_file(&src_file, &dst_file) {
             eprintln!(
                 "Error copying {} to {}: {e}",
                 src_file.display(),
@@ -4767,7 +4958,20 @@ fn run_backup_command(store_path: &Path, dest: &Path, json: bool) -> i32 {
     }
     let manifest_path = dest.join("SHA256SUMS");
     let manifest_content = format!("{}\n", manifest_lines.join("\n"));
-    if let Err(e) = std::fs::write(&manifest_path, manifest_content) {
+    let manifest_write = (|| -> std::io::Result<()> {
+        use std::io::Write;
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        options
+            .open(&manifest_path)?
+            .write_all(manifest_content.as_bytes())
+    })();
+    if let Err(e) = manifest_write {
         eprintln!("Error writing {}: {e}", manifest_path.display());
         return 1;
     }
@@ -4796,25 +5000,36 @@ fn run_backup_command(store_path: &Path, dest: &Path, json: bool) -> i32 {
 }
 
 fn run_restore_command(src: &Path, store_path: &Path, force: bool, json: bool) -> i32 {
+    if force {
+        eprintln!("Error: --force is disabled; restore into a fresh destination");
+        return 1;
+    }
+    if !std::fs::symlink_metadata(src).is_ok_and(|m| m.is_dir() && !m.file_type().is_symlink())
+        || std::fs::symlink_metadata(store_path).is_ok_and(|m| m.file_type().is_symlink())
+    {
+        eprintln!("Error: snapshot roots must be real directories, not symlinks");
+        return 1;
+    }
+    if let Err(e) = reject_overlapping_snapshot_roots(src, store_path) {
+        eprintln!("Error: invalid restore destination: {e}");
+        return 1;
+    }
     let manifest_path = src.join("SHA256SUMS");
-    if !manifest_path.is_file() {
+    if !std::fs::symlink_metadata(&manifest_path)
+        .is_ok_and(|m| m.is_file() && !m.file_type().is_symlink())
+    {
         eprintln!(
             "Error: backup manifest {} not found",
             manifest_path.display()
         );
         return 1;
     }
-    if store_path.exists() && !force {
-        let non_empty = std::fs::read_dir(store_path)
-            .map(|mut d| d.next().is_some())
-            .unwrap_or(false);
-        if non_empty {
-            eprintln!(
-                "Error: destination store {} is non-empty (pass --force to overwrite)",
-                store_path.display()
-            );
-            return 1;
-        }
+    if std::fs::symlink_metadata(store_path).is_ok() {
+        eprintln!(
+            "Error: destination store {} must not already exist",
+            store_path.display()
+        );
+        return 1;
     }
     let manifest_raw = match std::fs::read_to_string(&manifest_path) {
         Ok(s) => s,
@@ -4824,6 +5039,7 @@ fn run_restore_command(src: &Path, store_path: &Path, force: bool, json: bool) -
         }
     };
     let mut entries_to_restore = Vec::new();
+    let mut seen = std::collections::HashSet::new();
     for line in manifest_raw.lines() {
         let trimmed = line.trim();
         if trimmed.is_empty() {
@@ -4832,11 +5048,24 @@ fn run_restore_command(src: &Path, store_path: &Path, force: bool, json: bool) -
         let mut parts = trimmed.splitn(2, char::is_whitespace);
         let expected_hash = parts.next().unwrap_or("").trim();
         let file_name = parts.next().unwrap_or("").trim();
-        if expected_hash.is_empty() || file_name.is_empty() {
+        if expected_hash.len() != 64
+            || !expected_hash.bytes().all(|b| b.is_ascii_hexdigit())
+            || !seen.insert(file_name.to_string())
+        {
             eprintln!("Error: malformed line in SHA256SUMS: {trimmed}");
             return 1;
         }
-        let src_file = src.join(file_name);
+        let src_file = match snapshot_path(src, file_name, false) {
+            Ok(path) => path,
+            Err(e) => {
+                eprintln!("Error: unsafe source path {file_name}: {e}");
+                return 1;
+            }
+        };
+        if let Err(e) = snapshot_path(store_path, file_name, true) {
+            eprintln!("Error: unsafe destination path {file_name}: {e}");
+            return 1;
+        }
         if !src_file.is_file() {
             eprintln!("Error: backup file missing: {}", src_file.display());
             return 1;
@@ -4857,17 +5086,66 @@ fn run_restore_command(src: &Path, store_path: &Path, force: bool, json: bool) -
         }
         entries_to_restore.push((file_name.to_string(), expected_hash.to_string()));
     }
-    if let Err(e) = std::fs::create_dir_all(store_path) {
+    if !seen.contains("data.mdb") {
+        eprintln!("Error: backup manifest does not contain data.mdb");
+        return 1;
+    }
+    let mut actual_files = Vec::new();
+    if let Err(e) = collect_snapshot_files(src, src, &mut actual_files) {
+        eprintln!("Error enumerating backup contents: {e}");
+        return 1;
+    }
+    if actual_files.len() != seen.len() || actual_files.iter().any(|path| !seen.contains(path)) {
+        eprintln!("Error: manifest does not exactly cover backup files");
+        return 1;
+    }
+    let destination = match std::path::absolute(store_path) {
+        Ok(path) => path,
+        Err(e) => {
+            eprintln!("Error resolving destination: {e}");
+            return 1;
+        }
+    };
+    let Some(parent) = destination.parent() else {
+        eprintln!("Error: destination needs an existing private parent");
+        return 1;
+    };
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if !std::fs::metadata(parent)
+            .is_ok_and(|m| m.is_dir() && m.permissions().mode() & 0o077 == 0)
+        {
+            eprintln!(
+                "Error: restore parent must be an existing directory inaccessible to group and others"
+            );
+            return 1;
+        }
+    }
+    let stage = parent.join(format!(".wm-restore-stage-{}", uuid::Uuid::new_v4()));
+    let mut stage_builder = std::fs::DirBuilder::new();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        stage_builder.mode(0o700);
+    }
+    if let Err(e) = stage_builder.create(&stage) {
         eprintln!(
-            "Error creating store directory {}: {e}",
-            store_path.display()
+            "Error creating private restore stage {}: {e}",
+            stage.display()
         );
         return 1;
     }
-    for (file_name, _) in &entries_to_restore {
+    for (file_name, expected_hash) in &entries_to_restore {
         let src_file = src.join(file_name);
-        let dst_file = store_path.join(file_name);
-        if let Err(e) = std::fs::copy(&src_file, &dst_file) {
+        let dst_file = stage.join(file_name);
+        if let Some(parent) = dst_file.parent() {
+            if let Err(e) = std::fs::create_dir_all(parent) {
+                eprintln!("Error creating restore directory: {e}");
+                return 1;
+            }
+        }
+        if let Err(e) = copy_snapshot_file(&src_file, &dst_file) {
             eprintln!(
                 "Error restoring {} to {}: {e}",
                 src_file.display(),
@@ -4875,6 +5153,30 @@ fn run_restore_command(src: &Path, store_path: &Path, force: bool, json: bool) -
             );
             return 1;
         }
+        if !sha256_file_hex(&dst_file)
+            .is_ok_and(|actual| actual.eq_ignore_ascii_case(expected_hash))
+        {
+            eprintln!("Error: restored bytes failed verification for {file_name}");
+            return 1;
+        }
+    }
+    // Reserve the destination without overwriting an existing directory, then
+    // replace only the empty directory we just created. Parent must be private
+    // and exclusively controlled for the duration of the restore.
+    if let Err(e) = std::fs::create_dir(&destination) {
+        eprintln!(
+            "Error reserving destination; verified stage retained at {}: {e}",
+            stage.display()
+        );
+        return 1;
+    }
+    if let Err(e) = std::fs::rename(&stage, &destination) {
+        eprintln!(
+            "Error promoting verified stage {}; stage and reserved destination {} retained: {e}",
+            stage.display(),
+            destination.display()
+        );
+        return 1;
     }
     if json {
         println!(
@@ -4896,6 +5198,165 @@ fn run_restore_command(src: &Path, store_path: &Path, force: bool, json: bool) -
         );
     }
     0
+}
+
+#[cfg(test)]
+mod snapshot_recovery_tests {
+    use super::*;
+
+    #[test]
+    fn snapshot_round_trip_preserves_nested_receipts() {
+        let root = std::env::temp_dir().join(format!("wm-snapshot-{}", uuid::Uuid::new_v4()));
+        let live = root.join("live");
+        let backup = root.join("backup");
+        let restored = root.join("restored");
+        std::fs::create_dir_all(live.join("receipts")).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).unwrap();
+        }
+        std::fs::write(live.join("data.mdb"), b"test database").unwrap();
+        std::fs::write(live.join("lock.mdb"), b"ephemeral lock").unwrap();
+        std::fs::write(live.join("receipts/first.json"), b"receipt").unwrap();
+        assert_eq!(run_backup_command(&live, &backup, false), 0);
+        assert_eq!(run_restore_command(&backup, &restored, false, false), 0);
+        assert_eq!(
+            std::fs::read(restored.join("data.mdb")).unwrap(),
+            b"test database"
+        );
+        assert_eq!(
+            std::fs::read(restored.join("receipts/first.json")).unwrap(),
+            b"receipt"
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                std::fs::metadata(restored.join("data.mdb"))
+                    .unwrap()
+                    .permissions()
+                    .mode()
+                    & 0o777,
+                0o600
+            );
+        }
+        assert!(!restored.join("lock.mdb").exists());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn restore_rejects_parent_escape_without_touching_outside_file() {
+        let root =
+            std::env::temp_dir().join(format!("wm-snapshot-escape-{}", uuid::Uuid::new_v4()));
+        let src = root.join("input/source");
+        let dst = root.join("output/destination");
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::create_dir_all(dst.parent().unwrap()).unwrap();
+        std::fs::write(root.join("input/payload"), b"attacker").unwrap();
+        std::fs::write(root.join("output/payload"), b"untouched").unwrap();
+        let hash = sha256_file_hex(&root.join("input/payload")).unwrap();
+        std::fs::write(src.join("SHA256SUMS"), format!("{hash}  ../payload\n")).unwrap();
+        assert_ne!(run_restore_command(&src, &dst, false, false), 0);
+        assert_eq!(
+            std::fs::read(root.join("output/payload")).unwrap(),
+            b"untouched"
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn restore_rejects_symlink_in_source() {
+        use std::os::unix::fs::symlink;
+        let root = std::env::temp_dir().join(format!("wm-snapshot-link-{}", uuid::Uuid::new_v4()));
+        let src = root.join("source");
+        let dst = root.join("destination");
+        let outside = root.join("outside");
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::write(src.join("data.mdb"), b"database").unwrap();
+        std::fs::write(outside.join("item"), b"payload").unwrap();
+        symlink(&outside, src.join("receipts")).unwrap();
+        let a = sha256_file_hex(&src.join("data.mdb")).unwrap();
+        let b = sha256_file_hex(&src.join("receipts/item")).unwrap();
+        std::fs::write(
+            src.join("SHA256SUMS"),
+            format!("{a}  data.mdb\n{b}  receipts/item\n"),
+        )
+        .unwrap();
+        assert_ne!(run_restore_command(&src, &dst, false, false), 0);
+        assert!(!dst.exists());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn restore_rejects_tampering_before_writing_anything() {
+        let root =
+            std::env::temp_dir().join(format!("wm-snapshot-tamper-{}", uuid::Uuid::new_v4()));
+        let src = root.join("source");
+        let dst = root.join("destination");
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::write(src.join("data.mdb"), b"correct").unwrap();
+        let hash = sha256_file_hex(&src.join("data.mdb")).unwrap();
+        std::fs::write(src.join("SHA256SUMS"), format!("{hash}  data.mdb\n")).unwrap();
+        std::fs::write(src.join("data.mdb"), b"changed").unwrap();
+        assert_ne!(run_restore_command(&src, &dst, false, false), 0);
+        assert!(!dst.exists());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn backup_rejects_destination_within_source_without_creating_it() {
+        let root =
+            std::env::temp_dir().join(format!("wm-snapshot-overlap-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("data.mdb"), b"database").unwrap();
+        assert_ne!(
+            run_backup_command(&root, &root.join("nested/backup"), false),
+            0
+        );
+        assert!(!root.join("nested").exists());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn restore_rejects_truncated_manifest_and_existing_destination() {
+        let root =
+            std::env::temp_dir().join(format!("wm-snapshot-coverage-{}", uuid::Uuid::new_v4()));
+        let src = root.join("source");
+        let dst = root.join("destination");
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::write(src.join("data.mdb"), b"database").unwrap();
+        std::fs::write(src.join("journal.jsonl"), b"journal").unwrap();
+        let hash = sha256_file_hex(&src.join("data.mdb")).unwrap();
+        std::fs::write(src.join("SHA256SUMS"), format!("{hash}  data.mdb\n")).unwrap();
+        assert_ne!(run_restore_command(&src, &dst, false, false), 0);
+        assert!(!dst.exists());
+        std::fs::create_dir_all(&dst).unwrap();
+        std::fs::write(dst.join("old"), b"preserve").unwrap();
+        assert_ne!(run_restore_command(&src, &dst, true, false), 0);
+        assert_eq!(std::fs::read(dst.join("old")).unwrap(), b"preserve");
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn restore_rejects_shared_destination_parent() {
+        use std::os::unix::fs::PermissionsExt;
+        let root =
+            std::env::temp_dir().join(format!("wm-snapshot-parent-{}", uuid::Uuid::new_v4()));
+        let source = root.join("source");
+        let destination = root.join("restored");
+        std::fs::create_dir_all(&source).unwrap();
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o755)).unwrap();
+        std::fs::write(source.join("data.mdb"), b"database").unwrap();
+        let hash = sha256_file_hex(&source.join("data.mdb")).unwrap();
+        std::fs::write(source.join("SHA256SUMS"), format!("{hash}  data.mdb\n")).unwrap();
+        assert_ne!(run_restore_command(&source, &destination, false, false), 0);
+        assert!(!destination.exists());
+        std::fs::remove_dir_all(root).unwrap();
+    }
 }
 
 fn run_seed_command(store_path: &Path, action: &str, json: bool) {
