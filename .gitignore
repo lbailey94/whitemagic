@@ -146,6 +146,7 @@ wm-leases.json
 
 # Internal development and staging scripts (public surface: install.sh + install.ps1 + smoke test + release)
 /scripts/*
+!/scripts/qualify_gate17_timing.sh
 !/scripts/release_tail.py
 !/scripts/install.sh
 !/scripts/install.ps1
