@@ -251,11 +251,12 @@ Neither operation guarantees durability across a crash or resists concurrent
 malicious changes to the source or destination tree.
 
 ```bash
-# Stop any `wm serve` first, then run:
-wm backup /path/to/external/disk/gen3-$(date +%F) --json
+# Coordinate all writers for this store, including servers, timers and sidecars;
+# keep the source unchanged until the copy finishes, then resume prior writers.
+wm --store "$HOME/.local/share/whitemagic/gen3" backup /path/to/external/disk/gen3-$(date +%F) --json
 # Restore only to a fresh path beneath an existing private directory:
 wm --store /path/to/private-parent/restored restore /path/to/external/disk/gen3-YYYY-MM-DD --json
-# Or copy the store root directly:
+# Or, under the same writer coordination, copy the whole store root:
 cp -a ~/.local/share/whitemagic/gen3 /path/to/external/disk/gen3-$(date +%F)
 ```
 
