@@ -27,7 +27,7 @@ A canary test additionally asserts the absence of the forbidden crate list below
 
 | Dependency | Rationale |
 |---|---|
-| Rust toolchain 1.85+, edition 2024 | Same toolchain family as Gen2; workspace familiarity without code reuse |
+| Rust toolchain 1.92+, edition 2024; pinned builds use 1.98.0 | The locked ONNX dependencies require 1.92; the bundled SQLite wrapper requires 1.89 |
 | `tokio` | Async runtime; required for any server/harness process |
 | `rayon` | Data-parallel scoring/propagation loops (opt-in; not needed at Phase 1 start) |
 | `serde`, `serde_json`, `rmp-serde` | Serialization for stores, receipts, and harness IO |

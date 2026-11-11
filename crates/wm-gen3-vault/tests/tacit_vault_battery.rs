@@ -14,6 +14,18 @@ use wm_gen3_vault::shm_bridge::{
 };
 use wm_gen3_zeropointfive::System05;
 
+#[test]
+fn test_bundled_sqlite_runtime_version() {
+    let conn = Connection::open_in_memory().expect("in-memory db");
+    let version: String = conn
+        .query_row("SELECT sqlite_version()", [], |row| row.get(0))
+        .expect("runtime SQLite version");
+    assert!(
+        rusqlite::version_number() >= 3_054_000,
+        "bundled SQLite must be at least 3.54.0; runtime is {version}"
+    );
+}
+
 /// Resolve the System05 potion checkpoint, or `None` when it is absent.
 /// CI runners carry no model weights; model-dependent tests skip there and
 /// stay live on developer machines with the canonical data dir present.
