@@ -9,9 +9,16 @@ if ! (set -o noclobber; : > "$log_path") 2>/dev/null; then
   exit 1
 fi
 
-export GATE17_SOURCE_REVISION="$(git rev-parse HEAD)"
-export GATE17_TEST_SHA256="$(shasum -a 256 crates/wm-gen3-core/tests/gate17_spreading_activation.rs | awk '{print $1}')"
-export GATE17_OPS_SHA256="$(shasum -a 256 crates/wm-gen3-core/src/ops.rs | awk '{print $1}')"
+GATE17_SOURCE_REVISION="$(git rev-parse HEAD)"
+GATE17_TEST_SHA256="$(shasum -a 256 crates/wm-gen3-core/tests/gate17_spreading_activation.rs | awk '{print $1}')"
+GATE17_OPS_SHA256="$(shasum -a 256 crates/wm-gen3-core/src/ops.rs | awk '{print $1}')"
+if ! [[ "$GATE17_SOURCE_REVISION" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] \
+  || ! [[ "$GATE17_TEST_SHA256" =~ ^[0-9a-f]{64}$ ]] \
+  || ! [[ "$GATE17_OPS_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "Could not bind timing qualification to valid source identities" >&2
+  exit 1
+fi
+export GATE17_SOURCE_REVISION GATE17_TEST_SHA256 GATE17_OPS_SHA256
 
 cargo test --locked -p wm-gen3-core --features operator --release \
   --test gate17_spreading_activation test_gate17_release_recall_latency \

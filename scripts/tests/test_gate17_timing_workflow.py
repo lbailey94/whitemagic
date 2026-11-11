@@ -120,6 +120,30 @@ class Gate17TimingWorkflowTests(unittest.TestCase):
         self.assertEqual(existing.read_text(), "retained earlier observation\n")
         self.assertFalse(self.args_path.exists())
 
+    def test_source_command_failures_stop_before_cargo(self):
+        output = self.output(self.record())
+        for command in ("git", "shasum"):
+            with self.subTest(command=command):
+                stub = self.directory / command
+                stub.write_text("#!/bin/sh\nexit 1\n")
+                stub.chmod(0o700)
+                result, _ = self.run_wrapper(output, name=f"{command}-failure.log")
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(self.args_path.exists())
+                stub.unlink()
+
+    def test_invalid_source_identities_stop_before_cargo(self):
+        output = self.output(self.record())
+        for command in ("git", "shasum"):
+            with self.subTest(command=command):
+                stub = self.directory / command
+                stub.write_text('#!/bin/sh\nprintf "invalid-identity\\n"\n')
+                stub.chmod(0o700)
+                result, _ = self.run_wrapper(output, name=f"{command}-invalid.log")
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(self.args_path.exists())
+                stub.unlink()
+
     def test_linux_and_macos_require_and_retain_qualification(self):
         workflow = (ROOT / ".github/workflows/ci.yml").read_text()
         for job, artifact in (("test-linux", "Linux-X64"), ("test-macos", "macOS-ARM64")):
