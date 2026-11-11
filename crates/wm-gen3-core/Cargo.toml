@@ -102,7 +102,7 @@ sha2 = "0.10"
 # for secret buffers. Versions mirror the v9 branch exactly.
 argon2 = "0.5"
 chacha20poly1305 = "0.10"
-hkdf = "0.12"
+hkdf = "0.13"
 zeroize = { version = "1", features = ["derive"] }
 rayon = "1.10"
 ed25519-dalek = "3.0.0"
