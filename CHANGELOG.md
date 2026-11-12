@@ -5,6 +5,11 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Crystal anchor policy, phase 1 (warn-first)**: `verify_and_unseal_crystal_set` gains `require_anchor` (`None` default = warn, `True` = refuse, `False` = explicit opt-out). Verifying without an off-store `expected_commitment` now emits `CrystalUnanchoredWarning`, because whole-store rollback (T9) and erasure resurrection (T10) are undetectable without one. Behaviour is otherwise unchanged. Phase 2 will make the strict default.
+
 ## [11.2.0] — 2026-11-08 (UTC)
 
 ### Added
