@@ -14,32 +14,53 @@ import release_manifest as rm  # noqa: E402
 
 
 class ReleaseManifestFactsTest(unittest.TestCase):
-    def test_workspace_crate_count_reads_lock(self) -> None:
+    def test_workspace_crate_count_excludes_vendored_path_dependencies(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            (root / "Cargo.toml").write_text(
+                '[workspace]\nmembers = ["crates/*"]\nexclude = ["crates/excluded"]\n',
+                encoding="utf-8",
+            )
+            for name in ("crates/wm-core", "crates/whitemagic", "crates/excluded", "vendor/patched"):
+                member = root / name
+                member.mkdir(parents=True)
+                (member / "Cargo.toml").write_text('[package]\nname = "fixture"\nversion = "1.0.0"\n')
             (root / "Cargo.lock").write_text(
                 '[[package]]\nname = "wm-core"\nversion = "9.1.4"\n\n'
                 '[[package]]\nname = "whitemagic"\nversion = "9.1.4"\n\n'
                 '[[package]]\nname = "serde"\nversion = "1"\n'
-                'source = "registry+https://github.com/rust-lang/crates.io-index"\n',
+                'source = "registry+https://github.com/rust-lang/crates.io-index"\n\n'
+                '[[package]]\nname = "patched-dependency"\nversion = "0.9.1"\n',
                 encoding="utf-8",
             )
             self.assertEqual(rm.workspace_crate_count(root), 2)
 
     def test_install_gated_defaults_to_the_gated_lines(self) -> None:
-        # 2026-10-04: the v10 matrix is glibc Linux + macOS arm64 + Windows
-        # (5d9b03d, ONNX runtime is glibc-only); musl and macos-x86_64 are
-        # not built, so they are not install-gated claims. Mirrors the
-        # release.yml matrix — the manifest must declare what CI builds.
+        # The current matrix and installer certification cover exactly three
+        # targets. Windows is retained only in the artifact parser for history.
         self.assertEqual(
             rm.DEFAULT_INSTALL_GATED,
             [
                 "linux-x86_64",
                 "linux-aarch64",
                 "macos-aarch64",
-                "windows-x86_64",
             ],
         )
+
+    def test_generated_profile_follows_generation_without_replaying_test_counts(self) -> None:
+        from unittest.mock import patch
+        for version, profile in (("9.3.5", "curated"), ("11.2.1", "cyberbrain")):
+            with self.subTest(version=version), tempfile.TemporaryDirectory() as tmp:
+                artifacts = Path(tmp)
+                (artifacts / "wm-linux-x86_64").write_bytes(b"synthetic fixture, not a release binary")
+                output = artifacts / "manifest.json"
+                args = ["release_manifest.py", "--version", version, "--channel", "open alpha",
+                        "--artifacts-dir", str(artifacts), "--out", str(output)]
+                with patch.object(sys, "argv", args), contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(rm.main(), 0)
+                manifest = json.loads(output.read_text())
+                self.assertEqual(manifest["supported_profile"], profile)
+                self.assertNotIn("tests", manifest)
 
     def test_arm64_artifacts_map_to_manifest_targets(self) -> None:
         self.assertEqual(rm.TARGETS["wm-linux-aarch64"], "linux-aarch64")

@@ -10,7 +10,7 @@ Local-first memory and session continuity for coding agents, exposed over MCP. A
 
 ```bash
 curl -fsSL https://www.whitemagic.dev/install.sh?ref=gen3-skill | sh
-wm --version         # expect: wm 11.2.0 (Gen3 line)
+wm --version         # expect: wm 11.2.1 (Gen3 line)
 wm --store "$HOME/.local/share/whitemagic/gen3" grimoire --plan
                      # 100% read-only environment/store check + client-config target preview
                      # 0 disk writes even on missing or --bare stores; does not edit client configs
@@ -27,7 +27,7 @@ wm ingest --file notes.jsonl --default-source notes:stream   # JSONL stream ('-'
 
 The v9-only commands (`doctor`, `connect`, `setup`, `quickstart`,
 `update`, `seal`, `verify`, `trust`, `anchor`) belong to the `wm9`
-binary line; `wm backup`, `wm restore`, `wm wiki`, and `wm verify-receipt` are natively supported in `wm 11.2.0`. Gen3 `grimoire --plan` reports client config targets
+binary line; `wm backup`, `wm restore`, `wm wiki`, and `wm verify-receipt` are natively supported in `wm 11.2.1`. Gen3 `grimoire --plan` reports client config targets
 without writing them; add the `serve` command shown below to the client config.
 Building from source instead: `cargo build --release` in this repository, then install `target/release/wm` onto your `PATH`.
 

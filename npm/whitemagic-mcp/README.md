@@ -17,11 +17,14 @@ without a manual download step.
 ## Quick start (no install step)
 
 The local, full-write path straight from npm — the package downloads and
-checksum-verifies the official `wm` binary on first run. Use the `@next`
-dist-tag: npm `@latest` still resolves the stable v9 line.
+checksum-verifies the official `wm` binary on first run. Pin an exact published
+package and inspect its matching release assets. This source checkout's
+version is not installable until its package and native release are published.
+The `latest` and `next` dist-tags are independent selectors controlled by
+release health; neither is a permanent alias for a generation.
 
 ```bash
-npx -y whitemagic-mcp@next serve --profile cyberbrain
+npx -y whitemagic-mcp@11.2.1 serve --profile cyberbrain
 ```
 
 MCP client config:
@@ -31,7 +34,7 @@ MCP client config:
   "mcpServers": {
     "whitemagic": {
       "command": "npx",
-      "args": ["-y", "whitemagic-mcp@next", "serve", "--profile", "cyberbrain"]
+      "args": ["-y", "whitemagic-mcp@11.2.1", "serve", "--profile", "cyberbrain"]
     }
   }
 }
@@ -40,15 +43,14 @@ MCP client config:
 Or try the binary directly:
 
 ```bash
-npx -y whitemagic-mcp@next selftest   # invariant self-test + host diagnostics
-npx -y whitemagic-mcp@next --version  # wm 11.2.0
-npx -y whitemagic-mcp@next doctor     # environment health check
+npx -y whitemagic-mcp@11.2.1 selftest   # invariant self-test + host diagnostics
+npx -y whitemagic-mcp@11.2.1 --version  # wm 11.2.1
+npx -y whitemagic-mcp@11.2.1 grimoire --plan  # preview detected client config targets
 ```
 
 The binary is cached under `~/.cache/whitemagic/bin/<release-tag>/`
-(respects `XDG_CACHE_HOME`). `@next` tracks the v10 line; unpinned
-`@latest` installs fetch the stable v9 line instead. Pin the exact
-release with `whitemagic-mcp@11.2.0`, or override the release
+(respects `XDG_CACHE_HOME`). Pin the exact published
+release with `whitemagic-mcp@11.2.1`, or override the release
 tag with `WHITEMAGIC_RELEASE`.
 
 ## Try it without installing (hosted read-only lane)
@@ -72,10 +74,11 @@ local, full-write path.
 
 ## Platforms
 
-The Gen3 preview publishes Linux x86-64 and arm64 binaries requiring glibc
-2.39+, plus macOS arm64. Its active installers are certified against the
-published release in CI. Windows x64 and Intel macOS use the separate stable
-Gen2 line (`whitemagic-mcp@latest`); they are not in this preview's asset matrix.
+The Gen3 native matrix covers Linux x86-64 and arm64 requiring glibc 2.39+,
+plus macOS arm64. Consult the exact signed manifest and completed release
+health record for its actual assets and installer certification. Windows x64
+and Intel macOS are absent from this matrix; do not infer a fallback artifact
+from an npm selector.
 Downloads prefer the compressed `.gz`
 distributable when the release ships one (~58% smaller) and fall back to the
 raw binary otherwise. No asset for your platform? Build from source:
