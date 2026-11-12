@@ -280,7 +280,7 @@ of the product contract.
 
 ## Building from source
 
-Requires Rust 1.85+:
+Requires Rust 1.92+; this repository pins Rust 1.98.0 for builds and checks:
 
 ```bash
 cargo build --release

@@ -44,7 +44,7 @@ accepted.
 
 ## Development
 
-Requires Rust 1.85+.
+Requires Rust 1.92+; use the pinned Rust 1.98.0 toolchain for builds and checks.
 
 ```bash
 cargo build                      # debug build
