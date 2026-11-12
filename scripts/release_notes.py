@@ -27,11 +27,11 @@ PLATFORMS_STABLE = (
     "published release in CI)."
 )
 
-PLATFORMS_V10_ALPHA = (
-    "Linux x86-64, Linux arm64, and macOS arm64 are install-gated in the v10 "
-    "open-alpha matrix (checksum-verified installers, each certified against "
-    "the published release in CI). Windows x86_64 and Intel macOS (x86_64) "
-    "remain on the stable Gen 2 (v9.3.4) channel."
+PLATFORMS_GEN3 = (
+    "The current Gen 3 native build matrix covers Linux x86-64, Linux arm64, "
+    "and macOS arm64. Check the signed release manifest and release health "
+    "record for the assets and install certifications actually published. "
+    "Windows x86-64 and Intel macOS native assets are not in this matrix."
 )
 
 CHANGELOG_URL = "https://github.com/lbailey94/whitemagic/blob/main/CHANGELOG.md"
@@ -61,13 +61,13 @@ def extract_section(changelog: str, version: str) -> str | None:
 
 
 def render(version: str, section: str) -> str:
-    platforms = PLATFORMS_V10_ALPHA if version.startswith("10.") else PLATFORMS_STABLE
+    gen3 = version.startswith(("10.", "11."))
+    platforms = PLATFORMS_GEN3 if gen3 else PLATFORMS_STABLE
     install = INSTALL.format(version=version)
-    if version.startswith("10."):
+    if gen3:
         channels = (
             f'Or: `npx -y whitemagic-mcp@{version} --store /absolute/path/to/gen3 '
             'serve --profile cyberbrain` (npm) · '
-            f'`cargo install whitemagic --version {version}` (crates.io) · '
             f'`docker run -i --rm -v whitemagic-gen3:/data lbailey94/whitemagic:{version} '
             '--store /data serve --profile cyberbrain` (Docker Hub).'
         )
@@ -77,7 +77,7 @@ def render(version: str, section: str) -> str:
             f'`cargo install whitemagic --version {version}` (crates.io) · '
             f'`docker run -i lbailey94/whitemagic:{version} serve --profile curated` (Docker Hub).'
         )
-    if version.startswith("10."):
+    if gen3:
         activation = (
             'After installing, `wm --store "$HOME/.local/share/whitemagic/gen3" '
             "grimoire --plan` checks the environment and previews detected client "
