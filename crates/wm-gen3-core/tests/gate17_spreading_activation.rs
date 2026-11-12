@@ -98,8 +98,13 @@ fn test_gate17_multi_hop_lateral_recall() {
 #[test]
 #[ignore = "run the serialized release-mode qualifier in scripts/qualify_gate17_timing.sh"]
 fn test_gate17_release_recall_latency() {
-    assert!(
-        !cfg!(debug_assertions),
+    let profile = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "release"
+    };
+    assert_eq!(
+        profile, "release",
         "Gate17 timing qualification requires --release"
     );
     let (mut substrate, _s, _j) = make_temp_substrate("gate17_release_timing");
@@ -121,7 +126,7 @@ fn test_gate17_release_recall_latency() {
         "\nGATE17_TIMING_JSON={}",
         serde_json::json!({
             "protocol": "gate17-full-recall-v1",
-            "profile": "release",
+            "profile": profile,
             "scope": "full recall including LMDB reads and journal writes",
             "arch": std::env::consts::ARCH,
             "os": std::env::consts::OS,
