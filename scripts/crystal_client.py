@@ -28,6 +28,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import warnings
+from pathlib import Path
 from typing import Any
 
 try:
@@ -502,7 +503,10 @@ def unseal_crystal(
         metadata_public=crystal_envelope.get("metadata_public") if isinstance(crystal_envelope.get("metadata_public"), dict) else {},
         bind_metadata=(id_kek_version is not None),
     )
-    return _aead_for(cipher_norm, payload_key).decrypt(nonce, ciphertext, aad)
+    try:
+        return _aead_for(cipher_norm, payload_key).decrypt(nonce, ciphertext, aad)
+    except Exception as exc:
+        raise CrystalVerificationError(f"AEAD decryption or integrity tag verification failed: {exc}") from exc
 
 
 def _erased_ids_digest(erasures: list[dict[str, Any]]) -> tuple[int, str]:
@@ -604,6 +608,32 @@ def compute_crystal_set_commitment(
     return commitment
 
 
+def resolve_offstore_anchor_path(
+    store_path: str | os.PathLike[str],
+    *,
+    tenant_hash: str | None = None,
+    base_dir: str | os.PathLike[str] | None = None,
+) -> Path:
+    """Resolve an isolated anchor commitment file path located outside the store boundary.
+
+    To detect snapshot rollbacks (T9) and erasure resurrection (T10), the signed
+    set commitment must not reside within the directory tree being snapshotted.
+    When ``base_dir`` is omitted, defaults to an isolated sibling directory
+    ``<store_dir>.anchor`` or ``~/.whitemagic/anchors/<tenant_hash>/``.
+    """
+    p = Path(store_path).resolve()
+    if base_dir is not None:
+        anchor_root = Path(base_dir).resolve()
+    elif tenant_hash:
+        anchor_root = Path.home() / ".whitemagic" / "anchors" / tenant_hash
+    else:
+        if p.is_file():
+            anchor_root = p.parent.parent / f"{p.parent.name}.anchor"
+        else:
+            anchor_root = p.parent / f"{p.name}.anchor"
+    return anchor_root / "commitment.json"
+
+
 def verify_and_unseal_crystal_set(
     crystals: list[dict[str, Any]],
     key: bytes,
@@ -612,14 +642,15 @@ def verify_and_unseal_crystal_set(
     expected_commitment: dict[str, Any] | None = None,
     anchor_public_key: bytes | None = None,
     erasures: list[dict[str, Any]] | None = None,
-    require_anchor: bool | None = None,
+    require_anchor: bool = True,
 ) -> list[bytes]:
     """Read-path verifier for an ordered crystal set before session resumption (I6/I7).
 
     Checks:
-      1. Optional anchored export commitment (signature, tenant_hash, high-water count,
+      1. Anchored export commitment (signature, tenant_hash, high-water count,
          anchored head_crystal_id, and ordered_crystal_ids_digest) -> rejects T9 whole-store
-         rollback and T2 tail truncation.
+         rollback and T2 tail truncation. Required by default (Phase 2 strict policy);
+         pass require_anchor=False to explicitly opt out.
       2. Context binding (tenant_hash == expected_tenant_hash) -> rejects T6 cross-context replay.
       3. Lineage DAG continuity (genesis parent is None; each subsequent crystal's
          parent_crystal_id equals the immediately preceding crystal_id) -> rejects
@@ -629,22 +660,12 @@ def verify_and_unseal_crystal_set(
          -> rejects T1 payload edits, T5 forged records, and T8 metadata edits.
     """
     if expected_commitment is None:
-        # Anchor policy: ``require_anchor`` True -> refuse; None (default, phase 1)
-        # -> warn; False -> explicit caller opt-out, silent.
+        # Phase 2 strict anchor policy: default is True (fail-closed against rollback).
         if require_anchor:
             raise CrystalRollbackError(
-                "no off-store anchor commitment supplied; rollback (T9) and erasure "
-                "resurrection (T10) cannot be detected"
-            )
-        if require_anchor is None:
-            warnings.warn(
-                "crystal set verified WITHOUT an off-store anchor commitment: whole-store "
-                "rollback (T9) and erasure resurrection (T10) are not detectable. Keep the "
-                "signed set commitment outside the store and pass expected_commitment=..., "
-                "or pass require_anchor=False to acknowledge. The default will become "
-                "strict in a later release.",
-                CrystalUnanchoredWarning,
-                stacklevel=2,
+                "no off-store anchor commitment supplied; whole-store rollback (T9) and erasure "
+                "resurrection (T10) cannot be detected without an independently retained commitment. "
+                "Provide expected_commitment=... or pass require_anchor=False to explicitly opt out."
             )
     if expected_commitment is not None:
         if not isinstance(expected_commitment, dict) or expected_commitment.get("kind") != "wm.crystal-set-commitment":
