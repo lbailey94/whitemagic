@@ -202,7 +202,7 @@ impl Gen2EpisodicRecord {
     pub fn compute_content_hash(content: &str) -> String {
         let mut hasher = Sha256::new();
         hasher.update(content.as_bytes());
-        format!("{:x}", hasher.finalize())
+        crate::hex_encode(&hasher.finalize())
     }
 
     /// Validate that the record's content matches its immutable content hash.
@@ -668,7 +668,7 @@ impl MigrationReceipt {
         hasher.update(epoch.to_string().as_bytes());
         hasher.update(b":");
         hasher.update(ts.to_rfc3339().as_bytes());
-        format!("{:x}", hasher.finalize())
+        crate::hex_encode(&hasher.finalize())
     }
 }
 
@@ -1418,7 +1418,7 @@ impl SessionMigrationReceipt {
         hasher.update(decode_skipped.to_string().as_bytes());
         hasher.update(b":");
         hasher.update(ts.to_rfc3339().as_bytes());
-        format!("{:x}", hasher.finalize())
+        crate::hex_encode(&hasher.finalize())
     }
 }
 

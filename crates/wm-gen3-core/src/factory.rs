@@ -71,7 +71,10 @@ impl SoftwareFactoryConfig {
     ) -> Self {
         let signing = SigningKey::from_bytes(checker_seed);
         let verifying = signing.verifying_key();
-        let checker_did = format!("did:key:{:x}", Sha256::digest(verifying.as_bytes()));
+        let checker_did = format!(
+            "did:key:{}",
+            crate::hex_encode(&Sha256::digest(verifying.as_bytes()))
+        );
         Self {
             tenant_id: tenant_id.into(),
             checker_did,

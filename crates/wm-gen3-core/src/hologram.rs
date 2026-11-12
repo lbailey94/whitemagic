@@ -293,7 +293,7 @@ impl MemoryProjection {
         for c in q_coords {
             hasher.update(c.to_le_bytes()); // Explicit Little-Endian encoding across all architectures
         }
-        format!("{:x}", hasher.finalize())
+        crate::hex_encode(&hasher.finalize())
     }
 
     /// Construct a signed MemoryProjection with strict fail-closed coordinate validation.

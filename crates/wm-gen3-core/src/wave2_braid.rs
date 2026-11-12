@@ -869,7 +869,7 @@ impl ProdrugCarrierEnvelope {
         let mut seal_hasher = Sha256::new();
         seal_hasher.update(mask_key);
         seal_hasher.update(&masked_payload);
-        let carrier_seal_sha256 = format!("{:x}", seal_hasher.finalize());
+        let carrier_seal_sha256 = crate::hex_encode(&seal_hasher.finalize());
 
         Self {
             target_node_id: target_node_id.to_string(),
@@ -901,7 +901,7 @@ impl ProdrugCarrierEnvelope {
         let mut seal_hasher = Sha256::new();
         seal_hasher.update(mask_key);
         seal_hasher.update(&self.masked_payload);
-        let expected_seal = format!("{:x}", seal_hasher.finalize());
+        let expected_seal = crate::hex_encode(&seal_hasher.finalize());
         if expected_seal != self.carrier_seal_sha256 {
             return Err("ProdrugRemainInert: Carrier seal integrity violation");
         }

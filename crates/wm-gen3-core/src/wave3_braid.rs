@@ -832,7 +832,7 @@ pub fn compute_loosh_and_engram_link(
         hasher.update(a.as_bytes());
         hasher.update(b"|");
     }
-    let digest = format!("{:x}", hasher.finalize());
+    let digest = crate::hex_encode(&hasher.finalize());
 
     LooshEngramState {
         symbiotic_vitality_loosh: loosh,
@@ -1014,7 +1014,7 @@ pub fn evaluate_fuller_synergetics(
     let mut hasher = Sha256::new();
     hasher.update(b"CHRONOFILE-PRESCIENCE-V1:");
     hasher.update(prescience_claim.as_bytes());
-    let seal = format!("{:x}", hasher.finalize());
+    let seal = crate::hex_encode(&hasher.finalize());
 
     FullerSynergeticsReport {
         ephemeralization_index: ephem,
@@ -1347,7 +1347,7 @@ pub fn converge_cantrip_avadhuti_channel(
         hasher.update(mid.to_le_bytes());
     }
     let conv = ((dot / (n1.sqrt() * n2.sqrt()).max(1e-12)) + 1.0) * 0.5;
-    let digest = format!("{:x}", hasher.finalize());
+    let digest = crate::hex_encode(&hasher.finalize());
 
     CantripAvadhutiSynthesis {
         circle_ward_active: telos_alignment >= 0.75,
@@ -1543,7 +1543,7 @@ pub fn execute_z80_clean_room_loop(
 ) -> Z80CleanRoomPortReceipt {
     let mut hasher = Sha256::new();
     hasher.update(behavioral_spec.as_bytes());
-    let spec_hash = format!("{:x}", hasher.finalize());
+    let spec_hash = crate::hex_encode(&hasher.finalize());
 
     let mut passed = 0usize;
     for (inp, exp) in golden_inputs.iter().zip(expected_outputs.iter()) {
@@ -1726,7 +1726,7 @@ pub fn traverse_valmere_web_and_page_curve(
     let mut hasher = Sha256::new();
     hasher.update(b"QUANTUM-HAIR-HORIZON:");
     hasher.update(archived_payload.as_bytes());
-    let hair = format!("{:x}", hasher.finalize());
+    let hair = crate::hex_encode(&hasher.finalize());
 
     ValmerePageCurveReceipt {
         seed_concept: seed_concept.to_string(),

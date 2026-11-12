@@ -1,5 +1,4 @@
 use crate::extractor::NormalizedTurn;
-use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone)]
 pub struct VaultChunk {
@@ -187,9 +186,7 @@ fn count_tokens(text: &str) -> usize {
 }
 
 fn compute_hash(text: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(text.as_bytes());
-    format!("{:x}", hasher.finalize())
+    wm_gen3_core::journal::sha256_hex(text.as_bytes())
 }
 
 fn summarize_turn(text: &str, max_len: usize) -> String {

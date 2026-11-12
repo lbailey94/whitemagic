@@ -106,7 +106,7 @@ impl CausalEvent {
             hasher.update(p.as_bytes());
         }
         hasher.update(payload);
-        format!("{:x}", hasher.finalize())
+        crate::hex_encode(&hasher.finalize())
     }
 
     pub fn new_signed(

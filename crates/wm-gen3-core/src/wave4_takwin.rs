@@ -298,7 +298,7 @@ pub fn shrink_failing_trace(trace: &[AgentTraceStep]) -> Option<ShrunkReplayBlob
     let mut hasher = Sha256::new();
     hasher.update(b"WM-TRACE-SHRINK-V1:");
     hasher.update(serialized.as_bytes());
-    let digest = format!("{:x}", hasher.finalize());
+    let digest = crate::hex_encode(&hasher.finalize());
 
     let orig_len = trace.len().max(1);
     let shrunk_len = current.len().max(1);
@@ -423,7 +423,7 @@ pub fn compile_holographic_wiki(entries: &[WikiMemoryEntry]) -> HolographicWikiB
         pages.insert(page_name, page_lines.join("\n"));
     }
 
-    let bundle_merkle_root = format!("{:x}", merkle_hasher.finalize());
+    let bundle_merkle_root = crate::hex_encode(&merkle_hasher.finalize());
     index_lines.push(String::new());
     index_lines.push(format!("**Wiki Merkle Root**: `{bundle_merkle_root}`"));
 
@@ -695,7 +695,7 @@ pub fn run_wave4_full_benchmark_suite() -> Wave4BenchmarkReport {
     for i in 0..64u64 {
         let mut h = Sha256::new();
         h.update(format!("record-{i}").as_bytes());
-        let sha = format!("{:x}", h.finalize());
+        let sha = crate::hex_encode(&h.finalize());
         entries.push(WikiMemoryEntry {
             record_id: 400_000 + i,
             constellation_hex: (i % 64) as u8,

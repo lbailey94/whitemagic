@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use ed25519_dalek::SigningKey;
-use sha2::{Digest, Sha256};
 
 use wm_gen3_core::bicameral::{GeneseedVault, JevDecisionTensor, MutationKind};
 use wm_gen3_core::cladistics::EvolutionaryFate;
@@ -36,7 +35,10 @@ fn test_peb15_mandala_kekkai_benchmark_suite() {
     let seed = [42u8; 32];
     let signing_key = SigningKey::from_bytes(&seed);
     let verifying_key = signing_key.verifying_key();
-    let checker_did = format!("did:key:{:x}", Sha256::digest(verifying_key.as_bytes()));
+    let checker_did = format!(
+        "did:key:{}",
+        wm_gen3_core::journal::sha256_hex(verifying_key.as_bytes())
+    );
 
     // Adapt iteration counts for debug mode to prevent unoptimized curve25519 stalling
     let jev_iterations = if is_debug { 2_000usize } else { 20_000usize };

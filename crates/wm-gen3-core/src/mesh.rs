@@ -184,7 +184,7 @@ impl SyncRecord {
     pub fn from_evidence_record(rec: &EvidenceRecord) -> Self {
         let mut hasher = Sha256::new();
         hasher.update(rec.content().as_bytes());
-        let sha256 = format!("{:x}", hasher.finalize());
+        let sha256 = crate::hex_encode(&hasher.finalize());
 
         let kind = match rec.domain() {
             Domain::World => "reported",
@@ -231,7 +231,7 @@ impl SyncRecord {
         }
         let mut hasher = Sha256::new();
         hasher.update(self.content.as_bytes());
-        let digest = format!("{:x}", hasher.finalize());
+        let digest = crate::hex_encode(&hasher.finalize());
         if digest != self.sha256 {
             return Err(MeshError::BundleCorrupted(format!(
                 "record {} content digest mismatch (declared {}, computed {}); refusing ingest",
@@ -1619,7 +1619,7 @@ impl SyncBundle {
             hasher.update((migrated_count as u64).to_le_bytes());
             hasher.update((duplicate_skipped as u64).to_le_bytes());
             hasher.update(target_epoch.to_le_bytes());
-            format!("{:x}", hasher.finalize())
+            crate::hex_encode(&hasher.finalize())
         };
 
         let mut receipts_imported = 0;
@@ -3304,7 +3304,7 @@ mod tests {
     fn sha256_hex(content: &str) -> String {
         let mut hasher = Sha256::new();
         hasher.update(content.as_bytes());
-        format!("{:x}", hasher.finalize())
+        crate::hex_encode(&hasher.finalize())
     }
 
     #[test]

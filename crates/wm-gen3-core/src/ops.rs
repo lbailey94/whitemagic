@@ -66,7 +66,7 @@ pub(crate) fn file_sha256(path: &Path) -> Result<String, std::io::Error> {
         }
         hasher.update(&buffer[..count]);
     }
-    Ok(format!("{:x}", hasher.finalize()))
+    Ok(crate::hex_encode(&hasher.finalize()))
 }
 
 /// Derived vector projection status for a committed record.

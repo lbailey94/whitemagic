@@ -86,6 +86,8 @@ pub mod wave3_braid;
 pub mod wave4_takwin;
 pub mod zodiac_arcana;
 
+pub(crate) use at_rest::hex_encode;
+
 pub use hexagram::{Hexagram, HexagramMeta, Trigram, WuXing};
 pub use legion::{
     ChoHanVerdict, CloneEvaluationResult, CohortArchetype, LegionAdjudicationReport, LegionError,

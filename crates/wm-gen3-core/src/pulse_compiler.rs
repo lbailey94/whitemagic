@@ -1607,7 +1607,7 @@ pub fn run_peb10_pulse_compiler_benchmark(total_trials: usize) -> Peb10Benchmark
                     h.update(v.as_bytes());
                 }
                 let digest = h.finalize();
-                guard.insert(format!("dag_hash_{}", task._id), format!("{:x}", digest));
+                guard.insert(format!("dag_hash_{}", task._id), crate::hex_encode(&digest));
             }
         }
         let dag_dur = t_dag_start.elapsed().as_nanos() as f64 / 1000.0;
