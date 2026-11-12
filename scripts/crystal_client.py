@@ -614,24 +614,35 @@ def resolve_offstore_anchor_path(
     tenant_hash: str | None = None,
     base_dir: str | os.PathLike[str] | None = None,
 ) -> Path:
-    """Resolve an isolated anchor commitment file path located outside the store boundary.
+    """Resolve an anchor path outside the resolved store directory tree.
 
-    To detect snapshot rollbacks (T9) and erasure resurrection (T10), the signed
-    set commitment must not reside within the directory tree being snapshotted.
-    When ``base_dir`` is omitted, defaults to an isolated sibling directory
-    ``<store_dir>.anchor`` or ``~/.whitemagic/anchors/<tenant_hash>/``.
+    An existing store file uses its resolved parent as the store boundary;
+    other store paths are treated as directories. When ``base_dir`` is omitted,
+    use ``<store_dir>.anchor`` or ``~/.whitemagic/anchors/<tenant_hash>/``.
+    Tenant hashes must use the canonical ``sha256:<64 lowercase hex>`` form
+    returned by :func:`compute_tenant_hash`.
+
+    This performs no writes or directory creation. It checks the current
+    resolved paths, including existing symlinks; it does not ensure independent
+    retention, a separate filesystem, or safety against later path replacement.
     """
+    if tenant_hash is not None and (
+        not isinstance(tenant_hash, str)
+        or re.fullmatch(r"sha256:[0-9a-f]{64}", tenant_hash) is None
+    ):
+        raise ValueError("tenant_hash must be sha256:<64 lowercase hex digits>")
     p = Path(store_path).resolve()
+    store_dir = p.parent if p.is_file() else p
     if base_dir is not None:
-        anchor_root = Path(base_dir).resolve()
-    elif tenant_hash:
+        anchor_root = Path(base_dir)
+    elif tenant_hash is not None:
         anchor_root = Path.home() / ".whitemagic" / "anchors" / tenant_hash
     else:
-        if p.is_file():
-            anchor_root = p.parent.parent / f"{p.parent.name}.anchor"
-        else:
-            anchor_root = p.parent / f"{p.name}.anchor"
-    return anchor_root / "commitment.json"
+        anchor_root = store_dir.parent / f"{store_dir.name}.anchor"
+    candidate = (anchor_root / "commitment.json").resolve()
+    if candidate.is_relative_to(store_dir):
+        raise ValueError("anchor commitment path must be outside the resolved store directory")
+    return candidate
 
 
 def verify_and_unseal_crystal_set(
@@ -650,7 +661,8 @@ def verify_and_unseal_crystal_set(
       1. Anchored export commitment (signature, tenant_hash, high-water count,
          anchored head_crystal_id, and ordered_crystal_ids_digest) -> rejects T9 whole-store
          rollback and T2 tail truncation. Required by default (Phase 2 strict policy);
-         pass require_anchor=False to explicitly opt out.
+         pass require_anchor=False to explicitly opt out. The flag must be a
+         boolean; other values are rejected even when a commitment is supplied.
       2. Context binding (tenant_hash == expected_tenant_hash) -> rejects T6 cross-context replay.
       3. Lineage DAG continuity (genesis parent is None; each subsequent crystal's
          parent_crystal_id equals the immediately preceding crystal_id) -> rejects
@@ -659,6 +671,8 @@ def verify_and_unseal_crystal_set(
          and AEAD decryption over AAD (cipher, tenant_hash, parent, created_at, metadata)
          -> rejects T1 payload edits, T5 forged records, and T8 metadata edits.
     """
+    if not isinstance(require_anchor, bool):
+        raise CrystalVerificationError("require_anchor must be a boolean")
     if expected_commitment is None:
         # Phase 2 strict anchor policy: default is True (fail-closed against rollback).
         if require_anchor:
