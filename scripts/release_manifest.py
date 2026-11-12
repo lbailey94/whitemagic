@@ -21,7 +21,7 @@ Usage:
                         [--install-gated linux-x86_64]
 
 `--channel` is required: it is an evidence-tied label
-(`docs/RELEASE_CADENCE.md` §Channel labels), recorded in the signed manifest.
+(`docs/RELEASE_CHANNELS.md` §Channel labels), recorded in the signed manifest.
 It has no default on purpose — a silent `stable` would contradict the
 current channel.
 
@@ -33,10 +33,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
 import sys
+import tomllib
 from datetime import datetime, timezone
 from pathlib import Path
+from release_tail import family_for_version
 
 # artifact filename -> target key in the manifest
 # Mirrors the release.yml build matrix (glibc Linux, macOS arm64, Windows —
@@ -50,15 +51,13 @@ TARGETS = {
     "wm-windows-x86_64.exe": "windows-x86_64",
 }
 
-# Targets whose install path is gated (README §Install path: Linux x86-64,
-# Linux arm64, macOS arm64, and Windows x86_64 — the v10 matrix; Linux via
-# native CI smoke, macOS arm64 via hardware field smoke evidence in issue
-# #2, Windows via tagged-release installer certification in release.yml).
+# Targets that the current release workflow requires to pass published-asset
+# installer certification. The signed declaration precedes that job; only
+# successful Release and release-health runs establish its completed result.
 DEFAULT_INSTALL_GATED = [
     "linux-x86_64",
     "linux-aarch64",
     "macos-aarch64",
-    "windows-x86_64",
 ]
 
 
@@ -71,16 +70,19 @@ def sha256_file(path: Path) -> str:
 
 
 def workspace_crate_count(root: Path) -> int | None:
-    """Count workspace members from Cargo.lock (entries with no `source`)."""
-    lock = root / "Cargo.lock"
-    if not lock.is_file():
+    """Count declared members, excluding patched path dependencies in the lock."""
+    manifest = root / "Cargo.toml"
+    if not manifest.is_file():
         return None
-    count = sum(
-        1
-        for block in lock.read_text(encoding="utf-8").split("[[package]]")[1:]
-        if "source =" not in block and re.search(r'^name = "', block, re.M)
-    )
-    return count or None
+    data = tomllib.loads(manifest.read_text(encoding="utf-8"))
+    workspace = data.get("workspace", {})
+    members = {path.resolve() for pattern in workspace.get("members", [])
+               for path in root.glob(pattern) if (path / "Cargo.toml").is_file()}
+    excluded = {path.resolve() for pattern in workspace.get("exclude", [])
+                for path in root.glob(pattern)}
+    if "package" in data:
+        members.add(root.resolve())
+    return len(members - excluded) or None
 
 
 def load_tests(path: Path | None) -> dict | None:
@@ -109,7 +111,7 @@ def main() -> int:
         "--channel",
         required=True,
         help="evidence-tied release channel label (e.g. 'open alpha'); recorded "
-        "in the signed manifest — see docs/RELEASE_CADENCE.md §Channel labels",
+        "in the signed manifest — see docs/RELEASE_CHANNELS.md §Channel labels",
     )
     ap.add_argument("--repo", default="lbailey94/whitemagic")
     ap.add_argument("--artifacts-dir", default="artifacts")
@@ -126,6 +128,10 @@ def main() -> int:
         "--benchmarks-file", default=None, help="benchmark_results.txt snapshot"
     )
     args = ap.parse_args()
+    try:
+        family = family_for_version(args.version)
+    except ValueError as exc:
+        ap.error(str(exc))
 
     artifacts = Path(args.artifacts_dir)
     if not artifacts.is_dir():
@@ -184,7 +190,7 @@ def main() -> int:
         "version": args.version,
         "published": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "minimum_store_schema": args.minimum_store_schema,
-        "supported_profile": "curated",
+        "supported_profile": "cyberbrain" if family == "gen3" else "curated",
         "notes": notes,
         "targets": targets,
     }

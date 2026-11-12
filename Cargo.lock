@@ -5120,7 +5120,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "wm-gen3-core"
-version = "11.2.0"
+version = "11.2.1"
 dependencies = [
  "argon2",
  "chacha20poly1305",
@@ -5148,7 +5148,7 @@ dependencies = [
 
 [[package]]
 name = "wm-gen3-harness"
-version = "11.2.0"
+version = "11.2.1"
 dependencies = [
  "chrono",
  "clap",
@@ -5167,7 +5167,7 @@ dependencies = [
 
 [[package]]
 name = "wm-gen3-shm"
-version = "11.2.0"
+version = "11.2.1"
 dependencies = [
  "bytemuck",
  "criterion",
@@ -5180,7 +5180,7 @@ dependencies = [
 
 [[package]]
 name = "wm-gen3-systemone"
-version = "11.2.0"
+version = "11.2.1"
 dependencies = [
  "laya",
  "serde_json",
@@ -5188,7 +5188,7 @@ dependencies = [
 
 [[package]]
 name = "wm-gen3-vault"
-version = "11.2.0"
+version = "11.2.1"
 dependencies = [
  "chrono",
  "libc",
@@ -5209,7 +5209,7 @@ dependencies = [
 
 [[package]]
 name = "wm-gen3-zeropointfive"
-version = "11.2.0"
+version = "11.2.1"
 dependencies = [
  "model2vec-rs",
  "serde",
@@ -5218,7 +5218,7 @@ dependencies = [
 
 [[package]]
 name = "wm-sandbox"
-version = "11.2.0"
+version = "11.2.1"
 dependencies = [
  "libc",
  "serde",

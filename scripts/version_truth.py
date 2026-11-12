@@ -19,7 +19,7 @@ Usage:
 
     --check compares every surface with the workspace version (or --version X
     when the bump already happened but the tag has not).
-    --set replaces every 9.x.y reference on the curated surfaces; run
+    --set replaces product release references on the curated surfaces; run
     `cargo check` afterwards to refresh Cargo.lock.
     --open-changelog turns the `[Unreleased]` heading into the dated target
     heading the ceremony gate requires (release morning used to hand-edit it).
@@ -50,6 +50,8 @@ SURFACES = [
     "README.md",
     "skill.md",
     "scripts/install.sh",
+    "Dockerfile",
+    "llms.txt",
 ]
 
 VERSION_RE = re.compile(r"\bv?(?:11\.\d+(?:\.\d+)?(?:-alpha(?:\.\d+)?)?|10\.\d+(?:\.\d+)?(?:-alpha(?:\.\d+)?)?|9\.\d+\.\d+)\b")

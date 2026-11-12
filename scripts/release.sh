@@ -11,7 +11,7 @@
 #   scripts/release.sh 9.1.9 --tail-only --dry-run   # local preview, no network/writes
 #
 # Division of labor (9.1.8 lesson): the tag-triggered `release.yml` workflow
-# owns the five channels — it builds the 5-platform binaries, signs the
+# owns the five channels — it builds the three-target native matrix, signs the
 # manifest, generates SBOMs, and publishes crates.io → npm → Docker Hub →
 # MCP registry (its `registries` job). This script orchestrates the release
 # and then VERIFIES every channel:
@@ -132,8 +132,8 @@ if $DRY_RUN; then
   echo "[dry-run] python3 scripts/version_truth.py --open-changelog $VERSION"
   echo "[dry-run] python3 scripts/version_truth.py --set $VERSION (all listed"
   echo "[dry-run]   surfaces: Cargo.toml pins, npm package/server/MCPB, Dockerfile"
-  echo "[dry-run]   labels, CITATION, docs, skill.md, README, PRIVACY_POLICY.md,"
-  echo "[dry-run]   install examples, rust-toolchain.toml; CHANGELOG ceremony is"
+  echo "[dry-run]   default, CITATION, skill.md, README, LLM context and install"
+  echo "[dry-run]   examples; CHANGELOG ceremony is"
   echo "[dry-run]   checked separately)"
   echo "[dry-run] cargo check (refresh Cargo.lock); commit + push; tag v$VERSION"
 else
@@ -227,7 +227,7 @@ fi
 # ── release workflow (assets + registries) ───────────────────────────────
 banner "RELEASE WORKFLOW (assets + registries)"
 if $DRY_RUN; then
-  echo "[dry-run] gh run watch the tag-triggered Release workflow: 5-platform"
+  echo "[dry-run] gh run watch the tag-triggered Release workflow: three-target"
   echo "[dry-run]   binaries + cosign bundles + SBOMs + signed manifest, then its"
   echo "[dry-run]   registries job: crates.io → npm → Docker Hub → MCP registry"
 else
@@ -259,8 +259,9 @@ banner "RELEASE ASSETS"
 TMP=""
 RELEASED_BIN=""
 if $DRY_RUN; then
-  echo "[dry-run] gh release view v$VERSION --json assets (expect >= 28: 5 binaries,"
-  echo "[dry-run]   5 sha256, 5 cosign bundles, 15 SBOMs, manifest + .sig)"
+  echo "[dry-run] gh release view v$VERSION --json assets (coarse >=28 check;"
+  echo "[dry-run]   exact native/compressed checksums, signatures, SBOMs and"
+  echo "[dry-run]   signed manifest are reconciled by the release-health gate)"
   echo "[dry-run] download wm-linux-x86_64 + .sha256; sha256sum -c"
 else
   ASSET_COUNT=$(gh release view "v$VERSION" --json assets --jq '.assets | length')

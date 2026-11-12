@@ -5,6 +5,20 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [11.2.1] — 2026-11-12
+
+### Fixed
+- Preserve nested companion files in recursive store snapshots and restore to a fresh, isolated destination only after checking the complete listed file set. Reject escaping paths, links and overlapping roots; these checks do not authenticate a backup or establish a consistent copy of an active store.
+- Keep benchmark evidence in workflow artifacts instead of creating or mutating release records. Use generation-specific release commands and preserve current install selectors until their release-health gates pass.
+- Align the declared Rust minimum with the selected dependency graph, retain the scoped Candle ZIP dependency patch, and exercise native SQLite migration/transaction behavior. Update ChaCha20-Poly1305, SHA-2 and HKDF to their compatible dependency families.
+- Run the full-recall timing guard only in serialized release tests; shared-runner debug timing remains an observation rather than a release performance claim.
+- Include Docker defaults and LLM context in version-truth checks. Keep npm selector semantics, independent source/package identities and the three-target native installer policy explicit.
+- Generate the default profile for the selected release generation and count declared workspace members without counting vendored path dependencies as workspace crates.
+
+### Release scope
+- This is a forward source patch. A release requires new native builds, a signed manifest, all three published-installer certifications, exact-version package/container checks and release-health success. Earlier benchmark-only records and their public tags remain unchanged.
+- No new independent-operator, answer-quality, hosted-runtime, payment or completed-platform claim follows from these source changes. Test and benchmark snapshots must come from the exact release commit; missing observations remain missing.
+
 ## [11.2.0] — 2026-11-08 (UTC)
 
 ### Added

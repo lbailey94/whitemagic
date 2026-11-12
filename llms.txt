@@ -27,10 +27,11 @@ Or download the binary from the [latest release](https://github.com/lbailey94/wh
 }
 ```
 
-The server speaks stdio JSON-RPC. `cyberbrain` (default) exposes 12 lean tools
-including the `wm` meta-tool; `full` exposes the 40-route curated catalog plus
-any feature-gated routes the build registered (`wm contract --json` reports the
-exact set). Explicit routing is the dependable contract.
+The server speaks stdio JSON-RPC. `cyberbrain` is the default compact profile;
+`full` exposes the wider registered surface. Inspect `initialize` and
+`tools/list` from the exact binary/profile for its names and schemas;
+`wm contract --json` reports the route contract. Explicit routing is the
+dependable contract.
 
 ## Hosted lanes (read-only beta)
 
@@ -46,7 +47,7 @@ receipt-verification API runs at <https://api.whitemagic.dev> (`/health` and
 ## Verify
 
 ```bash
-wm --version          # wm 11.2.0 (Gen3 line)
+wm --version          # wm 11.2.1 (Gen3 line)
 wm selftest --json    # install invariant + host_status/host_health
 wm selftest --strict  # exit 1 only when the host verdict is critical
 wm wave4-benchmark    # Wave-4 Takwin & trace-shrinking benchmark (PEB-23..25)
