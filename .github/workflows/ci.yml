@@ -96,6 +96,15 @@ jobs:
         run: |
           set -o pipefail
           cargo test --workspace 2>&1 | tee tests-output.txt
+      - name: Qualify Gate17 full-recall timing (release, serialized)
+        run: bash scripts/qualify_gate17_timing.sh gate17-timing-Linux-X64.log
+      - name: Retain Gate17 timing evidence
+        if: ${{ always() && !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gate17-timing-Linux-X64
+          path: gate17-timing-Linux-X64.log
+          if-no-files-found: warn
       - name: Run gate batteries (reference-models)
         # Activates the Gate 9A adversary_contract and Gate 9D reality
         # batteries, which never compile under the default feature set.
@@ -166,6 +175,15 @@ jobs:
         run: cargo run -p wm-gen3-core --example warm_embed_cache
       - name: Run workspace tests
         run: cargo test --workspace --no-fail-fast
+      - name: Qualify Gate17 full-recall timing (release, serialized)
+        run: bash scripts/qualify_gate17_timing.sh gate17-timing-macOS-ARM64.log
+      - name: Retain Gate17 timing evidence
+        if: ${{ always() && !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gate17-timing-macOS-ARM64
+          path: gate17-timing-macOS-ARM64.log
+          if-no-files-found: warn
 
   build-release:
     timeout-minutes: 20
