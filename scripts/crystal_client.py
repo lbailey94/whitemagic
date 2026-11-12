@@ -27,6 +27,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import warnings
 from typing import Any
 
 try:
@@ -54,6 +55,15 @@ class CrystalVerificationError(ValueError):
 
 class CrystalRollbackError(CrystalVerificationError):
     """Raised when a crystal store is rolled back or truncated relative to an anchor commitment."""
+
+
+class CrystalUnanchoredWarning(UserWarning):
+    """A crystal set was verified without an off-store anchor commitment.
+
+    Without a signed commitment held outside the store, whole-store snapshot
+    rollback (T9) and erasure resurrection (T10) cannot be detected: a restored
+    copy carries any in-store commitment back with it.
+    """
 
 
 class CrystalLineageError(CrystalVerificationError):
@@ -602,6 +612,7 @@ def verify_and_unseal_crystal_set(
     expected_commitment: dict[str, Any] | None = None,
     anchor_public_key: bytes | None = None,
     erasures: list[dict[str, Any]] | None = None,
+    require_anchor: bool | None = None,
 ) -> list[bytes]:
     """Read-path verifier for an ordered crystal set before session resumption (I6/I7).
 
@@ -617,6 +628,24 @@ def verify_and_unseal_crystal_set(
          and AEAD decryption over AAD (cipher, tenant_hash, parent, created_at, metadata)
          -> rejects T1 payload edits, T5 forged records, and T8 metadata edits.
     """
+    if expected_commitment is None:
+        # Anchor policy: ``require_anchor`` True -> refuse; None (default, phase 1)
+        # -> warn; False -> explicit caller opt-out, silent.
+        if require_anchor:
+            raise CrystalRollbackError(
+                "no off-store anchor commitment supplied; rollback (T9) and erasure "
+                "resurrection (T10) cannot be detected"
+            )
+        if require_anchor is None:
+            warnings.warn(
+                "crystal set verified WITHOUT an off-store anchor commitment: whole-store "
+                "rollback (T9) and erasure resurrection (T10) are not detectable. Keep the "
+                "signed set commitment outside the store and pass expected_commitment=..., "
+                "or pass require_anchor=False to acknowledge. The default will become "
+                "strict in a later release.",
+                CrystalUnanchoredWarning,
+                stacklevel=2,
+            )
     if expected_commitment is not None:
         if not isinstance(expected_commitment, dict) or expected_commitment.get("kind") != "wm.crystal-set-commitment":
             raise CrystalRollbackError("invalid or missing crystal-set commitment")

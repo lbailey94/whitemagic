@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [11.2.1] — 2026-11-12
 
+### Added
+- **Crystal anchor policy, phase 1 (warn-first)**: `verify_and_unseal_crystal_set` gains `require_anchor` (`None` default = warn, `True` = refuse, `False` = explicit opt-out). Verifying without an off-store `expected_commitment` now emits `CrystalUnanchoredWarning`, because whole-store rollback (T9) and erasure resurrection (T10) are undetectable without one. Behaviour is otherwise unchanged. Phase 2 will make the strict default.
+
 ### Fixed
 - Preserve nested companion files in recursive store snapshots and restore to a fresh, isolated destination only after checking the complete listed file set. Reject escaping paths, links and overlapping roots; these checks do not authenticate a backup or establish a consistent copy of an active store.
 - Keep benchmark evidence in workflow artifacts instead of creating or mutating release records. Use generation-specific release commands and preserve current install selectors until their release-health gates pass.
