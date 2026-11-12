@@ -10,6 +10,16 @@ use zstd::stream::Decoder as ZstdDecoder;
 
 use wm_gen3_core::hologram::quantize_coords_6d;
 
+fn hex_encode(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for b in bytes {
+        out.push(HEX[(b >> 4) as usize] as char);
+        out.push(HEX[(b & 0x0f) as usize] as char);
+    }
+    out
+}
+
 pub const DEFAULT_SHM_CACHE_DIR: &str = "/dev/shm/whitemagic_cold_cache";
 pub const MAX_SHM_CACHE_BYTES: u64 = 1024 * 1024 * 1024; // 1,024 MB (1 GB)
 
@@ -241,13 +251,13 @@ impl ColdStorageEngine {
                     let mut buf = Vec::with_capacity(size as usize);
                     if entry.read_to_end(&mut buf).is_ok() {
                         let hash_bytes = Sha256::digest(&buf);
-                        content_hash = format!("{:x}", hash_bytes);
+                        content_hash = hex_encode(&hash_bytes);
                         coords = compute_6d_coords(&hash_bytes, mtime, &path_str);
                         if let Ok(text) = String::from_utf8(buf) {
                             content_text = Some(text);
                         }
                     } else {
-                        content_hash = format!("{:x}", Sha256::digest(path_str.as_bytes()));
+                        content_hash = hex_encode(&Sha256::digest(path_str.as_bytes()));
                         coords = compute_6d_coords(
                             &Sha256::digest(path_str.as_bytes()),
                             mtime,
@@ -260,7 +270,7 @@ impl ColdStorageEngine {
                     hasher.update(path_str.as_bytes());
                     hasher.update(size.to_le_bytes());
                     let hash_bytes = hasher.finalize();
-                    content_hash = format!("{:x}", hash_bytes);
+                    content_hash = hex_encode(&hash_bytes);
                     coords = compute_6d_coords(&hash_bytes, mtime, &path_str);
                 }
 
@@ -375,7 +385,7 @@ impl ColdStorageEngine {
         archive_path: P,
         path_in_archive: &str,
     ) -> Result<Vec<u8>, String> {
-        let cache_key = format!("{:x}", Sha256::digest(path_in_archive.as_bytes()));
+        let cache_key = hex_encode(&Sha256::digest(path_in_archive.as_bytes()));
         let cached_file = self.cache_dir.join(&cache_key);
 
         // 1. Check /dev/shm LRU cache (< 0.02ms hit!)

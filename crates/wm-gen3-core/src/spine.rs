@@ -172,10 +172,8 @@ impl KernelSpine for StandardKernelSpine {
                 committed.push(id);
             }
         }
-        let receipt_hash = format!(
-            "{:x}",
-            sha2::Sha256::digest(verdict.execution_id.as_bytes())
-        );
+        let receipt_hash =
+            crate::hex_encode(&sha2::Sha256::digest(verdict.execution_id.as_bytes()));
         Ok(SealedSpineReceipt {
             execution_id: verdict.execution_id,
             committed_record_ids: committed,

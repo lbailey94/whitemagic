@@ -1379,7 +1379,7 @@ fn verify_profile(value: &Value, key: &VerifyingKey, profile: &str) -> Result<()
                     receipt.verify()?;
                     let mut hasher = Sha256::new();
                     hasher.update(receipt.inquiry.as_bytes());
-                    let actual_digest = format!("{:x}", hasher.finalize());
+                    let actual_digest = hex_encode(&hasher.finalize());
                     if receipt.inquiry_digest != actual_digest {
                         return Err("inquiry text does not match signed inquiry_digest".to_string());
                     }
@@ -2064,7 +2064,7 @@ mod tests {
         let store = fixture_store(&key);
         let receipt_id = "legacy-receipt";
         let inquiry = "legacy inquiry";
-        let inquiry_digest = format!("{:x}", Sha256::digest(inquiry.as_bytes()));
+        let inquiry_digest = hex_encode(&Sha256::digest(inquiry.as_bytes()));
         let candidates = vec!["memory.search".to_string(), "memory.create".to_string()];
         let chosen_route = "memory.search";
         let timestamp_ms = 1_700_000_000_000;

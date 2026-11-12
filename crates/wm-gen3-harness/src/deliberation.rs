@@ -287,7 +287,7 @@ impl DeliberationReceipt {
         let inquiry_digest = {
             let mut hasher = Sha256::new();
             hasher.update(inquiry.as_bytes());
-            format!("{:x}", hasher.finalize())
+            hex_encode(&hasher.finalize())
         };
 
         let pubkey_bytes = signing_key.verifying_key().to_bytes();
@@ -594,7 +594,7 @@ fn model_sha256(path: &Path) -> Option<String> {
         }
         hasher.update(&buf[..n]);
     }
-    let digest = format!("{:x}", hasher.finalize());
+    let digest = hex_encode(&hasher.finalize());
     let _ = std::fs::write(&sidecar, format!("{digest}  {}", path.display()));
     Some(digest)
 }

@@ -1093,7 +1093,7 @@ impl WorkspaceClaim {
         }
         hasher.update(self.created_at.to_be_bytes());
         hasher.update(self.expires_at.to_be_bytes());
-        format!("sha256:{:x}", hasher.finalize())
+        format!("sha256:{}", crate::hex_encode(&hasher.finalize()))
     }
 
     /// Signs this claim with an authorized gate signing key.

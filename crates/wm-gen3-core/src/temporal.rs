@@ -405,7 +405,7 @@ pub(crate) fn digest(entry: &LedgerEntry) -> Result<String, TemporalError> {
     let mut h = Sha256::new();
     h.update(b"WhiteMagic temporal assertion v1\0");
     h.update(bytes);
-    Ok(format!("{:x}", h.finalize()))
+    Ok(crate::hex_encode(&h.finalize()))
 }
 
 pub(crate) fn realm_hex(realm: [u8; 16]) -> String {

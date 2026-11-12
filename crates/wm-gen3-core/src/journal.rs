@@ -23,16 +23,24 @@ pub fn now_epoch() -> u64 {
 pub fn sha256_hex(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
-    format!("{:x}", hasher.finalize())
+    crate::hex_encode(&hasher.finalize())
 }
 
 /// Hash a file's bytes (run-level journal hash; the host computes it after
 /// `Substrate::finish` returns).
 pub fn sha256_file(path: &Path) -> std::io::Result<String> {
+    use std::io::Read;
     let mut file = File::open(path)?;
     let mut hasher = Sha256::new();
-    std::io::copy(&mut file, &mut hasher)?;
-    Ok(format!("{:x}", hasher.finalize()))
+    let mut buf = [0u8; 8192];
+    loop {
+        let n = file.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    Ok(crate::hex_encode(&hasher.finalize()))
 }
 
 /// JSONL journal writer. One writer per run.

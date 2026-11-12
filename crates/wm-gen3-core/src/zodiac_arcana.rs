@@ -442,7 +442,7 @@ pub fn deliberate_council(
     hasher.update(mode.as_bytes());
     hasher.update(b"|");
     hasher.update(format!("{grade:?}").as_bytes());
-    let digest_sha256 = format!("{:x}", hasher.finalize());
+    let digest_sha256 = crate::hex_encode(&hasher.finalize());
 
     CouncilDeliberationReport {
         inquiry: inquiry.to_string(),

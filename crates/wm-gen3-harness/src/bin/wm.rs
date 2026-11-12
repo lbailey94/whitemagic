@@ -5794,7 +5794,7 @@ fn run_wiki_command(store_path: &Path, out_dir: &Path, limit: usize, json: bool)
         let content_preview: String = rec.content().chars().take(280).collect();
         let mut h = Sha256::new();
         h.update(rec.content().as_bytes());
-        let sha = format!("{:x}", h.finalize());
+        let sha = hex_encode(&h.finalize());
         let next_id = records
             .get((idx + 1) % records.len())
             .map_or(record_id, |r| r.id());
@@ -7470,7 +7470,7 @@ fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
                 let mut hasher = Sha256::new();
                 hasher.update(target.as_bytes());
                 hasher.update(reason.as_bytes());
-                format!("{:x}", hasher.finalize())
+                hex_encode(&hasher.finalize())
             });
 
             let now = std::time::SystemTime::now()
