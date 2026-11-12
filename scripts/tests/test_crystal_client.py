@@ -389,36 +389,33 @@ class CrystalClientTest(unittest.TestCase):
                 [c1], kek, tenant_hash, expected_commitment=comm, anchor_public_key=anchor_pub
             )
 
-    def test_unanchored_verify_policy_warn_first(self) -> None:
-        import warnings
+    def test_unanchored_verify_policy_strict_default(self) -> None:
+        from pathlib import Path
 
         kek = bytes(range(32))
         tenant_hash = cc.compute_tenant_hash("tenant-anchor-policy")
         c1 = cc.seal_crystal(
             b"one", kek, "tenant-anchor-policy", kek_version=1
         )
-        # Default (phase 1): no anchor -> verifies, but warns loudly.
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            pts = cc.verify_and_unseal_crystal_set([c1], kek, tenant_hash)
-        self.assertEqual(pts, [b"one"])
-        self.assertTrue(any(issubclass(w.category, cc.CrystalUnanchoredWarning) for w in caught))
-        # Strict opt-in: no anchor -> refused.
+        # Default (phase 2 strict): no anchor -> refused fail-closed.
         with self.assertRaises(cc.CrystalRollbackError):
-            cc.verify_and_unseal_crystal_set([c1], kek, tenant_hash, require_anchor=True)
-        # Explicit acknowledgement: silent.
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            cc.verify_and_unseal_crystal_set([c1], kek, tenant_hash, require_anchor=False)
-        self.assertFalse(caught)
-        # Anchored: silent, and strict passes.
+            cc.verify_and_unseal_crystal_set([c1], kek, tenant_hash)
+        # Explicit opt-out: allowed.
+        pts = cc.verify_and_unseal_crystal_set([c1], kek, tenant_hash, require_anchor=False)
+        self.assertEqual(pts, [b"one"])
+        # Anchored: passes cleanly.
         comm = cc.compute_crystal_set_commitment([c1], tenant_hash)
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            cc.verify_and_unseal_crystal_set(
-                [c1], kek, tenant_hash, expected_commitment=comm, require_anchor=True
-            )
-        self.assertFalse(caught)
+        pts_anchored = cc.verify_and_unseal_crystal_set(
+            [c1], kek, tenant_hash, expected_commitment=comm
+        )
+        self.assertEqual(pts_anchored, [b"one"])
+
+        # Off-store anchor path resolution helper
+        p_dir = Path("/tmp/my-test-store")
+        resolved = cc.resolve_offstore_anchor_path(p_dir)
+        self.assertEqual(resolved, Path("/tmp/my-test-store.anchor/commitment.json"))
+        # Must not be inside store boundary
+        self.assertFalse(str(resolved).startswith(str(p_dir) + "/"))
 
     def test_l5_third_party_zero_knowledge_verifier_rejects_all_t1_t9_without_kek(self) -> None:
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
