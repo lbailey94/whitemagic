@@ -149,10 +149,15 @@ curl -fsSL https://www.whitemagic.dev/install.sh?ref=readme | sh
 
 ### Other channels
 
+These commands are not one release. `npx whitemagic-mcp` follows the npm
+`latest` tag, which is the current open-alpha release (11.2.1).
+`cargo install whitemagic` and the Docker tag `9` are the Gen2 9.3.4 line.
+Docker Hub also publishes a tag for the current release, `11.2.1`.
+
 ```bash
-npx whitemagic-mcp serve                     # npm (no global install)
-cargo install whitemagic                     # crates.io
-docker run -i lbailey94/whitemagic:9 serve   # Docker Hub
+npx whitemagic-mcp serve                     # npm latest (open alpha)
+cargo install whitemagic                     # crates.io (Gen2 9.3.4)
+docker run -i lbailey94/whitemagic:9 serve   # Docker Hub Gen2 tag
 ```
 
 Adoption snapshot (2026-10-16): 5,680 npm downloads · 6,173 Docker Hub pulls ·
