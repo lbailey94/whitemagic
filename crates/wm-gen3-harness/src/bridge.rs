@@ -969,7 +969,7 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
                     "session_id": { "type": "string", "description": "Optional session identifier filter; if omitted, returns the latest checkpoint across all sessions" },
                     "current_session_id": { "type": "string", "description": "Optional active session identifier to exclude when selecting a prior session" },
                     "track": { "type": "string", "description": "Optional track slug to surface prior crystallized codex memories and select the latest prior session on this track" },
-                    "token_budget": { "type": "integer", "description": "Optional cap for compact agent_context.text: UTF-8 byte cap is token_budget × 4; estimated_tokens is a byte-based heuristic, not tokenizer-guaranteed. Zero produces empty context." }
+                    "token_budget": { "type": "integer", "description": "Optional cap for compact agent_context.text: UTF-8 byte cap is token_budget × 4; estimated_tokens is a byte-based heuristic, not tokenizer-guaranteed. Zero produces empty context. Newest checkpoint summary and next_queue are reserved first; if they cannot fit, budget_completeness is insufficient and text is empty." }
                 }
             }
         },
@@ -1283,7 +1283,7 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
                     "until": { "type": "string", "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD" },
                     "max_content_bytes": { "type": "integer", "description": "Per-turn content cap in bytes (default 8192)" },
                     "max_response_bytes": { "type": "integer", "description": "Turns budget in bytes (default 49152)" },
-                    "token_budget": { "type": "integer", "description": "Optional cap for compact agent_context.text: UTF-8 byte cap is token_budget × 4; estimated_tokens is a byte-based heuristic, not tokenizer-guaranteed. Zero produces empty context." },
+                    "token_budget": { "type": "integer", "description": "Optional cap for compact agent_context.text: UTF-8 byte cap is token_budget × 4; estimated_tokens is a byte-based heuristic, not tokenizer-guaranteed. Zero produces empty context. Newest checkpoint summary and next_queue are reserved first; if they cannot fit, budget_completeness is insufficient and text is empty." },
                     "include_briefing_text": { "type": "boolean", "description": "Include the ready-to-inject briefing.text block" }
                 }
             }
@@ -4495,6 +4495,20 @@ fn resolve_continuity_session_lane(
         {
             return Some(prior_sid);
         }
+        // Checkpoints can exist for a track before any session_log turns do.
+        // Prefer that lane over returning None (which becomes session "all").
+        if let Some(substrate) = substrate {
+            if let Ok(views) = substrate.session_continuities(None, 256) {
+                if let Some(sid) = views.into_iter().find_map(|view| {
+                    (view.track.as_deref() == Some(trk.as_str())
+                        && !view.session_id.is_empty()
+                        && Some(view.session_id.as_str()) != current_session)
+                    .then_some(view.session_id)
+                }) {
+                    return Some(sid);
+                }
+            }
+        }
         // A scoped track with no prior session stays scoped to the requested
         // session (or to an empty lane); never import the globally latest lane.
         if let Some(current) = current_session {
@@ -4778,7 +4792,7 @@ fn handle_session_continuity(
     if let Some(context) = agent_context {
         response["agent_context"] = context;
         response["context_budget_disclosure"] = json!(
-            "agent_context.text is the compact agent-consumed projection; other response fields are diagnostic/transport metadata outside its cap. estimated_tokens is ceil(UTF-8 bytes/4), a heuristic rather than a tokenizer guarantee."
+            "agent_context.text is the compact agent-consumed projection; other response fields are diagnostic/transport metadata outside its cap. estimated_tokens is ceil(UTF-8 bytes/4), a heuristic rather than a tokenizer guarantee. The newest checkpoint summary and next_queue are reserved as continuity core: if they cannot fit, budget_completeness is insufficient and text is empty rather than a null-checkpoint partial. Treat agent_context as unusable when continuity_core_omitted is true or checkpoint is null while the top-level checkpoint field is present."
         );
     }
 
@@ -4846,11 +4860,15 @@ fn compact_agent_context(input: CompactAgentContextInput<'_>) -> Value {
             let kept = retained.iter().filter(|turn| turn["kind"] == kind).count();
             omissions[kind] = json!(total.saturating_sub(kept));
         }
+        let continuity_core_omitted = context["continuity_core_omitted"].as_bool().unwrap_or(false);
         context["critical_evidence_omitted"] = json!(
-            omissions["arc"].as_u64().unwrap_or(0) > 0
+            continuity_core_omitted
+                || omissions["arc"].as_u64().unwrap_or(0) > 0
                 || omissions["decision"].as_u64().unwrap_or(0) > 0
         );
-        context["budget_completeness"] = json!(if context["text"] == "" {
+        context["budget_completeness"] = json!(if continuity_core_omitted {
+            "insufficient"
+        } else if context["text"] == "" {
             "empty"
         } else if context["omitted_turns"].as_u64().unwrap_or(0) > 0
             || context["omitted_other"].as_u64().unwrap_or(0) > 0
@@ -4864,11 +4882,13 @@ fn compact_agent_context(input: CompactAgentContextInput<'_>) -> Value {
         context["omitted_turns_by_kind"] = omissions;
         context
     };
-    let mut cp = checkpoint.map(|c| {
+    let cp = checkpoint.map(|c| {
         json!({"status": c.checkpoint_type, "created_at": c.timestamp_iso,
         "summary": c.summary, "record_id": c.record_id, "track": c.track})
     });
-    let mut q: Vec<Value> = queue.iter().cloned().map(Value::String).collect();
+    // Continuity core: newest checkpoint + next_queue stay together. Prefer an
+    // empty `insufficient` projection over a partial one with checkpoint null.
+    let q: Vec<Value> = queue.iter().cloned().map(Value::String).collect();
     let mut f: Vec<Value> = flags.iter().cloned().map(Value::String).collect();
     const CRYSTAL_TITLE_MAX_BYTES: usize = 120;
     const CRYSTAL_PREVIEW_MAX_BYTES: usize = 160;
@@ -4899,32 +4919,58 @@ fn compact_agent_context(input: CompactAgentContextInput<'_>) -> Value {
     };
     let mut omitted_turns = 0usize;
     let mut omitted_other = usize::from(briefing_duplicates_projection);
+    let core_omission_count =
+        queue.len() + usize::from(checkpoint.is_some()) + flags.len() + crystals.len()
+            + usize::from(briefing.is_some());
+    let insufficient = |omitted_turns: usize, omitted_other: usize| {
+        finish(
+            json!({
+                "text": "",
+                "byte_cap": byte_cap,
+                "bytes_used": 0,
+                "estimated_tokens": 0,
+                "estimate_method": "utf8_bytes_div_4_heuristic",
+                "omitted_turns": omitted_turns,
+                "omitted_other": omitted_other,
+                "crystals_omitted": crystals.len(),
+                "crystal_titles_truncated": 0,
+                "crystal_previews_truncated": 0,
+                "continuity_core_omitted": true,
+                "briefing_omitted_as_duplicate": briefing_duplicates_projection
+            }),
+            &[],
+        )
+    };
+    if byte_cap == 0 {
+        return finish(
+            json!({"text":"", "byte_cap":0, "bytes_used":0, "estimated_tokens":0, "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":total_selected_turns, "omitted_other":queue.len()+flags.len()+crystals.len()+usize::from(checkpoint.is_some())+usize::from(briefing.is_some()), "crystals_omitted":crystals.len(), "crystal_titles_truncated":0, "crystal_previews_truncated":0, "continuity_core_omitted": checkpoint.is_some() || !queue.is_empty()}),
+            &[],
+        );
+    }
+    let core_only = json!({"turns": [], "checkpoint": cp, "queue": q, "flags": [], "crystals": [], "briefing": null});
+    let core_text = serde_json::to_string(&core_only).unwrap_or_else(|_| "{}".into());
+    if (cp.is_some() || !q.is_empty()) && core_text.len() > byte_cap {
+        return insufficient(total_selected_turns, core_omission_count);
+    }
     loop {
         let value = json!({"turns": turns, "checkpoint": cp, "queue": q, "flags": f, "crystals": c, "briefing": brief});
         let text = serde_json::to_string(&value).unwrap_or_else(|_| "{}".into());
-        if byte_cap == 0 {
-            return finish(
-                json!({"text":"", "byte_cap":0, "bytes_used":0, "estimated_tokens":0, "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":total_selected_turns, "omitted_other":queue.len()+flags.len()+crystals.len()+usize::from(checkpoint.is_some())+usize::from(briefing.is_some()), "crystals_omitted":crystals.len(), "crystal_titles_truncated":0, "crystal_previews_truncated":0}),
-                &[],
-            );
-        }
         if text.len() <= byte_cap {
             return finish(
-                json!({"text":text, "byte_cap":byte_cap, "bytes_used":text.len(), "estimated_tokens":text.len().div_ceil(4), "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":omitted_turns, "omitted_other":omitted_other, "crystals_omitted":crystals.len().saturating_sub(c.len()), "crystal_titles_truncated":crystal_title_truncated.iter().filter(|truncated| **truncated).count(), "crystal_previews_truncated":crystal_preview_truncated.iter().filter(|truncated| **truncated).count(), "briefing_omitted_as_duplicate":briefing_duplicates_projection}),
+                json!({"text":text, "byte_cap":byte_cap, "bytes_used":text.len(), "estimated_tokens":text.len().div_ceil(4), "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":omitted_turns, "omitted_other":omitted_other, "crystals_omitted":crystals.len().saturating_sub(c.len()), "crystal_titles_truncated":crystal_title_truncated.iter().filter(|truncated| **truncated).count(), "crystal_previews_truncated":crystal_preview_truncated.iter().filter(|truncated| **truncated).count(), "briefing_omitted_as_duplicate":briefing_duplicates_projection, "continuity_core_omitted": false}),
                 &turns,
             );
         }
+        // Drop history and ornaments before the continuity core. Never null out
+        // checkpoint or next_queue to make room for older turns.
         if let Some(index) = turns.iter().rposition(|turn| turn["kind"] == "recent") {
             turns.remove(index);
             omitted_turns += 1;
-        } else if !q.is_empty() {
-            q.pop();
-            omitted_other += 1;
+        } else if let Some(index) = turns.iter().rposition(|turn| turn["kind"] == "salient") {
+            turns.remove(index);
+            omitted_turns += 1;
         } else if !f.is_empty() {
             f.pop();
-            omitted_other += 1;
-        } else if cp.is_some() {
-            cp = None;
             omitted_other += 1;
         } else if let Some(text) = brief.as_mut() {
             if text.is_empty() {
@@ -4954,9 +5000,11 @@ fn compact_agent_context(input: CompactAgentContextInput<'_>) -> Value {
         } else if !turns.is_empty() {
             turns.pop();
             omitted_turns += 1;
+        } else if cp.is_some() || !q.is_empty() {
+            return insufficient(total_selected_turns, omitted_other.max(core_omission_count));
         } else {
             return finish(
-                json!({"text":"", "byte_cap":byte_cap, "bytes_used":0, "estimated_tokens":0, "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":total_selected_turns, "omitted_other":omitted_other, "crystals_omitted":crystals.len(), "crystal_titles_truncated":0, "crystal_previews_truncated":0}),
+                json!({"text":"", "byte_cap":byte_cap, "bytes_used":0, "estimated_tokens":0, "estimate_method":"utf8_bytes_div_4_heuristic", "omitted_turns":total_selected_turns, "omitted_other":omitted_other, "crystals_omitted":crystals.len(), "crystal_titles_truncated":0, "crystal_previews_truncated":0, "continuity_core_omitted": false}),
                 &[],
             );
         }
@@ -10244,7 +10292,7 @@ mod compact_agent_context_tests {
         let a = turn("a", "question", 2, "open arc: what is the recovery rule?");
         let giant = turn("g", "note", 3, &"checkpoint ".repeat(1000));
         let huge = vec!["flag".repeat(500); 10];
-        let checkpoint = SessionContinuityView {
+        let oversized = SessionContinuityView {
             record_id: 99,
             epoch: 1,
             session_id: "s".into(),
@@ -10266,7 +10314,7 @@ mod compact_agent_context_tests {
         };
         let crystals =
             vec![json!({"record_id":1,"title":"crystal","preview":"crystal ".repeat(500)})];
-        for budget in [0usize, 1, 280] {
+        for budget in [0usize, 1] {
             let ctx = compact_agent_context(CompactAgentContextInput {
                 byte_cap: budget * 4,
                 recent: &[
@@ -10279,7 +10327,7 @@ mod compact_agent_context_tests {
                 ],
                 salient: &[d.clone(), d2.clone(), d3.clone(), d4.clone()],
                 arcs: std::slice::from_ref(&a),
-                checkpoint: Some(&checkpoint),
+                checkpoint: Some(&oversized),
                 queue: &huge,
                 flags: &huge,
                 crystals: &crystals,
@@ -10292,30 +10340,123 @@ mod compact_agent_context_tests {
                 ctx["estimated_tokens"].as_u64().unwrap() as usize,
                 text.len().div_ceil(4)
             );
+            assert_eq!(text, "");
             if budget == 0 {
-                assert_eq!(text, "");
-            } else if !text.is_empty() {
-                let parsed: Value =
-                    serde_json::from_str(text).expect("projection stays valid JSON");
-                let turns = parsed["turns"].as_array().unwrap();
-                assert!(turns.iter().filter(|t| t["kind"] == "decision").count() <= 4);
-                assert!(turns.iter().filter(|t| t["kind"] == "arc").count() <= 1);
-                if budget == 280 {
-                    assert_eq!(turns.iter().filter(|t| t["kind"] == "decision").count(), 4);
-                    assert_eq!(turns.iter().filter(|t| t["kind"] == "arc").count(), 1);
-                    assert_eq!(parsed["crystals"].as_array().unwrap().len(), 1);
-                    assert_eq!(parsed["crystals"][0]["id"], 1);
-                    assert!(parsed["crystals"][0]["title"].as_str().is_some());
-                    assert!(parsed["crystals"][0]["preview"].as_str().unwrap().len() <= 160);
-                    assert_eq!(
-                        turns.len(),
-                        5,
-                        "the duplicate recent/salient turns are deduplicated and giant chatter is pruned"
-                    );
-                    assert!(ctx["crystal_previews_truncated"].as_u64().unwrap() >= 1);
-                }
+                assert_eq!(ctx["budget_completeness"], "insufficient");
+                assert_eq!(ctx["continuity_core_omitted"], true);
+            } else {
+                assert_eq!(ctx["budget_completeness"], "insufficient");
+                assert_eq!(ctx["continuity_core_omitted"], true);
             }
         }
+
+        let compact = SessionContinuityView {
+            record_id: 7,
+            epoch: 1,
+            session_id: "s".into(),
+            agent_id: "a".into(),
+            checkpoint_type: "handoff".into(),
+            summary: "keep this checkpoint".into(),
+            next_queue: vec!["do next".into()],
+            open_flags: vec!["watch".into()],
+            timestamp_iso: Some("2026-11-13T00:00:00Z".into()),
+            raw_content: String::new(),
+            track: Some("estate".into()),
+            ..Default::default()
+        };
+        let ctx = compact_agent_context(CompactAgentContextInput {
+            byte_cap: 280 * 4,
+            recent: &[
+                d.clone(),
+                d2.clone(),
+                d3.clone(),
+                d4.clone(),
+                a.clone(),
+                giant.clone(),
+            ],
+            salient: &[d.clone(), d2.clone(), d3.clone(), d4.clone()],
+            arcs: std::slice::from_ref(&a),
+            checkpoint: Some(&compact),
+            queue: &["do next".into()],
+            flags: &["watch".into()],
+            crystals: &crystals,
+            briefing: Some(&"briefing ".repeat(1000)),
+        });
+        let text = ctx["text"].as_str().unwrap();
+        assert!(text.len() <= 280 * 4);
+        let parsed: Value = serde_json::from_str(text).expect("projection stays valid JSON");
+        assert_eq!(parsed["checkpoint"]["record_id"], 7);
+        assert_eq!(parsed["checkpoint"]["summary"], "keep this checkpoint");
+        assert_eq!(parsed["queue"].as_array().unwrap().len(), 1);
+        let turns = parsed["turns"].as_array().unwrap();
+        assert_eq!(turns.iter().filter(|t| t["kind"] == "decision").count(), 4);
+        assert_eq!(turns.iter().filter(|t| t["kind"] == "arc").count(), 1);
+        assert_eq!(parsed["crystals"].as_array().unwrap().len(), 1);
+        assert_eq!(parsed["crystals"][0]["id"], 1);
+        assert!(parsed["crystals"][0]["preview"].as_str().unwrap().len() <= 160);
+        assert_eq!(
+            turns.len(),
+            5,
+            "the duplicate recent/salient turns are deduplicated and giant chatter is pruned"
+        );
+        assert!(ctx["crystal_previews_truncated"].as_u64().unwrap() >= 1);
+        assert_eq!(ctx["continuity_core_omitted"], false);
+    }
+
+    #[test]
+    fn compact_projection_keeps_checkpoint_over_history_and_refuses_null_core() {
+        let chatter = turn("r", "note", 9, &"recent noise ".repeat(40));
+        let decision = turn("d", "decision", 1, "decision: keep the lane");
+        let checkpoint = SessionContinuityView {
+            record_id: 42,
+            epoch: 2,
+            session_id: "estate".into(),
+            agent_id: "cursor".into(),
+            checkpoint_type: "milestone".into(),
+            summary: "production is on v11.2.1".into(),
+            next_queue: vec!["verify cards".into()],
+            timestamp_iso: Some("2026-11-13T03:07:01Z".into()),
+            raw_content: String::new(),
+            track: Some("estate".into()),
+            ..Default::default()
+        };
+
+        let kept = compact_agent_context(CompactAgentContextInput {
+            byte_cap: 220,
+            recent: std::slice::from_ref(&chatter),
+            salient: std::slice::from_ref(&decision),
+            arcs: &[],
+            checkpoint: Some(&checkpoint),
+            queue: &["verify cards".into()],
+            flags: &["stale-flag".into()],
+            crystals: &[],
+            briefing: None,
+        });
+        let text = kept["text"].as_str().unwrap();
+        assert!(!text.is_empty());
+        let parsed: Value = serde_json::from_str(text).unwrap();
+        assert_eq!(parsed["checkpoint"]["record_id"], 42);
+        assert_eq!(parsed["queue"][0], "verify cards");
+        assert!(
+            parsed["turns"].as_array().unwrap().len() < 2,
+            "history yields before the continuity core"
+        );
+
+        let too_small = compact_agent_context(CompactAgentContextInput {
+            byte_cap: 32,
+            recent: std::slice::from_ref(&chatter),
+            salient: std::slice::from_ref(&decision),
+            arcs: &[],
+            checkpoint: Some(&checkpoint),
+            queue: &["verify cards".into()],
+            flags: &[],
+            crystals: &[],
+            briefing: None,
+        });
+        assert_eq!(too_small["text"], "");
+        assert_eq!(too_small["budget_completeness"], "insufficient");
+        assert_eq!(too_small["continuity_core_omitted"], true);
+        assert_eq!(too_small["critical_evidence_omitted"], true);
     }
 
     #[test]
@@ -12641,6 +12782,137 @@ mod diaml_and_salience_refinement_tests {
         .expect("replay pattern B");
         assert_eq!(replay_b["session_id"], "c1_arch_s1");
         assert_eq!(replay_b["returned"], 1);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn continuity_core_survives_overcrowd_and_track_only_checkpoint_resume() {
+        let dir = std::env::temp_dir().join(format!("wm-cont-core-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("open substrate");
+
+        for i in 1..=10 {
+            handle_session_record(
+                &json!({
+                    "session_id": "estate-lane",
+                    "role": "assistant",
+                    "turn_type": "decision",
+                    "track": "estate",
+                    "importance": 0.95,
+                    "content": format!(
+                        "D{i}: Keep estate continuity durable under budget pressure; pad {}",
+                        "x".repeat(40)
+                    )
+                }),
+                &mut substrate,
+                &dir,
+                false,
+            )
+            .expect("decision");
+        }
+        for i in 1..=16 {
+            handle_session_record(
+                &json!({
+                    "session_id": "estate-lane",
+                    "role": "assistant",
+                    "turn_type": "note",
+                    "track": "estate",
+                    "importance": 0.2,
+                    "content": format!("recent noise {i}: {}", "n".repeat(48))
+                }),
+                &mut substrate,
+                &dir,
+                false,
+            )
+            .expect("noise");
+        }
+        handle_session_checkpoint(
+            &json!({
+                "session_id": "estate-lane",
+                "agent_id": "cursor",
+                "checkpoint_type": "milestone",
+                "track": "estate",
+                "summary": "Production hosted lane now runs v11.2.1.",
+                "next_queue": ["Verify cards before deploy."]
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("checkpoint");
+
+        // Foreign history that used to pollute track-only resume when the
+        // resolver fell through to session "all".
+        handle_session_record(
+            &json!({
+                "session_id": "foreign-lane",
+                "role": "user",
+                "turn_type": "decision",
+                "track": "other",
+                "importance": 0.95,
+                "content": "FOREIGN_DECISION: rotate staging CSS on Tuesday."
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("foreign");
+
+        let crowded = handle_session_continuity(
+            &json!({
+                "session_id": "estate-lane",
+                "track": "estate",
+                "token_budget": 280,
+                "n": 8
+            }),
+            &substrate,
+            &dir,
+        )
+        .expect("crowded continuity");
+        let ctx = crowded["agent_context"].as_object().expect("agent_context");
+        assert_eq!(ctx["continuity_core_omitted"], false);
+        assert_ne!(ctx["budget_completeness"], "insufficient");
+        let projection: Value =
+            serde_json::from_str(ctx["text"].as_str().expect("text")).expect("json");
+        assert_eq!(projection["checkpoint"]["summary"], "Production hosted lane now runs v11.2.1.");
+        assert_eq!(projection["queue"][0], "Verify cards before deploy.");
+        let turns = projection["turns"].as_array().expect("turns");
+        assert!(
+            turns
+                .iter()
+                .all(|turn| !turn["text"].as_str().unwrap_or_default().contains("FOREIGN_DECISION")),
+            "estate overcrowding must not import foreign-lane chatter"
+        );
+
+        // Checkpoint-only track resume: clear the session log so only the
+        // substrate checkpoint can identify the estate lane.
+        std::fs::write(dir.join("session_log.jsonl"), "").expect("clear log");
+        let track_only = handle_session_continuity(
+            &json!({
+                "track": "estate",
+                "token_budget": 120,
+                "n": 3
+            }),
+            &substrate,
+            &dir,
+        )
+        .expect("track-only continuity");
+        assert_eq!(track_only["session_id"], "estate-lane");
+        assert_ne!(track_only["session_id"], "all");
+        assert_eq!(
+            track_only["checkpoint"]["summary"],
+            "Production hosted lane now runs v11.2.1."
+        );
+        let track_ctx = track_only["agent_context"].as_object().expect("agent_context");
+        let track_projection: Value =
+            serde_json::from_str(track_ctx["text"].as_str().expect("text")).expect("json");
+        assert_eq!(
+            track_projection["checkpoint"]["summary"],
+            "Production hosted lane now runs v11.2.1."
+        );
+        assert_eq!(track_projection["queue"][0], "Verify cards before deploy.");
 
         let _ = std::fs::remove_dir_all(&dir);
     }

@@ -1,0 +1,1788 @@
+{
+  "candidate": {
+    "binary": {
+      "path": "/home/lucas/Desktop/front burner/repos/WHITEMAGIC/WMv10/target/candidate/wm-continuity-core",
+      "sha256": "712d6170eb9ebd8d6a50a25dec83891e9968b5b69cecb20b950a4f7d2dbfcb9e",
+      "version": "wm 11.2.1"
+    },
+    "continuity_family": {
+      "family": "T_CONTINUITY",
+      "scenarios": [
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.591,
+            "open_arc_precision": 0.0,
+            "tokens_used": 277
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 2.436,
+            "open_arc_precision": 0.0,
+            "tokens_used": 277
+          },
+          "scenario_id": "C1_payment_journal_invariants",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.931,
+            "open_arc_precision": 1.0,
+            "tokens_used": 258
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-11-13T16:00:34.433926805+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C1_payment_journal_invariants design and recorded decisions.\",\"track\":\"track-economy\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C1_payment_journal_invariants_s1]\\nTrack: track-economy\\nSummary: Completed C1_payment_journal_invariants design and recorded decisions.\\nConverge\",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: What alert threshold should trigger on held unknown settlements in pilot?\"},{\"kind\":\"decision\",\"text\":\"D1: Persist pending settlement journal with fsync before facilitator /settle.\"},{\"kind\":\"decision\",\"text\":\"D2: Hold account on unknown facilitator HTTP 200 empty response.\"},{\"kind\":\"decision\",\"text\":\"D3: Bind recovery matching to full 64-hex nonce, account, amount, and tx.\"},{\"kind\":\"decision\",\"text\":\"D4: Keep production --economy flag disabled until qualification closes.\"},{\"kind\":\"decision\",\"text\":\"D_RES: No, truncated nonces must remain held unless full identity matches.\"}]}",
+            "context_bytes": 1078,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 20.811,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 18975,
+            "selected_prior_session": "C1_payment_journal_invariants_s1",
+            "tokens_used": 270
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.547,
+            "open_arc_precision": 0.0,
+            "tokens_used": 277
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 2.327,
+            "open_arc_precision": 0.0,
+            "tokens_used": 277
+          },
+          "scenario_id": "C2_release_manifest_signing",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 1.256,
+            "open_arc_precision": 1.0,
+            "tokens_used": 254
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-11-13T16:00:34.558197950+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C2_release_manifest_signing design and recorded decisions.\",\"track\":\"track-release\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C2_release_manifest_signing_s1]\\nTrack: track-release\\nSummary: Completed C2_release_manifest_signing design and recorded decisions.\\nConverged De\",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: When should Windows ONNX runtime targets re-enter the alpha matrix?\"},{\"kind\":\"decision\",\"text\":\"D1: Sign release-manifest.json with Ed25519 key aade884b035d...\"},{\"kind\":\"decision\",\"text\":\"D2: Verify raw binary SHA-256 and size against GitHub asset digests.\"},{\"kind\":\"decision\",\"text\":\"D3: Bind npm and docker install_certification to bound_manifest_sha256.\"},{\"kind\":\"decision\",\"text\":\"D4: Run trusted release_health.py from RUNNER_TEMP across tag checkouts.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Exempted explicit stable channel fallback pin in version_truth.py.\"}]}",
+            "context_bytes": 1058,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 17.571,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 18837,
+            "selected_prior_session": "C2_release_manifest_signing_s1",
+            "tokens_used": 265
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.934,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 2.393,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C3_crystal_envelope_security",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.898,
+            "open_arc_precision": 1.0,
+            "tokens_used": 253
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-11-13T16:00:34.673734193+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C3_crystal_envelope_security design and recorded decisions.\",\"track\":\"track-crystals\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C3_crystal_envelope_security_s1]\\nTrack: track-crystals\\nSummary: Completed C3_crystal_envelope_security design and recorded decisions.\\nConverged\",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should external OpenTimestamps anchors batch crystal-set commitments hourly?\"},{\"kind\":\"decision\",\"text\":\"D1: Bind cell_id to sha256(id_kek_version || nonce || ciphertext).\"},{\"kind\":\"decision\",\"text\":\"D2: Wrap per-crystal DEK under tenant KEK with versioned rotation.\"},{\"kind\":\"decision\",\"text\":\"D3: Require Ed25519 client_sig over canonical envelope for L5 audit.\"},{\"kind\":\"decision\",\"text\":\"D4: Enforce X-WM-Crystal-Assertion HMAC replay refusal in SQLite.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Yes, id_kek_version stays pinned while kek_version increments.\"}]}",
+            "context_bytes": 1056,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 18.78,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 18889,
+            "selected_prior_session": "C3_crystal_envelope_security_s1",
+            "tokens_used": 264
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.595,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 2.415,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C4_backup_restore_contract",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.868,
+            "open_arc_precision": 1.0,
+            "tokens_used": 261
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-11-13T16:00:34.836113601+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C4_backup_restore_contract design and recorded decisions.\",\"track\":\"track-recovery\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C4_backup_restore_contract_s1]\\nTrack: track-recovery\\nSummary: Completed C4_backup_restore_contract design and recorded decisions.\\nConverged Dec\",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should off-box backup freshness alert at 30h or 36h age?\"},{\"kind\":\"decision\",\"text\":\"D1: Raise aggregate tenant-write archive cap to 4 GiB (4294967296 bytes).\"},{\"kind\":\"decision\",\"text\":\"D2: Require correlated timestamps across hosted-store, auth-state, hosted-writes.\"},{\"kind\":\"decision\",\"text\":\"D3: Deploy replacement host with deploy.sh --no-restart before state extraction.\"},{\"kind\":\"decision\",\"text\":\"D4: Verify next-lane readiness on 18798/18799 before re-enabling key issuance.\"},{\"kind\":\"decision\",\"text\":\"D_RES: No, deploy.sh --no-restart installs the 52 manifest files first.\"}]}",
+            "context_bytes": 1083,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 19.695,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 18939,
+            "selected_prior_session": "C4_backup_restore_contract_s1",
+            "tokens_used": 271
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.5,
+            "latency_ms": 0.871,
+            "open_arc_precision": 0.0,
+            "tokens_used": 257
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 2.352,
+            "open_arc_precision": 0.0,
+            "tokens_used": 272
+          },
+          "scenario_id": "C5_diaml_sutra_binding",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.942,
+            "open_arc_precision": 1.0,
+            "tokens_used": 260
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-11-13T16:00:34.953052687+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C5_diaml_sutra_binding design and recorded decisions.\",\"track\":\"track-sutra\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C5_diaml_sutra_binding_s1]\\nTrack: track-sutra\\nSummary: Completed C5_diaml_sutra_binding design and recorded decisions.\\nConverged Decisions & Mi\",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should multi-track inheritance support parent track namespaces?\"},{\"kind\":\"decision\",\"text\":\"D1: Map Sutra codons with Verification+Synthesis to verified decision turns.\"},{\"kind\":\"decision\",\"text\":\"D2: Auto-resolve latest open question arc when executing synthesis Sutra.\"},{\"kind\":\"decision\",\"text\":\"D3: Surface track-scoped codex crystals automatically in session_continuity.\"},{\"kind\":\"decision\",\"text\":\"D4: Penalize high-degree noisy hubs during 2-hop association traversal.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Pure tail replay evicts early turns; hybrid replay pins salient anchors first.\"}]}",
+            "context_bytes": 1081,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 18.848,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 18720,
+            "selected_prior_session": "C5_diaml_sutra_binding_s1",
+            "tokens_used": 271
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.069,
+            "open_arc_precision": 0.0,
+            "tokens_used": 277
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 3.398,
+            "open_arc_precision": 0.0,
+            "tokens_used": 277
+          },
+          "scenario_id": "C6_stripe_webhook_guard",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 1.453,
+            "open_arc_precision": 1.0,
+            "tokens_used": 250
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-11-13T16:00:35.076292369+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C6_stripe_webhook_guard design and recorded decisions.\",\"track\":\"track-billing\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C6_stripe_webhook_guard_s1]\\nTrack: track-billing\\nSummary: Completed C6_stripe_webhook_guard design and recorded decisions.\\nConverged Decisions \",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: When should automated tenant key provisioning replace manual 24h pilot setup?\"},{\"kind\":\"decision\",\"text\":\"D1: Refuse production Stripe webhook execution when secret is unset.\"},{\"kind\":\"decision\",\"text\":\"D2: Enforce constant-time HMAC-SHA256 signature verification with 300s window.\"},{\"kind\":\"decision\",\"text\":\"D3: Deduplicate webhook event IDs in KV with 30-day TTL.\"},{\"kind\":\"decision\",\"text\":\"D4: Align EN and ZH fleet peering disclosure to $249/mo.\"},{\"kind\":\"decision\",\"text\":\"D_RES: No, it was copy drift; updated ZH disclosure to $249/mo.\"}]}",
+            "context_bytes": 1038,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 25.858,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 18641,
+            "selected_prior_session": "C6_stripe_webhook_guard_s1",
+            "tokens_used": 260
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.138,
+            "open_arc_precision": 0.0,
+            "tokens_used": 270
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 3.605,
+            "open_arc_precision": 0.0,
+            "tokens_used": 270
+          },
+          "scenario_id": "C7_ingest_postings_perf",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 1.456,
+            "open_arc_precision": 1.0,
+            "tokens_used": 261
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-11-13T16:00:35.335225875+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C7_ingest_postings_perf design and recorded decisions.\",\"track\":\"track-perf\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C7_ingest_postings_perf_s1]\\nTrack: track-perf\\nSummary: Completed C7_ingest_postings_perf design and recorded decisions.\\nConverged Decisions & M\",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should commit_intake also batch LMDB write transactions above 500 items?\"},{\"kind\":\"decision\",\"text\":\"D1: Preload content-hash identity cache once per commit_intake batch.\"},{\"kind\":\"decision\",\"text\":\"D2: Decode only the shortest token postings slice during dedup lookup.\"},{\"kind\":\"decision\",\"text\":\"D3: Separate PEB-10 wall-clock speedup gate from debug unit test runs.\"},{\"kind\":\"decision\",\"text\":\"D4: Require median >= 1.40x across >= 5 release-mode samples in benchmark gate.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Shared runner CPU jitter affected single debug sample; moved to release median harness.\"}]}",
+            "context_bytes": 1091,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 50.651,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 18760,
+            "selected_prior_session": "C7_ingest_postings_perf_s1",
+            "tokens_used": 273
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.884,
+            "open_arc_precision": 0.0,
+            "tokens_used": 275
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 5.898,
+            "open_arc_precision": 0.0,
+            "tokens_used": 275
+          },
+          "scenario_id": "C8_stress_untyped_low_importance_decision",
+          "stress_untyped": true,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 2.201,
+            "open_arc_precision": 1.0,
+            "tokens_used": 244
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"briefing\":null,\"checkpoint\":{\"created_at\":\"2026-11-13T16:00:35.554817843+00:00\",\"record_id\":32,\"status\":\"turn\",\"summary\":\"Completed C8_stress_untyped_low_importance_decision design and recorded decisions.\",\"track\":\"track-stress\"},\"crystals\":[{\"id\":33,\"preview\":\"[session_crystal:C8_stress_untyped_low_importance_decision_s1]\\nTrack: track-stress\\nSummary: Completed C8_stress_untyped_low_importance_decision design and recor\",\"title\":\"\"}],\"flags\":[],\"queue\":[],\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should we add a lint warning when a constraint turn is logged with importance < 0.8?\"},{\"kind\":\"decision\",\"text\":\"D1: Pin canonical API OpenAPI contract to 19 paths.\"},{\"kind\":\"decision\",\"text\":\"D2: Enforce Landlock ABI v3 filesystem sandbox in receipt-api.\"},{\"kind\":\"decision\",\"text\":\"D3: Require RFC 8785 JCS canonicalization for continuity receipts.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Yes, supportedSpecRange covers 0.4 through 0.5.\"},{\"kind\":\"salient\",\"text\":\"D4: Keep SQLite busy_timeout at 5000ms on crystal replay store.\"}]}",
+            "context_bytes": 1035,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 30.82,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 19110,
+            "selected_prior_session": "C8_stress_untyped_low_importance_decision_s1",
+            "tokens_used": 259
+          }
+        }
+      ]
+    },
+    "continuity_family_wall_s": 1.4273807299999817,
+    "continuity_summary": {
+      "budget_enforced_rate": 1.0,
+      "checkpoint_in_compact_rate": 1.0,
+      "crystal_rate": 1.0,
+      "latency": {
+        "p50_ms": 20.25,
+        "p95_ms": 50.65
+      },
+      "mean_decision_recall": 1.0,
+      "mean_open_arc_precision": 1.0,
+      "mean_tokens_used": 266.625,
+      "scenario_count": 8,
+      "track_routing_rate": 1.0
+    },
+    "label": "candidate-continuity-core",
+    "microbench_wall_s": 0.652046734999999,
+    "resume_shaped_microbench": {
+      "budgets": [
+        {
+          "byte_cap": 480,
+          "checkpoint_kept_every_repeat": true,
+          "foreign_never_imported": true,
+          "latency": {
+            "p50_ms": 18.61,
+            "p95_ms": 19.94
+          },
+          "mean_tokens_used": 119.0,
+          "null_checkpoint_partial_seen": false,
+          "queue_kept_every_repeat": true,
+          "repeats": 5,
+          "samples": [
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 473,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 19.943854999951327,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 119,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 473,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 18.988883000019996,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 119,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 473,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 19.697278999956325,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 119,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 473,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 18.387159999974756,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 119,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 473,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 18.26231600000483,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 119,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 473,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 18.819675000031566,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 119,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 473,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 19.32471199995689,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 119,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 473,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 17.4698000000717,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 119,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 473,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 17.31297599997106,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 119,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 473,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 18.397301000049993,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 119,
+              "top_level_checkpoint_present": true
+            }
+          ],
+          "session_never_all": true,
+          "token_budget": 120
+        },
+        {
+          "byte_cap": 1120,
+          "checkpoint_kept_every_repeat": true,
+          "foreign_never_imported": true,
+          "latency": {
+            "p50_ms": 18.05,
+            "p95_ms": 29.61
+          },
+          "mean_tokens_used": 275.0,
+          "null_checkpoint_partial_seen": false,
+          "queue_kept_every_repeat": true,
+          "repeats": 5,
+          "samples": [
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1097,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 29.610235999939505,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 275,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1097,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 28.04823999997552,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 275,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1097,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 23.293884999930015,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 275,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1097,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 16.723597999998674,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 275,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1097,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 17.25659600003837,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 275,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1097,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 16.86598900005265,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 275,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1097,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 16.184253999995235,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 275,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1097,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 19.344584999998915,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 275,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1097,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 18.846269999926335,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 275,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1097,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 16.59042899996166,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 275,
+              "top_level_checkpoint_present": true
+            }
+          ],
+          "session_never_all": true,
+          "token_budget": 280
+        },
+        {
+          "byte_cap": 1600,
+          "checkpoint_kept_every_repeat": true,
+          "foreign_never_imported": true,
+          "latency": {
+            "p50_ms": 16.01,
+            "p95_ms": 16.58
+          },
+          "mean_tokens_used": 392.0,
+          "null_checkpoint_partial_seen": false,
+          "queue_kept_every_repeat": true,
+          "repeats": 5,
+          "samples": [
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1565,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 16.24571900003957,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 392,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1565,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 16.391438000027847,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 392,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1565,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 16.457448999972257,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 392,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1565,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 15.814803000012034,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 392,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1565,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 15.783532999989802,
+              "mode": "scoped",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 392,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1565,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 16.204386000026716,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 392,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1565,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 16.580736000037177,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 392,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1565,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 15.202383999962876,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 392,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1565,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 14.736141999946994,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 392,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": false,
+              "compact_checkpoint_present": true,
+              "context_bytes": 1565,
+              "continuity_core_omitted": false,
+              "foreign_imported": false,
+              "latency_ms": 14.564725000013823,
+              "mode": "track_only",
+              "queue": [
+                "Do not promote until continuity-core bench is green."
+              ],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 392,
+              "top_level_checkpoint_present": true
+            }
+          ],
+          "session_never_all": true,
+          "token_budget": 400
+        }
+      ],
+      "name": "resume_shaped_overcrowd"
+    }
+  },
+  "delta": {
+    "continuity_checkpoint_in_compact_rate": 0.0,
+    "continuity_mean_decision_recall": 0.0,
+    "continuity_mean_open_arc_precision": 0.0,
+    "continuity_p50_ms": 4.699999999999999,
+    "continuity_p95_ms": 34.19,
+    "resume_shaped": {
+      "120": {
+        "candidate_checkpoint_kept": true,
+        "candidate_foreign_never_imported": true,
+        "candidate_null_partial": false,
+        "candidate_session_never_all": true,
+        "installed_checkpoint_kept": false,
+        "installed_foreign_never_imported": true,
+        "installed_null_partial": true,
+        "installed_session_never_all": true,
+        "p50_ms_delta": 3.0999999999999996
+      },
+      "280": {
+        "candidate_checkpoint_kept": true,
+        "candidate_foreign_never_imported": true,
+        "candidate_null_partial": false,
+        "candidate_session_never_all": true,
+        "installed_checkpoint_kept": false,
+        "installed_foreign_never_imported": true,
+        "installed_null_partial": true,
+        "installed_session_never_all": true,
+        "p50_ms_delta": 2.0500000000000007
+      },
+      "400": {
+        "candidate_checkpoint_kept": true,
+        "candidate_foreign_never_imported": true,
+        "candidate_null_partial": false,
+        "candidate_session_never_all": true,
+        "installed_checkpoint_kept": false,
+        "installed_foreign_never_imported": true,
+        "installed_null_partial": true,
+        "installed_session_never_all": true,
+        "p50_ms_delta": 0.5000000000000018
+      }
+    }
+  },
+  "generated_note": "Does not overwrite pinned-task-eval-results.json",
+  "installed": {
+    "binary": {
+      "path": "/home/lucas/.local/bin/wm3",
+      "sha256": "1fd32bea3ce78b044ab03f2fb4150fd54407c5d64123a3d5ef22ea59faf790ea",
+      "version": "wm 11.2.1"
+    },
+    "continuity_family": {
+      "family": "T_CONTINUITY",
+      "scenarios": [
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.615,
+            "open_arc_precision": 0.0,
+            "tokens_used": 277
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 2.16,
+            "open_arc_precision": 0.0,
+            "tokens_used": 277
+          },
+          "scenario_id": "C1_payment_journal_invariants",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.73,
+            "open_arc_precision": 1.0,
+            "tokens_used": 258
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: What alert threshold should trigger on held unknown settlements in pilot?\"},{\"kind\":\"decision\",\"text\":\"D1: Persist pending settlement journal with fsync before facilitator /settle.\"},{\"kind\":\"decision\",\"text\":\"D2: Hold account on unknown facilitator HTTP 200 empty response.\"},{\"kind\":\"decision\",\"text\":\"D3: Bind recovery matching to full 64-hex nonce, account, amount, and tx.\"},{\"kind\":\"decision\",\"text\":\"D4: Keep production --economy flag disabled until qualification closes.\"},{\"kind\":\"decision\",\"text\":\"D_RES: No, truncated nonces must remain held unless full identity matches.\"}],\"checkpoint\":{\"status\":\"turn\",\"created_at\":\"2026-11-13T16:00:32.413845020+00:00\",\"summary\":\"Completed C1_payment_journal_invariants design and recorded decisions.\",\"record_id\":32,\"track\":\"track-economy\"},\"queue\":[],\"flags\":[],\"crystals\":[{\"id\":33,\"title\":\"\",\"preview\":\"[session_crystal:C1_payment_journal_invariants_s1]\\nTrack: track-economy\\nSummary: Completed C1_payment_journal_invariants design and recorded decisions.\\nConverge\"}],\"briefing\":null}",
+            "context_bytes": 1078,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 16.099,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 18231,
+            "selected_prior_session": "C1_payment_journal_invariants_s1",
+            "tokens_used": 270
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.479,
+            "open_arc_precision": 0.0,
+            "tokens_used": 277
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.96,
+            "open_arc_precision": 0.0,
+            "tokens_used": 277
+          },
+          "scenario_id": "C2_release_manifest_signing",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.634,
+            "open_arc_precision": 1.0,
+            "tokens_used": 254
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: When should Windows ONNX runtime targets re-enter the alpha matrix?\"},{\"kind\":\"decision\",\"text\":\"D1: Sign release-manifest.json with Ed25519 key aade884b035d...\"},{\"kind\":\"decision\",\"text\":\"D2: Verify raw binary SHA-256 and size against GitHub asset digests.\"},{\"kind\":\"decision\",\"text\":\"D3: Bind npm and docker install_certification to bound_manifest_sha256.\"},{\"kind\":\"decision\",\"text\":\"D4: Run trusted release_health.py from RUNNER_TEMP across tag checkouts.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Exempted explicit stable channel fallback pin in version_truth.py.\"}],\"checkpoint\":{\"status\":\"turn\",\"created_at\":\"2026-11-13T16:00:32.524389784+00:00\",\"summary\":\"Completed C2_release_manifest_signing design and recorded decisions.\",\"record_id\":32,\"track\":\"track-release\"},\"queue\":[],\"flags\":[],\"crystals\":[{\"id\":33,\"title\":\"\",\"preview\":\"[session_crystal:C2_release_manifest_signing_s1]\\nTrack: track-release\\nSummary: Completed C2_release_manifest_signing design and recorded decisions.\\nConverged De\"}],\"briefing\":null}",
+            "context_bytes": 1058,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 16.414,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 18093,
+            "selected_prior_session": "C2_release_manifest_signing_s1",
+            "tokens_used": 265
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.449,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.899,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C3_crystal_envelope_security",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.858,
+            "open_arc_precision": 1.0,
+            "tokens_used": 253
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should external OpenTimestamps anchors batch crystal-set commitments hourly?\"},{\"kind\":\"decision\",\"text\":\"D1: Bind cell_id to sha256(id_kek_version || nonce || ciphertext).\"},{\"kind\":\"decision\",\"text\":\"D2: Wrap per-crystal DEK under tenant KEK with versioned rotation.\"},{\"kind\":\"decision\",\"text\":\"D3: Require Ed25519 client_sig over canonical envelope for L5 audit.\"},{\"kind\":\"decision\",\"text\":\"D4: Enforce X-WM-Crystal-Assertion HMAC replay refusal in SQLite.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Yes, id_kek_version stays pinned while kek_version increments.\"}],\"checkpoint\":{\"status\":\"turn\",\"created_at\":\"2026-11-13T16:00:32.638319888+00:00\",\"summary\":\"Completed C3_crystal_envelope_security design and recorded decisions.\",\"record_id\":32,\"track\":\"track-crystals\"},\"queue\":[],\"flags\":[],\"crystals\":[{\"id\":33,\"title\":\"\",\"preview\":\"[session_crystal:C3_crystal_envelope_security_s1]\\nTrack: track-crystals\\nSummary: Completed C3_crystal_envelope_security design and recorded decisions.\\nConverged\"}],\"briefing\":null}",
+            "context_bytes": 1056,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 15.657,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 18145,
+            "selected_prior_session": "C3_crystal_envelope_security_s1",
+            "tokens_used": 264
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.46,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.837,
+            "open_arc_precision": 0.0,
+            "tokens_used": 279
+          },
+          "scenario_id": "C4_backup_restore_contract",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.607,
+            "open_arc_precision": 1.0,
+            "tokens_used": 261
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should off-box backup freshness alert at 30h or 36h age?\"},{\"kind\":\"decision\",\"text\":\"D1: Raise aggregate tenant-write archive cap to 4 GiB (4294967296 bytes).\"},{\"kind\":\"decision\",\"text\":\"D2: Require correlated timestamps across hosted-store, auth-state, hosted-writes.\"},{\"kind\":\"decision\",\"text\":\"D3: Deploy replacement host with deploy.sh --no-restart before state extraction.\"},{\"kind\":\"decision\",\"text\":\"D4: Verify next-lane readiness on 18798/18799 before re-enabling key issuance.\"},{\"kind\":\"decision\",\"text\":\"D_RES: No, deploy.sh --no-restart installs the 52 manifest files first.\"}],\"checkpoint\":{\"status\":\"turn\",\"created_at\":\"2026-11-13T16:00:32.752026160+00:00\",\"summary\":\"Completed C4_backup_restore_contract design and recorded decisions.\",\"record_id\":32,\"track\":\"track-recovery\"},\"queue\":[],\"flags\":[],\"crystals\":[{\"id\":33,\"title\":\"\",\"preview\":\"[session_crystal:C4_backup_restore_contract_s1]\\nTrack: track-recovery\\nSummary: Completed C4_backup_restore_contract design and recorded decisions.\\nConverged Dec\"}],\"briefing\":null}",
+            "context_bytes": 1083,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 15.269,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 18195,
+            "selected_prior_session": "C4_backup_restore_contract_s1",
+            "tokens_used": 271
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.5,
+            "latency_ms": 0.473,
+            "open_arc_precision": 0.0,
+            "tokens_used": 257
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.818,
+            "open_arc_precision": 0.0,
+            "tokens_used": 272
+          },
+          "scenario_id": "C5_diaml_sutra_binding",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.597,
+            "open_arc_precision": 1.0,
+            "tokens_used": 260
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should multi-track inheritance support parent track namespaces?\"},{\"kind\":\"decision\",\"text\":\"D1: Map Sutra codons with Verification+Synthesis to verified decision turns.\"},{\"kind\":\"decision\",\"text\":\"D2: Auto-resolve latest open question arc when executing synthesis Sutra.\"},{\"kind\":\"decision\",\"text\":\"D3: Surface track-scoped codex crystals automatically in session_continuity.\"},{\"kind\":\"decision\",\"text\":\"D4: Penalize high-degree noisy hubs during 2-hop association traversal.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Pure tail replay evicts early turns; hybrid replay pins salient anchors first.\"}],\"checkpoint\":{\"status\":\"turn\",\"created_at\":\"2026-11-13T16:00:32.857321632+00:00\",\"summary\":\"Completed C5_diaml_sutra_binding design and recorded decisions.\",\"record_id\":32,\"track\":\"track-sutra\"},\"queue\":[],\"flags\":[],\"crystals\":[{\"id\":33,\"title\":\"\",\"preview\":\"[session_crystal:C5_diaml_sutra_binding_s1]\\nTrack: track-sutra\\nSummary: Completed C5_diaml_sutra_binding design and recorded decisions.\\nConverged Decisions & Mi\"}],\"briefing\":null}",
+            "context_bytes": 1081,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 14.457,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 17976,
+            "selected_prior_session": "C5_diaml_sutra_binding_s1",
+            "tokens_used": 271
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.796,
+            "open_arc_precision": 0.0,
+            "tokens_used": 277
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 2.301,
+            "open_arc_precision": 0.0,
+            "tokens_used": 277
+          },
+          "scenario_id": "C6_stripe_webhook_guard",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 1.08,
+            "open_arc_precision": 1.0,
+            "tokens_used": 250
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: When should automated tenant key provisioning replace manual 24h pilot setup?\"},{\"kind\":\"decision\",\"text\":\"D1: Refuse production Stripe webhook execution when secret is unset.\"},{\"kind\":\"decision\",\"text\":\"D2: Enforce constant-time HMAC-SHA256 signature verification with 300s window.\"},{\"kind\":\"decision\",\"text\":\"D3: Deduplicate webhook event IDs in KV with 30-day TTL.\"},{\"kind\":\"decision\",\"text\":\"D4: Align EN and ZH fleet peering disclosure to $249/mo.\"},{\"kind\":\"decision\",\"text\":\"D_RES: No, it was copy drift; updated ZH disclosure to $249/mo.\"}],\"checkpoint\":{\"status\":\"turn\",\"created_at\":\"2026-11-13T16:00:32.966542614+00:00\",\"summary\":\"Completed C6_stripe_webhook_guard design and recorded decisions.\",\"record_id\":32,\"track\":\"track-billing\"},\"queue\":[],\"flags\":[],\"crystals\":[{\"id\":33,\"title\":\"\",\"preview\":\"[session_crystal:C6_stripe_webhook_guard_s1]\\nTrack: track-billing\\nSummary: Completed C6_stripe_webhook_guard design and recorded decisions.\\nConverged Decisions \"}],\"briefing\":null}",
+            "context_bytes": 1038,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 14.971,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 17897,
+            "selected_prior_session": "C6_stripe_webhook_guard_s1",
+            "tokens_used": 260
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.475,
+            "open_arc_precision": 0.0,
+            "tokens_used": 270
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 1.908,
+            "open_arc_precision": 0.0,
+            "tokens_used": 270
+          },
+          "scenario_id": "C7_ingest_postings_perf",
+          "stress_untyped": false,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.658,
+            "open_arc_precision": 1.0,
+            "tokens_used": 261
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should commit_intake also batch LMDB write transactions above 500 items?\"},{\"kind\":\"decision\",\"text\":\"D1: Preload content-hash identity cache once per commit_intake batch.\"},{\"kind\":\"decision\",\"text\":\"D2: Decode only the shortest token postings slice during dedup lookup.\"},{\"kind\":\"decision\",\"text\":\"D3: Separate PEB-10 wall-clock speedup gate from debug unit test runs.\"},{\"kind\":\"decision\",\"text\":\"D4: Require median >= 1.40x across >= 5 release-mode samples in benchmark gate.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Shared runner CPU jitter affected single debug sample; moved to release median harness.\"}],\"checkpoint\":{\"status\":\"turn\",\"created_at\":\"2026-11-13T16:00:33.071412407+00:00\",\"summary\":\"Completed C7_ingest_postings_perf design and recorded decisions.\",\"record_id\":32,\"track\":\"track-perf\"},\"queue\":[],\"flags\":[],\"crystals\":[{\"id\":33,\"title\":\"\",\"preview\":\"[session_crystal:C7_ingest_postings_perf_s1]\\nTrack: track-perf\\nSummary: Completed C7_ingest_postings_perf design and recorded decisions.\\nConverged Decisions & M\"}],\"briefing\":null}",
+            "context_bytes": 1091,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 15.445,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 18016,
+            "selected_prior_session": "C7_ingest_postings_perf_s1",
+            "tokens_used": 273
+          }
+        },
+        {
+          "bm25_flat_files": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 0.509,
+            "open_arc_precision": 0.0,
+            "tokens_used": 275
+          },
+          "budget_scope": "exact consumed UTF-8 context string; bytes/4 token estimate; transport/debug metadata excluded",
+          "budget_tokens": 280,
+          "context_byte_cap": 1120,
+          "failure_trace": null,
+          "plain_files_tail": {
+            "budget_enforced": true,
+            "decision_recall": 0.0,
+            "latency_ms": 2.048,
+            "open_arc_precision": 0.0,
+            "tokens_used": 275
+          },
+          "scenario_id": "C8_stress_untyped_low_importance_decision",
+          "stress_untyped": true,
+          "structured_metadata_files": {
+            "budget_enforced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 0.648,
+            "open_arc_precision": 1.0,
+            "tokens_used": 244
+          },
+          "whitemagic_v10_4": {
+            "budget_enforced": true,
+            "consumed_context": "{\"turns\":[{\"kind\":\"arc\",\"text\":\"Q_OPEN: Should we add a lint warning when a constraint turn is logged with importance < 0.8?\"},{\"kind\":\"decision\",\"text\":\"D1: Pin canonical API OpenAPI contract to 19 paths.\"},{\"kind\":\"decision\",\"text\":\"D2: Enforce Landlock ABI v3 filesystem sandbox in receipt-api.\"},{\"kind\":\"decision\",\"text\":\"D3: Require RFC 8785 JCS canonicalization for continuity receipts.\"},{\"kind\":\"decision\",\"text\":\"D_RES: Yes, supportedSpecRange covers 0.4 through 0.5.\"},{\"kind\":\"salient\",\"text\":\"D4: Keep SQLite busy_timeout at 5000ms on crystal replay store.\"}],\"checkpoint\":{\"status\":\"turn\",\"created_at\":\"2026-11-13T16:00:33.179196412+00:00\",\"summary\":\"Completed C8_stress_untyped_low_importance_decision design and recorded decisions.\",\"record_id\":32,\"track\":\"track-stress\"},\"queue\":[],\"flags\":[],\"crystals\":[{\"id\":33,\"title\":\"\",\"preview\":\"[session_crystal:C8_stress_untyped_low_importance_decision_s1]\\nTrack: track-stress\\nSummary: Completed C8_stress_untyped_low_importance_decision design and recor\"}],\"briefing\":null}",
+            "context_bytes": 1035,
+            "cross_session_crystal_surfaced": true,
+            "decision_recall": 1.0,
+            "latency_ms": 16.464,
+            "new_session_track_routing_ok": true,
+            "open_arc_precision": 1.0,
+            "response_bytes": 18366,
+            "selected_prior_session": "C8_stress_untyped_low_importance_decision_s1",
+            "tokens_used": 259
+          }
+        }
+      ]
+    },
+    "continuity_family_wall_s": 0.9265623329999926,
+    "continuity_summary": {
+      "budget_enforced_rate": 1.0,
+      "checkpoint_in_compact_rate": 1.0,
+      "crystal_rate": 1.0,
+      "latency": {
+        "p50_ms": 15.55,
+        "p95_ms": 16.46
+      },
+      "mean_decision_recall": 1.0,
+      "mean_open_arc_precision": 1.0,
+      "mean_tokens_used": 266.625,
+      "scenario_count": 8,
+      "track_routing_rate": 1.0
+    },
+    "label": "installed-11.2.1",
+    "microbench_wall_s": 0.5543877730000304,
+    "resume_shaped_microbench": {
+      "budgets": [
+        {
+          "byte_cap": 480,
+          "checkpoint_kept_every_repeat": false,
+          "foreign_never_imported": true,
+          "latency": {
+            "p50_ms": 15.51,
+            "p95_ms": 16.58
+          },
+          "mean_tokens_used": 99.0,
+          "null_checkpoint_partial_seen": true,
+          "queue_kept_every_repeat": false,
+          "repeats": 5,
+          "samples": [
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 393,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 13.930477000030805,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 99,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 393,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.585813000029702,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 99,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 393,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.225818999965668,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 99,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 393,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 14.920221000011225,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 99,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 393,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 16.297181000027194,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 99,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 393,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.927272999988418,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 99,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 393,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 16.57737800007908,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 99,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 393,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.442219000078694,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 99,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 393,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.70977199992285,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 99,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 393,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.118497000003117,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 99,
+              "top_level_checkpoint_present": true
+            }
+          ],
+          "session_never_all": true,
+          "token_budget": 120
+        },
+        {
+          "byte_cap": 1120,
+          "checkpoint_kept_every_repeat": false,
+          "foreign_never_imported": true,
+          "latency": {
+            "p50_ms": 16.0,
+            "p95_ms": 18.19
+          },
+          "mean_tokens_used": 255.0,
+          "null_checkpoint_partial_seen": true,
+          "queue_kept_every_repeat": false,
+          "repeats": 5,
+          "samples": [
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1017,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 16.11247400001048,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 255,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1017,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.556150999941565,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 255,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1017,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.796570000020438,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 255,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1017,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 17.180029999963153,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 255,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1017,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 16.186473000061596,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 255,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1017,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.122370999961277,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 255,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1017,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.879287000075237,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 255,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1017,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.631201000019246,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 255,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1017,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 16.60327399997641,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 255,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1017,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 18.186859999900662,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 255,
+              "top_level_checkpoint_present": true
+            }
+          ],
+          "session_never_all": true,
+          "token_budget": 280
+        },
+        {
+          "byte_cap": 1600,
+          "checkpoint_kept_every_repeat": false,
+          "foreign_never_imported": true,
+          "latency": {
+            "p50_ms": 15.51,
+            "p95_ms": 15.82
+          },
+          "mean_tokens_used": 372.0,
+          "null_checkpoint_partial_seen": true,
+          "queue_kept_every_repeat": false,
+          "repeats": 5,
+          "samples": [
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1485,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.674685000021782,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 372,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1485,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.319321999982094,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 372,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1485,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.661559000022862,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 372,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1485,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.375165000023117,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 372,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1485,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.364524000005986,
+              "mode": "scoped",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 372,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1485,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.69734299994252,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 372,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1485,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.368598000009115,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 372,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1485,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.816639000036048,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 372,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1485,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 14.980672999968192,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 372,
+              "top_level_checkpoint_present": true
+            },
+            {
+              "budget_completeness": "partial",
+              "compact_checkpoint_null": true,
+              "compact_checkpoint_present": false,
+              "context_bytes": 1485,
+              "continuity_core_omitted": null,
+              "foreign_imported": false,
+              "latency_ms": 15.652084999942417,
+              "mode": "track_only",
+              "queue": [],
+              "session_id": "resume-shaped-s1",
+              "tokens_used": 372,
+              "top_level_checkpoint_present": true
+            }
+          ],
+          "session_never_all": true,
+          "token_budget": 400
+        }
+      ],
+      "name": "resume_shaped_overcrowd"
+    }
+  },
+  "purpose": "pre-deploy continuity-core reservation check"
+}
