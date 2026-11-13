@@ -611,5 +611,158 @@ class CrystalClientTest(unittest.TestCase):
             )
 
 
+class CrystalAnchorPathTest(unittest.TestCase):
+    def test_default_directory_anchor_is_a_sibling_without_creating_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            store = root / "store"
+            self.assertEqual(
+                cc.resolve_offstore_anchor_path(store),
+                root / "store.anchor" / "commitment.json",
+            )
+            self.assertEqual(list(root.iterdir()), [])
+
+    def test_explicit_base_outside_store_is_resolved_without_creating_it(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            store = root / "store"
+            store.mkdir()
+            outside = root / "anchors" / "nested"
+            self.assertEqual(
+                cc.resolve_offstore_anchor_path(store, base_dir=outside),
+                outside / "commitment.json",
+            )
+            self.assertFalse((root / "anchors").exists())
+            self.assertEqual(list(store.iterdir()), [])
+
+    def test_base_inside_store_and_candidate_equal_to_store_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            store = root / "store"
+            store.mkdir()
+            for base in (store, store / "anchors", store / "missing" / "nested"):
+                with self.subTest(base=base), self.assertRaisesRegex(ValueError, "outside"):
+                    cc.resolve_offstore_anchor_path(store, base_dir=base)
+            self.assertEqual(list(store.iterdir()), [])
+            with self.assertRaisesRegex(ValueError, "outside"):
+                cc.resolve_offstore_anchor_path(root / "commitment.json", base_dir=root)
+
+    def test_file_store_uses_its_directory_as_the_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            store_dir = root / "store"
+            store_dir.mkdir()
+            store_file = store_dir / "data.mdb"
+            store_file.write_bytes(b"synthetic store")
+            self.assertEqual(
+                cc.resolve_offstore_anchor_path(store_file),
+                root / "store.anchor" / "commitment.json",
+            )
+            with self.assertRaisesRegex(ValueError, "outside"):
+                cc.resolve_offstore_anchor_path(store_file, base_dir=store_dir / "anchors")
+            self.assertEqual(store_file.read_bytes(), b"synthetic store")
+            self.assertEqual(list(store_dir.iterdir()), [store_file])
+
+    def test_base_and_commitment_symlinks_into_store_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            store = root / "store"
+            store.mkdir()
+            alias = root / "anchor-alias"
+            alias.symlink_to(store, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "outside"):
+                cc.resolve_offstore_anchor_path(store, base_dir=alias)
+
+            outside = root / "outside"
+            outside.mkdir()
+            retained = store / "retained.json"
+            retained.write_bytes(b"unchanged synthetic anchor")
+            (outside / "commitment.json").symlink_to(retained)
+            with self.assertRaisesRegex(ValueError, "outside"):
+                cc.resolve_offstore_anchor_path(store, base_dir=outside)
+            self.assertEqual(retained.read_bytes(), b"unchanged synthetic anchor")
+
+    def test_store_symlinks_use_the_resolved_directory_and_file_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            actual = root / "actual-store"
+            actual.mkdir()
+            store_file = actual / "data.mdb"
+            store_file.write_bytes(b"synthetic store")
+            directory_alias = root / "directory-alias"
+            directory_alias.symlink_to(actual, target_is_directory=True)
+            file_alias = root / "file-alias"
+            file_alias.symlink_to(store_file)
+            expected = root / "actual-store.anchor" / "commitment.json"
+            for store in (directory_alias, file_alias):
+                with self.subTest(store=store):
+                    self.assertEqual(cc.resolve_offstore_anchor_path(store), expected)
+                    with self.assertRaisesRegex(ValueError, "outside"):
+                        cc.resolve_offstore_anchor_path(store, base_dir=actual)
+
+    def test_tenant_default_uses_canonical_component_without_creating_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            home = root / "home"
+            tenant_hash = cc.compute_tenant_hash("test-tenant")
+            with patch.object(cc.Path, "home", return_value=home):
+                self.assertEqual(
+                    cc.resolve_offstore_anchor_path(root / "store", tenant_hash=tenant_hash),
+                    home / ".whitemagic" / "anchors" / tenant_hash / "commitment.json",
+                )
+            self.assertEqual(list(root.iterdir()), [])
+
+    def test_tenant_default_inside_store_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            store = Path(td).resolve()
+            with patch.object(cc.Path, "home", return_value=store):
+                with self.assertRaisesRegex(ValueError, "outside"):
+                    cc.resolve_offstore_anchor_path(
+                        store, tenant_hash=cc.compute_tenant_hash("test-tenant")
+                    )
+            self.assertEqual(list(store.iterdir()), [])
+
+    def test_noncanonical_or_traversing_tenant_components_are_rejected(self) -> None:
+        invalid_values = (
+            "", ".", "..", "../escape", "/absolute/escape", "a" * 64,
+            "sha256:" + "a" * 64 + "/../escape", "sha256:" + "A" * 64,
+            "sha256:" + "g" * 64, "sha256:short", "sha256:" + "a" * 64 + "\n",
+            0, False, b"sha256:" + b"a" * 64,
+        )
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            for tenant_hash in invalid_values:
+                for base in (None, root / "outside"):
+                    with self.subTest(tenant_hash=tenant_hash, base=base):
+                        with self.assertRaisesRegex(ValueError, "tenant_hash"):
+                            cc.resolve_offstore_anchor_path(
+                                root / "store", tenant_hash=tenant_hash, base_dir=base
+                            )
+            self.assertEqual(list(root.iterdir()), [])
+
+    def test_anchor_requirement_accepts_only_booleans_even_with_a_commitment(self) -> None:
+        key = bytes(range(32))
+        tenant_hash = cc.compute_tenant_hash("strict-anchor-flag")
+        commitment = cc.compute_crystal_set_commitment([], tenant_hash)
+        for flag in (None, 0, 1, 0.0, 1.0, "", "false", [], {}):
+            for expected in (None, commitment):
+                with self.subTest(flag=flag, anchored=expected is not None):
+                    with self.assertRaisesRegex(cc.CrystalVerificationError, "must be a boolean"):
+                        cc.verify_and_unseal_crystal_set(
+                            [], key, tenant_hash, expected_commitment=expected,
+                            require_anchor=flag,
+                        )
+        self.assertEqual(
+            cc.verify_and_unseal_crystal_set([], key, tenant_hash, require_anchor=False), []
+        )
+        self.assertEqual(
+            cc.verify_and_unseal_crystal_set(
+                [], key, tenant_hash, expected_commitment=commitment, require_anchor=True
+            ), []
+        )
+        with self.assertRaises(cc.CrystalRollbackError):
+            cc.verify_and_unseal_crystal_set([], key, tenant_hash, require_anchor=True)
+
+
 if __name__ == "__main__":
     unittest.main()

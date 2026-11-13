@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Crystal anchor policy (Phase 2 strict default)**: `verify_and_unseal_crystal_set` now defaults to `require_anchor=True`, refusing unanchored verification to prevent undetectable whole-store rollback (T9) and erasure resurrection (T10). Added `resolve_offstore_anchor_path` helper to isolate anchor commitments outside the snapshot boundary. Callers may explicitly pass `require_anchor=False` to opt out.
 
 ### Fixed
+- Validate resolved Crystal anchor paths against the actual store directory, including existing file stores and symlinks; reject noncanonical tenant components and nonboolean `require_anchor` values. Path separation alone does not establish independent retention or a separate filesystem.
 - Preserve nested companion files in recursive store snapshots and restore to a fresh, isolated destination only after checking the complete listed file set. Reject escaping paths, links and overlapping roots; these checks do not authenticate a backup or establish a consistent copy of an active store.
 - Keep benchmark evidence in workflow artifacts instead of creating or mutating release records. Use generation-specific release commands and preserve current install selectors until their release-health gates pass.
 - Align the declared Rust minimum with the selected dependency graph, retain the scoped Candle ZIP dependency patch, and exercise native SQLite migration/transaction behavior. Update ChaCha20-Poly1305, SHA-2 and HKDF to their compatible dependency families.
