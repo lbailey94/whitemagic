@@ -764,5 +764,182 @@ class CrystalAnchorPathTest(unittest.TestCase):
             cc.verify_and_unseal_crystal_set([], key, tenant_hash, require_anchor=True)
 
 
+class LocalCrystalStoreTests(unittest.TestCase):
+    def test_zero_config_auto_persists_offstore_anchor_and_defeats_rollback_and_erasure_resurrection(self) -> None:
+        import json
+        import shutil
+        import stat
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        kek = cc.generate_key()
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            store_dir = root / "agent-store"
+            xdg_state = root / "xdg-state"
+            with patch.dict("os.environ", {"XDG_STATE_HOME": str(xdg_state)}):
+                store = cc.LocalCrystalStore(store_dir, key=kek, tenant_id="tenant-zero")
+
+                # Off-store anchor + key live outside store_dir with private permissions.
+                self.assertFalse(store.anchor_path.is_relative_to(store.store_dir))
+                self.assertTrue(store.anchor_path.is_file())
+                self.assertTrue((store.anchor_dir / "anchor.key").is_file())
+                self.assertEqual(stat.S_IMODE(store.anchor_path.stat().st_mode), 0o600)
+                self.assertEqual(stat.S_IMODE((store.anchor_dir / "anchor.key").stat().st_mode), 0o600)
+                self.assertFalse((store.store_dir / "commitment.json").exists())
+
+                e1 = store.append("fact one", metadata_public={"slot": "s1"})
+                e2 = store.append("fact two", metadata_public={"slot": "s2"})
+                records = store.read_all()
+                self.assertEqual([r["plaintext"] for r in records], [b"fact one", b"fact two"])
+
+                # Third-party no-KEK verification succeeds on the auto-signed envelopes + anchor.
+                audit = store.verify_third_party()
+                self.assertTrue(audit["verified"])
+                self.assertEqual(audit["count"], 2)
+
+                # Snapshot store_dir only, then append e3 (T9 setup).
+                snap_t9 = root / "snap-t9"
+                shutil.copytree(store_dir, snap_t9)
+                e3 = store.append("fact three", metadata_public={"slot": "s3"})
+                self.assertEqual(len(store.read_all()), 3)
+
+                # Restore pre-append store_dir (T9): off-store anchor detects rollback on read AND refuses append laundering.
+                shutil.rmtree(store_dir)
+                shutil.copytree(snap_t9, store_dir)
+                with self.assertRaises(cc.CrystalRollbackError):
+                    store.read_all()
+                with self.assertRaises(cc.CrystalRollbackError):
+                    store.append("laundered fact")
+                self.assertEqual(json.loads(store.anchor_path.read_text(encoding="utf-8"))["count"], 3)
+
+                # Reset to genuine 3-crystal state, snapshot pre-erasure, erase tail e3, then restore pre-erasure store_dir (T10).
+                store.crystals_path.write_text(json.dumps([e1, e2, e3]), encoding="utf-8")
+                self.assertEqual(len(store.read_all()), 3)
+                snap_t10 = root / "snap-t10"
+                shutil.copytree(store_dir, snap_t10)
+                erased = store.erase(e3["crystal_id"])
+                self.assertEqual(len(erased), 1)
+                self.assertEqual([r["plaintext"] for r in store.read_all()], [b"fact one", b"fact two"])
+
+                shutil.rmtree(store_dir)
+                shutil.copytree(snap_t10, store_dir)
+                with self.assertRaises(cc.CrystalRollbackError):
+                    store.read_all()
+
+    def test_refuses_in_store_anchor_deleted_anchor_symlinks_metadata_tamper_and_middle_erase(self) -> None:
+        import json
+        import tempfile
+        from pathlib import Path
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+
+        kek = cc.generate_key()
+        seed = cc.generate_key()
+        pub = Ed25519PrivateKey.from_private_bytes(seed).public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            store_dir = root / "store"
+            anchor_base = root / "anchors"
+
+            with self.assertRaisesRegex(ValueError, "outside"):
+                cc.LocalCrystalStore(
+                    store_dir, key=kek, tenant_id="t1",
+                    anchor_signing_key=seed, anchor_path=store_dir / "commitment.json",
+                )
+
+            store = cc.LocalCrystalStore(
+                store_dir, key=kek, tenant_id="t1",
+                anchor_signing_key=seed, anchor_base_dir=anchor_base,
+            )
+            e1 = store.append("first", metadata_public={"role": "system"})
+            e2 = store.append("second", metadata_public={"role": "user"})
+
+            # Read-only view validates but refuses mutations.
+            ro = cc.LocalCrystalStore(
+                store_dir, key=kek, tenant_id="t1",
+                anchor_public_key=pub, anchor_base_dir=anchor_base, create=False,
+            )
+            self.assertEqual(ro.verify_and_unseal(), [b"first", b"second"])
+            with self.assertRaises(cc.CrystalVerificationError):
+                ro.append("blocked")
+            with self.assertRaises(cc.CrystalVerificationError):
+                ro.erase()
+
+            # Interior erase without erase_descendants refuses to break linear lineage.
+            with self.assertRaises(cc.CrystalLineageError):
+                store.erase(e1["crystal_id"])
+            self.assertEqual(len(store.read_all()), 2)
+
+            # Metadata tamper (T8) is caught on read by kek_version=1 AAD + client_sig.
+            raw = json.loads(store.crystals_path.read_text(encoding="utf-8"))
+            orig_raw = json.loads(json.dumps(raw))
+            raw[1]["metadata_public"]["role"] = "admin"
+            store.crystals_path.write_text(json.dumps(raw), encoding="utf-8")
+            with self.assertRaises(cc.CrystalVerificationError):
+                store.read_all()
+            store.crystals_path.write_text(json.dumps(orig_raw), encoding="utf-8")
+
+            # Deleting off-store anchor on a populated store fails closed on reopen AND read/write.
+            saved_anchor = store.anchor_path.read_text(encoding="utf-8")
+            store.anchor_path.unlink()
+            reopened = cc.LocalCrystalStore(
+                store_dir, key=kek, tenant_id="t1",
+                anchor_signing_key=seed, anchor_base_dir=anchor_base,
+            )
+            with self.assertRaises(cc.CrystalRollbackError):
+                reopened.read_all()
+            with self.assertRaises(cc.CrystalRollbackError):
+                reopened.append("should-not-bootstrap")
+
+            # Replacing off-store anchor with a symlink back into store_dir is refused.
+            in_store_copy = store_dir / "fake-anchor.json"
+            in_store_copy.write_text(saved_anchor, encoding="utf-8")
+            store.anchor_path.symlink_to(in_store_copy)
+            with self.assertRaises(cc.CrystalVerificationError):
+                reopened.read_all()
+            store.anchor_path.unlink()
+            in_store_copy.unlink()
+
+            # Restore valid anchor and erase from e1 with erase_descendants=True cleanly.
+            store.anchor_path.write_text(saved_anchor, encoding="utf-8")
+            erased = store.erase(e1["crystal_id"], erase_descendants=True)
+            self.assertEqual(len(erased), 2)
+            self.assertEqual(store.read_all(), [])
+
+            # Unsigned AEAD metadata tamper (sign_envelope=False) is also rejected via kek_version=1 AAD.
+            e_unsigned = store.append("unsigned-meta", metadata_public={"role": "user"}, sign_envelope=False)
+            raw_u = json.loads(store.crystals_path.read_text(encoding="utf-8"))
+            raw_u[0]["metadata_public"]["role"] = "admin"
+            store.crystals_path.write_text(json.dumps(raw_u), encoding="utf-8")
+            with self.assertRaises(cc.CrystalVerificationError):
+                store.read_all()
+            self.assertEqual(e_unsigned["tenant_hash"], store.tenant_hash)
+
+    def test_validates_commitment_types_digest_and_bool_version_trap(self) -> None:
+        kek = bytes(range(32))
+        tenant_hash = cc.compute_tenant_hash("t-types")
+        seed = bytes([7]) * 32
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+        pub = Ed25519PrivateKey.from_private_bytes(seed).public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+        c1 = cc.seal_crystal("one", kek, "t-types", kek_version=1)
+        comm = cc.compute_crystal_set_commitment([c1], tenant_hash, signing_key=seed, erasures=[])
+
+        bad_ver = dict(comm, version=True)
+        with self.assertRaises(cc.CrystalRollbackError):
+            cc.verify_and_unseal_crystal_set([c1], kek, tenant_hash, expected_commitment=bad_ver, anchor_public_key=pub)
+
+        bad_digest = dict(comm, commitment_digest="sha256:" + "0" * 64)
+        with self.assertRaises(cc.CrystalRollbackError):
+            cc.verify_and_unseal_crystal_set([c1], kek, tenant_hash, expected_commitment=bad_digest, anchor_public_key=pub)
+
+        bad_pub = dict(comm, sig=dict(comm["sig"], public_key="00" * 32))
+        with self.assertRaises(cc.CrystalRollbackError):
+            cc.verify_and_unseal_crystal_set([c1], kek, tenant_hash, expected_commitment=bad_pub, anchor_public_key=pub)
+
+
 if __name__ == "__main__":
     unittest.main()
