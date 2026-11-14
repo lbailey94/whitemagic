@@ -61,7 +61,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install Python test dependencies
-        run: python3 -m pip install --no-cache-dir "cryptography>=41.0.0"
+        run: python3 -m pip install --no-cache-dir --require-hashes --only-binary :all: -r .github/workflows/python-test-requirements.txt
       - name: Run python unit tests
         run: python3 -m unittest discover -s scripts/tests -v
 
