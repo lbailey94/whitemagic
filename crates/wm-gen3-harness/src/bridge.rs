@@ -4503,7 +4503,7 @@ fn resolve_continuity_session_lane(
                     (view.track.as_deref() == Some(trk.as_str())
                         && !view.session_id.is_empty()
                         && Some(view.session_id.as_str()) != current_session)
-                    .then_some(view.session_id)
+                        .then_some(view.session_id)
                 }) {
                     return Some(sid);
                 }
@@ -4860,7 +4860,9 @@ fn compact_agent_context(input: CompactAgentContextInput<'_>) -> Value {
             let kept = retained.iter().filter(|turn| turn["kind"] == kind).count();
             omissions[kind] = json!(total.saturating_sub(kept));
         }
-        let continuity_core_omitted = context["continuity_core_omitted"].as_bool().unwrap_or(false);
+        let continuity_core_omitted = context["continuity_core_omitted"]
+            .as_bool()
+            .unwrap_or(false);
         context["critical_evidence_omitted"] = json!(
             continuity_core_omitted
                 || omissions["arc"].as_u64().unwrap_or(0) > 0
@@ -4919,9 +4921,11 @@ fn compact_agent_context(input: CompactAgentContextInput<'_>) -> Value {
     };
     let mut omitted_turns = 0usize;
     let mut omitted_other = usize::from(briefing_duplicates_projection);
-    let core_omission_count =
-        queue.len() + usize::from(checkpoint.is_some()) + flags.len() + crystals.len()
-            + usize::from(briefing.is_some());
+    let core_omission_count = queue.len()
+        + usize::from(checkpoint.is_some())
+        + flags.len()
+        + crystals.len()
+        + usize::from(briefing.is_some());
     let insufficient = |omitted_turns: usize, omitted_other: usize| {
         finish(
             json!({
@@ -10341,13 +10345,8 @@ mod compact_agent_context_tests {
                 text.len().div_ceil(4)
             );
             assert_eq!(text, "");
-            if budget == 0 {
-                assert_eq!(ctx["budget_completeness"], "insufficient");
-                assert_eq!(ctx["continuity_core_omitted"], true);
-            } else {
-                assert_eq!(ctx["budget_completeness"], "insufficient");
-                assert_eq!(ctx["continuity_core_omitted"], true);
-            }
+            assert_eq!(ctx["budget_completeness"], "insufficient");
+            assert_eq!(ctx["continuity_core_omitted"], true);
         }
 
         let compact = SessionContinuityView {
@@ -12876,13 +12875,17 @@ mod diaml_and_salience_refinement_tests {
         assert_ne!(ctx["budget_completeness"], "insufficient");
         let projection: Value =
             serde_json::from_str(ctx["text"].as_str().expect("text")).expect("json");
-        assert_eq!(projection["checkpoint"]["summary"], "Production hosted lane now runs v11.2.1.");
+        assert_eq!(
+            projection["checkpoint"]["summary"],
+            "Production hosted lane now runs v11.2.1."
+        );
         assert_eq!(projection["queue"][0], "Verify cards before deploy.");
         let turns = projection["turns"].as_array().expect("turns");
         assert!(
-            turns
-                .iter()
-                .all(|turn| !turn["text"].as_str().unwrap_or_default().contains("FOREIGN_DECISION")),
+            turns.iter().all(|turn| !turn["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("FOREIGN_DECISION")),
             "estate overcrowding must not import foreign-lane chatter"
         );
 
@@ -12905,7 +12908,9 @@ mod diaml_and_salience_refinement_tests {
             track_only["checkpoint"]["summary"],
             "Production hosted lane now runs v11.2.1."
         );
-        let track_ctx = track_only["agent_context"].as_object().expect("agent_context");
+        let track_ctx = track_only["agent_context"]
+            .as_object()
+            .expect("agent_context");
         let track_projection: Value =
             serde_json::from_str(track_ctx["text"].as_str().expect("text")).expect("json");
         assert_eq!(

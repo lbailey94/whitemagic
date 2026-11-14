@@ -74,11 +74,22 @@ EXEMPT: dict[str, set[str]] = {}
 #   2. Rejects the stable version if it appears as drift elsewhere in the file,
 #   3. Rejects rewriting or deleting the stable fallback when the Install path
 #      section is present.
-CHANNEL_CONTEXTS: dict[str, list[tuple[re.Pattern[str], str]]] = {
+CHANNEL_CONTEXTS: dict[str, list[tuple[re.Pattern[str], str, str]]] = {
     "README.md": [
         (
             re.compile(r"remain on the stable Gen 2 `(v?(?:10\.\d+(?:\.\d+)?(?:-alpha(?:\.\d+)?)?|9\.\d+\.\d+))` release line"),
             "9.3.4",
+            "- **Install path:",
+        ),
+        (
+            re.compile(r"the Docker tag `9` are the Gen2 (v?(?:10\.\d+(?:\.\d+)?(?:-alpha(?:\.\d+)?)?|9\.\d+\.\d+)) line\."),
+            "9.3.4",
+            "### Other channels",
+        ),
+        (
+            re.compile(r"cargo install whitemagic\s+# crates\.io \(Gen2 (v?(?:10\.\d+(?:\.\d+)?(?:-alpha(?:\.\d+)?)?|9\.\d+\.\d+))\)"),
+            "9.3.4",
+            "### Other channels",
         ),
     ],
 }
@@ -87,13 +98,13 @@ CHANNEL_CONTEXTS: dict[str, list[tuple[re.Pattern[str], str]]] = {
 def versions_in(
     text: str,
     exempt: frozenset[str] = frozenset(),
-    channel_contexts: list[tuple[re.Pattern[str], str]] | None = None,
+    channel_contexts: list[tuple[re.Pattern[str], str, str]] | None = None,
 ) -> list[str]:
     results: list[str] = []
     contexts = channel_contexts or []
     for line in text.splitlines():
         pinned_spans: list[tuple[int, int]] = []
-        for pattern, expected_pin in contexts:
+        for pattern, expected_pin, _marker in contexts:
             for cm in pattern.finditer(line):
                 actual_pin = cm.group(1).lstrip("v")
                 if actual_pin == expected_pin:
@@ -113,14 +124,14 @@ def check_channel_contexts(rel: str, text: str) -> list[str]:
     contexts = CHANNEL_CONTEXTS.get(rel, [])
     if not contexts:
         return errors
-    for pattern, expected_pin in contexts:
+    for pattern, expected_pin, marker in contexts:
         matches = list(pattern.finditer(text))
         if matches:
             for cm in matches:
                 actual_pin = cm.group(1).lstrip("v")
                 if actual_pin != expected_pin:
                     errors.append(f"stable-channel pin {actual_pin} != {expected_pin}")
-        elif "- **Install path:" in text:
+        elif marker in text:
             errors.append(f"missing required stable-channel fallback pin ({expected_pin})")
     return errors
 
@@ -129,14 +140,14 @@ def rewrite(
     text: str,
     target: str,
     exempt: frozenset[str] = frozenset(),
-    channel_contexts: list[tuple[re.Pattern[str], str]] | None = None,
+    channel_contexts: list[tuple[re.Pattern[str], str, str]] | None = None,
 ) -> tuple[str, int]:
     count = 0
     contexts = channel_contexts or []
     out_lines: list[str] = []
     for line in text.splitlines(keepends=True):
         pinned_spans: list[tuple[int, int]] = []
-        for pattern, expected_pin in contexts:
+        for pattern, expected_pin, _marker in contexts:
             for cm in pattern.finditer(line):
                 if cm.group(1).lstrip("v") == expected_pin:
                     pinned_spans.append(cm.span(1))

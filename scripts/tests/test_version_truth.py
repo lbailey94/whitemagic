@@ -240,6 +240,25 @@ class VersionTruthTest(unittest.TestCase):
             )
             self.assertEqual(vt.check(root, None), 1)
 
+    def test_other_channels_gen2_pins_are_preserved_only_in_context(self) -> None:
+        tmp, root = make_tree("11.2.1")
+        with tmp:
+            (root / "README.md").write_text(
+                "# WhiteMagic 11.2.1\n\n### Other channels\n\n"
+                "`cargo install whitemagic` and the Docker tag `9` are the Gen2 9.3.4 line.\n\n"
+                "```bash\ncargo install whitemagic                     # crates.io (Gen2 9.3.4)\n```\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(vt.check(root, None), 0)
+            # Rewriting the Gen2 line to 11.2.1 must be caught as stable-channel pin drift.
+            (root / "README.md").write_text(
+                "# WhiteMagic 11.2.1\n\n### Other channels\n\n"
+                "`cargo install whitemagic` and the Docker tag `9` are the Gen2 11.2.1 line.\n\n"
+                "```bash\ncargo install whitemagic                     # crates.io (Gen2 9.3.4)\n```\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(vt.check(root, None), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
