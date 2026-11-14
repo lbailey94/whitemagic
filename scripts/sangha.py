@@ -526,10 +526,10 @@ def all_claims(scope_filter=None):
         if scope_filter and scope_filter.lower() not in (post["scope"] or "").lower():
             continue
         expires = _parse_iso(post["expires"])
-        if expires and expires <= now:
-            post["state"] = "expired"
-        elif any(_release_after(r, post) for r in releases.get(post["scope"], [])):
+        if any(_release_after(r, post) for r in releases.get(post["scope"], [])):
             post["state"] = "released"
+        elif expires and expires <= now:
+            post["state"] = "expired"
         else:
             post["state"] = "active"
         claims.append(post)
@@ -2289,6 +2289,18 @@ def _scope_claimed(checkout, claims, leases):
     return False
 
 
+def _sentinel_finding_key(finding):
+    """Build a stable dedup key for Sentinel posts without volatile age ticks."""
+    kind = finding.get("kind", "")
+    name = finding.get("name", "")
+    if kind == "dirty-unclaimed":
+        sample = ",".join(finding.get("sample") or ())
+        return f"{name}|{kind}|{finding.get('files', 0)}|{sample}"
+    if kind == "expired-claim-dirty":
+        return f"{name}|{kind}|{finding.get('claim_seq', '')}|{finding.get('scope', '')}"
+    return f"{name}|{kind}|{finding.get('summary', '')}"
+
+
 def cmd_sentinel(args):
     checkouts = _load_checkouts()
     claims = active_claims()
@@ -2416,8 +2428,7 @@ def cmd_sentinel(args):
         if not findings:
             print("  no unclaimed stale work")
     if args.post and findings:
-        digest = json.dumps(sorted(f"{f['name']}|{f['kind']}|{f.get('summary', '')}"
-                                   for f in findings))
+        digest = json.dumps(sorted(_sentinel_finding_key(f) for f in findings))
         try:
             last = json.loads(SENTINEL_STATE.read_text()).get("digest")
         except (OSError, ValueError):

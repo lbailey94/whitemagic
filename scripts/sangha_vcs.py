@@ -29,10 +29,24 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(os.environ.get("SANGHA_ROOT", "")).resolve() if os.environ.get("SANGHA_ROOT") else Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT))
-
-import sangha
+_SCRIPT_DIR = Path(__file__).resolve().parent
+ROOT = Path(os.environ.get("SANGHA_ROOT", "")).resolve() if os.environ.get("SANGHA_ROOT") else _SCRIPT_DIR
+if "sangha" not in sys.modules:
+    _main = sys.modules.get("__main__")
+    _main_file = getattr(_main, "__file__", None)
+    if _main_file and Path(_main_file).resolve() == (_SCRIPT_DIR / "sangha.py"):
+        sys.modules["sangha"] = _main
+        import sangha  # noqa: E402
+    else:
+        # Import the sibling sangha.py module, not any shim/fixture inside SANGHA_ROOT.
+        _orig_path = list(sys.path)
+        sys.path = [str(_SCRIPT_DIR), *[p for p in _orig_path if p != str(_SCRIPT_DIR)]]
+        try:
+            import sangha  # noqa: E402
+        finally:
+            sys.path = _orig_path
+else:
+    import sangha  # noqa: E402
 
 STATE_DIR = ROOT / ".sangha"
 ACTIVE_PASS_FILE = STATE_DIR / "vcs_active_pass.json"
