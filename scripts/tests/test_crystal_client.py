@@ -764,6 +764,7 @@ class CrystalAnchorPathTest(unittest.TestCase):
             cc.verify_and_unseal_crystal_set([], key, tenant_hash, require_anchor=True)
 
 
+@unittest.skipIf(cc.AESGCM is None or cc.ChaCha20Poly1305 is None, "cryptography is optional")
 class LocalCrystalStoreTests(unittest.TestCase):
     def test_zero_config_auto_persists_offstore_anchor_and_defeats_rollback_and_erasure_resurrection(self) -> None:
         import json
