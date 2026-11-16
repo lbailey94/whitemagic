@@ -21,6 +21,7 @@
 pub mod action_skeleton;
 pub mod adaptive;
 pub mod admin;
+pub mod adversarial_guard;
 pub mod answer_contract;
 pub mod apotheosis;
 pub mod at_rest;
@@ -64,6 +65,7 @@ pub mod pray_combinatorics;
 pub mod projection;
 pub mod pulse;
 pub mod pulse_compiler;
+pub mod qfhrr_lut;
 pub mod quarantine;
 pub mod recipe;
 pub mod relativity;
@@ -141,12 +143,21 @@ pub use valkyrie::{
     project_srht_to_64d, vsa_hadamard_bind,
 };
 
+pub use adversarial_guard::{
+    BoundaryVerdict, IngestGuard, StuffingScore, evaluate_nlu_action_boundary,
+    fold_confusable_char, normalize_adversarial_text, score_with_stuffing_cap,
+    tokenize_adversarial_safe,
+};
 pub use factory::{FactoryAdjudication, FactoryCandidate, SoftwareFactory, SoftwareFactoryConfig};
 pub use ops::{
     ConsentRing, EvidenceBundle, EvidenceCoverage, EvidenceDisposition, HermitCrabSanctuary,
     InspectionPromise, InspectionReport, MemCutAuditReport, MemoryWorthStats, ObligationStatus,
     OpenLoop, OpenLoopStatus, ProspectiveObligation, RecallStopReason, SessionCheckpoint,
     SessionContinuityView, VectorProjectionState, VectorRepairReport, WriteWorthAssessment,
+};
+pub use qfhrr_lut::{
+    QFHRR_K16_TRI_LUT, QFHRR_MAX_SCORE, QfhrrPacked32, pack_64_nibbles_to_32, qfhrr_bind_64d,
+    qfhrr_packed32_triangular_sim, qfhrr_text_signature_packed32, qfhrr_triangular_sim_64d,
 };
 pub use sweep::{ChamberAuditReport, CognitiveChamber, is_disposable_telemetry};
 pub use transport::{

@@ -15,6 +15,7 @@
 //! the frozen pre-registration). Never calibrated on benchmark outcomes.
 
 use std::path::Path;
+#[cfg(feature = "fastembed")]
 use std::time::Instant;
 
 /// Frozen embedding model id (exception receipt pins the artifact hashes).
@@ -34,6 +35,12 @@ pub const TAU_SWEEP: f32 = 0.50;
 /// Minimum acceptable battery separation between hard negatives and positives.
 pub const MIN_BATTERY_MARGIN: f32 = 0.05;
 
+/// True when compiled with the `fastembed` ONNX embedding backend.
+#[must_use]
+pub const fn fastembed_compiled() -> bool {
+    cfg!(feature = "fastembed")
+}
+
 /// Model load + embedding counters (cost accounting, pre-reg §4/M-cost).
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ProjectionStats {
@@ -44,6 +51,7 @@ pub struct ProjectionStats {
 }
 
 pub struct Projection {
+    #[cfg(feature = "fastembed")]
     model: fastembed::TextEmbedding,
     cache_dir: std::path::PathBuf,
     pub stats: ProjectionStats,
@@ -53,35 +61,47 @@ impl Projection {
     /// Load the frozen model from a local cache directory (no network at run
     /// time; the dir is read-only for this process).
     pub fn load(cache_dir: &Path) -> Result<Self, String> {
-        let started = Instant::now();
-        // Code-enforce offline execution: fail closed if cache is missing or incomplete,
-        // preventing any network attempts (erratum #57).
-        if !cache_dir.exists() {
-            return Err(format!(
-                "projection: cache directory missing: {cache_dir:?}; offline execution refuses network fetch"
-            ));
+        #[cfg(not(feature = "fastembed"))]
+        {
+            let _ = cache_dir;
+            Err(
+                "projection: compiled without `fastembed` ONNX support; using pure-Rust lexical / System 0.5 / qFHRR recall"
+                    .to_string(),
+            )
         }
-        let model_dir = cache_dir.join("models--Qdrant--bge-small-en-v1.5-onnx-Q");
-        let legacy_model_dir = cache_dir.join("models--Xenova--bge-small-en-v1.5");
-        if !model_dir.exists() && !legacy_model_dir.exists() {
-            return Err(format!(
-                "projection: model artifacts missing in {cache_dir:?}; offline execution refuses network fetch"
-            ));
+        #[cfg(feature = "fastembed")]
+        {
+            let started = Instant::now();
+            // Code-enforce offline execution: fail closed if cache is missing or incomplete,
+            // preventing any network attempts (erratum #57).
+            if !cache_dir.exists() {
+                return Err(format!(
+                    "projection: cache directory missing: {cache_dir:?}; offline execution refuses network fetch"
+                ));
+            }
+            let model_dir = cache_dir.join("models--Qdrant--bge-small-en-v1.5-onnx-Q");
+            let legacy_model_dir = cache_dir.join("models--Xenova--bge-small-en-v1.5");
+            if !model_dir.exists() && !legacy_model_dir.exists() {
+                return Err(format!(
+                    "projection: model artifacts missing in {cache_dir:?}; offline execution refuses network fetch"
+                ));
+            }
+            let options =
+                fastembed::TextInitOptions::new(fastembed::EmbeddingModel::BGESmallENV15Q)
+                    .with_cache_dir(cache_dir.to_path_buf())
+                    .with_show_download_progress(false);
+            let model = fastembed::TextEmbedding::try_new(options)
+                .map_err(|e| format!("projection: model load failed from {cache_dir:?}: {e}"))?;
+            let load_ms = started.elapsed().as_millis() as u64;
+            Ok(Self {
+                model,
+                cache_dir: cache_dir.to_path_buf(),
+                stats: ProjectionStats {
+                    model_load_ms: load_ms,
+                    ..Default::default()
+                },
+            })
         }
-        let options = fastembed::TextInitOptions::new(fastembed::EmbeddingModel::BGESmallENV15Q)
-            .with_cache_dir(cache_dir.to_path_buf())
-            .with_show_download_progress(false);
-        let model = fastembed::TextEmbedding::try_new(options)
-            .map_err(|e| format!("projection: model load failed from {cache_dir:?}: {e}"))?;
-        let load_ms = started.elapsed().as_millis() as u64;
-        Ok(Self {
-            model,
-            cache_dir: cache_dir.to_path_buf(),
-            stats: ProjectionStats {
-                model_load_ms: load_ms,
-                ..Default::default()
-            },
-        })
     }
 
     #[must_use]
@@ -91,18 +111,26 @@ impl Projection {
 
     /// Embed texts (L2-normalized). Batch call; stats recorded.
     pub fn embed(&mut self, texts: &[String]) -> Result<Vec<Vec<f32>>, String> {
-        let started = Instant::now();
-        let mut out = self
-            .model
-            .embed(texts, None)
-            .map_err(|e| format!("projection: embed failed: {e}"))?;
-        for v in out.iter_mut() {
-            l2_normalize(v);
+        #[cfg(not(feature = "fastembed"))]
+        {
+            let _ = texts;
+            Err("projection: fastembed feature disabled in this build".to_string())
         }
-        self.stats.embed_calls += 1;
-        self.stats.embed_texts += texts.len() as u64;
-        self.stats.embed_ms += started.elapsed().as_millis() as u64;
-        Ok(out)
+        #[cfg(feature = "fastembed")]
+        {
+            let started = Instant::now();
+            let mut out = self
+                .model
+                .embed(texts, None)
+                .map_err(|e| format!("projection: embed failed: {e}"))?;
+            for v in out.iter_mut() {
+                l2_normalize(v);
+            }
+            self.stats.embed_calls += 1;
+            self.stats.embed_texts += texts.len() as u64;
+            self.stats.embed_ms += started.elapsed().as_millis() as u64;
+            Ok(out)
+        }
     }
 
     pub fn embed_one(&mut self, text: &str) -> Result<Vec<f32>, String> {
@@ -137,7 +165,7 @@ pub fn semantic_support(cos: f32) -> f32 {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "fastembed"))]
 mod tests {
     use super::*;
 
@@ -211,7 +239,7 @@ mod tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "fastembed"))]
 mod a3_diagnostic {
     use super::*;
 
@@ -317,5 +345,27 @@ mod a3_diagnostic {
             res.is_err(),
             "missing cache dir must fail closed without attempting network"
         );
+    }
+}
+
+#[cfg(test)]
+mod pure_rust_projection_tests {
+    use super::*;
+
+    #[test]
+    fn cosine_and_semantic_support_work_without_fastembed() {
+        let mut a = vec![3.0_f32, 4.0];
+        l2_normalize(&mut a);
+        assert!((cosine(&a, &a) - 1.0).abs() < 1e-5);
+        assert_eq!(semantic_support(TAU_GATE - 0.01), 0.0);
+        assert!((semantic_support(1.0) - 1.0).abs() < 1e-6);
+    }
+
+    #[cfg(not(feature = "fastembed"))]
+    #[test]
+    fn projection_load_fails_gracefully_when_fastembed_disabled() {
+        assert!(!fastembed_compiled());
+        let err = Projection::load(Path::new(".")).err().expect("must fail");
+        assert!(err.contains("without `fastembed`"));
     }
 }

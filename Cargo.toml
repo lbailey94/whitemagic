@@ -18,7 +18,7 @@ license = "MIT"
 authors = ["WhiteMagic Project"]
 
 [workspace.dependencies]
-wm-gen3-core = { path = "crates/wm-gen3-core", version = "11.2.1" }
+wm-gen3-core = { path = "crates/wm-gen3-core", version = "11.2.1", default-features = false }
 wm-gen3-shm = { path = "crates/wm-gen3-shm", version = "11.2.1" }
 wm-gen3-systemone = { path = "crates/wm-gen3-systemone", version = "11.2.1" }
 wm-gen3-vault = { path = "crates/wm-gen3-vault", version = "11.2.1" }

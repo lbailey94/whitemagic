@@ -8,10 +8,18 @@ authors.workspace = true
 description = "WhiteMagic Gen3 — minimal substrate skeleton (Phase 1 first slice)"
 
 [features]
+default = ["fastembed"]
+# Optional local ONNX embedding engine; disable (`--no-default-features`) for pure-Rust
+# zero-DLL minimal builds (e.g. Windows x86_64, static musl, Intel macOS).
+fastembed = ["dep:fastembed"]
 # Operator-side construction paths (e.g. RatifiedChannel::mint). Never enabled by
 # the adaptive layer; see docs/DEPENDENCY_MANIFEST.md.
 operator = []
 reference-models = []
+
+[[example]]
+name = "warm_embed_cache"
+required-features = ["fastembed"]
 
 [[test]]
 name = "adversary_contract"
@@ -90,7 +98,7 @@ name = "gate21_scitt_mesh_gossip"
 required-features = ["operator"]
 
 [dependencies]
-fastembed = "7.5.0"
+fastembed = { version = "7.5.0", optional = true }
 lmdb = "0.8"
 rmp-serde = "1"
 serde = { version = "1", features = ["derive"] }

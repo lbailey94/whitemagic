@@ -29,7 +29,8 @@ name = "wm-node"
 path = "src/bin/wm_node.rs"
 
 [features]
-default = ["system05"]
+default = ["system05", "fastembed"]
+fastembed = ["wm-gen3-core/fastembed"]
 systemone = ["dep:wm-gen3-systemone"]
 system05 = []
 system05-onig = ["system05", "wm-gen3-zeropointfive/onig"]

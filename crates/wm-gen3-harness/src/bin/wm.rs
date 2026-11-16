@@ -93,6 +93,12 @@ enum Commands {
         #[arg(long)]
         plan: bool,
     },
+    /// Run read-only diagnostics across store, embeddings, client MCP configs, and contract parity
+    Doctor {
+        /// Output diagnostic report as JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Initialize and provision a local WhiteMagic substrate store
     Init {
         /// Force re-seeding of the starter guide galaxy even if store already exists
@@ -367,6 +373,9 @@ enum Commands {
         /// Output formatted JSON manifest
         #[arg(long)]
         json: bool,
+        /// Exit non-zero if undeclared tools or live tools/list parity drift are detected
+        #[arg(long)]
+        verify: bool,
     },
     /// Run the JSON-RPC / MCP stdio server (sidecar for Claude Code, Antigravity, Opencode)
     #[command(alias = "mcp")]
@@ -1744,6 +1753,14 @@ fn main() {
                 std::process::exit(1);
             }
         }
+        Commands::Doctor { json } => match wm_gen3_harness::doctor::run_doctor(&store_path, json) {
+            Ok(report) if !report.healthy => std::process::exit(1),
+            Ok(_) => {}
+            Err(e) => {
+                eprintln!("Doctor failed: {e}");
+                std::process::exit(1);
+            }
+        },
         Commands::Init { force, bare } => {
             println!(
                 "Initializing WhiteMagic substrate at: {}",
@@ -4004,8 +4021,16 @@ fn main() {
             );
             println!("==================================================");
         }
-        Commands::Contract { json } => {
+        Commands::Contract { json, verify } => {
             let manifest = build_contract_manifest(WM_VERSION);
+            let manifest_routes = manifest["counts"]["routes"].as_u64().unwrap_or(0) as usize;
+            let live_tools_val = get_tools_list_for_profile(McpProfile::Full, false);
+            let live_tools = live_tools_val.as_array();
+            let live_full = live_tools.map_or(0, Vec::len);
+            let valid_schemas = live_tools.is_some_and(|arr| {
+                arr.iter()
+                    .all(|t| t["inputSchema"]["type"].as_str() == Some("object"))
+            });
             if json {
                 println!(
                     "{}",
@@ -4026,6 +4051,12 @@ fn main() {
                 );
                 println!("  Run with --json for complete machine-checked JSON manifest.");
                 println!("==================================================");
+            }
+            if verify && (manifest_routes == 0 || manifest_routes != live_full || !valid_schemas) {
+                eprintln!(
+                    "contract parity verification failed: manifest_routes={manifest_routes} live_full={live_full} valid_schemas={valid_schemas}"
+                );
+                std::process::exit(1);
             }
         }
         Commands::Serve {
