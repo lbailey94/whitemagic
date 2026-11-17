@@ -59,6 +59,7 @@ pub mod kdf;
 pub mod legion;
 pub mod mandala;
 pub mod mesh;
+pub mod novelty_gate;
 pub mod ops;
 pub mod peer;
 pub mod pray_combinatorics;
@@ -149,6 +150,9 @@ pub use adversarial_guard::{
     tokenize_adversarial_safe,
 };
 pub use factory::{FactoryAdjudication, FactoryCandidate, SoftwareFactory, SoftwareFactoryConfig};
+pub use novelty_gate::{
+    CountMinSketch, HyperLogLog14, NoveltyDecision, NoveltyGate, SurpriseGate, SurpriseObservation,
+};
 pub use ops::{
     ConsentRing, EvidenceBundle, EvidenceCoverage, EvidenceDisposition, HermitCrabSanctuary,
     InspectionPromise, InspectionReport, MemCutAuditReport, MemoryWorthStats, ObligationStatus,

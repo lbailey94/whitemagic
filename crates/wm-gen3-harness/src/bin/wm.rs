@@ -92,6 +92,26 @@ enum Commands {
         /// Plan detected MCP client configuration changes without modifying any files
         #[arg(long)]
         plan: bool,
+        /// Write detected MCP client configurations using backup-verified setup
+        #[arg(long)]
+        write: bool,
+    },
+    /// Configure MCP clients safely with expanded paths, timestamped backups, and parse-back verification
+    Setup {
+        /// Optional client id (opencode, claude, claude-desktop, cursor, windsurf, codex, antigravity)
+        client: Option<String>,
+        /// Apply configuration changes (dry-run proposal by default)
+        #[arg(long)]
+        write: bool,
+        /// Force --readonly on configured client entries
+        #[arg(long)]
+        readonly: bool,
+        /// Remove WhiteMagic from detected/selected client config(s)
+        #[arg(long)]
+        remove: bool,
+        /// Output report as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Run read-only diagnostics across store, embeddings, client MCP configs, and contract parity
     Doctor {
@@ -1747,9 +1767,38 @@ fn main() {
     match cli.command {
         Commands::BuildInfo { json } => print_build_identity(json),
         Commands::AnswerContract { .. } => unreachable!("handled before store resolution"),
-        Commands::Grimoire { json, plan } => {
-            if let Err(e) = wm_gen3_harness::grimoire::run_grimoire(&store_path, json, plan) {
+        Commands::Grimoire { json, plan, write } => {
+            if let Err(e) =
+                wm_gen3_harness::grimoire::run_grimoire(&store_path, json, plan && !write)
+            {
                 eprintln!("Grimoire run failed: {e}");
+                std::process::exit(1);
+            }
+            if write {
+                if let Err(e) =
+                    wm_gen3_harness::setup::run_setup(&store_path, None, true, false, false, json)
+                {
+                    eprintln!("Grimoire setup --write failed: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        Commands::Setup {
+            client,
+            write,
+            readonly,
+            remove,
+            json,
+        } => {
+            if let Err(e) = wm_gen3_harness::setup::run_setup(
+                &store_path,
+                client.as_deref(),
+                write,
+                readonly,
+                remove,
+                json,
+            ) {
+                eprintln!("Setup failed: {e}");
                 std::process::exit(1);
             }
         }

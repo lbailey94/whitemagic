@@ -233,6 +233,7 @@ pub fn evaluate_nlu_action_boundary(
         norm_tool == cls
             || norm_tool.ends_with(&format!(".{cls}"))
             || norm_tool.starts_with(&format!("{cls}:"))
+            || norm_tool.starts_with(&format!("{cls} "))
             || norm_tool.contains(&format!(" {cls} "))
     });
     if targets_destructive && !has_non_nlu_capability_seal {
