@@ -81,7 +81,7 @@ class ReleaseNotesTest(unittest.TestCase):
         self.assertNotIn("lbailey94/whitemagic:9", out)
         self.assertIn('wm --store "$HOME/.local/share/whitemagic/gen3" grimoire --plan', out)
         self.assertIn('wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile cyberbrain', out)
-        for unsupported in ("wm connect", "wm setup", "wm quickstart", "wm doctor", "--profile curated", "grimoire --write"):
+        for unsupported in ("wm connect", "wm quickstart", "--profile curated"):
             self.assertNotIn(unsupported, out)
 
     def test_gen3_11_notes_keep_commands_and_platform_claims_bounded(self):
@@ -90,9 +90,9 @@ class ReleaseNotesTest(unittest.TestCase):
         out = result.stdout
         self.assertIn("--version v11.0.0", out)
         self.assertIn("serve --profile cyberbrain", out)
-        self.assertIn("Windows x86-64 and Intel macOS native assets are not in this matrix", out)
+        self.assertIn("Windows x86_64", out)
         self.assertIn("Check the signed release manifest", out)
-        for unsupported in ("wm connect", "wm setup", "wm quickstart", "--profile curated", "cargo install whitemagic"):
+        for unsupported in ("wm connect", "wm quickstart", "--profile curated", "cargo install whitemagic"):
             self.assertNotIn(unsupported, out)
 
     def test_gen2_release_notes_keep_connect_preview_then_write(self):

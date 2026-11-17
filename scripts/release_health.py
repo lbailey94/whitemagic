@@ -45,19 +45,23 @@ import tempfile
 
 UA = "wm-release-health/1.0 (+https://github.com/lbailey94/whitemagic)"
 DEFAULT_RELEASE_PUBKEY = "aade884b035d2f92333843faba153eb83b201d1d1db63e25d642d82f4b12770e"
-# Mirrors the release.yml build matrix. The v10 line is glibc-only (the ONNX
-# runtime the binary loads has no musl build) and macOS arm64-only — musl and
-# macos-x86_64 were dropped from the matrix in 5d9b03d. Keep this list in
-# lockstep with the matrix: a stale entry here is a guaranteed false LAGGING.
+# Mirrors the release.yml build matrix. Linux and macOS arm64 ship with
+# fastembed/ONNX; Intel macOS and Windows x86_64 ship pure-Rust zero-DLL builds
+# (--no-default-features --features system05). Keep this list in lockstep with
+# the release.yml matrix: a stale entry here is a guaranteed false LAGGING.
 TARGETS = [
     "wm-linux-x86_64",
     "wm-linux-aarch64",
     "wm-macos-aarch64",
+    "wm-macos-x86_64",
+    "wm-windows-x86_64.exe",
 ]
 EXPECTED_MANIFEST_TARGETS = {
     "linux-x86_64": "wm-linux-x86_64",
     "linux-aarch64": "wm-linux-aarch64",
     "macos-aarch64": "wm-macos-aarch64",
+    "macos-x86_64": "wm-macos-x86_64",
+    "windows-x86_64": "wm-windows-x86_64.exe",
 }
 V9_TARGETS = [
     "wm-linux-x86_64", "wm-linux-x86_64-musl", "wm-linux-aarch64",
@@ -70,12 +74,9 @@ V9_EXPECTED_MANIFEST_TARGETS = {
     "macos-aarch64": "wm-macos-aarch64", "macos-x86_64": "wm-macos-x86_64",
     "windows-x86_64": "wm-windows-x86_64.exe",
 }
-# Windows is out of the alpha matrix until the ONNX Runtime link/DLL work
-# lands (2026-10-05, see release.yml); its asset must not be listed here or
-# every probe would report a guaranteed false LAGGING.
-# Distributables are published gzip'd alongside the raw binary
-# (2026-09-21, slow-link accessibility).
-COMPRESSED_TARGETS = list(TARGETS)
+# Distributables are published gzip'd alongside the raw binary on POSIX targets
+# (2026-09-21, slow-link accessibility); Windows ships raw .exe + .sha256.
+COMPRESSED_TARGETS = [t for t in TARGETS if not t.endswith(".exe")]
 REQUIRED_RELEASE_ASSETS = (
     [
         asset

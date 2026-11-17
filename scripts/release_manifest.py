@@ -48,6 +48,7 @@ TARGETS = {
     "wm-linux-x86_64": "linux-x86_64",
     "wm-linux-aarch64": "linux-aarch64",
     "wm-macos-aarch64": "macos-aarch64",
+    "wm-macos-x86_64": "macos-x86_64",
     "wm-windows-x86_64.exe": "windows-x86_64",
 }
 
@@ -58,6 +59,8 @@ DEFAULT_INSTALL_GATED = [
     "linux-x86_64",
     "linux-aarch64",
     "macos-aarch64",
+    "macos-x86_64",
+    "windows-x86_64",
 ]
 
 

@@ -28,10 +28,11 @@ PLATFORMS_STABLE = (
 )
 
 PLATFORMS_GEN3 = (
-    "The current Gen 3 native build matrix covers Linux x86-64, Linux arm64, "
-    "and macOS arm64. Check the signed release manifest and release health "
-    "record for the assets and install certifications actually published. "
-    "Windows x86-64 and Intel macOS native assets are not in this matrix."
+    "The current Gen 3 build matrix covers Linux x86-64, Linux arm64, "
+    "macOS arm64, and pure-Rust zero-DLL builds for Intel macOS x86_64 and "
+    "Windows x86_64 (BM25 + System 0.5 + 32B qFHRR recall without ONNX Runtime "
+    "DLLs). Check the signed release manifest and release health record for "
+    "the assets and install certifications actually published."
 )
 
 CHANGELOG_URL = "https://github.com/lbailey94/whitemagic/blob/main/CHANGELOG.md"

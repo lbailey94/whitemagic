@@ -427,7 +427,7 @@ print(json.dumps({'packages':[{'id':ident,'name':name,'publish':None,'dependenci
         self.assertLess(channel_save, fetch)
         self.assertLess(fetch, checkout)
         self.assertEqual(text.count('python3 "$RUNNER_TEMP/release_health.py"'), 2)
-        self.assertEqual(text.count('python3 "$RUNNER_TEMP/release_channels.py"'), 4)
+        self.assertEqual(text.count('python3 "$RUNNER_TEMP/release_channels.py"'), 5)
         self.assertIn('TREE_V=', text[checkout:])
         # A v9 fixture remains tied to v9 metadata by the existing exact tag
         # version assertion, while the saved checker is independent of tag code.

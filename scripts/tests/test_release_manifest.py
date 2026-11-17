@@ -36,14 +36,14 @@ class ReleaseManifestFactsTest(unittest.TestCase):
             self.assertEqual(rm.workspace_crate_count(root), 2)
 
     def test_install_gated_defaults_to_the_gated_lines(self) -> None:
-        # The current matrix and installer certification cover exactly three
-        # targets. Windows is retained only in the artifact parser for history.
         self.assertEqual(
             rm.DEFAULT_INSTALL_GATED,
             [
                 "linux-x86_64",
                 "linux-aarch64",
                 "macos-aarch64",
+                "macos-x86_64",
+                "windows-x86_64",
             ],
         )
 
@@ -67,17 +67,10 @@ class ReleaseManifestFactsTest(unittest.TestCase):
         self.assertEqual(rm.TARGETS["wm-windows-x86_64.exe"], "windows-x86_64")
 
     def test_health_required_assets_match_manifest_targets(self) -> None:
-        # The release-health probe's required-asset list must stay in
-        # lockstep with the build matrix. Windows is parked out of the alpha
-        # matrix (release.yml, 2026-10-05: ONNX link/DLL work pending), so its
-        # manifest targets are excluded from the current expectation — re-add
-        # them here only together with the matrix entry.
         import release_health as rh
 
         expected = set()
         for filename in rm.TARGETS:
-            if filename.endswith(".exe"):
-                continue
             expected.add(filename)
             expected.add(f"{filename}.sha256")
             if not filename.endswith(".exe"):
@@ -210,6 +203,18 @@ class ReleaseManifestFactsTest(unittest.TestCase):
                         },
                         "macos-aarch64": {
                             "url": f"{base_dl}/wm-macos-aarch64",
+                            "sha256": good_sha,
+                            "size": 1000,
+                            "install_gated": True,
+                        },
+                        "macos-x86_64": {
+                            "url": f"{base_dl}/wm-macos-x86_64",
+                            "sha256": good_sha,
+                            "size": 1000,
+                            "install_gated": True,
+                        },
+                        "windows-x86_64": {
+                            "url": f"{base_dl}/wm-windows-x86_64.exe",
                             "sha256": good_sha,
                             "size": 1000,
                             "install_gated": True,

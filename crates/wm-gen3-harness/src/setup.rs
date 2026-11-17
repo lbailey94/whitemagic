@@ -964,21 +964,41 @@ fn entry_matches(spec: &ClientSpec, exe: &Path, store_path: &Path, readonly: boo
     }
 }
 
+fn has_active_writable_whitemagic_server(spec: &ClientSpec) -> bool {
+    let Ok(raw) = std::fs::read_to_string(&spec.config_path) else {
+        return false;
+    };
+    let fragment = match spec.kind {
+        ConfigKind::McpServersJson => serde_json::from_str::<Value>(&raw)
+            .ok()
+            .and_then(|v| {
+                v.get("mcpServers")
+                    .and_then(|m| m.get("whitemagic"))
+                    .cloned()
+            })
+            .and_then(|v| serde_json::to_string(&v).ok()),
+        ConfigKind::OpencodeJsonc => parse_jsonc(&raw)
+            .ok()
+            .and_then(|v| v.get("mcp").and_then(|m| m.get("whitemagic")).cloned())
+            .and_then(|v| serde_json::to_string(&v).ok()),
+        ConfigKind::CodexToml => find_toml_section_span(&raw, "[mcp_servers.whitemagic]")
+            .map(|(s, e)| raw[s..e].to_string()),
+    };
+    let Some(frag) = fragment else {
+        return false;
+    };
+    let low = frag.to_ascii_lowercase();
+    low.contains("serve")
+        && !low.contains("--readonly")
+        && !low.contains("enabled = false")
+        && !low.contains("\"enabled\": false")
+        && !low.contains("\"enabled\":false")
+}
+
 fn count_existing_writable_clients(home: Option<&Path>, exclude_id: &str) -> usize {
     specs_in(home)
         .into_iter()
-        .filter(|s| s.id != exclude_id)
-        .filter(|s| {
-            std::fs::read_to_string(&s.config_path).is_ok_and(|raw| {
-                let low = raw.to_ascii_lowercase();
-                low.contains("whitemagic")
-                    && low.contains("serve")
-                    && !low.contains("--readonly")
-                    && !low.contains("enabled = false")
-                    && !low.contains("\"enabled\": false")
-                    && !low.contains("\"enabled\":false")
-            })
-        })
+        .filter(|s| s.id != exclude_id && has_active_writable_whitemagic_server(s))
         .count()
 }
 
