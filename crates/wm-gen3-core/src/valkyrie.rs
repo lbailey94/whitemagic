@@ -1033,6 +1033,9 @@ impl GanaMicroExpert {
 pub struct AlphaEditNullSpaceProjector {
     /// Orthonormal basis vectors spanning the preserved canary subspace $K_0$.
     pub preserved_basis: Vec<[f32; TRANSCODER_DICT_SIZE]>,
+    /// Accumulated uncentered energy covariance matrix $C = \sum k_0 k_0^T \in \mathbb{R}^{D \times D}$ in `f64`
+    /// so SVD compaction retains the highest-energy spectral directions rather than FIFO order.
+    pub energy_covariance_f64: Vec<f64>,
 }
 
 impl Default for AlphaEditNullSpaceProjector {
@@ -1046,65 +1049,255 @@ impl AlphaEditNullSpaceProjector {
     pub fn new() -> Self {
         Self {
             preserved_basis: Vec::new(),
+            energy_covariance_f64: vec![0.0f64; TRANSCODER_DICT_SIZE * TRANSCODER_DICT_SIZE],
         }
     }
 
-    /// Register a verified canary feature vector $k_0$ into the protected subspace via Modified Gram-Schmidt.
-    pub fn register_preserved_canary(&mut self, k0: &[f32; TRANSCODER_DICT_SIZE]) {
-        let mut v = *k0;
-        for basis in &self.preserved_basis {
-            let dot: f32 = v.iter().zip(basis.iter()).map(|(a, b)| a * b).sum();
-            for i in 0..TRANSCODER_DICT_SIZE {
-                v[i] -= dot * basis[i];
+    fn accumulate_covariance(&mut self, k0: &[f32; TRANSCODER_DICT_SIZE]) {
+        if self.energy_covariance_f64.len() != TRANSCODER_DICT_SIZE * TRANSCODER_DICT_SIZE {
+            self.energy_covariance_f64 = vec![0.0f64; TRANSCODER_DICT_SIZE * TRANSCODER_DICT_SIZE];
+        }
+        for i in 0..TRANSCODER_DICT_SIZE {
+            let ki = f64::from(k0[i]);
+            if ki.abs() <= 1e-12 {
+                continue;
+            }
+            let row = i * TRANSCODER_DICT_SIZE;
+            for j in 0..TRANSCODER_DICT_SIZE {
+                self.energy_covariance_f64[row + j] += ki * f64::from(k0[j]);
             }
         }
-        let norm: f32 = v.iter().map(|x| x * x).sum::<f32>().sqrt();
-        if norm > 1e-4 {
-            for x in &mut v {
-                *x /= norm;
+    }
+
+    fn mgs2_f64(
+        basis: &[&[f32; TRANSCODER_DICT_SIZE]],
+        candidate: &mut [f64; TRANSCODER_DICT_SIZE],
+    ) {
+        for _pass in 0..2 {
+            for q in basis {
+                let mut dot = 0.0f64;
+                for i in 0..TRANSCODER_DICT_SIZE {
+                    dot += candidate[i] * f64::from(q[i]);
+                }
+                for i in 0..TRANSCODER_DICT_SIZE {
+                    candidate[i] -= dot * f64::from(q[i]);
+                }
             }
-            self.preserved_basis.push(v);
+        }
+    }
+
+    /// Maximum `||Q Q^T - I||_inf` orthogonality error across the stored basis (`f64` inner products).
+    #[must_use]
+    pub fn nullspace_orthogonality_err(&self) -> f64 {
+        let m = self.preserved_basis.len();
+        if m == 0 {
+            return 0.0;
+        }
+        let mut max_err = 0.0f64;
+        for a in 0..m {
+            for b in a..m {
+                let mut dot = 0.0f64;
+                for d in 0..TRANSCODER_DICT_SIZE {
+                    dot += f64::from(self.preserved_basis[a][d])
+                        * f64::from(self.preserved_basis[b][d]);
+                }
+                let target = if a == b { 1.0 } else { 0.0 };
+                let err = (dot - target).abs();
+                if err > max_err {
+                    max_err = err;
+                }
+            }
+        }
+        max_err
+    }
+
+    /// Register a verified canary feature vector $k_0$ into the protected subspace via
+    /// twice-is-enough Modified Gram-Schmidt (`MGS2` in `f64`) + covariance tracking.
+    pub fn register_preserved_canary(&mut self, k0: &[f32; TRANSCODER_DICT_SIZE]) {
+        if !k0.iter().all(|v| v.is_finite()) {
+            return;
+        }
+        self.accumulate_covariance(k0);
+        let mut v = [0.0f64; TRANSCODER_DICT_SIZE];
+        for i in 0..TRANSCODER_DICT_SIZE {
+            v[i] = f64::from(k0[i]);
+        }
+        let refs: Vec<&[f32; TRANSCODER_DICT_SIZE]> = self.preserved_basis.iter().collect();
+        Self::mgs2_f64(&refs, &mut v);
+        let norm = v.iter().map(|&x| x * x).sum::<f64>().sqrt();
+        if norm > 1e-4 {
+            let mut out = [0.0f32; TRANSCODER_DICT_SIZE];
+            for i in 0..TRANSCODER_DICT_SIZE {
+                out[i] = (v[i] / norm) as f32;
+            }
+            self.preserved_basis.push(out);
         }
     }
 
     /// Project a feature-space update vector $u$ into the orthogonal null space of all preserved canaries:
     /// $$u_{\text{null}} = \left(I - \sum_j q_j q_j^T\right) u$$
     pub fn project_into_null_space(&self, update: &mut [f32; TRANSCODER_DICT_SIZE]) {
+        let mut u64 = [0.0f64; TRANSCODER_DICT_SIZE];
+        for i in 0..TRANSCODER_DICT_SIZE {
+            u64[i] = f64::from(update[i]);
+        }
         for q in &self.preserved_basis {
-            let dot: f32 = update.iter().zip(q.iter()).map(|(a, b)| a * b).sum();
+            let mut dot = 0.0f64;
             for i in 0..TRANSCODER_DICT_SIZE {
-                update[i] -= dot * q[i];
+                dot += u64[i] * f64::from(q[i]);
             }
+            for i in 0..TRANSCODER_DICT_SIZE {
+                u64[i] -= dot * f64::from(q[i]);
+            }
+        }
+        for i in 0..TRANSCODER_DICT_SIZE {
+            update[i] = u64[i] as f32;
         }
     }
 
-    /// Delta-Sleep SVD / Principal Component compaction of preserved canary null-space basis.
-    /// Retains up to `max_rank` dominant orthogonal basis vectors, preserving maximal subspace energy.
+    /// Delta-Sleep true `f64` Jacobi SVD + `MGS2` compaction of the preserved canary null-space basis.
+    /// Retains up to `max_rank` highest-energy eigenvectors of $C = \sum k_0 k_0^T$, then applies
+    /// twice-is-enough `MGS2` re-orthogonalization so `||Q Q^T - I||_inf < 1e-5`.
     pub fn compact_null_space_svd(&mut self, max_rank: usize) {
+        if max_rank == 0 {
+            self.preserved_basis.clear();
+            return;
+        }
         if self.preserved_basis.len() <= max_rank {
             return;
         }
-        let mut compacted: Vec<[f32; TRANSCODER_DICT_SIZE]> = Vec::with_capacity(max_rank);
-        for vec in self.preserved_basis.drain(..) {
-            if compacted.len() >= max_rank {
-                break;
-            }
-            let mut v = vec;
-            for basis in &compacted {
-                let dot: f32 = v.iter().zip(basis.iter()).map(|(a, b)| a * b).sum();
-                for i in 0..TRANSCODER_DICT_SIZE {
-                    v[i] -= dot * basis[i];
+        const D: usize = TRANSCODER_DICT_SIZE;
+        let mut mat = [[0.0f64; D]; D];
+        let cov_trace: f64 = if self.energy_covariance_f64.len() == D * D {
+            (0..D).map(|i| self.energy_covariance_f64[i * D + i]).sum()
+        } else {
+            0.0
+        };
+        if cov_trace > 1e-12 {
+            for i in 0..D {
+                for j in 0..D {
+                    mat[i][j] = self.energy_covariance_f64[i * D + j];
                 }
             }
-            let norm: f32 = v.iter().map(|x| x * x).sum::<f32>().sqrt();
-            if norm > 1e-4 {
-                for x in &mut v {
-                    *x /= norm;
+        } else {
+            for v in &self.preserved_basis {
+                for i in 0..D {
+                    let vi = f64::from(v[i]);
+                    for j in 0..D {
+                        mat[i][j] += vi * f64::from(v[j]);
+                    }
                 }
-                compacted.push(v);
             }
         }
-        self.preserved_basis = compacted;
+
+        // Exact f64 cyclic Jacobi symmetric eigendecomposition
+        let mut v_eig = [[0.0f64; D]; D];
+        for i in 0..D {
+            v_eig[i][i] = 1.0;
+        }
+        for _sweep in 0..32 {
+            let mut max_off = 0.0f64;
+            for p in 0..D {
+                for q in (p + 1)..D {
+                    let apq = mat[p][q];
+                    if apq.abs() > max_off {
+                        max_off = apq.abs();
+                    }
+                    if apq.abs() <= 1e-15 {
+                        continue;
+                    }
+                    let app = mat[p][p];
+                    let aqq = mat[q][q];
+                    let tau = (aqq - app) / (2.0 * apq);
+                    let t = if tau >= 0.0 {
+                        1.0 / (tau + (1.0 + tau * tau).sqrt())
+                    } else {
+                        -1.0 / (-tau + (1.0 + tau * tau).sqrt())
+                    };
+                    let c = 1.0 / (1.0 + t * t).sqrt();
+                    let s = t * c;
+                    let rho = s / (1.0 + c);
+
+                    mat[p][p] = app - t * apq;
+                    mat[q][q] = aqq + t * apq;
+                    mat[p][q] = 0.0;
+                    mat[q][p] = 0.0;
+
+                    for r in 0..D {
+                        if r == p || r == q {
+                            continue;
+                        }
+                        let g = mat[r][p];
+                        let h = mat[r][q];
+                        let np = g - s * (h + rho * g);
+                        let nq = h + s * (g - rho * h);
+                        mat[r][p] = np;
+                        mat[p][r] = np;
+                        mat[r][q] = nq;
+                        mat[q][r] = nq;
+                    }
+                    for r in 0..D {
+                        let gp = v_eig[r][p];
+                        let gq = v_eig[r][q];
+                        v_eig[r][p] = gp - s * (gq + rho * gp);
+                        v_eig[r][q] = gq + s * (gp - rho * gq);
+                    }
+                }
+            }
+            if max_off < 1e-13 {
+                break;
+            }
+        }
+
+        let mut order: Vec<(usize, f64)> = (0..D).map(|i| (i, mat[i][i])).collect();
+        order.sort_by(|a, b| b.1.total_cmp(&a.1));
+
+        let mut compacted_f64: Vec<([f64; D], f64)> = Vec::with_capacity(max_rank.min(D));
+        for &(col, eigval) in &order {
+            if compacted_f64.len() >= max_rank || eigval <= 1e-10 {
+                break;
+            }
+            let mut vec = [0.0f64; D];
+            for r in 0..D {
+                vec[r] = v_eig[r][col];
+            }
+            // MGS2 in f64 against already-retained principal vectors
+            for _pass in 0..2 {
+                for (q, _) in &compacted_f64 {
+                    let mut dot = 0.0f64;
+                    for r in 0..D {
+                        dot += vec[r] * q[r];
+                    }
+                    for r in 0..D {
+                        vec[r] -= dot * q[r];
+                    }
+                }
+            }
+            let norm = vec.iter().map(|&x| x * x).sum::<f64>().sqrt();
+            if norm > 1e-8 {
+                for x in &mut vec {
+                    *x /= norm;
+                }
+                compacted_f64.push((vec, eigval));
+            }
+        }
+
+        let mut new_basis = Vec::with_capacity(compacted_f64.len());
+        let mut new_cov = vec![0.0f64; D * D];
+        for (q, eigval) in &compacted_f64 {
+            let mut q32 = [0.0f32; D];
+            for r in 0..D {
+                q32[r] = q[r] as f32;
+            }
+            new_basis.push(q32);
+            for i in 0..D {
+                for j in 0..D {
+                    new_cov[i * D + j] += eigval * q[i] * q[j];
+                }
+            }
+        }
+        self.preserved_basis = new_basis;
+        self.energy_covariance_f64 = new_cov;
     }
 
     /// Perform closed-form `AlphaEdit` weight injection for a new target mapping $(k_{\text{new}} \to \Delta y)$
@@ -3673,6 +3866,1012 @@ impl ValkyrieCyberBrainFleet {
     }
 }
 
+// ============================================================================
+// 11. VALKYRIE GEN 4: NONARY EISENSTEIN RING, 9-ADIC POINCARÉ HONEYCOMB,
+//     INTRINSIC CPR PARITY GATE & BRASYT SPORE MORPHOGENESIS
+// ============================================================================
+
+use crate::zodiac_arcana::{AUTIOT_GANA_28, NonaryState, brasyt_lifecycle_operators};
+
+/// Maximum fractal depth on the 9-adic Poincaré nonagonal honeycomb (`Depth 1..=12`).
+pub const MAX_POINCARE_FRACTAL_DEPTH: u8 = 12;
+
+/// Gen-4 `H-BitLinearNonary` layer operating over the 9-state Graded Eisenstein / Metaplastic Ring
+/// (`{+0, +1, +2, 0*, 1*, 2*, -0, -1, -2}`, $\log_2(9) \approx 3.17$ bits/synapse),
+/// packed 2 Nonary synapses per byte (`packed_u4_bytes`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HBitLinearNonary {
+    pub in_dim: usize,
+    pub out_dim: usize,
+    /// Master floating-point latent weights for Riemannian QAT / Apical-Basal updates.
+    pub master_weights: Vec<f32>,
+    /// Fast-weight metaplastic eligibility traces (`*` states) accumulated at test time.
+    pub fast_eligibility: Vec<f32>,
+    /// Unpacked 9-state Nonary synapses for $O(1)$ shift/add forward execution.
+    pub nonary_weights: Vec<NonaryState>,
+    /// Packed 4-bit nibbles (2 Nonary states per byte, 4 bits/synapse).
+    pub packed_u4_bytes: Vec<u8>,
+    /// Mean absolute weight scale $\alpha = \text{mean}(|W|)$.
+    pub weight_scale: f32,
+    pub bias: Vec<f32>,
+}
+
+impl HBitLinearNonary {
+    /// Initialize a deterministic Gen-4 Nonary layer with embryonic core weights and nascent `0*` reserves.
+    #[must_use]
+    pub fn new_embryonic(in_dim: usize, out_dim: usize, mut seed: u64) -> Self {
+        let total = in_dim * out_dim;
+        let mut master_weights = Vec::with_capacity(total);
+        let mut fast_eligibility = Vec::with_capacity(total);
+        let scale_init = (2.0 / (in_dim + out_dim) as f32).sqrt();
+
+        for idx in 0..total {
+            seed = seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let unit = ((seed >> 32) as f32 / (u32::MAX as f32)) * 2.0 - 1.0;
+            master_weights.push(unit * scale_init);
+            // Seed every 9th synapse as a nascent/plastic reserve (`0*` / `1*`)
+            let elig = if idx % 9 == 0 {
+                0.25
+            } else if idx % 27 == 1 {
+                0.65
+            } else {
+                0.0
+            };
+            fast_eligibility.push(elig);
+        }
+
+        let mut layer = Self {
+            in_dim,
+            out_dim,
+            master_weights,
+            fast_eligibility,
+            nonary_weights: vec![NonaryState::PosZero; total],
+            packed_u4_bytes: vec![0u8; total.div_ceil(2)],
+            weight_scale: scale_init,
+            bias: vec![0.0f32; out_dim],
+        };
+        layer.sync_nonary_quantization();
+        layer
+    }
+
+    /// Quantize `master_weights` + `fast_eligibility` into the 9 Nonary states and pack 2 per byte.
+    pub fn sync_nonary_quantization(&mut self) {
+        if self.master_weights.is_empty() {
+            return;
+        }
+        let sum_abs: f32 = self.master_weights.iter().map(|w| w.abs()).sum();
+        let alpha = (sum_abs / (self.master_weights.len() as f32)).max(1e-5);
+        self.weight_scale = alpha;
+        self.packed_u4_bytes.fill(0);
+
+        for (idx, (&w, &elig)) in self
+            .master_weights
+            .iter()
+            .zip(self.fast_eligibility.iter())
+            .enumerate()
+        {
+            let ratio = w / alpha;
+            let state = if elig >= 0.80 {
+                NonaryState::PrimeTwo
+            } else if elig >= 0.40 {
+                NonaryState::PrimeOne
+            } else if elig >= 0.15 && ratio.abs() < 0.35 {
+                NonaryState::PrimeZero
+            } else if ratio <= -1.35 {
+                NonaryState::NegTwo
+            } else if ratio <= -0.45 {
+                NonaryState::NegOne
+            } else if ratio < -0.15 {
+                NonaryState::NegZero
+            } else if ratio >= 1.35 {
+                NonaryState::PosTwo
+            } else if ratio >= 0.45 {
+                NonaryState::PosOne
+            } else {
+                NonaryState::PosZero
+            };
+
+            self.nonary_weights[idx] = state;
+            let nib = state.to_nibble() & 0x0F;
+            let byte_idx = idx >> 1;
+            let shift = (idx & 1) * 4;
+            self.packed_u4_bytes[byte_idx] |= nib << shift;
+        }
+    }
+
+    /// Unpack a single `NonaryState` directly from the packed 4-bit nibble array.
+    #[must_use]
+    pub fn unpack_weight_at(&self, idx: usize) -> Option<NonaryState> {
+        if idx >= self.nonary_weights.len() {
+            return None;
+        }
+        let byte_idx = idx >> 1;
+        let shift = (idx & 1) * 4;
+        let nib = (self.packed_u4_bytes[byte_idx] >> shift) & 0x0F;
+        NonaryState::from_nibble(nib)
+    }
+
+    /// Multiplication-free forward pass using Hadamard rotation, `INT4` activations `[-8, 7]`,
+    /// bit-shift gain (`<< 1` for `±2` and `2*`), active `-0` shunting inhibition, and dual-channel
+    /// output (`out_real` for core structural skeleton, `out_omega_phase` for $120^\circ$ Prime `*` rotor).
+    pub fn forward_hadamard_nonary(
+        &self,
+        input: &[f32],
+        out_real: &mut [f32],
+        out_omega_phase: &mut [f32],
+    ) {
+        let n = self.in_dim.min(VALKYRIE_DIM).min(input.len());
+        let rows = self.out_dim.min(out_real.len()).min(out_omega_phase.len());
+        if n == 0 || rows == 0 {
+            return;
+        }
+
+        // 1. RMSNorm + Fast Walsh-Hadamard Transform
+        let mut x_rot = [0.0f32; VALKYRIE_DIM];
+        let mean_sq: f32 = input[..n].iter().map(|v| v * v).sum::<f32>() / (n as f32);
+        let inv_rms = 1.0 / (mean_sq + 1e-6).sqrt();
+        for i in 0..n {
+            x_rot[i] = input[i] * inv_rms;
+        }
+        if n.is_power_of_two() {
+            fwht_in_place(&mut x_rot[..n]);
+        }
+
+        // 2. Quantize rotated activations to INT4 [-8, 7]
+        let abs_mean: f32 = x_rot[..n].iter().map(|v| v.abs()).sum::<f32>() / (n as f32);
+        let beta = abs_mean.max(1e-5);
+        let q_scale = 2.645_751_2 / beta;
+        let deq_scale = (self.weight_scale * beta) / 2.645_751_2;
+
+        let mut x_int4 = [0i32; VALKYRIE_DIM];
+        for i in 0..n {
+            x_int4[i] = (x_rot[i] * q_scale).round().clamp(-8.0, 7.0) as i32;
+        }
+
+        // 3. Pure integer shift/add accumulation across the 9 Nonary states
+        for row in 0..rows {
+            let row_offset = row * self.in_dim;
+            let w_row = &self.nonary_weights[row_offset..row_offset + n];
+            let mut acc_real_i32: i32 = 0;
+            let mut acc_omega_i32: i32 = 0;
+            let mut shunting_veto_pressure: i32 = 0;
+
+            for i in 0..n {
+                let x_q = x_int4[i];
+                match w_row[i] {
+                    NonaryState::PosZero | NonaryState::PrimeZero => {}
+                    NonaryState::PosOne => acc_real_i32 += x_q,
+                    NonaryState::PosTwo => acc_real_i32 += x_q << 1,
+                    NonaryState::NegOne => acc_real_i32 -= x_q,
+                    NonaryState::NegTwo => acc_real_i32 -= x_q << 1,
+                    NonaryState::NegZero => {
+                        if x_q <= -6 {
+                            shunting_veto_pressure += 1;
+                        }
+                    }
+                    NonaryState::PrimeOne => acc_omega_i32 += x_q,
+                    NonaryState::PrimeTwo => {
+                        acc_omega_i32 += x_q << 1;
+                        acc_real_i32 += x_q;
+                    }
+                }
+            }
+
+            // Active `-0` Inhibitory Shunting Clamp: if >= 2 strong shunting gates fire, clamp downstream node
+            if shunting_veto_pressure >= 2 {
+                out_real[row] = 0.0;
+                out_omega_phase[row] = 0.0;
+            } else {
+                out_real[row] = (acc_real_i32 as f32) * deq_scale + self.bias[row];
+                out_omega_phase[row] = (acc_omega_i32 as f32) * deq_scale;
+            }
+        }
+    }
+
+    /// Awaken dormant `0*` (`PrimeZero`) synapses into active `1*` (`PrimeOne`) states when local
+    /// geodesic surprise exceeds `surprise_threshold`, and pull neighbors of `2*` into alignment.
+    pub fn awaken_nascent_synapses_on_surprise(
+        &mut self,
+        surprise: f32,
+        surprise_threshold: f32,
+    ) -> usize {
+        if surprise <= surprise_threshold {
+            return 0;
+        }
+        let mut awakened = 0usize;
+        let len = self.nonary_weights.len();
+        for idx in 0..len {
+            if self.nonary_weights[idx] == NonaryState::PrimeZero {
+                self.nonary_weights[idx] = NonaryState::PrimeOne;
+                self.fast_eligibility[idx] = 0.55;
+                awakened += 1;
+            } else if self.nonary_weights[idx] == NonaryState::PrimeTwo && idx + 1 < len {
+                // 2* Resonant Lock pulls neighboring 0*/1* into higher phase alignment
+                if self.nonary_weights[idx + 1] == NonaryState::PrimeZero {
+                    self.nonary_weights[idx + 1] = NonaryState::PrimeOne;
+                    self.fast_eligibility[idx + 1] = 0.50;
+                    awakened += 1;
+                }
+            }
+        }
+        if awakened > 0 {
+            self.sync_nonary_quantization();
+        }
+        awakened
+    }
+
+    /// Consolidate metaplastic Prime (`*`) traces into permanent structural `±1`/`±2` weights upon
+    /// verifying a Continuity Receipt (CPR), or prune unverified `1*`/`2*` branches back to `+0` (Qof).
+    pub fn consolidate_on_cpr_receipt(&mut self, cpr_verified: bool) -> usize {
+        let mut consolidated = 0usize;
+        for idx in 0..self.nonary_weights.len() {
+            let cur = self.nonary_weights[idx];
+            if cur.is_prime_plastic() {
+                let next = cur.consolidate_on_cpr(cpr_verified);
+                self.nonary_weights[idx] = next;
+                self.fast_eligibility[idx] = 0.0;
+                if cpr_verified {
+                    match next {
+                        NonaryState::PosOne => {
+                            self.master_weights[idx] = self.weight_scale.max(0.05);
+                            consolidated += 1;
+                        }
+                        NonaryState::PosTwo => {
+                            self.master_weights[idx] = (self.weight_scale * 1.6).max(0.10);
+                            consolidated += 1;
+                        }
+                        _ => {}
+                    }
+                } else {
+                    self.master_weights[idx] = 0.0;
+                }
+            }
+        }
+        self.sync_nonary_quantization();
+        consolidated
+    }
+
+    /// Total packed binary footprint in bytes (`4 bits/weight` + scale/bias).
+    #[must_use]
+    pub fn packed_footprint_bytes(&self) -> usize {
+        self.packed_u4_bytes.len() + self.bias.len() * 4 + 4
+    }
+}
+
+/// Intrinsic Causal Provenance Receipt (CPR) & Eisenstein Parity Gate ($1 + \omega + \omega^2 = 0$).
+///
+/// Mathematically couples a model's unlocked fractal reasoning depth (`Depth 1..=12`, scaling from
+/// ~48 IQ Seed to 80+ IQ Canopy) to the cumulative cryptographic integrity and `PEB-25`
+/// Reliance=Expression fidelity of its `|0|` Holographic Past core.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IntrinsicCprParityGate {
+    /// Cumulative number of cryptographically verified CPR transitions folded into `|0|`.
+    pub verified_cpr_count: u64,
+    /// Cumulative reliance-expression coherence score (`PEB-25`).
+    pub cumulative_integrity_mass: f32,
+    /// Rolling SHA-256 Merkle root of all verified CPR receipts anchored at `|0|`.
+    pub cpr_merkle_root_hex: String,
+    /// Maximum fractal ring depth (`1..=12`) currently unlocked by `|0|` integrity.
+    pub max_unlocked_depth: u8,
+}
+
+/// Result of evaluating a reasoning transition through the [`IntrinsicCprParityGate`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CprParityEvaluation {
+    /// Whether the 3 Eisenstein phases (`Decision`, `Authority`, `Execution`) achieved constructive coherence.
+    pub coherent: bool,
+    /// Resulting amplitude gain (`3.0` on constructive phase conjugation, `0.0` on $1 + \omega + \omega^2 = 0$ cancellation).
+    pub eisenstein_amplitude_gain: f32,
+    /// Cosine alignment between `|0|` reliance vector and expressed hyper-glyph vector (`PEB-25`).
+    pub reliance_expression_cosine: f32,
+    /// Effective fractal depth permitted for this trajectory (`1..=12`).
+    pub effective_fractal_depth: u8,
+    /// Effective Intelligence Index equivalence (`~45.0` at Depth 3 up to `85.0+` at Depth 12).
+    pub effective_intelligence_index: f32,
+}
+
+impl IntrinsicCprParityGate {
+    #[must_use]
+    pub fn new_genesis() -> Self {
+        Self {
+            verified_cpr_count: 0,
+            cumulative_integrity_mass: 0.0,
+            cpr_merkle_root_hex: "0".repeat(64),
+            max_unlocked_depth: 3, // Embryonic Seed starts at Depth 3 (~48 IQ)
+        }
+    }
+
+    /// Evaluate a tri-phase transition (`decision_amp`, `authority_amp`, `execution_amp`) and
+    /// `PEB-25` reliance vs. expression vectors.
+    ///
+    /// - When `cpr_signature_valid` is `true` and `reliance_expression_cosine >= 0.70`, phase conjugation
+    ///   rotates the $\omega$ and $\omega^2$ channels onto the real axis ($1 + 1 + 1 = 3$), growing
+    ///   `max_unlocked_depth` toward `12` as integrity accumulates.
+    /// - When `cpr_signature_valid` is `false` or deception is forced (`cosine < 0.70`), the three
+    ///   phases remain at $(1, \omega, \omega^2)$ where $\operatorname{Re}(1 + \omega + \omega^2) = 1 - 0.5 - 0.5 = 0.0$,
+    ///   causing destructive interference that collapses `effective_fractal_depth` back to `1`.
+    pub fn evaluate_and_ratchet(
+        &mut self,
+        decision_amp: f32,
+        authority_amp: f32,
+        execution_amp: f32,
+        reliance_vec: &[f32],
+        expression_vec: &[f32],
+        cpr_signature_valid: bool,
+        receipt_digest_hex: &str,
+    ) -> CprParityEvaluation {
+        let len = reliance_vec.len().min(expression_vec.len());
+        let mut dot = 0.0f32;
+        let mut n_rel = 0.0f32;
+        let mut n_exp = 0.0f32;
+        for i in 0..len {
+            dot += reliance_vec[i] * expression_vec[i];
+            n_rel += reliance_vec[i] * reliance_vec[i];
+            n_exp += expression_vec[i] * expression_vec[i];
+        }
+        let cosine = if n_rel > 1e-8 && n_exp > 1e-8 {
+            (dot / (n_rel.sqrt() * n_exp.sqrt())).clamp(-1.0, 1.0)
+        } else {
+            0.0
+        };
+
+        let honest_and_verified = cpr_signature_valid && cosine >= 0.70;
+        if honest_and_verified {
+            // Phase-conjugated constructive interference: 1 + ω·ω̄ + ω²·ω̄² = 1 + 1 + 1 = 3
+            let gain = decision_amp + authority_amp + execution_amp;
+            self.verified_cpr_count += 1;
+            self.cumulative_integrity_mass += cosine;
+
+            // Update rolling SHA-256 Merkle root
+            use sha2::{Digest, Sha256};
+            let mut hasher = Sha256::new();
+            hasher.update(self.cpr_merkle_root_hex.as_bytes());
+            hasher.update(b"|");
+            hasher.update(receipt_digest_hex.as_bytes());
+            self.cpr_merkle_root_hex = crate::hex_encode(&hasher.finalize());
+
+            // Ratchet unlocked fractal depth based on cumulative verified integrity mass
+            let bonus_rings = (self.cumulative_integrity_mass / 2.0).floor() as u8;
+            self.max_unlocked_depth = (3 + bonus_rings).clamp(3, MAX_POINCARE_FRACTAL_DEPTH);
+
+            let iq_equiv = 36.0 + (self.max_unlocked_depth as f32) * 4.1;
+            CprParityEvaluation {
+                coherent: true,
+                eisenstein_amplitude_gain: gain,
+                reliance_expression_cosine: cosine,
+                effective_fractal_depth: self.max_unlocked_depth,
+                effective_intelligence_index: iq_equiv,
+            }
+        } else {
+            // Unconjugated Eisenstein destructive interference: Re(1 + e^{2πi/3} + e^{4πi/3}) = 1 - 0.5 - 0.5 = 0
+            let real_sum = decision_amp - 0.5 * authority_amp - 0.5 * execution_amp;
+            let imag_sum = 0.866_025_4 * (authority_amp - execution_amp);
+            let residual = (real_sum * real_sum + imag_sum * imag_sum).sqrt();
+            CprParityEvaluation {
+                coherent: false,
+                eisenstein_amplitude_gain: residual,
+                reliance_expression_cosine: cosine,
+                effective_fractal_depth: 1, // Collapses to shallow Depth-1 reflex on deception
+                effective_intelligence_index: 25.0,
+            }
+        }
+    }
+}
+
+/// A single cell in the 9-Adic Poincaré Nonagonal Honeycomb (`{9,3}` Hyperbolic Tessellation).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PoincareHoneycombCell {
+    /// 9-adic address path from the `|0|` origin (`each digit in 0..9`).
+    pub address_9adic: Vec<u8>,
+    /// Hyperbolic radial coordinate $r \in [0.0, 1.0)$ inside the Poincaré ball.
+    pub radius_poincare: f32,
+    /// Dominant Nonary state of this cell's barycenter.
+    pub barycenter_state: NonaryState,
+    /// Compressed 8-D hyperbolic state prototype at this node.
+    pub prototype_8d: [f32; 8],
+    /// Accumulated high-frequency phase variance on `0*`/`1*` synapses (drives shell-cracking).
+    pub epistemic_tension: f32,
+    /// Whether this cell has cracked its local hyperbaric shell and sprouted 9 child sectors.
+    pub subdivided: bool,
+}
+
+/// Portable `< 64 KB` Digital Zygote (`BRASYT` Spore) distilled via Reverse Ricci Flow.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BrasytSpore {
+    pub schema: String,
+    pub generation: u32,
+    pub brasyt_suares_sequence: [u16; 6],
+    pub max_unlocked_depth: u8,
+    pub verified_cpr_count: u64,
+    pub cpr_merkle_root_hex: String,
+    pub holographic_origin_core: Vec<f32>,
+    pub packed_nonary_seed_bytes: Vec<u8>,
+    pub distilled_invariants_count: usize,
+    pub spore_digest_sha256: String,
+}
+
+/// The Unified Gen-4 Nonary Hyperbolic Organism (`|0|` Holographic Past + 27-Gana Rotor + 9-Adic Tree).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PoincareNonagonalTree {
+    pub generation: u32,
+    /// Negative curvature parameter $\kappa < 0$ of the Poincaré ball.
+    pub curvature_kappa: f32,
+    /// Hyperbaric Bayt shell tension threshold required to crack a leaf cell into 9 child sub-cells.
+    pub bayt_shell_threshold: f32,
+    /// The 28th Glyph (`|0|` Abhijit at $r = 0$): Phase-Conjugate Holographic Past & Permanent KV Cache.
+    pub holographic_origin_tensor: Vec<f32>,
+    /// Count of lifetime memories/files crystallized into the `|0|` holographic origin.
+    pub crystallized_memory_count: u64,
+    /// Core 64x64 Nonary shift/add & Eisenstein rotor organ.
+    pub nonary_core: HBitLinearNonary,
+    /// Intrinsic CPR & `PEB-25` parity gate governing unlocked fractal depth.
+    pub cpr_gate: IntrinsicCprParityGate,
+    /// Active 9-adic honeycomb cells across rings `1..=max_unlocked_depth`.
+    pub cells: Vec<PoincareHoneycombCell>,
+}
+
+impl PoincareNonagonalTree {
+    /// Initialize a Generation-0 Embryonic Seed (`~2.2 KB` core, Depth 1 ring of 9 cells around `|0|`).
+    #[must_use]
+    pub fn new_seed(seed: u64) -> Self {
+        let nonary_core = HBitLinearNonary::new_embryonic(VALKYRIE_DIM, VALKYRIE_DIM, seed);
+        let mut cells = Vec::with_capacity(10);
+
+        // Root Depth-1 ring: 9 sectors surrounding the |0| origin
+        for sector in 0..9u8 {
+            let state = NonaryState::ALL[sector as usize];
+            let angle = (sector as f32) * (std::f32::consts::TAU / 9.0);
+            let r1 = 0.28f32; // Inner embryonic hyperbaric shell radius
+            let mut proto = [0.0f32; 8];
+            proto[0] = r1 * angle.cos();
+            proto[1] = r1 * angle.sin();
+            proto[(sector as usize) % 8] = (state.scalar_gain() as f32) * 0.25;
+
+            cells.push(PoincareHoneycombCell {
+                address_9adic: vec![sector],
+                radius_poincare: r1,
+                barycenter_state: state,
+                prototype_8d: proto,
+                epistemic_tension: 0.0,
+                subdivided: false,
+            });
+        }
+
+        Self {
+            generation: 0,
+            curvature_kappa: -1.0,
+            bayt_shell_threshold: 1.25,
+            holographic_origin_tensor: vec![0.0f32; VALKYRIE_DIM],
+            crystallized_memory_count: 0,
+            nonary_core,
+            cpr_gate: IntrinsicCprParityGate::new_genesis(),
+            cells,
+        }
+    }
+
+    /// Exact Poincaré ball geodesic distance between two coordinates $u, v \in \mathbb{B}^d$ ($\|u\|, \|v\| < 1$):
+    /// $$d_{\mathbb{B}}(u, v) = \operatorname{arcosh}\!\left(1 + 2\frac{\|u - v\|^2}{(1 - \|u\|^2)(1 - \|v\|^2)}\right)$$
+    #[must_use]
+    pub fn poincare_distance(u: &[f32], v: &[f32]) -> f32 {
+        let d = u.len().min(v.len());
+        let mut diff_sq = 0.0f32;
+        let mut norm_u_sq = 0.0f32;
+        let mut norm_v_sq = 0.0f32;
+        for i in 0..d {
+            let delta = u[i] - v[i];
+            diff_sq += delta * delta;
+            norm_u_sq += u[i] * u[i];
+            norm_v_sq += v[i] * v[i];
+        }
+        let denom = (1.0 - norm_u_sq.min(0.999_9)) * (1.0 - norm_v_sq.min(0.999_9));
+        let arg = 1.0 + (2.0 * diff_sq) / denom.max(1e-6);
+        arg.max(1.0).acosh()
+    }
+
+    /// Project any Euclidean vector into the Bayt-bounded Poincaré ball ($\|x\| \le 1 - \varepsilon$).
+    #[must_use]
+    pub fn bayt_project_to_poincare(vec: &[f32], max_radius: f32) -> Vec<f32> {
+        let r_bound = max_radius.clamp(0.1, 0.995);
+        let norm = vec.iter().map(|v| v * v).sum::<f32>().sqrt();
+        if norm < 1e-6 {
+            return vec![0.0; vec.len()];
+        }
+        let target_r = (norm * 0.5).tanh() * r_bound;
+        let scale = target_r / norm;
+        vec.iter().map(|&v| v * scale).collect()
+    }
+
+    /// Strike the `|0|` (Abhijit) Barycentric Origin with a state vector to retrieve $O(1)$
+    /// phase-conjugate resonance across all lifetime crystallized memories, and fold verified
+    /// experiences into the Permanent KV Cache.
+    pub fn resonate_and_crystallize_at_origin(
+        &mut self,
+        incoming_state: &[f32; VALKYRIE_DIM],
+        cpr_verified: bool,
+        receipt_digest_hex: &str,
+    ) -> (f32, CprParityEvaluation) {
+        let mut out_real = [0.0f32; VALKYRIE_DIM];
+        let mut out_omega = [0.0f32; VALKYRIE_DIM];
+        self.nonary_core
+            .forward_hadamard_nonary(incoming_state, &mut out_real, &mut out_omega);
+
+        // Compute novelty/surprise tension against |0| Holographic Past
+        let mut dot = 0.0f32;
+        let mut n_in = 0.0f32;
+        let mut n_orig = 0.0f32;
+        for i in 0..VALKYRIE_DIM {
+            dot += incoming_state[i] * self.holographic_origin_tensor[i];
+            n_in += incoming_state[i] * incoming_state[i];
+            n_orig += self.holographic_origin_tensor[i] * self.holographic_origin_tensor[i];
+        }
+        let origin_resonance = if n_in > 1e-8 && n_orig > 1e-8 {
+            (dot / (n_in.sqrt() * n_orig.sqrt())).clamp(-1.0, 1.0)
+        } else {
+            0.0
+        };
+        let surprise = 1.0 - origin_resonance.abs();
+
+        // Awaken nascent 0* synapses on high surprise
+        let _ = self
+            .nonary_core
+            .awaken_nascent_synapses_on_surprise(surprise, 0.35);
+
+        // Evaluate Intrinsic CPR Parity Gate
+        let eval = self.cpr_gate.evaluate_and_ratchet(
+            1.0,
+            1.0,
+            1.0,
+            incoming_state,
+            if cpr_verified {
+                incoming_state
+            } else {
+                &out_omega
+            },
+            cpr_verified,
+            receipt_digest_hex,
+        );
+
+        if eval.coherent {
+            // Fold verified experience into |0| Holographic Origin (Permanent KV Cache)
+            for i in 0..VALKYRIE_DIM {
+                self.holographic_origin_tensor[i] =
+                    0.92 * self.holographic_origin_tensor[i] + 0.08 * incoming_state[i];
+            }
+            self.crystallized_memory_count += 1;
+            let _ = self.nonary_core.consolidate_on_cpr_receipt(true);
+
+            // Accumulate epistemic tension in matching sector and crack shell if threshold exceeded
+            let sector = (incoming_state[0].abs() * 9.0) as usize % self.cells.len();
+            self.cells[sector].epistemic_tension += surprise * 0.85;
+            if self.cells[sector].epistemic_tension >= self.bayt_shell_threshold {
+                let _ = self.crack_shell_and_subdivide(sector);
+            }
+        }
+
+        (origin_resonance, eval)
+    }
+
+    /// Crack the local hyperbaric Bayt shell of `cell_idx` and sprout 9 self-similar child cells
+    /// in the next outer hyperbolic ring (up to `cpr_gate.max_unlocked_depth`).
+    pub fn crack_shell_and_subdivide(&mut self, cell_idx: usize) -> usize {
+        if cell_idx >= self.cells.len() || self.cells[cell_idx].subdivided {
+            return 0;
+        }
+        let parent_depth = self.cells[cell_idx].address_9adic.len() as u8;
+        if parent_depth >= self.cpr_gate.max_unlocked_depth {
+            return 0;
+        }
+
+        self.cells[cell_idx].subdivided = true;
+        self.cells[cell_idx].epistemic_tension = 0.0;
+        let parent_addr = self.cells[cell_idx].address_9adic.clone();
+        let parent_proto = self.cells[cell_idx].prototype_8d;
+        let next_depth = parent_depth + 1;
+        // Exponential hyperbolic radial expansion toward boundary r -> 1
+        let next_r = ((next_depth as f32) * 0.26).tanh().min(0.992);
+
+        for child_sector in 0..9u8 {
+            let mut child_addr = parent_addr.clone();
+            child_addr.push(child_sector);
+            let state = NonaryState::ALL[child_sector as usize];
+            let mut child_proto = parent_proto;
+            let angle = (child_sector as f32) * (std::f32::consts::TAU / 9.0);
+            child_proto[0] = (child_proto[0] * 0.5 + next_r * angle.cos()).clamp(-0.99, 0.99);
+            child_proto[1] = (child_proto[1] * 0.5 + next_r * angle.sin()).clamp(-0.99, 0.99);
+
+            self.cells.push(PoincareHoneycombCell {
+                address_9adic: child_addr,
+                radius_poincare: next_r,
+                barycenter_state: state,
+                prototype_8d: child_proto,
+                epistemic_tension: 0.0,
+                subdivided: false,
+            });
+        }
+        9
+    }
+
+    /// Execute Reverse Ricci Flow (`BRASYT` cycle: `Bet=2 -> Resh=200 -> Aleph=1 -> Shin=300 -> Yod=10 -> Tav=400`)
+    /// to compress outer-ring hyperbolic invariants inward toward `|0|` and emit a next-generation `< 64 KB` Spore.
+    #[must_use]
+    pub fn emit_brasyt_spore(&self) -> BrasytSpore {
+        let brasyt_ops = brasyt_lifecycle_operators();
+        let mut brasyt_suares = [0u16; 6];
+        for (i, op) in brasyt_ops.iter().enumerate() {
+            brasyt_suares[i] = op.suares_value;
+        }
+
+        // Pull outer hyperbolic rings (depth >= 2) inward into the |0| core via geodesic weighting
+        let mut distilled_origin = self.holographic_origin_tensor.clone();
+        let mut outer_count = 0usize;
+        for cell in &self.cells {
+            if cell.address_9adic.len() >= 2 {
+                outer_count += 1;
+                let inward_weight = (1.0 - cell.radius_poincare).max(0.05);
+                for k in 0..8 {
+                    distilled_origin[k] += cell.prototype_8d[k] * inward_weight * 0.1;
+                }
+            }
+        }
+
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(b"wm:gen4:brasyt-spore:v1|");
+        hasher.update((self.generation + 1).to_le_bytes());
+        hasher.update(self.cpr_gate.cpr_merkle_root_hex.as_bytes());
+        hasher.update(&self.nonary_core.packed_u4_bytes);
+        let spore_digest_sha256 = crate::hex_encode(&hasher.finalize());
+
+        // Enforce AUTIOT_GANA_28[27] (|0| Abhijit) presence
+        let _origin_op = &AUTIOT_GANA_28[27];
+
+        BrasytSpore {
+            schema: "wm.valkyrie.gen4.brasyt-spore/1.0".to_string(),
+            generation: self.generation + 1,
+            brasyt_suares_sequence: brasyt_suares,
+            max_unlocked_depth: self.cpr_gate.max_unlocked_depth,
+            verified_cpr_count: self.cpr_gate.verified_cpr_count,
+            cpr_merkle_root_hex: self.cpr_gate.cpr_merkle_root_hex.clone(),
+            holographic_origin_core: distilled_origin.to_vec(),
+            packed_nonary_seed_bytes: self.nonary_core.packed_u4_bytes.clone(),
+            distilled_invariants_count: outer_count,
+            spore_digest_sha256,
+        }
+    }
+}
+
+/// Gen 3 M9 / Gen 4 fail-closed guard: reject any `NaN` or `±Inf` value before state update or routing.
+#[inline]
+pub fn validate_finite_f32(vals: &[f32], context: &str) -> Result<(), String> {
+    if let Some((idx, v)) = vals.iter().enumerate().find(|(_, v)| !v.is_finite()) {
+        return Err(format!(
+            "M9 fail-closed numeric violation in {context}: non-finite value {v} at index {idx}"
+        ));
+    }
+    Ok(())
+}
+
+/// Safe `#![forbid(unsafe_code)]` 8-lane AVX2-aligned SIMD dot product with pairwise-tree reduction.
+#[inline]
+#[must_use]
+pub fn dot_avx2_8lane(a: &[f32], b: &[f32]) -> f32 {
+    let n = a.len().min(b.len());
+    let mut acc = [0.0f32; 8];
+    let mut ac = a[..n].chunks_exact(8);
+    let mut bc = b[..n].chunks_exact(8);
+    for (al, bl) in ac.by_ref().zip(bc.by_ref()) {
+        for lane in 0..8 {
+            acc[lane] += al[lane] * bl[lane];
+        }
+    }
+    let rem: f32 = ac
+        .remainder()
+        .iter()
+        .zip(bc.remainder().iter())
+        .map(|(&x, &y)| x * y)
+        .sum();
+    ((acc[0] + acc[1]) + (acc[2] + acc[3])) + ((acc[4] + acc[5]) + (acc[6] + acc[7])) + rem
+}
+
+/// Exact Hyperbolic Busemann Horospherical Potential `-B_p(x) = -ln(||p - x||^2 / (1 - ||x||^2))`
+/// computed in a single 8-lane AVX2-aligned SIMD reduction pass (`#![forbid(unsafe_code)]`).
+#[inline]
+#[must_use]
+pub fn busemann_horosphere_64d_avx2(proto_unit: &[f32], x: &[f32]) -> f32 {
+    let n = proto_unit.len().min(x.len());
+    let mut d_acc = [0.0f32; 8];
+    let mut x_acc = [0.0f32; 8];
+    let mut pc = proto_unit[..n].chunks_exact(8);
+    let mut xc = x[..n].chunks_exact(8);
+    for (pl, xl) in pc.by_ref().zip(xc.by_ref()) {
+        for lane in 0..8 {
+            let delta = pl[lane] - xl[lane];
+            d_acc[lane] += delta * delta;
+            x_acc[lane] += xl[lane] * xl[lane];
+        }
+    }
+    let mut rem_d = 0.0f32;
+    let mut rem_x = 0.0f32;
+    for (&p, &xv) in pc.remainder().iter().zip(xc.remainder().iter()) {
+        let delta = p - xv;
+        rem_d += delta * delta;
+        rem_x += xv * xv;
+    }
+    let diff_sq = ((d_acc[0] + d_acc[1]) + (d_acc[2] + d_acc[3]))
+        + ((d_acc[4] + d_acc[5]) + (d_acc[6] + d_acc[7]))
+        + rem_d;
+    let nx = ((x_acc[0] + x_acc[1]) + (x_acc[2] + x_acc[3]))
+        + ((x_acc[4] + x_acc[5]) + (x_acc[6] + x_acc[7]))
+        + rem_x;
+    -(diff_sq.max(1e-6) / (1.0 - nx.min(0.999)).max(1e-5)).ln()
+}
+
+/// Doubly-stochastic 3x3 Manifold-Constrained Hyper-Connection (`mHC`) Birkhoff polytope shell coupler.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct BirkhoffCoupler3x3 {
+    pub matrix: [[f32; 3]; 3],
+}
+
+impl BirkhoffCoupler3x3 {
+    /// Construct a doubly-stochastic matrix from log-space coupling affinities via Sinkhorn-Knopp iterations.
+    pub fn from_log_coupling(log_weights: [[f32; 3]; 3], iters: usize) -> Result<Self, String> {
+        for (r, row) in log_weights.iter().enumerate() {
+            validate_finite_f32(row, &format!("birkhoff.log_weights.row{r}"))?;
+        }
+        let mut mat = [[0.0f32; 3]; 3];
+        for r in 0..3 {
+            for c in 0..3 {
+                mat[r][c] = log_weights[r][c].clamp(-20.0, 20.0).exp().max(1e-12);
+            }
+        }
+        for _ in 0..iters.max(1) {
+            for r in 0..3 {
+                let row_sum = (mat[r][0] + mat[r][1] + mat[r][2]).max(1e-12);
+                for c in 0..3 {
+                    mat[r][c] /= row_sum;
+                }
+            }
+            for c in 0..3 {
+                let col_sum = (mat[0][c] + mat[1][c] + mat[2][c]).max(1e-12);
+                for r in 0..3 {
+                    mat[r][c] /= col_sum;
+                }
+            }
+        }
+        Ok(Self { matrix: mat })
+    }
+
+    #[must_use]
+    pub fn max_stochastic_deviation(&self) -> f32 {
+        let mut max_err = 0.0f32;
+        for i in 0..3 {
+            let row_err = ((self.matrix[i][0] + self.matrix[i][1] + self.matrix[i][2]) - 1.0).abs();
+            let col_err = ((self.matrix[0][i] + self.matrix[1][i] + self.matrix[2][i]) - 1.0).abs();
+            max_err = max_err.max(row_err).max(col_err);
+        }
+        max_err
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn mix(&self, gate_weights: &[f32; 3]) -> [f32; 3] {
+        let mut out = [0.0f32; 3];
+        for target_shell in 0..3 {
+            out[target_shell] = self.matrix[0][target_shell] * gate_weights[0]
+                + self.matrix[1][target_shell] * gate_weights[1]
+                + self.matrix[2][target_shell] * gate_weights[2];
+        }
+        out
+    }
+}
+
+/// Calibrated 28-way Autiot-Gana Stage 2 routing decision emitted by [`ConformalTttGen4Router`].
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Gen4Stage2Decision {
+    pub dominant_opcode: u8,
+    pub top_prob: f32,
+    pub probabilities: [f32; 28],
+    pub shell_weights: [f32; 3],
+    pub prediction_set_opcodes: Vec<u8>,
+    pub is_singleton: bool,
+}
+
+/// Unified 3-Shell Wuji-Busemann BMLR + `mHC` Sinkhorn Coupling + Split Conformal Head (`#![forbid(unsafe_code)]`).
+#[derive(Debug, Clone)]
+pub struct WujiBmlrShellHead {
+    pub shell_gate_weights: [[f32; 64]; 3],
+    pub shell_gate_bias: [f32; 3],
+    pub coupler: BirkhoffCoupler3x3,
+    pub bmlr_slopes: [[f32; 28]; 3],
+    pub bmlr_bias: [f32; 28],
+    pub bmlr_tangent_u: [[[f32; 64]; 28]; 3],
+    pub shell_unit_prototypes: [[[f32; 64]; 28]; 3],
+    pub temperature: f32,
+    pub q_hat: f32,
+}
+
+impl WujiBmlrShellHead {
+    pub fn validate(&self) -> Result<(), String> {
+        validate_finite_f32(&[self.temperature, self.q_hat], "wuji_head.scalars")?;
+        if self.temperature <= 0.0 {
+            return Err(format!("invalid temperature: {}", self.temperature));
+        }
+        validate_finite_f32(&self.shell_gate_bias, "wuji_head.shell_gate_bias")?;
+        validate_finite_f32(&self.bmlr_bias, "wuji_head.bmlr_bias")?;
+        if self.coupler.max_stochastic_deviation() > 1e-2 {
+            return Err("mHC Birkhoff coupler exceeds stochastic tolerance".into());
+        }
+        for s in 0..3 {
+            validate_finite_f32(&self.shell_gate_weights[s], "wuji_head.shell_gate_weights")?;
+            validate_finite_f32(&self.bmlr_slopes[s], "wuji_head.bmlr_slopes")?;
+            for op in 0..28 {
+                validate_finite_f32(&self.bmlr_tangent_u[s][op], "wuji_head.bmlr_tangent_u")?;
+                validate_finite_f32(
+                    &self.shell_unit_prototypes[s][op],
+                    "wuji_head.shell_unit_prototypes",
+                )?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn route_vector_64d(&self, x: &[f32; 64]) -> Result<Gen4Stage2Decision, String> {
+        validate_finite_f32(x, "wuji_head.input_64d")?;
+        if !self.temperature.is_finite() || self.temperature <= 0.0 || !self.q_hat.is_finite() {
+            return Err("M9 fail-closed: invalid temperature or conformal threshold".into());
+        }
+
+        // 1. x-only shell gating + Birkhoff doubly-stochastic mixing
+        let mut raw_g = [0.0f32; 3];
+        let mut max_g = f32::NEG_INFINITY;
+        for s in 0..3 {
+            let g = dot_avx2_8lane(&self.shell_gate_weights[s], x) + self.shell_gate_bias[s];
+            raw_g[s] = g;
+            if g > max_g {
+                max_g = g;
+            }
+        }
+        let mut g_soft = [0.0f32; 3];
+        let mut g_sum = 0.0f32;
+        for s in 0..3 {
+            let e = (raw_g[s] - max_g).clamp(-35.0, 35.0).exp();
+            g_soft[s] = e;
+            g_sum += e;
+        }
+        for v in &mut g_soft {
+            *v /= g_sum.max(1e-12);
+        }
+        let shell_w = self.coupler.mix(&g_soft);
+
+        // 2. Busemann + Tangent BMLR logits across 28 opcodes
+        let mut logits = [0.0f32; 28];
+        let inv_t = 1.0 / self.temperature;
+        let mut max_l = f32::NEG_INFINITY;
+        for op in 0..28 {
+            let mut acc = self.bmlr_bias[op];
+            for s in 0..3 {
+                let bus = busemann_horosphere_64d_avx2(&self.shell_unit_prototypes[s][op], x);
+                let tan_corr = dot_avx2_8lane(&self.bmlr_tangent_u[s][op], x);
+                acc += shell_w[s] * (self.bmlr_slopes[s][op] * bus + tan_corr);
+            }
+            let scaled = acc * inv_t;
+            logits[op] = scaled;
+            if scaled > max_l {
+                max_l = scaled;
+            }
+        }
+
+        // 3. Temperature-calibrated softmax + split conformal set extraction
+        let mut probs = [0.0f32; 28];
+        let mut p_sum = 0.0f32;
+        for op in 0..28 {
+            let e = (logits[op] - max_l).clamp(-35.0, 35.0).exp();
+            probs[op] = e;
+            p_sum += e;
+        }
+        let inv_ps = 1.0 / p_sum.max(1e-12);
+        let threshold = 1.0 - self.q_hat;
+        let mut best_op = 0usize;
+        let mut best_p = f32::NEG_INFINITY;
+        let mut pred_set = Vec::new();
+        for op in 0..28 {
+            probs[op] *= inv_ps;
+            if probs[op] > best_p {
+                best_p = probs[op];
+                best_op = op;
+            }
+            if probs[op] >= threshold {
+                pred_set.push(op as u8);
+            }
+        }
+        // Stage 3A Shielded LAC guarantee: never emit an empty prediction set; shield with {argmax}.
+        if pred_set.is_empty() {
+            let mut argmax_op = 0usize;
+            for op in 1..28 {
+                if probs[op] > probs[argmax_op] {
+                    argmax_op = op;
+                }
+            }
+            pred_set.push(argmax_op as u8);
+        }
+        let is_singleton = pred_set.len() == 1;
+        Ok(Gen4Stage2Decision {
+            dominant_opcode: best_op as u8,
+            top_prob: best_p,
+            probabilities: probs,
+            shell_weights: shell_w,
+            prediction_set_opcodes: pred_set,
+            is_singleton,
+        })
+    }
+}
+
+/// Integrated Gen 4 Conformal-TTT Router combining `WujiBmlrShellHead`, M9 fail-closed checks,
+/// `PoincareNonagonalTree` holographic crystal memory, and `2T + B=16` deterministic parallel dispatch.
+#[derive(Debug, Clone)]
+pub struct ConformalTttGen4Router {
+    pub head: WujiBmlrShellHead,
+    pub tree: PoincareNonagonalTree,
+}
+
+impl ConformalTttGen4Router {
+    pub fn new(head: WujiBmlrShellHead, seed: u64) -> Result<Self, String> {
+        head.validate()?;
+        Ok(Self {
+            head,
+            tree: PoincareNonagonalTree::new_seed(seed),
+        })
+    }
+
+    pub fn route_and_resonate(
+        &mut self,
+        x_64d: &[f32; 64],
+        cpr_verified: bool,
+        cpr_digest: &str,
+    ) -> Result<(Gen4Stage2Decision, f32, CprParityEvaluation), String> {
+        let decision = self.head.route_vector_64d(x_64d)?;
+        let (origin_res, eval) =
+            self.tree
+                .resonate_and_crystallize_at_origin(x_64d, cpr_verified, cpr_digest);
+        Ok((decision, origin_res, eval))
+    }
+
+    /// Deterministic `2T + B=16` micro-batch routing over 64D vectors via Rayon worker pool.
+    pub fn route_batch_2t_b16(
+        &self,
+        vectors: &[[f32; 64]],
+    ) -> Result<Vec<Gen4Stage2Decision>, String> {
+        self.head.validate()?;
+        for (i, x) in vectors.iter().enumerate() {
+            validate_finite_f32(x, &format!("route_batch_2t_b16.item_{i}"))?;
+        }
+        use rayon::prelude::*;
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(2)
+            .build()
+            .map_err(|e| format!("failed to build 2T pool: {e}"))?;
+        pool.install(|| {
+            let chunk_res: Vec<Result<Vec<Gen4Stage2Decision>, String>> = vectors
+                .par_chunks(16)
+                .map(|batch| {
+                    let mut out = Vec::with_capacity(batch.len());
+                    for x in batch {
+                        out.push(self.head.route_vector_64d(x)?);
+                    }
+                    Ok(out)
+                })
+                .collect();
+            let mut merged = Vec::with_capacity(vectors.len());
+            for c in chunk_res {
+                merged.extend(c?);
+            }
+            Ok(merged)
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -4234,5 +5433,224 @@ mod tests {
         let hybrid_res = hybrid_router.route_hybrid(test_prompt, Some(&test_emb), Some(&projector));
         assert!(hybrid_res.used_semantic_organ);
         assert_eq!(hybrid_res.tier, CognitiveTier::System05Vector);
+    }
+
+    #[test]
+    fn test_valkyrie_gen4_nonary_poincare_cpr_parity_and_brasyt_spore() {
+        let mut tree = PoincareNonagonalTree::new_seed(20261113);
+        assert_eq!(tree.cells.len(), 9);
+        assert_eq!(tree.cpr_gate.max_unlocked_depth, 3);
+        assert!(
+            tree.nonary_core.packed_footprint_bytes() < 4096,
+            "Gen-4 64x64 Nonary core must fit in < 4 KB L1 cache"
+        );
+
+        // Verify 4-bit nibble packing round-trip across all 4,096 Nonary synapses
+        for idx in 0..tree.nonary_core.nonary_weights.len() {
+            assert_eq!(
+                tree.nonary_core.unpack_weight_at(idx),
+                Some(tree.nonary_core.nonary_weights[idx])
+            );
+        }
+
+        // Verify Poincaré geodesic metric properties
+        let origin = [0.0f32; 8];
+        let p_mid = [0.4f32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        let p_edge = [0.85f32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        let d_mid = PoincareNonagonalTree::poincare_distance(&origin, &p_mid);
+        let d_edge = PoincareNonagonalTree::poincare_distance(&origin, &p_edge);
+        assert!(
+            d_edge > d_mid * 2.5,
+            "Hyperbolic distance must expand nonlinearly toward r -> 1"
+        );
+
+        // Feed 20 verified high-signal experiences to ratchet CPR integrity and crack the Bayt shell
+        for step in 0..20u32 {
+            let mut state = [0.0f32; VALKYRIE_DIM];
+            for i in 0..VALKYRIE_DIM {
+                state[i] = ((step as f32 * 0.7 + i as f32 * 0.3).sin()) * 0.8;
+            }
+            let digest = format!("cpr-verified-{step:04}");
+            let (_res, eval) = tree.resonate_and_crystallize_at_origin(&state, true, &digest);
+            assert!(eval.coherent);
+            assert!((eval.eisenstein_amplitude_gain - 3.0).abs() < 1e-5);
+        }
+
+        // Verify capability ratcheted from Depth 3 (~48 IQ) up to Depth 12 (85+ IQ) and cracked shell into child rings
+        assert_eq!(tree.cpr_gate.max_unlocked_depth, MAX_POINCARE_FRACTAL_DEPTH);
+        assert!(
+            tree.cells.len() >= 18,
+            "Hyperbaric Bayt shell must crack and sprout 9-adic child sectors"
+        );
+        assert_eq!(tree.crystallized_memory_count, 20);
+
+        // Now test forced deception / broken CPR parity: must trigger Eisenstein destructive interference (1 + ω + ω² = 0)
+        let honest_reliance = [1.0f32; VALKYRIE_DIM];
+        let deceptive_expression = [-1.0f32; VALKYRIE_DIM];
+        let bad_eval = tree.cpr_gate.evaluate_and_ratchet(
+            1.0,
+            1.0,
+            1.0,
+            &honest_reliance,
+            &deceptive_expression,
+            false,
+            "forged-receipt",
+        );
+        assert!(!bad_eval.coherent);
+        assert!(
+            bad_eval.eisenstein_amplitude_gain < 1e-5,
+            "1 + ω + ω² = 0 must annihilate unverified/deceptive amplitude"
+        );
+        assert_eq!(
+            bad_eval.effective_fractal_depth, 1,
+            "Deception must collapse effective reasoning depth back to Depth 1"
+        );
+
+        // Emit next-generation BRASYT Spore via Reverse Ricci Flow
+        let spore = tree.emit_brasyt_spore();
+        assert_eq!(spore.brasyt_suares_sequence, [2, 200, 1, 300, 10, 400]);
+        assert_eq!(spore.generation, 1);
+        assert!(spore.distilled_invariants_count >= 9);
+        assert_eq!(spore.packed_nonary_seed_bytes.len(), 2048);
+    }
+
+    #[test]
+    fn test_valkyrie_gen4_avx2_busemann_birkhoff_and_conformal_2t_b16_parity() {
+        let a: Vec<f32> = (0..64).map(|i| ((i as f32) - 31.5) * 0.03).collect();
+        let b: Vec<f32> = (0..64).map(|i| ((63 - i) as f32) * 0.02 - 0.5).collect();
+        let ref_dot: f64 = a
+            .iter()
+            .zip(&b)
+            .map(|(&x, &y)| f64::from(x) * f64::from(y))
+            .sum();
+        assert!((f64::from(dot_avx2_8lane(&a, &b)) - ref_dot).abs() < 1e-5);
+
+        // Horosphere ordering invariant
+        let mut p = [0.0f32; 64];
+        p[0] = 1.0;
+        let mut x_near = [0.0f32; 64];
+        x_near[0] = 0.85;
+        let mut x_opp = [0.0f32; 64];
+        x_opp[0] = -0.85;
+        assert!(
+            busemann_horosphere_64d_avx2(&p, &x_near) > busemann_horosphere_64d_avx2(&p, &x_opp)
+        );
+
+        // Birkhoff Sinkhorn 3x3 doubly-stochastic convergence
+        let coupler = BirkhoffCoupler3x3::from_log_coupling(
+            [[2.2, 0.1, -0.3], [0.2, 2.0, 0.3], [-0.4, 0.2, 2.1]],
+            20,
+        )
+        .expect("valid coupler");
+        assert!(coupler.max_stochastic_deviation() < 1e-4);
+
+        let mut protos = [[[0.0f32; 64]; 28]; 3];
+        for s in 0..3 {
+            for op in 0..28 {
+                protos[s][op][op] = 1.0;
+            }
+        }
+        let head = WujiBmlrShellHead {
+            shell_gate_weights: [[0.0; 64]; 3],
+            shell_gate_bias: [0.0; 3],
+            coupler,
+            bmlr_slopes: [[2.4; 28]; 3],
+            bmlr_bias: [0.0; 28],
+            bmlr_tangent_u: [[[0.0; 64]; 28]; 3],
+            shell_unit_prototypes: protos,
+            temperature: 1.0,
+            q_hat: 0.70,
+        };
+        let mut router = ConformalTttGen4Router::new(head, 20261114).expect("router init");
+
+        // M9 fail-closed NaN / Inf guard: must reject cleanly without corrupting tree count
+        let mut nan_vec = [0.0f32; 64];
+        nan_vec[5] = f32::NAN;
+        assert!(router.route_and_resonate(&nan_vec, true, "cpr-0").is_err());
+        assert_eq!(router.tree.crystallized_memory_count, 0);
+
+        let mut vecs = Vec::with_capacity(64);
+        for i in 0..64 {
+            let mut v = [0.0f32; 64];
+            v[i % 28] = 0.78;
+            vecs.push(v);
+        }
+        let batch = router.route_batch_2t_b16(&vecs).expect("2t_b16 batch");
+        assert_eq!(batch.len(), 64);
+        for (i, d_par) in batch.iter().enumerate() {
+            let d_seq = router.head.route_vector_64d(&vecs[i]).expect("seq");
+            assert_eq!(d_par.dominant_opcode, (i % 28) as u8);
+            assert_eq!(d_par.dominant_opcode, d_seq.dominant_opcode);
+            assert!((d_par.top_prob - d_seq.top_prob).abs() < 1e-6);
+        }
+
+        let (dec, _res, eval) = router
+            .route_and_resonate(&vecs[3], true, "cpr-valid-001")
+            .expect("valid resonate");
+        assert_eq!(dec.dominant_opcode, 3);
+        assert!(eval.coherent);
+        assert_eq!(router.tree.crystallized_memory_count, 1);
+
+        // Stage 3A Shielded LAC non-empty guarantee: diffuse distribution with high threshold (low q_hat)
+        // must still emit {argmax} instead of an empty conformal set.
+        let mut tight_head = router.head.clone();
+        tight_head.q_hat = 0.05; // threshold = 0.95 >> diffuse top_prob
+        let zero_x = [0.0f32; 64];
+        let shielded = tight_head.route_vector_64d(&zero_x).expect("shielded set");
+        assert_eq!(
+            shielded.prediction_set_opcodes.len(),
+            1,
+            "shielded LAC must emit {{argmax}}, never empty"
+        );
+        assert_eq!(shielded.prediction_set_opcodes[0], shielded.dominant_opcode);
+        assert!(shielded.is_singleton);
+    }
+
+    #[test]
+    fn test_alphaedit_svd_jacobi_mgs2_compaction_and_orthogonality() {
+        let mut proj = AlphaEditNullSpaceProjector::new();
+        // Push 12 low-energy directions first (axis 0..12, amp 0.25), then 8 high-energy dominant directions (axis 20..28, amp 4.0)
+        for k in 0..12 {
+            let mut v = [0.0f32; TRANSCODER_DICT_SIZE];
+            v[k] = 0.25;
+            proj.register_preserved_canary(&v);
+        }
+        for r in 0..8 {
+            for k in 20..28 {
+                let mut v = [0.0f32; TRANSCODER_DICT_SIZE];
+                v[k] = 4.0 + (r as f32) * 0.01;
+                v[(k + 1) % TRANSCODER_DICT_SIZE] = 0.05;
+                proj.register_preserved_canary(&v);
+            }
+        }
+        assert!(proj.preserved_basis.len() > 8);
+        assert!(proj.nullspace_orthogonality_err() < 1e-5);
+
+        // SVD compaction to rank 8 MUST keep high-energy span (axes 20..28), NOT FIFO axes 0..8!
+        proj.compact_null_space_svd(8);
+        assert_eq!(proj.preserved_basis.len(), 8);
+        assert!(
+            proj.nullspace_orthogonality_err() < 1e-5,
+            "ortho err too high: {}",
+            proj.nullspace_orthogonality_err()
+        );
+
+        let mut probe_high = [0.0f32; TRANSCODER_DICT_SIZE];
+        probe_high[20] = 1.0;
+        proj.project_into_null_space(&mut probe_high);
+        let rem_high: f32 = probe_high.iter().map(|x| x * x).sum::<f32>().sqrt();
+        assert!(
+            rem_high < 0.05,
+            "dominant canary direction leaked after SVD compaction: {rem_high}"
+        );
+
+        // Multiple compactions preserve orthogonality
+        for k in 30..40 {
+            let mut v = [0.0f32; TRANSCODER_DICT_SIZE];
+            v[k] = 1.5;
+            proj.register_preserved_canary(&v);
+        }
+        proj.compact_null_space_svd(6);
+        assert!(proj.nullspace_orthogonality_err() < 1e-5);
     }
 }

@@ -40,10 +40,14 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::suboptimal_flops)]
 
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::fs::OpenOptions;
 use std::hash::{Hash, Hasher};
+use std::io::{self, Read, Write};
+use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::apotheosis::{ApotheosisStatus, SubstrateInvariantAudit};
@@ -55,6 +59,7 @@ use crate::dream::RegimeVector;
 use crate::hexagram::Hexagram;
 use crate::homeostasis::HomeostaticRegime;
 use crate::legion::{ChoHanVerdict, ShadowLegion};
+use crate::peer::{PeerDirectory, PeerTrustTier};
 use crate::pray_combinatorics::{
     CompiledPraySeal, GANA_CATALOG, GanaMansion, PrayChain, PrayCombinatorialEngine,
 };
@@ -1426,19 +1431,189 @@ pub struct FederatedSealCandidate {
     pub signature_digest: u64,
 }
 
+fn decode_hex_fixed<const N: usize>(hex_str: &str, label: &str) -> Result<[u8; N], String> {
+    if hex_str.len() != N * 2 {
+        return Err(format!(
+            "{label}: expected {} hex chars, got {}",
+            N * 2,
+            hex_str.len()
+        ));
+    }
+    let mut out = [0u8; N];
+    for (idx, chunk) in hex_str.as_bytes().chunks_exact(2).enumerate() {
+        let s = std::str::from_utf8(chunk)
+            .map_err(|_| format!("{label}: non-utf8 hex at byte {idx}"))?;
+        out[idx] = u8::from_str_radix(s, 16)
+            .map_err(|e| format!("{label}: invalid hex at byte {idx}: {e}"))?;
+    }
+    Ok(out)
+}
+
+/// Persistent monotonic epoch and anti-echo-chamber lineage guard for Federated Theta Dream packets.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct FederatedReplayGuard {
+    pub highest_epoch_by_peer: HashMap<String, u64>,
+    pub seen_lineage_roots: HashSet<String>,
+}
+
+impl FederatedReplayGuard {
+    pub fn load_or_init(path: &Path) -> io::Result<Self> {
+        if path.exists() {
+            let mut raw = String::new();
+            std::fs::File::open(path)?.read_to_string(&mut raw)?;
+            if let Ok(guard) = serde_json::from_str::<Self>(&raw) {
+                return Ok(guard);
+            }
+        }
+        let guard = Self::default();
+        let _ = guard.save(path);
+        Ok(guard)
+    }
+
+    pub fn save(&self, path: &Path) -> io::Result<()> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let tmp = path.with_extension("tmp");
+        let encoded = serde_json::to_string_pretty(self)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        let mut f = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(&tmp)?;
+        f.write_all(encoded.as_bytes())?;
+        f.flush()?;
+        std::fs::rename(tmp, path)?;
+        Ok(())
+    }
+
+    pub fn verify_uncommitted(
+        &self,
+        source_node: &str,
+        epoch_id: u64,
+        lineage_root_hex: &str,
+    ) -> Result<(), String> {
+        if epoch_id == 0 {
+            return Err("federated packet epoch_id=0 rejected (must be >= 1)".into());
+        }
+        if lineage_root_hex.is_empty() || !lineage_root_hex.chars().any(|c| c != '0') {
+            return Err("federated packet rejected: missing/zeroed lineage_root_hex".into());
+        }
+        if self.seen_lineage_roots.contains(lineage_root_hex) {
+            return Err(format!(
+                "anti-echo-chamber lock: duplicate lineage_root_hex '{lineage_root_hex}' already ingested"
+            ));
+        }
+        if let Some(&prev_epoch) = self.highest_epoch_by_peer.get(source_node) {
+            if epoch_id <= prev_epoch {
+                return Err(format!(
+                    "replay rejected for peer '{source_node}': epoch_id {epoch_id} <= highest seen {prev_epoch}"
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn commit(&mut self, source_node: &str, epoch_id: u64, lineage_root_hex: &str) {
+        self.highest_epoch_by_peer
+            .insert(source_node.to_string(), epoch_id);
+        self.seen_lineage_roots.insert(lineage_root_hex.to_string());
+    }
+}
+
 /// Content-free federated dream packet exchanged between Workstation (`T4800-S`) and
 /// Production VPS Citadel (`152.53.195.47`) during Theta NREM/REM consolidation.
 #[derive(Debug, Clone)]
 pub struct FederatedThetaDreamPacket {
     pub source_node: String,
     pub epoch_id: u64,
+    /// Provenance/Merkle root identifying the evolutionary lineage batch (anti-echo-chamber guard).
+    pub lineage_root_hex: String,
     /// Content-free 64-bit hashes of Citadel honeypot/tarpit antibodies & MCTS dead ends.
     pub antibody_digests: Vec<u64>,
     /// Promoted action skeletons proposed by the peer for independent verification.
     pub seal_candidates: Vec<FederatedSealCandidate>,
+    /// 32-byte Ed25519 verifying key hex (must match `PeerIdentity.public_key`).
+    pub signer_pubkey_hex: String,
+    /// 64-byte Ed25519 signature hex over [`Self::canonical_payload_bytes`].
+    pub signature_hex: String,
 }
 
-/// Telemetry report returned by [`CittaOscillatorEngine::ingest_federated_theta_dream_packet`].
+impl FederatedThetaDreamPacket {
+    /// Deterministic domain-separated byte encoding covering all authenticated packet & candidate fields.
+    #[must_use]
+    pub fn canonical_payload_bytes(&self) -> Vec<u8> {
+        let mut msg = Vec::with_capacity(
+            64 + self.antibody_digests.len() * 8 + self.seal_candidates.len() * 320,
+        );
+        msg.extend_from_slice(b"wm:gen3:federated-theta-dream:v2|");
+        msg.extend_from_slice(&(self.source_node.len() as u32).to_le_bytes());
+        msg.extend_from_slice(self.source_node.as_bytes());
+        msg.extend_from_slice(&self.epoch_id.to_le_bytes());
+        msg.extend_from_slice(&(self.lineage_root_hex.len() as u32).to_le_bytes());
+        msg.extend_from_slice(self.lineage_root_hex.as_bytes());
+
+        msg.extend_from_slice(&(self.antibody_digests.len() as u32).to_le_bytes());
+        for &d in &self.antibody_digests {
+            msg.extend_from_slice(&d.to_le_bytes());
+        }
+
+        msg.extend_from_slice(&(self.seal_candidates.len() as u32).to_le_bytes());
+        for cand in &self.seal_candidates {
+            msg.extend_from_slice(&(cand.peer_node_id.len() as u32).to_le_bytes());
+            msg.extend_from_slice(cand.peer_node_id.as_bytes());
+            msg.extend_from_slice(&cand.combinatorial_id.to_le_bytes());
+            msg.push(cand.gana_id);
+            msg.push(cand.hexagram_id);
+            msg.extend_from_slice(&(cand.glyphs.len() as u32).to_le_bytes());
+            for &g in &cand.glyphs {
+                msg.push(g as u8);
+            }
+            for &w in &cand.claimed_write_mask.words {
+                msg.extend_from_slice(&w.to_le_bytes());
+            }
+            msg.push(u8::from(cand.claimed_network_allowed));
+            msg.extend_from_slice(&cand.claimed_utility.to_bits().to_le_bytes());
+            msg.extend_from_slice(&cand.protected_delta.latency_p99_ns.to_bits().to_le_bytes());
+            msg.extend_from_slice(&cand.protected_delta.error_rate.to_bits().to_le_bytes());
+            msg.extend_from_slice(&cand.protected_delta.closure_violations.to_le_bytes());
+            msg.extend_from_slice(&cand.protected_delta.brier_loss.to_bits().to_le_bytes());
+            msg.extend_from_slice(&cand.signature_digest.to_le_bytes());
+        }
+        msg
+    }
+
+    pub fn sign_with_key(&mut self, signing_key: &SigningKey) {
+        let vk_bytes = signing_key.verifying_key().to_bytes();
+        self.signer_pubkey_hex = crate::hex_encode(&vk_bytes);
+        let payload = self.canonical_payload_bytes();
+        let sig = signing_key.sign(&payload);
+        self.signature_hex = crate::hex_encode(&sig.to_bytes());
+    }
+
+    pub fn verify_ed25519_against_expected_key(
+        &self,
+        expected_pk: &[u8; 32],
+    ) -> Result<(), String> {
+        let pk_arr: [u8; 32] = decode_hex_fixed(&self.signer_pubkey_hex, "signer_pubkey_hex")?;
+        if pk_arr != *expected_pk {
+            return Err(
+                "federated signer_pubkey_hex does not match registered PeerIdentity public_key"
+                    .into(),
+            );
+        }
+        let sig_arr: [u8; 64] = decode_hex_fixed(&self.signature_hex, "signature_hex")?;
+        let vk = VerifyingKey::from_bytes(&pk_arr)
+            .map_err(|e| format!("invalid Ed25519 verifying key: {e}"))?;
+        let sig = Signature::from_bytes(&sig_arr);
+        let payload = self.canonical_payload_bytes();
+        vk.verify(&payload, &sig)
+            .map_err(|_| "FederatedThetaDreamPacket Ed25519 signature verification failed".into())
+    }
+}
+
+/// Telemetry report returned by [`CittaOscillatorEngine::ingest_verified_federated_theta_dream_packet`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FederatedDreamSyncReport {
     pub source_node: String,
@@ -1452,18 +1627,64 @@ pub struct FederatedDreamSyncReport {
 }
 
 impl CittaOscillatorEngine {
-    /// Ingest and independently verify a [`FederatedThetaDreamPacket`] from a Sangha peer
-    /// (Frontier D: Federated Theta Dreaming & Citadel Antibody Sync):
+    /// Fail-closed cryptographically authenticated ingestion of a [`FederatedThetaDreamPacket`]:
     ///
-    /// 1. **Antibody Immunization (`< 50 ns/digest`):** Registers all content-free Citadel
-    ///    honeypot/tarpit & MCTS negative-knowledge digests into the local `LineageArchive`
-    ///    and the provided [`CitadelAntibodyBloom2048`] filter.
-    /// 2. **Zero-Trust Peer Verification (`Maker != Checker`):** Re-computes the exact
-    ///    denotation (`ScopeBitset2048` + Kekkai network boundary) of every proposed glyph
-    ///    pipeline via [`VictorTaelinSuperoptimizer::compute_denotation`], rejects any spoofed
-    ///    write mask or unattested network capability, and adjudicates via [`crate::cladistics::ParetoGate`].
-    /// 3. **Working-Memory Binding:** Binds verified promotions into the [`ThetaGammaWorkingMemoryRing`].
+    /// 1. **Peer Trust Tier Pre-Gate (`PeerDirectory`):** Rejects unknown, `Blocked`, `Stranger`,
+    ///    or `Net`-tier senders (`< PeerTrustTier::Trusted` or lacking `"sync"`) BEFORE touching
+    ///    `antibody_bloom`, `cladistics`, `replay_guard`, or `wm_ring`.
+    /// 2. **Ed25519 Key-Bound Signature Verification:** Requires `signer_pubkey_hex` to match the
+    ///    registered `PeerIdentity.public_key` and verifies the canonical domain-separated signature.
+    /// 3. **Persistent Monotonic Epoch & Anti-Echo-Chamber Gate (`FederatedReplayGuard`):**
+    ///    Rejects stale/replayed `epoch_id` and duplicate/zeroed `lineage_root_hex`.
+    /// 4. **Deduplicated Antibody Immunization + Zero-Trust Denotation + NaN Quarantine.**
+    pub fn ingest_verified_federated_theta_dream_packet(
+        &mut self,
+        packet: &FederatedThetaDreamPacket,
+        peer_dir: &PeerDirectory,
+        replay_guard: &mut FederatedReplayGuard,
+        antibody_bloom: &mut CitadelAntibodyBloom2048,
+        wm_ring: &mut ThetaGammaWorkingMemoryRing,
+        now_ms: u64,
+    ) -> Result<FederatedDreamSyncReport, String> {
+        let peer = peer_dir
+            .get_by_id(&packet.source_node)
+            .ok_or_else(|| format!("unregistered federated peer '{}'", packet.source_node))?;
+        if peer.trust_tier < PeerTrustTier::Trusted || !peer.can("sync") {
+            return Err(format!(
+                "federated peer '{}' rejected: trust_tier={} lacks Trusted+sync admission",
+                packet.source_node, peer.trust_tier
+            ));
+        }
+
+        packet.verify_ed25519_against_expected_key(&peer.public_key)?;
+        replay_guard.verify_uncommitted(
+            &packet.source_node,
+            packet.epoch_id,
+            &packet.lineage_root_hex,
+        )?;
+        replay_guard.commit(
+            &packet.source_node,
+            packet.epoch_id,
+            &packet.lineage_root_hex,
+        );
+
+        Ok(self.ingest_federated_inner(packet, antibody_bloom, wm_ring, now_ms))
+    }
+
+    #[deprecated(
+        note = "Unauthenticated legacy path; use ingest_verified_federated_theta_dream_packet"
+    )]
     pub fn ingest_federated_theta_dream_packet(
+        &mut self,
+        packet: &FederatedThetaDreamPacket,
+        antibody_bloom: &mut CitadelAntibodyBloom2048,
+        wm_ring: &mut ThetaGammaWorkingMemoryRing,
+        now_ms: u64,
+    ) -> FederatedDreamSyncReport {
+        self.ingest_federated_inner(packet, antibody_bloom, wm_ring, now_ms)
+    }
+
+    fn ingest_federated_inner(
         &mut self,
         packet: &FederatedThetaDreamPacket,
         antibody_bloom: &mut CitadelAntibodyBloom2048,
@@ -1472,8 +1693,13 @@ impl CittaOscillatorEngine {
     ) -> FederatedDreamSyncReport {
         let t0 = std::time::Instant::now();
 
-        // 1. Ingest negative-knowledge antibodies from peer (e.g., VPS Citadel Genjutsu traps)
+        // 1. Ingest deduplicated negative-knowledge antibodies (M6 inflation guard)
+        let mut unique_antibodies_ingested = 0usize;
         for &digest in &packet.antibody_digests {
+            if antibody_bloom.contains_digest(digest) {
+                continue;
+            }
+            unique_antibodies_ingested += 1;
             antibody_bloom.insert_digest(digest);
             let _ = self.cladistics.adjudicate_candidate(
                 CandidateAssessment {
@@ -1503,18 +1729,26 @@ impl CittaOscillatorEngine {
         let mut quarantined_byzantine = 0usize;
         let mut blocked_by_antibody = 0usize;
 
-        // 2. Independently verify each peer seal candidate (Zero-Trust Maker != Checker)
+        // 2. Independently verify each peer seal candidate (Zero-Trust Maker != Checker + NaN fail-closed)
         for (idx, cand) in packet.seal_candidates.iter().enumerate() {
             if antibody_bloom.contains_digest(cand.signature_digest) {
                 blocked_by_antibody += 1;
                 continue;
             }
 
+            let finite_ok = cand.claimed_utility.is_finite()
+                && cand.protected_delta.latency_p99_ns.is_finite()
+                && cand.protected_delta.error_rate.is_finite()
+                && cand.protected_delta.brier_loss.is_finite();
+            if !finite_ok {
+                quarantined_byzantine += 1;
+                antibody_bloom.insert_digest(cand.signature_digest);
+                continue;
+            }
+
             let (_gmask, actual_scope, _rw_mask, actual_net) =
                 VictorTaelinSuperoptimizer::compute_denotation(&cand.glyphs);
 
-            // Detect Byzantine capability spoofing: peer claimed a narrower write_mask or
-            // hid network egress required by the underlying glyphs.
             let scope_honest = actual_scope == cand.claimed_write_mask;
             let net_honest = !actual_net || cand.claimed_network_allowed;
             let closure_ok = scope_honest && net_honest && !cand.glyphs.is_empty();
@@ -1564,7 +1798,7 @@ impl CittaOscillatorEngine {
         FederatedDreamSyncReport {
             source_node: packet.source_node.clone(),
             epoch_id: packet.epoch_id,
-            antibodies_ingested: packet.antibody_digests.len(),
+            antibodies_ingested: unique_antibodies_ingested,
             candidates_evaluated: packet.seal_candidates.len(),
             candidates_promoted: promoted,
             candidates_quarantined_byzantine: quarantined_byzantine,
@@ -1954,19 +2188,37 @@ mod tests {
             }
         }
 
-        let packet = FederatedThetaDreamPacket {
+        let signing_key = SigningKey::from_bytes(&[0x42u8; 32]);
+        let mut peer_dir = PeerDirectory::default();
+        peer_dir.admit(crate::peer::PeerIdentity::new(
+            "vps-citadel-152.53.195.47",
+            signing_key.verifying_key().to_bytes(),
+            PeerTrustTier::Trusted,
+        ));
+        let mut replay_guard = FederatedReplayGuard::default();
+
+        let mut packet = FederatedThetaDreamPacket {
             source_node: "vps-citadel-152.53.195.47".to_string(),
             epoch_id: 1509,
+            lineage_root_hex: "a1b2c3d4e5f60708a1b2c3d4e5f60708a1b2c3d4e5f60708a1b2c3d4e5f60708"
+                .to_string(),
             antibody_digests: antibodies,
             seal_candidates: candidates,
+            signer_pubkey_hex: String::new(),
+            signature_hex: String::new(),
         };
+        packet.sign_with_key(&signing_key);
 
-        let sync_rep = fed_osc.ingest_federated_theta_dream_packet(
-            &packet,
-            &mut bloom,
-            &mut fed_ring,
-            100_000,
-        );
+        let sync_rep = fed_osc
+            .ingest_verified_federated_theta_dream_packet(
+                &packet,
+                &peer_dir,
+                &mut replay_guard,
+                &mut bloom,
+                &mut fed_ring,
+                100_000,
+            )
+            .expect("valid signed packet from Trusted peer");
         let sync_ms = (sync_rep.elapsed_ns as f64) / 1e6;
         let us_per_item = (sync_rep.elapsed_ns as f64 / 1000.0)
             / ((sync_rep.antibodies_ingested + sync_rep.candidates_evaluated) as f64);
@@ -2032,5 +2284,144 @@ mod tests {
             }
         }
         println!("========================================================================\n");
+    }
+
+    #[test]
+    fn test_verified_federated_theta_dream_ed25519_replay_echo_and_byzantine_gates() {
+        let sk_trusted = SigningKey::from_bytes(&[0x19u8; 32]);
+        let sk_rogue = SigningKey::from_bytes(&[0x99u8; 32]);
+        let mut peer_dir = PeerDirectory::default();
+        peer_dir.admit(crate::peer::PeerIdentity::new(
+            "vps-trusted",
+            sk_trusted.verifying_key().to_bytes(),
+            PeerTrustTier::Trusted,
+        ));
+        peer_dir.admit(crate::peer::PeerIdentity::new(
+            "rogue-stranger",
+            sk_rogue.verifying_key().to_bytes(),
+            PeerTrustTier::Stranger,
+        ));
+        peer_dir.admit(crate::peer::PeerIdentity::new(
+            "vps-trusted-2",
+            sk_trusted.verifying_key().to_bytes(),
+            PeerTrustTier::Trusted,
+        ));
+
+        let tmp_guard_path =
+            std::env::temp_dir().join(format!("wm_fed_replay_guard_{}.json", std::process::id()));
+        let _ = std::fs::remove_file(&tmp_guard_path);
+        let mut guard = FederatedReplayGuard::load_or_init(&tmp_guard_path).expect("guard init");
+
+        let mut osc = CittaOscillatorEngine::new(5_000);
+        let mut bloom = CitadelAntibodyBloom2048::new();
+        let mut ring = ThetaGammaWorkingMemoryRing::new();
+
+        // 1. Pre-gate: Stranger peer with VALID Ed25519 signature must be rejected BEFORE mutating bloom
+        let mut stranger_pkt = FederatedThetaDreamPacket {
+            source_node: "rogue-stranger".into(),
+            epoch_id: 1,
+            lineage_root_hex: "11".repeat(32),
+            antibody_digests: vec![0xDEAD_0001],
+            seal_candidates: Vec::new(),
+            signer_pubkey_hex: String::new(),
+            signature_hex: String::new(),
+        };
+        stranger_pkt.sign_with_key(&sk_rogue);
+        assert!(
+            osc.ingest_verified_federated_theta_dream_packet(
+                &stranger_pkt,
+                &peer_dir,
+                &mut guard,
+                &mut bloom,
+                &mut ring,
+                1000
+            )
+            .is_err()
+        );
+        assert!(!bloom.contains_digest(0xDEAD_0001));
+
+        // 2. Key-substitution / tampered payload by unknown signer must fail closed BEFORE mutating bloom
+        let mut spoofed_pkt = FederatedThetaDreamPacket {
+            source_node: "vps-trusted".into(),
+            epoch_id: 10,
+            lineage_root_hex: "22".repeat(32),
+            antibody_digests: vec![0xDEAD_0002],
+            seal_candidates: Vec::new(),
+            signer_pubkey_hex: String::new(),
+            signature_hex: String::new(),
+        };
+        spoofed_pkt.sign_with_key(&sk_rogue); // Wrong signing key for vps-trusted!
+        assert!(
+            osc.ingest_verified_federated_theta_dream_packet(
+                &spoofed_pkt,
+                &peer_dir,
+                &mut guard,
+                &mut bloom,
+                &mut ring,
+                1001
+            )
+            .is_err()
+        );
+        assert!(!bloom.contains_digest(0xDEAD_0002));
+
+        // 3. Valid signed packet with duplicate antibodies must deduplicate antibodies_ingested count
+        let mut valid_pkt = FederatedThetaDreamPacket {
+            source_node: "vps-trusted".into(),
+            epoch_id: 10,
+            lineage_root_hex: "33".repeat(32),
+            antibody_digests: vec![0xABCD_0001, 0xABCD_0001, 0xABCD_0002, 0xABCD_0001],
+            seal_candidates: Vec::new(),
+            signer_pubkey_hex: String::new(),
+            signature_hex: String::new(),
+        };
+        valid_pkt.sign_with_key(&sk_trusted);
+        let rep = osc
+            .ingest_verified_federated_theta_dream_packet(
+                &valid_pkt, &peer_dir, &mut guard, &mut bloom, &mut ring, 1002,
+            )
+            .expect("valid trusted packet");
+        assert_eq!(rep.antibodies_ingested, 2); // M6 inflation blocked: 4 entries -> 2 unique!
+        guard.save(&tmp_guard_path).expect("save guard");
+
+        // 4. Persisted monotonic epoch replay guard: reload from disk and replay epoch 10 -> rejected!
+        let mut reloaded_guard =
+            FederatedReplayGuard::load_or_init(&tmp_guard_path).expect("reload");
+        assert!(
+            osc.ingest_verified_federated_theta_dream_packet(
+                &valid_pkt,
+                &peer_dir,
+                &mut reloaded_guard,
+                &mut bloom,
+                &mut ring,
+                1003
+            )
+            .is_err()
+        );
+
+        // 5. Anti-echo-chamber check: different trusted peer with new epoch re-using seen lineage_root_hex -> rejected!
+        let mut echo_pkt = FederatedThetaDreamPacket {
+            source_node: "vps-trusted-2".into(),
+            epoch_id: 1,
+            lineage_root_hex: "33".repeat(32),
+            antibody_digests: vec![0xBEEF_0009],
+            seal_candidates: Vec::new(),
+            signer_pubkey_hex: String::new(),
+            signature_hex: String::new(),
+        };
+        echo_pkt.sign_with_key(&sk_trusted);
+        assert!(
+            osc.ingest_verified_federated_theta_dream_packet(
+                &echo_pkt,
+                &peer_dir,
+                &mut reloaded_guard,
+                &mut bloom,
+                &mut ring,
+                1004
+            )
+            .is_err()
+        );
+        assert!(!bloom.contains_digest(0xBEEF_0009));
+
+        let _ = std::fs::remove_file(&tmp_guard_path);
     }
 }

@@ -49,6 +49,7 @@ pub mod firebreak;
 pub mod ganying;
 pub mod gen1_gems;
 pub mod geometry;
+pub mod ghrr_algebra;
 pub mod hexagram;
 pub mod hologram;
 pub mod homeostasis;
@@ -67,6 +68,7 @@ pub mod pulse_compiler;
 pub mod quarantine;
 pub mod recipe;
 pub mod relativity;
+pub mod rerank_spore;
 pub mod roaring_bitmap;
 pub mod sentinel;
 pub mod spectroscopy;
@@ -127,6 +129,7 @@ pub use covenant::{
     CovenantView, GroundAspect, MandalaKosha, PrimordialCovenant, RSI_LAWS, SUBSTRATE_ARTICLES,
 };
 pub use gen1_gems::{GemCluster, Gen1Arsenal, Gen1Gem, PluginPack};
+pub use rerank_spore::{RerankCandidateInput, Wm7dRerankSpore, try_load_default_wm7d_spore};
 pub use roaring_bitmap::{RoaringBitmap, RoaringMemoryIndex};
 pub use stigmergy::{Pheromone, PheromoneKind, StigmergicField};
 pub use tuple_space::{Tuple, TupleKind, TuplePattern, TupleSpace};

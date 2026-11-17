@@ -34,7 +34,7 @@
 use chrono::Utc;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use std::time::Instant;
 use uuid::Uuid;
 
@@ -43,10 +43,11 @@ use crate::evidence::{Domain, EvidenceStore, Refusal};
 use crate::field;
 #[cfg(any(test, feature = "operator", feature = "reference-models"))]
 use crate::field::Relation;
+use crate::ghrr_algebra::{canonicalize_for_noise_check, rank_stage4a_lexical_pool};
 use crate::intake::{CommitDisposition, CommitOutcome, IntakeKind, IntakeRequest, OperationId};
 use crate::journal::{Journal, sha256_hex};
 use crate::projection::{
-    DIM, MODEL_ID, Projection, ProjectionStats, TAU_GATE, cosine, semantic_support,
+    DIM, MODEL_ID, Projection, ProjectionStats, TAU_GATE, TAU_SWEEP, cosine, semantic_support,
 };
 use crate::pulse_compiler::{authorize_intake, authorize_sweep, authorize_sweep_replay};
 use crate::store::Store;
@@ -735,16 +736,17 @@ pub(crate) fn identity_key(
 /// Declared noise class table (spec W1_A1 rev 2 §1.3): content-pattern, kind-independent,
 /// rule-based. Returns the matched class name in declared table order; `None` outside the table.
 pub(crate) fn noise_class(content: &str) -> Option<&'static str> {
-    if content.contains("Traceback (most recent call last):") {
+    let canonical = canonicalize_for_noise_check(content);
+    if canonical.contains("Traceback (most recent call last):") {
         return Some("traceback");
     }
-    if content.lines().any(|line| {
+    if canonical.lines().any(|line| {
         let line = line.trim_start();
         line.starts_with("Error:") || line.starts_with("Exception:")
     }) {
         return Some("error_line");
     }
-    let trimmed = content.trim();
+    let trimmed = canonical.trim();
     if trimmed.starts_with("{\"json\":") {
         return Some("json_blob");
     }
@@ -809,6 +811,11 @@ pub struct Substrate {
     projection: Option<Projection>,
     projection_gated: bool,
     projection_gate_count: bool,
+    projection_gate_multi: bool,
+    hybrid_rrf: bool,
+    lazy_projection: bool,
+    stage4a_scoring: bool,
+    rerank_spore: Option<Arc<crate::rerank_spore::Wm7dRerankSpore>>,
     arbitration: Arbitration,
     dispersion_enabled: bool,
     intake_authority: Option<crate::evidence::RatifiedChannel>,
@@ -1518,6 +1525,11 @@ impl Substrate {
             projection: None,
             projection_gated: false,
             projection_gate_count: false,
+            projection_gate_multi: false,
+            hybrid_rrf: false,
+            lazy_projection: false,
+            stage4a_scoring: false,
+            rerank_spore: None,
             arbitration: Arbitration::PenaltyMultiplier,
             dispersion_enabled: false,
             intake_authority,
@@ -1725,6 +1737,79 @@ impl Substrate {
         self.projection_gate_count
     }
 
+    /// Stage 3C Multi-Incidence Sufficiency Gate: wakes the semantic projection pass
+    /// whenever active (non-superseded) lexical candidates `< 2` OR max lexical IDF support
+    /// falls below `0.45`, closing the `O_{+2}` (`mm>=2`) missed-opportunity hole.
+    pub fn set_projection_gate_multi(&mut self, on: bool) {
+        self.projection_gate_multi = on;
+    }
+
+    #[must_use]
+    pub fn projection_gate_multi(&self) -> bool {
+        self.projection_gate_multi
+    }
+
+    /// Stage 3C Hybrid Weighted Reciprocal Rank Fusion (`k = 60`, `LEX_TAU = 0.80`)
+    /// combining sparse lexical + dense semantic lanes while preserving exact matches.
+    pub fn set_hybrid_rrf(&mut self, on: bool) {
+        self.hybrid_rrf = on;
+    }
+
+    #[must_use]
+    pub fn hybrid_rrf(&self) -> bool {
+        self.hybrid_rrf
+    }
+
+    /// Stage 4A lazy batched projection (`WM_GEN3_LAZY_PROJECTION=1`): skip per-turn
+    /// eager ONNX embedding at ingest and batch-embed missing top candidates during recall.
+    pub fn set_lazy_projection(&mut self, on: bool) {
+        self.lazy_projection = on;
+    }
+
+    #[must_use]
+    pub fn lazy_projection(&self) -> bool {
+        self.lazy_projection
+    }
+
+    /// Stage 4A scorer (`WM_GEN3_STAGE4A=1`): BM25 saturation/length norm + non-commutative
+    /// `SO(4)^16` GHRR ordered phrase + `Qfhrr64` + `TAU_SWEEP` semantic lane fusion.
+    pub fn set_stage4a_scoring(&mut self, on: bool) {
+        self.stage4a_scoring = on;
+    }
+
+    #[must_use]
+    pub fn stage4a_scoring(&self) -> bool {
+        self.stage4a_scoring
+    }
+
+    /// Attach an optional quantized `WM7D` neural `ColBERT MaxSim` + cross-turn reranker spore.
+    pub fn set_rerank_spore(&mut self, spore: Option<Arc<crate::rerank_spore::Wm7dRerankSpore>>) {
+        self.rerank_spore = spore;
+    }
+
+    #[must_use]
+    pub fn rerank_spore(&self) -> Option<&Arc<crate::rerank_spore::Wm7dRerankSpore>> {
+        self.rerank_spore.as_ref()
+    }
+
+    /// Build a compressed `RoaringMemoryIndex` indexing live records by `ConsentRing`
+    /// and lexical domain prefix tags for sub-microsecond roaring consent filtering.
+    #[must_use]
+    pub fn build_roaring_consent_index(&self) -> crate::RoaringMemoryIndex {
+        let mut index = crate::RoaringMemoryIndex::new();
+        for r in self.store.iter_records().unwrap_or_default() {
+            if let Ok(rid) = u32::try_from(r.id()) {
+                let ring = ConsentRing::from_source(r.source()) as u8;
+                let mut tags = vec!["live".to_string()];
+                if let Some(lbl) = source_label(r.source()) {
+                    tags.push(lbl.to_string());
+                }
+                index.index_record(rid, ring, &tags);
+            }
+        }
+        index
+    }
+
     #[must_use]
     pub fn projection_stats(&self) -> Option<ProjectionStats> {
         self.projection.as_ref().map(|p| p.stats)
@@ -1738,12 +1823,36 @@ impl Substrate {
     fn embed_cached(&mut self, texts: &[String]) -> Result<Vec<Vec<f32>>, String> {
         let mut out: Vec<Option<Vec<f32>>> = vec![None; texts.len()];
         let mut hashes: Vec<String> = Vec::with_capacity(texts.len());
+        let use_disk_vec_cache = self.stage4a_scoring || self.lazy_projection;
+        let disk_cache_root = if use_disk_vec_cache {
+            self.projection
+                .as_ref()
+                .map(|p| p.cache_dir().join("vec_cache_v1"))
+        } else {
+            None
+        };
         for (i, t) in texts.iter().enumerate() {
             let h = embed_cache_key(t, EMBED_CACHE_FORMAT_VERSION);
-            if let Some(v) = self
-                .store
-                .get_embedding_cache(&h)
-                .map_err(|e| e.to_string())?
+            if let Some(ref root) = disk_cache_root {
+                let kh = sha256_hex(h.as_bytes());
+                let fpath = root.join(&kh[..2]).join(format!("{kh}.vec"));
+                if let Ok(bytes) = std::fs::read(&fpath)
+                    && bytes.len() == DIM * 4
+                {
+                    let mut vec = Vec::with_capacity(DIM);
+                    for chunk in bytes.chunks_exact(4) {
+                        vec.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+                    }
+                    if vec.iter().all(|x| x.is_finite()) {
+                        out[i] = Some(vec);
+                    }
+                }
+            }
+            if out[i].is_none()
+                && let Some(v) = self
+                    .store
+                    .get_embedding_cache(&h)
+                    .map_err(|e| e.to_string())?
             {
                 out[i] = Some(v);
             }
@@ -1757,8 +1866,22 @@ impl Substrate {
                 .as_mut()
                 .ok_or_else(|| "projection: not enabled".to_string())?;
             let vectors = projection.embed(&batch)?;
+            let skip_lmdb_sync = self.lazy_projection && self.stage4a_scoring;
             for (slot, vector) in misses.iter().zip(vectors) {
-                if !self.store.is_readonly() {
+                if let Some(ref root) = disk_cache_root
+                    && vector.len() == DIM
+                {
+                    let kh = sha256_hex(hashes[*slot].as_bytes());
+                    let sub = root.join(&kh[..2]);
+                    if std::fs::create_dir_all(&sub).is_ok() {
+                        let mut raw = Vec::with_capacity(DIM * 4);
+                        for &val in &vector {
+                            raw.extend_from_slice(&val.to_le_bytes());
+                        }
+                        let _ = std::fs::write(sub.join(format!("{kh}.vec")), &raw);
+                    }
+                }
+                if !self.store.is_readonly() && !skip_lmdb_sync {
                     self.store
                         .put_embedding_cache(&hashes[*slot], &vector)
                         .map_err(|e| e.to_string())?;
@@ -2358,7 +2481,7 @@ impl Substrate {
                 .map_err(|e| format!("hydrate committed intake: {e:?}"))?;
             self.identity.insert(key, id);
 
-            if self.projection.is_some() {
+            if self.projection.is_some() && !self.lazy_projection {
                 let _ = self.repair_record_vector(id);
             }
 
@@ -2667,6 +2790,61 @@ impl Substrate {
         let sources = &relations_view.sources;
         let graph_edges = &relations_view.graph_edges;
 
+        // Stage 4A Pool Scoring: BM25 length/TF saturation + SO(4)^16 ordered GHRR + Qfhrr64
+        let (stage4a_lex_scores, stage4a_pre_ranked, pre_text_cache): (
+            HashMap<u64, f32>,
+            Vec<u64>,
+            HashMap<u64, String>,
+        ) = if self.stage4a_scoring && !counts.is_empty() {
+            let mut raw_ids: Vec<u64> = counts.keys().copied().collect();
+            raw_ids.sort_by(|a, b| {
+                let idf_b = lex_matched_idf.get(b).copied().unwrap_or(0.0);
+                let idf_a = lex_matched_idf.get(a).copied().unwrap_or(0.0);
+                idf_b
+                    .partial_cmp(&idf_a)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+                    .then_with(|| {
+                        counts
+                            .get(b)
+                            .copied()
+                            .unwrap_or(0)
+                            .cmp(&counts.get(a).copied().unwrap_or(0))
+                    })
+                    .then_with(|| b.cmp(a))
+            });
+            raw_ids.truncate(768);
+            let mut text_map: HashMap<u64, String> = HashMap::with_capacity(raw_ids.len());
+            for id in raw_ids {
+                if let Ok(Some(rec)) = self.store.get_record(id) {
+                    text_map.insert(id, rec.content().to_string());
+                }
+            }
+            let doc_refs: Vec<(u64, &str)> =
+                text_map.iter().map(|(&id, s)| (id, s.as_str())).collect();
+            let ranked = rank_stage4a_lexical_pool(
+                &q.query,
+                |tok| {
+                    let df = self.store.df(tok).unwrap_or(0) as f32;
+                    let base = (1.0 + n as f32 / (1.0 + df)).ln();
+                    if self.dispersion_enabled {
+                        base * self.dispersion_weight(tok)
+                    } else {
+                        base
+                    }
+                },
+                &doc_refs,
+            );
+            let mut scores = HashMap::with_capacity(ranked.len());
+            let mut order = Vec::with_capacity(ranked.len());
+            for (id, sc) in ranked {
+                scores.insert(id, sc);
+                order.push(id);
+            }
+            (scores, order, text_map)
+        } else {
+            (HashMap::new(), Vec::new(), HashMap::new())
+        };
+
         // Activation policy. Floor mode (GEN3-GATED-S-001): fire when max
         // lexical support over lexical candidates is below the declared D2 floor
         // (0.01). Count mode (GEN3-GATED-S-003): fire when fewer than two
@@ -2674,24 +2852,49 @@ impl Substrate {
         // heuristic (a single record cannot form an earlier/current state
         // comparison). With neither mode set, projection always runs (frozen).
         let mut run_projection = self.projection.is_some();
-        if (self.projection_gated || self.projection_gate_count) && self.projection.is_some() {
+        if (self.projection_gated || self.projection_gate_count || self.projection_gate_multi)
+            && self.projection.is_some()
+        {
             let mut lex_support_max = 0.0_f32;
-            for &id in counts.keys() {
-                let matched = lex_matched_idf.get(&id).copied().unwrap_or(0.0);
-                let lex = if total_idf > f32::EPSILON {
-                    (matched / total_idf).clamp(0.0, 1.0)
-                } else {
-                    0.0
-                };
-                if lex > lex_support_max {
-                    lex_support_max = lex;
+            let mut lex_support_second = 0.0_f32;
+            if self.stage4a_scoring && !stage4a_pre_ranked.is_empty() {
+                lex_support_max = stage4a_lex_scores
+                    .get(&stage4a_pre_ranked[0])
+                    .copied()
+                    .unwrap_or(0.0);
+                if let Some(second_id) = stage4a_pre_ranked.get(1) {
+                    lex_support_second = stage4a_lex_scores.get(second_id).copied().unwrap_or(0.0);
+                }
+            } else {
+                for &id in counts.keys() {
+                    let matched = lex_matched_idf.get(&id).copied().unwrap_or(0.0);
+                    let lex = if total_idf > f32::EPSILON {
+                        (matched / total_idf).clamp(0.0, 1.0)
+                    } else {
+                        0.0
+                    };
+                    if lex > lex_support_max {
+                        lex_support_second = lex_support_max;
+                        lex_support_max = lex;
+                    } else if lex > lex_support_second {
+                        lex_support_second = lex;
+                    }
                 }
             }
             let relation_involved = counts
                 .keys()
                 .filter(|id| sources.contains(id) || superseded_by.contains_key(id))
                 .count();
-            let fired = if self.projection_gate_count {
+            let fired = if self.projection_gate_multi {
+                // Stage 3C Multi-Incidence Sufficiency Gate + Stage 4A margin ambiguity trigger + Stage 6E open-preference trigger:
+                counts.len() < 2
+                    || lex_support_max < 0.28
+                    || (relation_involved < 2 && lex_support_max < 0.30)
+                    || (self.stage4a_scoring
+                        && (crate::ghrr_algebra::is_open_preference_query(&q.query)
+                            || (lex_support_max < 0.62
+                                && (lex_support_max - lex_support_second) < 0.08)))
+            } else if self.projection_gate_count {
                 counts.len() < 2
             } else {
                 lex_support_max < self.policy.relevance_floor
@@ -2710,27 +2913,151 @@ impl Substrate {
             run_projection = fired;
         }
 
-        // Semantic projection candidates (brute-force cosine over cached vectors).
-        // GEN3-GATED-S-002: `projection_pass_ms` times exactly this block — the
-        // work the gate controls (measurement only; no behavior change).
+        // Semantic projection candidates (lazy batch candidate projection + cached vectors).
         let mut semantic: HashMap<u64, f32> = HashMap::new();
         let mut projection_pass_ms = 0.0_f64;
         let mut projection_ran = false;
         let mut projection_error = false;
         if run_projection {
             let pass_started = Instant::now();
+            let mut lazy_pairs: Vec<(u64, Vec<f32>)> = Vec::new();
+            if self.lazy_projection && !counts.is_empty() {
+                let open_pref_lazy =
+                    self.stage4a_scoring && crate::ghrr_algebra::is_open_preference_query(&q.query);
+                let lazy_cap = if open_pref_lazy {
+                    32
+                } else if self.stage4a_scoring {
+                    24
+                } else {
+                    q.candidate_limit.clamp(32, 48)
+                };
+                let mut ordered_pool: Vec<u64> = if !stage4a_pre_ranked.is_empty() {
+                    stage4a_pre_ranked.iter().copied().take(lazy_cap).collect()
+                } else {
+                    let mut tmp: Vec<u64> = counts.keys().copied().collect();
+                    tmp.sort_by(|a, b| {
+                        let idf_b = lex_matched_idf.get(b).copied().unwrap_or(0.0);
+                        let idf_a = lex_matched_idf.get(a).copied().unwrap_or(0.0);
+                        idf_b
+                            .partial_cmp(&idf_a)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                            .then_with(|| b.cmp(a))
+                    });
+                    tmp.truncate(lazy_cap);
+                    tmp
+                };
+                if self.stage4a_scoring {
+                    let seed_take = if open_pref_lazy { 12 } else { 6 };
+                    let top_seeds: Vec<u64> =
+                        ordered_pool.iter().copied().take(seed_take).collect();
+                    for sid in top_seeds {
+                        if sid > 1
+                            && pre_text_cache
+                                .get(&sid)
+                                .is_some_and(|t| crate::ghrr_algebra::is_assistant_styled(t))
+                            && !ordered_pool.contains(&(sid - 1))
+                        {
+                            ordered_pool.push(sid - 1);
+                        }
+                    }
+                }
+                let snip_budget = if self.rerank_spore.is_some() {
+                    400
+                } else {
+                    560
+                };
+                let mut missing_ids: Vec<u64> = Vec::new();
+                let mut missing_texts: Vec<String> = Vec::new();
+                for id in ordered_pool {
+                    if !self.recall_record_visible(id, sanctuary_sealed) {
+                        continue;
+                    }
+                    if let Some(ref scope) = q.scope
+                        && !self.record_in_view(id, scope)
+                    {
+                        continue;
+                    }
+                    if !self.store.has_valid_vector(id).unwrap_or(false) {
+                        let text = pre_text_cache.get(&id).cloned().or_else(|| {
+                            self.store
+                                .get_record(id)
+                                .ok()
+                                .flatten()
+                                .map(|r| r.content().to_string())
+                        });
+                        if let Some(txt) = text {
+                            let embed_txt = if self.stage4a_scoring {
+                                crate::ghrr_algebra::extract_query_focused_snippet(
+                                    &q.query,
+                                    &txt,
+                                    snip_budget,
+                                )
+                            } else {
+                                txt
+                            };
+                            missing_ids.push(id);
+                            missing_texts.push(embed_txt);
+                        }
+                    }
+                }
+                if !missing_texts.is_empty()
+                    && let Ok(vecs) = self.embed_cached(&missing_texts)
+                {
+                    let ro = self.store.is_readonly() || self.stage4a_scoring;
+                    for (id, vec) in missing_ids.into_iter().zip(vecs) {
+                        if vec.len() == DIM && vec.iter().all(|x| x.is_finite()) {
+                            if !ro {
+                                let _ = self.store.put_vector(id, &vec);
+                            }
+                            lazy_pairs.push((id, vec));
+                        }
+                    }
+                }
+            }
             match self.embed_cached(std::slice::from_ref(&q.query)) {
                 Ok(mut v) => {
                     projection_ran = true;
                     let qv = v.pop().unwrap_or_default();
                     if !qv.is_empty() {
-                        for (id, v) in self.store.iter_vectors().unwrap_or_default() {
-                            if !self.recall_record_visible(id, sanctuary_sealed) {
+                        let sem_soft_tau = 0.56_f32.max(TAU_SWEEP);
+                        let score_cos = |c: f32| -> Option<f32> {
+                            if self.stage4a_scoring {
+                                if c > TAU_GATE {
+                                    Some(
+                                        (0.30 + 0.70 * ((c - TAU_GATE) / (1.0 - TAU_GATE)))
+                                            .clamp(0.0, 1.0),
+                                    )
+                                } else if !counts.is_empty() && c > sem_soft_tau {
+                                    Some(
+                                        (0.25 * ((c - sem_soft_tau) / (TAU_GATE - sem_soft_tau)))
+                                            .clamp(0.0, 0.25),
+                                    )
+                                } else {
+                                    None
+                                }
+                            } else if c > TAU_GATE {
+                                Some(semantic_support(c))
+                            } else {
+                                None
+                            }
+                        };
+                        let mut seen_lazy: HashSet<u64> = HashSet::with_capacity(lazy_pairs.len());
+                        for (id, vec) in &lazy_pairs {
+                            seen_lazy.insert(*id);
+                            let c = cosine(&qv, vec);
+                            if let Some(sup) = score_cos(c) {
+                                semantic.insert(*id, sup);
+                            }
+                        }
+                        for (id, vec) in self.store.iter_vectors().unwrap_or_default() {
+                            if seen_lazy.contains(&id)
+                                || !self.recall_record_visible(id, sanctuary_sealed)
+                            {
                                 continue;
                             }
-                            let c = cosine(&qv, &v);
-                            if c > TAU_GATE {
-                                semantic.insert(id, semantic_support(c));
+                            let c = cosine(&qv, &vec);
+                            if let Some(sup) = score_cos(c) {
+                                semantic.insert(id, sup);
                             }
                         }
                     }
@@ -2809,10 +3136,30 @@ impl Substrate {
         let pool_cap = (q.candidate_limit.max(1) * 3).max(200);
         if candidate_ids.len() > pool_cap {
             candidate_ids.sort_by(|a, b| {
-                let idf_b = lex_matched_idf.get(b).copied().unwrap_or(0.0);
-                let idf_a = lex_matched_idf.get(a).copied().unwrap_or(0.0);
-                idf_b
-                    .partial_cmp(&idf_a)
+                let score_b = if self.stage4a_scoring {
+                    stage4a_lex_scores
+                        .get(b)
+                        .copied()
+                        .unwrap_or_else(|| {
+                            lex_matched_idf.get(b).copied().unwrap_or(0.0) / total_idf.max(1.0)
+                        })
+                        .max(semantic.get(b).copied().unwrap_or(0.0))
+                } else {
+                    lex_matched_idf.get(b).copied().unwrap_or(0.0)
+                };
+                let score_a = if self.stage4a_scoring {
+                    stage4a_lex_scores
+                        .get(a)
+                        .copied()
+                        .unwrap_or_else(|| {
+                            lex_matched_idf.get(a).copied().unwrap_or(0.0) / total_idf.max(1.0)
+                        })
+                        .max(semantic.get(a).copied().unwrap_or(0.0))
+                } else {
+                    lex_matched_idf.get(a).copied().unwrap_or(0.0)
+                };
+                score_b
+                    .partial_cmp(&score_a)
                     .unwrap_or(std::cmp::Ordering::Equal)
                     .then_with(|| {
                         let count_b = counts.get(b).copied().unwrap_or(0);
@@ -2824,19 +3171,133 @@ impl Substrate {
         }
 
         // 1. Gather base lexical and semantic support for all candidates
+        // Stage 3C / 4A Hybrid Weighted Reciprocal Rank Fusion (`k = 60`):
+        let use_hybrid = (self.hybrid_rrf || self.stage4a_scoring) && !semantic.is_empty();
+        let (lex_rank_map, sem_rank_map, max_lex_score, max_sem_score): (
+            HashMap<u64, usize>,
+            HashMap<u64, usize>,
+            f32,
+            f32,
+        ) = if use_hybrid {
+            let mut lex_pairs: Vec<(u64, f32)> = Vec::new();
+            let mut sem_pairs: Vec<(u64, f32)> = Vec::new();
+            let mut ml = f32::EPSILON;
+            let mut ms = f32::EPSILON;
+            for &id in &candidate_ids {
+                let ls = if self.stage4a_scoring {
+                    stage4a_lex_scores.get(&id).copied().unwrap_or_else(|| {
+                        let matched = lex_matched_idf.get(&id).copied().unwrap_or(0.0);
+                        if total_idf > f32::EPSILON {
+                            (matched / total_idf).clamp(0.0, 1.0)
+                        } else {
+                            0.0
+                        }
+                    })
+                } else {
+                    let matched = lex_matched_idf.get(&id).copied().unwrap_or(0.0);
+                    if total_idf > f32::EPSILON {
+                        (matched / total_idf).clamp(0.0, 1.0)
+                    } else {
+                        0.0
+                    }
+                };
+                if ls > 0.0 {
+                    ml = ml.max(ls);
+                    lex_pairs.push((id, ls));
+                }
+                let ss = semantic.get(&id).copied().unwrap_or(0.0);
+                if ss > 0.0 {
+                    ms = ms.max(ss);
+                    sem_pairs.push((id, ss));
+                }
+            }
+            lex_pairs.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+            sem_pairs.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+            let lrm: HashMap<u64, usize> = lex_pairs
+                .iter()
+                .enumerate()
+                .map(|(r, (id, _))| (*id, r))
+                .collect();
+            let srm: HashMap<u64, usize> = sem_pairs
+                .iter()
+                .enumerate()
+                .map(|(r, (id, _))| (*id, r))
+                .collect();
+            (lrm, srm, ml, ms)
+        } else {
+            (HashMap::new(), HashMap::new(), 1.0, 1.0)
+        };
+        const STAGE3C_RRF_K: f32 = 60.0;
+        const STAGE3C_LEX_TAU: f32 = 0.80;
+        const STAGE3C_W_LEX: f32 = 0.42;
+        const STAGE3C_W_SEM: f32 = 0.58;
+
         let mut base_records: HashMap<u64, (f32, f32, f32, u64)> = HashMap::new(); // (lex, sem, base_support, created_at)
         for &id in &candidate_ids {
             let Some(record) = self.store.get_record(id).ok().flatten() else {
                 continue;
             };
             let matched = lex_matched_idf.get(&id).copied().unwrap_or(0.0);
-            let lex_support = if total_idf > f32::EPSILON {
+            let lex_support = if self.stage4a_scoring {
+                stage4a_lex_scores.get(&id).copied().unwrap_or_else(|| {
+                    if total_idf > f32::EPSILON {
+                        (matched / total_idf).clamp(0.0, 1.0)
+                    } else {
+                        0.0
+                    }
+                })
+            } else if total_idf > f32::EPSILON {
                 (matched / total_idf).clamp(0.0, 1.0)
             } else {
                 0.0
             };
             let sem_support = semantic.get(&id).copied().unwrap_or(0.0);
-            let support = lex_support.max(sem_support);
+            let open_pref_fuse =
+                self.stage4a_scoring && crate::ghrr_algebra::is_open_preference_query(&q.query);
+            let support = if self.stage4a_scoring && !sem_rank_map.is_empty() {
+                // Query-level uniform monotone fusion: keep strong lexical precision dominant
+                // across ALL candidates (no per-record scale switching), while letting the
+                // semantic lane rescue low-lexical / paraphrase / open-preference queries.
+                let (w_lex, w_sem) = if max_lex_score >= 0.52 && !open_pref_fuse {
+                    (0.72_f32, 0.28_f32)
+                } else {
+                    (STAGE3C_W_LEX, STAGE3C_W_SEM)
+                };
+                let lex_strength = (lex_support / max_lex_score).clamp(0.0, 1.0);
+                let sem_strength = (sem_support / max_sem_score).clamp(0.0, 1.0);
+                let r_lex = lex_rank_map.get(&id).map_or(0.0, |&r| {
+                    w_lex * lex_strength / (STAGE3C_RRF_K + (r as f32) + 1.0)
+                });
+                let r_sem = sem_rank_map.get(&id).map_or(0.0, |&r| {
+                    w_sem * sem_strength / (STAGE3C_RRF_K + (r as f32) + 1.0)
+                });
+                let rrf_norm =
+                    ((r_lex + r_sem) * ((STAGE3C_RRF_K + 1.0) / (w_lex + w_sem))).clamp(0.0, 1.0);
+                let cont = if max_lex_score >= 0.52 && !open_pref_fuse {
+                    w_lex * lex_support + w_sem * sem_support
+                } else {
+                    (w_lex * lex_support + w_sem * sem_support).max(sem_support * 0.90)
+                };
+                (0.35 * rrf_norm + 0.65 * cont).clamp(0.0, 1.0)
+            } else if self.hybrid_rrf && !sem_rank_map.is_empty() && lex_support < STAGE3C_LEX_TAU {
+                // Strength-weighted RRF prevents near-zero garbage cosine/lex hits from double-dipping rank sum
+                let lex_strength = (lex_support / max_lex_score).clamp(0.0, 1.0);
+                let sem_strength = (sem_support / max_sem_score).clamp(0.0, 1.0);
+                let r_lex = lex_rank_map.get(&id).map_or(0.0, |&r| {
+                    STAGE3C_W_LEX * lex_strength / (STAGE3C_RRF_K + (r as f32) + 1.0)
+                });
+                let r_sem = sem_rank_map.get(&id).map_or(0.0, |&r| {
+                    STAGE3C_W_SEM * sem_strength / (STAGE3C_RRF_K + (r as f32) + 1.0)
+                });
+                let rrf_norm = ((r_lex + r_sem)
+                    * ((STAGE3C_RRF_K + 1.0) / (STAGE3C_W_LEX + STAGE3C_W_SEM)))
+                    .clamp(0.0, 1.0);
+                let cont = (STAGE3C_W_LEX * lex_support + STAGE3C_W_SEM * sem_support)
+                    .max(sem_support * 0.90);
+                (0.55 * rrf_norm + 0.45 * cont).clamp(0.0, 1.0)
+            } else {
+                lex_support.max(sem_support)
+            };
             base_records.insert(id, (lex_support, sem_support, support, record.created_at()));
         }
 
@@ -2864,6 +3325,112 @@ impl Substrate {
                     }
                 }
                 final_support = next_acts;
+            }
+        }
+
+        // Stage 5A HippoRAG-2 Dialog Turn-Pair Adjacency Diffusion:
+        // Propagate support between paired (User turn id-1 <-> Assistant turn id) dialogue turns
+        // when verbose assistant echoes outscore concise user preference/fact declarations.
+        if self.stage4a_scoring && !final_support.is_empty() {
+            let open_pref_q = crate::ghrr_algebra::is_open_preference_query(&q.query);
+            let asst_recall_q = crate::ghrr_algebra::is_assistant_recall_query(&q.query);
+            let is_asst_role = |src: &str, txt: &str| -> bool {
+                src.contains(":assistant,")
+                    || src.ends_with(":assistant")
+                    || crate::ghrr_algebra::is_assistant_styled(txt)
+            };
+            let mut top_seeds: Vec<(u64, f32)> =
+                final_support.iter().map(|(&k, &v)| (k, v)).collect();
+            top_seeds.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+            top_seeds.truncate(10);
+            for (seed_id, seed_sup) in top_seeds {
+                if seed_sup < 0.30 {
+                    continue;
+                }
+                let Some(seed_rec) = self.store.get_record(seed_id).ok().flatten() else {
+                    continue;
+                };
+                let seed_asst = is_asst_role(seed_rec.source(), seed_rec.content());
+                let seed_sess = seed_rec.source().split(',').nth(1).unwrap_or("");
+                if !asst_recall_q && seed_asst && seed_id > 1 {
+                    let prev_id = seed_id - 1;
+                    let visible = self.recall_record_visible(prev_id, sanctuary_sealed)
+                        && q.scope
+                            .as_ref()
+                            .is_none_or(|sc| self.record_in_view(prev_id, sc));
+                    if visible && let Some(prev_rec) = self.store.get_record(prev_id).ok().flatten()
+                    {
+                        let prev_sess = prev_rec.source().split(',').nth(1).unwrap_or("");
+                        if seed_sess.is_empty() || prev_sess == seed_sess {
+                            let prev_txt = prev_rec.content();
+                            if !is_asst_role(prev_rec.source(), prev_txt) {
+                                let fp = crate::ghrr_algebra::first_person_user_score(prev_txt);
+                                let boost = if open_pref_q {
+                                    Some((seed_sup * 0.98 + 0.08 * fp).clamp(0.0, 1.0))
+                                } else if counts.contains_key(&prev_id) && fp >= 0.25 {
+                                    Some((seed_sup * 0.88).clamp(0.0, 1.0))
+                                } else {
+                                    None
+                                };
+                                if let Some(b_val) = boost {
+                                    let cur = final_support.get(&prev_id).copied().unwrap_or(0.0);
+                                    if b_val > cur {
+                                        final_support.insert(prev_id, b_val);
+                                        base_records.entry(prev_id).or_insert((
+                                            stage4a_lex_scores
+                                                .get(&prev_id)
+                                                .copied()
+                                                .unwrap_or(0.0),
+                                            semantic.get(&prev_id).copied().unwrap_or(0.0),
+                                            b_val,
+                                            prev_rec.created_at(),
+                                        ));
+                                        if !candidate_ids.contains(&prev_id) {
+                                            candidate_ids.push(prev_id);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if asst_recall_q && !seed_asst {
+                    let next_id = seed_id + 1;
+                    let visible = self.recall_record_visible(next_id, sanctuary_sealed)
+                        && q.scope
+                            .as_ref()
+                            .is_none_or(|sc| self.record_in_view(next_id, sc));
+                    if visible && let Some(next_rec) = self.store.get_record(next_id).ok().flatten()
+                    {
+                        let next_sess = next_rec.source().split(',').nth(1).unwrap_or("");
+                        let ntxt = next_rec.content();
+                        let nlow = ntxt.to_lowercase();
+                        let is_clarify = nlow.contains("need a bit more information")
+                            || nlow.contains("could you please tell me")
+                            || nlow.contains("could you clarify");
+                        if (seed_sess.is_empty() || next_sess == seed_sess)
+                            && is_asst_role(next_rec.source(), ntxt)
+                            && !is_clarify
+                            && ntxt.len() >= 16
+                            && (counts.contains_key(&next_id) || self.rerank_spore.is_some())
+                        {
+                            let b_val = (seed_sup * 1.08).clamp(0.0, 1.0);
+                            let cur = final_support.get(&next_id).copied().unwrap_or(0.0);
+                            if b_val > cur {
+                                final_support.insert(next_id, b_val);
+                                final_support.insert(seed_id, (seed_sup * 0.88).clamp(0.0, 1.0));
+                                base_records.entry(next_id).or_insert((
+                                    stage4a_lex_scores.get(&next_id).copied().unwrap_or(0.0),
+                                    semantic.get(&next_id).copied().unwrap_or(0.0),
+                                    b_val,
+                                    next_rec.created_at(),
+                                ));
+                                if !candidate_ids.contains(&next_id) {
+                                    candidate_ids.push(next_id);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -2939,7 +3506,12 @@ impl Substrate {
                 || lower_content.contains("approved value")
                 || lower_content.contains("active value");
 
-            let mut key = support * (1.0 + self.policy.recency_weight * recency);
+            let eff_recency_w = if self.stage4a_scoring {
+                self.policy.recency_weight.min(0.012)
+            } else {
+                self.policy.recency_weight
+            };
+            let mut key = support * (1.0 + eff_recency_w * recency);
             if is_temporal_match {
                 key += 1.5;
             }
@@ -2966,6 +3538,287 @@ impl Substrate {
                 lex_support,
                 created_at,
             ));
+        }
+
+        // Stage 7D Quantized `WM7D` Neural Reranker (`ColBERT MaxSim` + Banded Evidence Tie-Breaking)
+        if self.stage4a_scoring
+            && !scored.is_empty()
+            && let Some(ref spore) = self.rerank_spore
+        {
+            scored.sort_by(|a, b| {
+                a.5.cmp(&b.5)
+                    .then_with(|| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal))
+                    .then(b.3.cmp(&a.3))
+            });
+            let top1_key = scored[0].0;
+            let band_floor = (top1_key - 0.25).max(0.45 * top1_key);
+            let rerank_n = scored
+                .iter()
+                .take(12)
+                .take_while(|row| row.0 >= band_floor)
+                .count();
+            if rerank_n >= 2 {
+                let mut lex_order: Vec<usize> = (0..rerank_n).collect();
+                lex_order.sort_by(|&ia, &ib| {
+                    scored[ib]
+                        .6
+                        .partial_cmp(&scored[ia].6)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                });
+                let mut pre_rank_map = vec![0usize; rerank_n];
+                for (r, &idx) in lex_order.iter().enumerate() {
+                    pre_rank_map[idx] = r;
+                }
+
+                let mut cand_records: Vec<(String, String)> = Vec::with_capacity(rerank_n);
+                let mut adj_features: Vec<(f32, bool, f32, bool)> = Vec::with_capacity(rerank_n);
+                for entry in scored.iter().take(rerank_n) {
+                    let id = entry.3;
+                    let rec = self.store.get_record(id).ok().flatten();
+                    let content = rec
+                        .as_ref()
+                        .map(|r| r.content().to_string())
+                        .unwrap_or_default();
+                    let source = rec
+                        .as_ref()
+                        .map(|r| r.source().to_string())
+                        .unwrap_or_default();
+                    let cur_sess = source.split(',').nth(1).unwrap_or("");
+
+                    let mut prev_lex = 0.0_f32;
+                    let mut prev_is_uq = false;
+                    if id > 1
+                        && let Ok(Some(prec)) = self.store.get_record(id - 1)
+                    {
+                        let ps = prec.source();
+                        let p_sess = ps.split(',').nth(1).unwrap_or("");
+                        if cur_sess.is_empty() || p_sess == cur_sess {
+                            prev_lex = stage4a_lex_scores.get(&(id - 1)).copied().unwrap_or(0.0);
+                            let ptxt = prec.content();
+                            let p_asst = ps.contains(":assistant,")
+                                || ps.ends_with(":assistant")
+                                || crate::ghrr_algebra::is_assistant_styled(ptxt);
+                            if !p_asst && ptxt.trim().ends_with('?') {
+                                prev_is_uq = true;
+                            }
+                        }
+                    }
+
+                    let mut next_lex = 0.0_f32;
+                    let mut next_is_a = false;
+                    if let Ok(Some(nrec)) = self.store.get_record(id + 1) {
+                        let ns = nrec.source();
+                        let n_sess = ns.split(',').nth(1).unwrap_or("");
+                        if cur_sess.is_empty() || n_sess == cur_sess {
+                            next_lex = stage4a_lex_scores.get(&(id + 1)).copied().unwrap_or(0.0);
+                            next_is_a = ns.contains(":assistant,")
+                                || ns.ends_with(":assistant")
+                                || crate::ghrr_algebra::is_assistant_styled(nrec.content());
+                        }
+                    }
+
+                    adj_features.push((prev_lex, prev_is_uq, next_lex, next_is_a));
+                    cand_records.push((content, source));
+                }
+
+                let inputs: Vec<crate::rerank_spore::RerankCandidateInput<'_>> = (0..rerank_n)
+                    .map(|idx| {
+                        let (_key, support, sem, id, sup, _stratum, lex, created_at) = scored[idx];
+                        let recency_norm = if n > 0 {
+                            created_at as f32 / n as f32
+                        } else {
+                            0.0
+                        };
+                        let (ref content, ref source) = cand_records[idx];
+                        let temporal_hit = temporal_anchor
+                            .as_ref()
+                            .is_some_and(|d| content.contains(d.as_str()));
+                        let (
+                            prev_turn_lex,
+                            prev_turn_is_user_question,
+                            next_turn_lex,
+                            next_turn_is_asst,
+                        ) = adj_features[idx];
+                        crate::rerank_spore::RerankCandidateInput {
+                            record_id: id,
+                            content,
+                            source,
+                            lex_support: lex,
+                            sem_support: sem,
+                            hybrid_support: support,
+                            pre_rank: pre_rank_map[idx],
+                            recency_norm,
+                            superseded: sup.is_some(),
+                            temporal_hit,
+                            prev_turn_lex,
+                            prev_turn_is_user_question,
+                            next_turn_lex,
+                            next_turn_is_asst,
+                        }
+                    })
+                    .collect();
+
+                let feats = spore.score_pool_detailed(&q.query, &inputs);
+                let colbert_raw: Vec<f32> = feats
+                    .iter()
+                    .map(|f| {
+                        0.40 * f.maxsim_high_idf + 0.28 * f.maxsim_weighted + 0.32 * f.maxsim_min_c
+                    })
+                    .collect();
+                let mean_cb = colbert_raw.iter().sum::<f32>() / (rerank_n as f32);
+                let mean_rec =
+                    feats.iter().map(|f| f.recency_norm).sum::<f32>() / (rerank_n as f32);
+                let mean_lex = (0..rerank_n).map(|i| scored[i].6).sum::<f32>() / (rerank_n as f32);
+
+                let q_low = q.query.to_lowercase();
+                let is_asst_q = crate::ghrr_algebra::is_assistant_recall_query(&q.query);
+                let is_open_pref_q = crate::ghrr_algebra::is_open_preference_query(&q.query);
+                let is_money_q = q_low.contains("how much")
+                    || q_low.contains("cost")
+                    || q_low.contains("price")
+                    || q_low.contains("spend")
+                    || q_low.contains("spent")
+                    || q_low.contains("paid")
+                    || q_low.contains("pay ");
+                let is_count_q = q_low.contains("how many")
+                    || q_low.contains("times have")
+                    || q_low.contains("number of")
+                    || q_low.contains("how often");
+                let is_time_q = q_low.starts_with("when ")
+                    || q_low.contains(" when ")
+                    || q_low.contains("what date")
+                    || q_low.contains("which date")
+                    || q_low.contains("how long")
+                    || q_low.contains("months ago")
+                    || q_low.contains("weeks ago");
+                let is_where_q = q_low.starts_with("where ")
+                    || q_low.contains(" where ")
+                    || q_low.contains("which city")
+                    || q_low.contains("which state")
+                    || q_low.contains("which country");
+                let is_previous_q = q_low.contains("previous")
+                    || q_low.contains("earlier")
+                    || q_low.contains("used to")
+                    || q_low.contains("former")
+                    || q_low.contains("initial");
+                let is_recency_tie_q = !is_previous_q
+                    && (q_low.contains("most recent")
+                        || q_low.contains("recently")
+                        || q_low.contains("currently")
+                        || q_low.contains("latest")
+                        || q_low.contains("times have")
+                        || q_low.contains("how long have")
+                        || q_low.contains("increase or decrease")
+                        || q_low.contains("last month"));
+
+                for (idx, f) in feats.into_iter().enumerate() {
+                    let cb = colbert_raw[idx];
+                    if !cb.is_finite() {
+                        continue;
+                    }
+                    let delta_cb = if is_asst_q {
+                        (0.18 * (cb - mean_cb)).clamp(-0.04, 0.04)
+                    } else {
+                        (0.36 * (cb - mean_cb)).clamp(-0.08, 0.08)
+                    };
+                    let content_low = cand_records[idx].0.to_lowercase();
+                    let has_asst_sep = content_low.contains("\nassistant:");
+                    let speaker_delta = if !is_asst_q {
+                        if f.tag_asst > 0.5 || (has_asst_sep && f.is_asst_styled) {
+                            if f.facts.proper_noun_count >= 2
+                                && f.first_person_u < 0.05
+                                && f.is_question_turn < 0.5
+                            {
+                                -0.075
+                            } else {
+                                -0.145
+                            }
+                        } else if f.tag_user < 0.5 && f.is_asst_styled && f.first_person_u < 0.15 {
+                            -0.105
+                        } else if f.tag_user > 0.5 && f.first_person_u >= 0.35 {
+                            0.025
+                        } else {
+                            0.0
+                        }
+                    } else if f.tag_asst > 0.5 {
+                        0.12
+                    } else if f.tag_user > 0.5 {
+                        -0.06
+                    } else {
+                        0.0
+                    };
+                    let is_solicitation = content_low.contains("can you remind me")
+                        || content_low.contains("can you give me")
+                        || content_low.contains("can you tell me")
+                        || content_low.contains("could you recommend")
+                        || content_low.contains("do you know any")
+                        || content_low.contains("do you have any recommendations")
+                        || content_low.contains("do you have any suggestions");
+                    let qtrap_delta = if !is_asst_q && !is_open_pref_q {
+                        if f.is_meta_clarify
+                            || (f.is_question_turn >= 0.9
+                                && is_solicitation
+                                && !f.facts.has_dollar
+                                && !f.facts.has_digit
+                                && f.facts.proper_noun_count == 0)
+                        {
+                            -0.085
+                        } else {
+                            0.0
+                        }
+                    } else if is_open_pref_q && f.tag_asst < 0.5 && f.first_person_u >= 0.40 {
+                        0.04
+                    } else {
+                        0.0
+                    };
+                    let mut atype_delta = 0.0_f32;
+                    if is_money_q {
+                        if f.facts.has_dollar {
+                            atype_delta += 0.075;
+                        } else if f.facts.has_digit {
+                            atype_delta += 0.03;
+                        } else if f.is_question_turn >= 0.8 {
+                            atype_delta -= 0.04;
+                        }
+                    } else if is_count_q {
+                        if (f.facts.has_digit && !f.facts.has_dollar) || f.facts.has_num_word {
+                            atype_delta += 0.02;
+                        }
+                    } else if is_time_q {
+                        if f.facts.has_month_or_date {
+                            atype_delta += 0.045;
+                        } else if f.facts.has_digit || f.facts.has_num_word {
+                            atype_delta += 0.025;
+                        } else if f.is_question_turn >= 0.8 {
+                            atype_delta -= 0.03;
+                        }
+                    } else if is_where_q && f.facts.proper_noun_count >= 1 {
+                        atype_delta += 0.045;
+                    }
+                    let recency_tie_delta =
+                        if is_recency_tie_q && (top1_key - scored[idx].0) <= 0.10 {
+                            0.115 * (f.recency_norm - mean_rec)
+                        } else if is_previous_q && (top1_key - scored[idx].0) <= 0.10 {
+                            let mut p_d = -0.055 * (f.recency_norm - mean_rec);
+                            if content_low.contains("previous") {
+                                p_d += 0.045;
+                            }
+                            p_d
+                        } else {
+                            0.0
+                        };
+                    let lex_tie_delta = if is_asst_q {
+                        0.02 * (scored[idx].6 - mean_lex)
+                    } else {
+                        0.06 * (scored[idx].6 - mean_lex)
+                    };
+                    let tie_sub = (delta_cb + atype_delta + recency_tie_delta + lex_tie_delta)
+                        .clamp(-0.14, 0.14);
+                    let total_delta = (speaker_delta + qtrap_delta + tie_sub).clamp(-0.20, 0.18);
+                    scored[idx].0 = (scored[idx].0 + total_delta).max(0.001);
+                    scored[idx].1 = (scored[idx].1 + 0.5 * total_delta).clamp(0.0, 1.0);
+                }
+            }
         }
 
         if scored.is_empty() {
@@ -3122,7 +3975,113 @@ impl Substrate {
         } else {
             q.candidate_limit
         };
-        scored.truncate(limit.min(candidate_limit.max(1)));
+        let target_n = limit.min(candidate_limit.max(1));
+
+        // Stage 7D Fast O(N^2) Anti-Redundancy MMR pass on top window (`<= 24`): keeps #1 untouched,
+        // then suppresses near-duplicate boilerplate echoes via sorted FNV-1a token hashes (< 0.05ms).
+        if self.stage4a_scoring && self.rerank_spore.is_some() && scored.len() > 2 && target_n > 1 {
+            let pool_n = scored.len().min(24.min(target_n.max(12)));
+            let mut tok_hashes: Vec<Vec<u64>> = Vec::with_capacity(pool_n);
+            for &(_, _, _, cid, _, _, _, _) in &scored[..pool_n] {
+                let mut hashes: Vec<u64> = self
+                    .store
+                    .get_record(cid)
+                    .ok()
+                    .flatten()
+                    .map(|r| {
+                        r.content()
+                            .split(|c: char| !c.is_ascii_alphanumeric())
+                            .filter(|w| w.len() >= 3)
+                            .map(|w| {
+                                let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+                                for &b in w.as_bytes() {
+                                    h ^= u64::from(b.to_ascii_lowercase());
+                                    h = h.wrapping_mul(0x0100_0000_01b3);
+                                }
+                                h
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                hashes.sort_unstable();
+                hashes.dedup();
+                tok_hashes.push(hashes);
+            }
+            let jaccard_sorted = |a: &[u64], b: &[u64]| -> f32 {
+                if a.is_empty() || b.is_empty() {
+                    return 0.0;
+                }
+                let (mut i, mut j, mut inter) = (0usize, 0usize, 0usize);
+                while i < a.len() && j < b.len() {
+                    match a[i].cmp(&b[j]) {
+                        std::cmp::Ordering::Less => i += 1,
+                        std::cmp::Ordering::Greater => j += 1,
+                        std::cmp::Ordering::Equal => {
+                            inter += 1;
+                            i += 1;
+                            j += 1;
+                        }
+                    }
+                }
+                let uni = (a.len() + b.len() - inter) as f32;
+                if uni > 0.0 { (inter as f32) / uni } else { 0.0 }
+            };
+            let mut used = vec![false; pool_n];
+            let mut max_sim = vec![0.0_f32; pool_n];
+            let mut mmr_selected = Vec::with_capacity(pool_n);
+            used[0] = true;
+            mmr_selected.push(0usize);
+            let mut last_sel = 0usize;
+            for _step in 1..pool_n {
+                let last_stratum = scored[last_sel].5;
+                let mut best_i = None;
+                let mut best_key = (u8::MAX, f32::NEG_INFINITY, 0u64);
+                for cand_i in 0..pool_n {
+                    if used[cand_i] {
+                        continue;
+                    }
+                    let c = scored[cand_i];
+                    if c.5 == last_stratum {
+                        let sim = jaccard_sorted(&tok_hashes[cand_i], &tok_hashes[last_sel]);
+                        if sim > max_sim[cand_i] {
+                            max_sim[cand_i] = sim;
+                        }
+                    }
+                    let max_j = max_sim[cand_i];
+                    let div_pen = if max_j > 0.50 {
+                        (max_j - 0.50) * 2.2
+                    } else {
+                        0.0
+                    };
+                    let eff_key = c.0 - div_pen;
+                    let better = match c.5.cmp(&best_key.0) {
+                        std::cmp::Ordering::Less => true,
+                        std::cmp::Ordering::Greater => false,
+                        std::cmp::Ordering::Equal => {
+                            eff_key > best_key.1
+                                || ((eff_key - best_key.1).abs() <= 1e-6 && c.3 > best_key.2)
+                        }
+                    };
+                    if best_i.is_none() || better {
+                        best_i = Some(cand_i);
+                        best_key = (c.5, eff_key, c.3);
+                    }
+                }
+                if let Some(bi) = best_i {
+                    used[bi] = true;
+                    mmr_selected.push(bi);
+                    last_sel = bi;
+                }
+            }
+            let mut reordered = Vec::with_capacity(scored.len());
+            for si in mmr_selected {
+                reordered.push(scored[si]);
+            }
+            reordered.extend_from_slice(&scored[pool_n..]);
+            scored = reordered;
+        }
+
+        scored.truncate(target_n);
 
         let mut hits = Vec::new();
         let mut selected_json = Vec::new();
@@ -4048,6 +5007,8 @@ impl Substrate {
                 "enabled": self.projection.is_some(),
                 "gated": self.projection_gated,
                 "gate_count": self.projection_gate_count,
+                "gate_multi": self.projection_gate_multi,
+                "hybrid_rrf": self.hybrid_rrf,
                 "model": MODEL_ID,
                 "dim": DIM,
                 "tau_gate": TAU_GATE,
@@ -8826,6 +9787,75 @@ mod gated_tests {
         assert_eq!(events[2]["lexical_candidates"], 0);
         // Diagnostic field present (zero behavioral effect).
         assert!(events[0]["relation_involved_candidates"].as_u64().is_some());
+    }
+
+    /// Stage 3C: Multi-Incidence Sufficiency Gate fires on `O_{+2}` queries where `counts.len() >= 2`
+    /// but max lexical IDF support is partial/weak (`< 0.45`), while staying dormant on high-confidence
+    /// multi-candidate matches (`>= 0.45`). Also verifies `RoaringMemoryIndex` consent ring filtering.
+    #[test]
+    fn stage3c_multi_gate_closes_o2_and_roaring_consent_filters() {
+        let dir = crate::embed_cache_dir_or_panic();
+        let store_path = temp_store("stage3c-multi-gate");
+        let journal_path = store_path.with_extension("journal.jsonl");
+        let mut s =
+            Substrate::open(&store_path, Some(&journal_path), default_view()).expect("open");
+        s.set_projection_enabled(true, Some(&dir))
+            .expect("projection loads");
+        s.set_projection_gate_multi(true);
+        s.set_hybrid_rrf(true);
+        s.set_arbitration(Arbitration::Structural);
+        s.remember_batch(&[
+            RememberItem {
+                content: "the red sofa sits in the lobby".into(),
+                source: "corpus:codex:ring1,s1".into(),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "the blue table sits in the lobby".into(),
+                source: "corpus:sanctuary:ring3,s2".into(),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "the north bay loading dock handles freight".into(),
+                source: "corpus:commons:ring0,s3".into(),
+                kind: ImportKind::Reported,
+            },
+            RememberItem {
+                content: "the north bay loading dock schedules freight".into(),
+                source: "corpus:commons:ring0,s4".into(),
+                kind: ImportKind::Reported,
+            },
+        ]);
+
+        // Weak partial overlap across 2 records ("lobby" matches 2 docs, 4 other tokens miss) -> MUST fire S!
+        let hits = s.recall_expect(&q("velvet sectional couch inside lobby entrance"));
+        assert!(!hits.is_empty());
+        // Strong multi-token lexical overlap across >= 2 docs -> stays dormant!
+        let _ = s.recall_expect(&q("north bay loading dock"));
+
+        let events = gate_events(&journal_path);
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0]["lexical_candidates"], 2);
+        assert_eq!(
+            events[0]["fired"], true,
+            "Stage 3C multi-gate must wake on weak mm>=2 query: {}",
+            events[0]
+        );
+        assert_eq!(events[1]["lexical_candidates"], 2);
+        assert_eq!(
+            events[1]["fired"], false,
+            "Stage 3C multi-gate must stay dormant on strong mm>=2 query: {}",
+            events[1]
+        );
+
+        let roaring = s.build_roaring_consent_index();
+        let ring0_only = roaring.query_records(&["live"], 0);
+        let ring0_and_1 = roaring.query_records(&["live"], 1);
+        assert_eq!(ring0_only.len(), 2);
+        assert_eq!(ring0_and_1.len(), 3);
+        assert_eq!(roaring.query_records(&["codex"], 1).len(), 1);
+        assert!(roaring.query_records(&["sanctuary"], 1).is_empty());
+        assert_eq!(roaring.query_records(&["sanctuary"], 3).len(), 1);
     }
 
     #[test]

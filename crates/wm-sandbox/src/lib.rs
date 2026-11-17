@@ -536,3 +536,40 @@ pub fn run_self_test() -> bool {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_stage3d_landlock_abi8_status_and_per_dispatch_confinement() {
+        let status = probe_sandbox_status();
+        if status.landlock_supported {
+            assert!(status.kernel_landlock_abi >= 4);
+            assert!(
+                run_self_test(),
+                "Landlock ABI {} self-test must pass FS RW/RO, credential lockout, and zero egress",
+                status.kernel_landlock_abi
+            );
+            // Per-dispatch sandboxed command execution: allowed command (/bin/true) passes,
+            // unauthorized read of ~/.bashrc fails inside confined child.
+            let builder = SandboxBuilder::new();
+            let ok_status = builder
+                .spawn_command("/bin/true", &[])
+                .expect("spawn confined /bin/true");
+            assert!(ok_status.success());
+
+            let home = env::var("HOME").unwrap_or_else(|_| "/home/lucas".to_string());
+            let bashrc = format!("{home}/.bashrc");
+            if PathBuf::from(&bashrc).exists() {
+                let deny_status = builder
+                    .spawn_command("/bin/cat", &[bashrc])
+                    .expect("spawn confined /bin/cat ~/.bashrc");
+                assert!(
+                    !deny_status.success(),
+                    "Landlock per-dispatch sandbox must deny reading ~/.bashrc"
+                );
+            }
+        }
+    }
+}

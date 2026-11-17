@@ -418,6 +418,89 @@ impl Firebreak {
         }
     }
 
+    /// Stage 3D `agmi` adversarial normalizer: strips invisible zero-width/BiDi
+    /// format characters and folds fullwidth ASCII + Cyrillic/Greek homoglyphs
+    /// back to canonical ASCII so obfuscated commands/credentials cannot bypass.
+    fn normalize_agmi(input: &str) -> String {
+        let mut out = String::with_capacity(input.len());
+        for ch in input.chars() {
+            if matches!(
+                ch,
+                '\u{00AD}'
+                    | '\u{034F}'
+                    | '\u{061C}'
+                    | '\u{180E}'
+                    | '\u{200B}'..='\u{200F}'
+                    | '\u{202A}'..='\u{202E}'
+                    | '\u{2060}'..='\u{206F}'
+                    | '\u{FE00}'..='\u{FE0F}'
+                    | '\u{FEFF}'
+            ) {
+                continue;
+            }
+            if ('\u{FF01}'..='\u{FF5E}').contains(&ch) {
+                if let Some(asc) = char::from_u32(u32::from(ch) - 0xFF01 + 0x21) {
+                    out.push(asc);
+                    continue;
+                }
+            }
+            if ch == '\u{FF00}' || ch == '\u{3000}' {
+                out.push(' ');
+                continue;
+            }
+            let folded = match ch {
+                'а' | 'А' | 'α' | 'Α' => {
+                    if ch.is_uppercase() {
+                        'A'
+                    } else {
+                        'a'
+                    }
+                }
+                'в' | 'В' | 'β' | 'Β' => 'b',
+                'с' | 'С' | 'ς' => {
+                    if ch == 'С' {
+                        'C'
+                    } else {
+                        'c'
+                    }
+                }
+                'ԁ' | 'Ԁ' => 'd',
+                'е' | 'Е' | 'ε' | 'Ε' => {
+                    if ch.is_uppercase() {
+                        'E'
+                    } else {
+                        'e'
+                    }
+                }
+                'һ' | 'Н' | 'н' | 'Η' => 'h',
+                'і' | 'І' | 'ι' | 'Ι' | 'ӏ' => 'i',
+                'ј' | 'Ј' => 'j',
+                'к' | 'К' | 'κ' | 'Κ' => 'k',
+                'м' | 'М' | 'Μ' => 'm',
+                'п' | 'ν' | 'Ν' => 'n',
+                'о' | 'О' | 'ο' | 'Ο' => {
+                    if ch.is_uppercase() {
+                        'O'
+                    } else {
+                        'o'
+                    }
+                }
+                'р' | 'Р' | 'ρ' | 'Ρ' => 'p',
+                'г' | 'ґ' => 'r',
+                'ѕ' | 'Ѕ' => 's',
+                'т' | 'Т' | 'τ' | 'Τ' => 't',
+                'у' | 'У' | 'ү' | 'Υ' => 'y',
+                'ѵ' => 'v',
+                'х' | 'Х' | 'χ' | 'Χ' => 'x',
+                '‐' | '‑' | '‒' | '–' | '—' | '−' => '-',
+                '⁄' | '∕' => '/',
+                _ => ch,
+            };
+            out.push(folded);
+        }
+        out
+    }
+
     /// Bounded scan windows for one string: the string itself when small,
     /// otherwise a char-boundary-safe prefix and suffix of [`MAX_SCAN_LEN`]
     /// bytes each. Anchored patterns (`$`) still see the true string end in
@@ -503,11 +586,14 @@ impl Firebreak {
         let mut findings = Vec::new();
         for s in std::iter::once(tool).chain(strings) {
             let excerpt: String = s.chars().take(80).collect();
-            let (windows, fully_covered) = Self::bounded_windows(s);
+            let norm_s = Self::normalize_agmi(s);
+            let (raw_windows, fully_covered_raw) = Self::bounded_windows(s);
+            let (norm_windows, fully_covered_norm) = Self::bounded_windows(&norm_s);
+            let fully_covered = fully_covered_raw && fully_covered_norm;
             let mut forbidden_pattern: Option<&'static str> = None;
             let mut dangerous = false;
             let mut caution = false;
-            for &window in &windows {
+            for window in raw_windows.into_iter().chain(norm_windows) {
                 if forbidden_pattern.is_none() {
                     if let Some(first) = self.forbidden.matches(window).into_iter().next() {
                         forbidden_pattern = Some(self.forbidden_sources[first]);
@@ -1197,5 +1283,32 @@ mod tests {
                 "lookalike prefix must not trip the boundary: {payload}"
             );
         }
+    }
+
+    #[test]
+    fn stage3d_agmi_blocks_homoglyph_zwsp_and_fullwidth_bypasses() {
+        for obfuscated in [
+            "r\u{200B}m\u{FEFF} -rf /",
+            "гм -rf /",
+            "\u{FF52}\u{FF4D} -rf /",
+            "/home/alice/.s\u{200B}sh/id_еd25519",
+            "bash\u{2060} -c 'rm -rf /'",
+        ] {
+            assert!(
+                matches!(
+                    verdict_for(obfuscated, true),
+                    FirebreakVerdict::Forbidden { .. }
+                ),
+                "Stage 3D agmi normalizer must catch obfuscated bypass: {obfuscated:?}"
+            );
+        }
+        // Zero false positives on benign Unicode prose
+        assert_eq!(
+            fb().evaluate(
+                "mandala.evaluate",
+                &json!({ "note": "Café metrics — Landlock ABI 8 verified at 99.9%" })
+            ),
+            FirebreakVerdict::Allow
+        );
     }
 }

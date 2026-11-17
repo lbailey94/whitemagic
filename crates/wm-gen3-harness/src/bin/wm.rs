@@ -412,6 +412,12 @@ enum Commands {
         /// Bind address for --transport http|sse (default: 127.0.0.1:18780)
         #[arg(long, default_value = "127.0.0.1:18780")]
         bind: String,
+        /// Harness compatibility flag (0 = unlimited)
+        #[arg(long, hide = true, default_value_t = 0)]
+        max_requests: u64,
+        /// Harness compatibility flag (0 = unlimited)
+        #[arg(long, hide = true, default_value_t = 0)]
+        rate_limit: u64,
     },
     /// Mandala P2P Mesh & Sovereign Synchronization
     Mesh {
@@ -2052,10 +2058,21 @@ fn main() {
                 match cache_dir {
                     Some(dir) => match substrate.set_projection_enabled(true, Some(&dir)) {
                         Ok(()) => {
-                            let gated = std::env::var("WM_GEN3_PROJECTION_GATED")
-                                .map(|v| v == "1")
-                                .unwrap_or(false);
-                            substrate.set_projection_gated(gated);
+                            let gated_env =
+                                std::env::var("WM_GEN3_PROJECTION_GATED").unwrap_or_default();
+                            match gated_env.as_str() {
+                                "multi" | "stage3c" => substrate.set_projection_gate_multi(true),
+                                "count" => substrate.set_projection_gate_count(true),
+                                "1" | "true" => substrate.set_projection_gated(true),
+                                _ => {}
+                            }
+                            if std::env::var("WM_GEN3_HYBRID_RRF")
+                                .map(|v| v == "1" || v == "true")
+                                .unwrap_or(false)
+                            {
+                                substrate.set_hybrid_rrf(true);
+                            }
+                            let gated = !gated_env.is_empty() && gated_env != "0";
                             recall_mode = if gated {
                                 "lexical+projection (gated)"
                             } else {
@@ -4041,6 +4058,8 @@ fn main() {
             legacy_store,
             transport,
             bind,
+            max_requests: _,
+            rate_limit: _,
         } => {
             let parsed_profile = profile;
             let sweep_enabled = sweep.unwrap_or(true) && !no_sweep;
@@ -4086,14 +4105,56 @@ fn main() {
 
                 substrate.set_intake_authority(RatifiedChannel::mint("wm-gen3-serve"));
                 substrate.set_sweep_enabled(sweep_enabled);
-                if projection {
-                    if let Err(e) = substrate.set_projection_enabled(true, embed_cache.as_deref()) {
+                let proj_enabled = projection
+                    || std::env::var("WM_GEN3_PROJECTION")
+                        .map(|v| v == "1" || v == "true")
+                        .unwrap_or(false);
+                let env_cache = std::env::var("WM_GEN3_EMBED_CACHE").ok().map(PathBuf::from);
+                let effective_cache = embed_cache.as_deref().or(env_cache.as_deref());
+                if proj_enabled {
+                    if let Err(e) = substrate.set_projection_enabled(true, effective_cache) {
                         eprintln!("gen3: projection enable failed: {e}");
                         std::process::exit(1);
                     }
                 }
+                let gated_env = std::env::var("WM_GEN3_PROJECTION_GATED").unwrap_or_default();
+                let (pg_floor, pg_count, pg_multi) = match gated_env.as_str() {
+                    "1" | "true" => (true, false, false),
+                    "count" => (false, true, false),
+                    "multi" | "stage3c" => (false, false, true),
+                    _ => (false, false, false),
+                };
+                substrate.set_projection_gated(pg_floor);
+                substrate.set_projection_gate_count(pg_count);
+                substrate.set_projection_gate_multi(pg_multi);
+                let hybrid_rrf = std::env::var("WM_GEN3_HYBRID_RRF")
+                    .map(|v| v == "1" || v == "true")
+                    .unwrap_or(false);
+                substrate.set_hybrid_rrf(hybrid_rrf);
+                let lazy_proj = std::env::var("WM_GEN3_LAZY_PROJECTION")
+                    .map(|v| v == "1" || v == "true")
+                    .unwrap_or(false);
+                substrate.set_lazy_projection(lazy_proj);
+                let stage4a = std::env::var("WM_GEN3_STAGE4A")
+                    .map(|v| v == "1" || v == "true")
+                    .unwrap_or(false);
+                substrate.set_stage4a_scoring(stage4a);
+                substrate.set_rerank_spore(wm_gen3_core::try_load_default_wm7d_spore());
+                match std::env::var("WM_GEN3_ARBITRATION").as_deref() {
+                    Ok("structural") => {
+                        substrate.set_arbitration(wm_gen3_core::ops::Arbitration::Structural);
+                    }
+                    Ok("sufficiency" | "qemem") => {
+                        substrate.set_arbitration(wm_gen3_core::ops::Arbitration::SufficiencyCover);
+                    }
+                    _ => {}
+                }
+                let effective_noise = noise_enabled
+                    && std::env::var("WM_GEN3_NOISE")
+                        .map(|v| v != "0")
+                        .unwrap_or(true);
                 substrate.set_dispersion(dispersion);
-                substrate.set_noise_enabled(noise_enabled);
+                substrate.set_noise_enabled(effective_noise);
 
                 eprintln!(
                     "gen3: serve store={} profile={:?} mode={} sweep={} projection={}",

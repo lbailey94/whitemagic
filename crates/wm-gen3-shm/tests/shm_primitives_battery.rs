@@ -306,3 +306,112 @@ fn test_portable_shm_name_validation() {
         .expect("empty name refused");
     assert_eq!(empty.kind(), std::io::ErrorKind::InvalidInput);
 }
+
+#[test]
+fn test_arena_untruncated_1kb_4kb_64kb_and_recycle() {
+    let sub = Arc::new(ShmSubstrate::anonymous().expect("anonymous shm"));
+    let space = ShmTupleSpace::new(Arc::clone(&sub));
+
+    for (idx, &size) in [1024usize, 4096, 65_536].iter().enumerate() {
+        let payload: Vec<u8> = (0..size)
+            .map(|i| ((i * 37 + idx * 13) % 251) as u8)
+            .collect();
+        let t = RawTuple {
+            id: Uuid::new_v4(),
+            kind_discriminator: 77,
+            resource_hash: 5000 + idx as u64,
+            holder_issuer_hash: 123,
+            resource_path: format!("/arena/{size}"),
+            tag: format!("size:{size}"),
+            payload: payload.clone(),
+            created_at_ms: 100,
+            expires_at_ms: 0,
+            landlock_token: [0u8; 32],
+            capability_mask: 0xFF,
+        };
+        space.out(&t).expect("out large arena tuple");
+        let peeked = space.rd_matching(Some(77), Some(5000 + idx as u64), 4, 100);
+        assert_eq!(peeked.len(), 1);
+        assert_eq!(peeked[0].payload.len(), size);
+        assert_eq!(peeked[0].payload, payload);
+
+        let taken = space
+            .in_matching(Some(77), Some(5000 + idx as u64), 100)
+            .expect("in_matching large tuple");
+        assert_eq!(taken.payload.len(), size);
+        assert_eq!(taken.payload, payload);
+    }
+
+    // 400 x 64 KiB roundtrips = 25.6 MiB > 15.9 MiB Arena capacity -> proves free-list block reuse!
+    let block_64k: Vec<u8> = (0..65_536).map(|i| (i % 199) as u8).collect();
+    for iter in 0..400u64 {
+        let t = RawTuple {
+            id: Uuid::new_v4(),
+            kind_discriminator: 88,
+            resource_hash: 9000 + iter,
+            holder_issuer_hash: 1,
+            resource_path: "/arena/recycle".into(),
+            tag: "recycle".into(),
+            payload: block_64k.clone(),
+            created_at_ms: 200,
+            expires_at_ms: 0,
+            landlock_token: [0u8; 32],
+            capability_mask: 1,
+        };
+        space
+            .out(&t)
+            .expect("recycled out should never exhaust arena");
+        let taken = space
+            .in_matching(Some(88), Some(9000 + iter), 200)
+            .expect("recycled in_matching");
+        assert_eq!(taken.payload.len(), 65_536);
+        assert_eq!(taken.payload[65_535], block_64k[65_535]);
+    }
+}
+
+#[test]
+fn test_sys_futex_sync_and_tokio_async_bridge_latency() {
+    let sub = Arc::new(ShmSubstrate::anonymous().expect("anonymous shm"));
+    let space = ShmTupleSpace::new(Arc::clone(&sub));
+    let payload_4k: Vec<u8> = (0..4096).map(|i| (i % 253) as u8).collect();
+
+    // Test async tokio futex bridge wakeup
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .build()
+        .expect("tokio runtime");
+
+    let producer_space = space.clone();
+    let p_clone = payload_4k.clone();
+    let t0 = std::time::Instant::now();
+    let received = rt.block_on(async move {
+        let waiter = tokio::spawn(async move {
+            producer_space
+                .wait_in_matching_async(Some(99), Some(4242), std::time::Duration::from_millis(500))
+                .await
+        });
+        tokio::time::sleep(std::time::Duration::from_millis(2)).await;
+        let t = RawTuple {
+            id: Uuid::new_v4(),
+            kind_discriminator: 99,
+            resource_hash: 4242,
+            holder_issuer_hash: 7,
+            resource_path: "/futex/wakeup".into(),
+            tag: "futex".into(),
+            payload: p_clone,
+            created_at_ms: 10,
+            expires_at_ms: 0,
+            landlock_token: [0u8; 32],
+            capability_mask: 1,
+        };
+        space.out(&t).expect("out futex tuple");
+        waiter.await.expect("join waiter")
+    });
+    let elapsed = t0.elapsed();
+    let got = received.expect("futex waiter must receive tuple");
+    assert_eq!(got.payload, payload_4k);
+    assert!(
+        elapsed < std::time::Duration::from_millis(100),
+        "futex wakeup unexpectedly slow: {elapsed:?}"
+    );
+}

@@ -519,19 +519,17 @@ impl TttHead {
         self.build_conformal_prediction(probs)
     }
 
-    /// Predict a batch of vectors using reusable thread-local scratch buffers (`micro_batch_size` chunking).
-    #[must_use]
-    pub fn predict_batch_conformal(
+    /// Internal shared micro-batch execution kernel reusing scratch buffers over a contiguous slice.
+    fn predict_slice_conformal(
         &self,
-        batch: &[Vec<f32>],
-        micro_batch_size: usize,
+        slice: &[Vec<f32>],
+        chunk_sz: usize,
     ) -> Vec<ConformalPrediction> {
-        let chunk_sz = micro_batch_size.max(1);
-        let mut results = Vec::with_capacity(batch.len());
+        let mut results = Vec::with_capacity(slice.len());
         let mut z_buf = vec![0.0f32; self.dim];
         let mut zp_buf = vec![0.0f32; self.k];
 
-        for chunk in batch.chunks(chunk_sz) {
+        for chunk in slice.chunks(chunk_sz) {
             for x in chunk {
                 let mut probs = vec![0.0f32; self.labels.len()];
                 self.predict_into(x, &mut z_buf, &mut zp_buf, &mut probs);
@@ -539,6 +537,49 @@ impl TttHead {
             }
         }
         results
+    }
+
+    /// Predict a batch of vectors using reusable thread-local scratch buffers (`micro_batch_size` chunking).
+    #[must_use]
+    pub fn predict_batch_conformal(
+        &self,
+        batch: &[Vec<f32>],
+        micro_batch_size: usize,
+    ) -> Vec<ConformalPrediction> {
+        self.predict_slice_conformal(batch, micro_batch_size.max(1))
+    }
+
+    /// Predict a batch in deterministic parallel `T`-thread micro-batches (`std::thread::scope`, default `2T + B=16`).
+    #[must_use]
+    pub fn predict_batch_conformal_parallel(
+        &self,
+        batch: &[Vec<f32>],
+        micro_batch_size: usize,
+        num_threads: usize,
+    ) -> Vec<ConformalPrediction> {
+        let chunk_sz = micro_batch_size.max(1);
+        let threads = num_threads.max(1).min(batch.len().max(1));
+        if threads <= 1 || batch.len() <= chunk_sz {
+            return self.predict_slice_conformal(batch, chunk_sz);
+        }
+
+        let per_worker = batch.len().div_ceil(threads);
+        let worker_outputs: Vec<Vec<ConformalPrediction>> = std::thread::scope(|scope| {
+            let mut handles = Vec::with_capacity(threads);
+            for slice in batch.chunks(per_worker) {
+                handles.push(scope.spawn(move || self.predict_slice_conformal(slice, chunk_sz)));
+            }
+            handles
+                .into_iter()
+                .map(|h| h.join().expect("ttt parallel worker panicked"))
+                .collect()
+        });
+
+        let mut merged = Vec::with_capacity(batch.len());
+        for part in worker_outputs {
+            merged.extend(part);
+        }
+        merged
     }
 
     #[inline]
@@ -585,19 +626,21 @@ impl TttHead {
     }
 }
 
+/// Safe `#![forbid(unsafe_code)]` 8-lane AVX2-aligned SIMD dot product with pairwise-tree reduction.
 #[inline]
 fn dot_slice(a: &[f32], b: &[f32]) -> f32 {
-    let mut s0 = 0.0f32;
-    let mut s1 = 0.0f32;
-    let mut s2 = 0.0f32;
-    let mut s3 = 0.0f32;
-    let mut a_chunks = a.chunks_exact(4);
-    let mut b_chunks = b.chunks_exact(4);
+    let mut acc = [0.0f32; 8];
+    let mut a_chunks = a.chunks_exact(8);
+    let mut b_chunks = b.chunks_exact(8);
     for (ac, bc) in a_chunks.by_ref().zip(b_chunks.by_ref()) {
-        s0 += ac[0] * bc[0];
-        s1 += ac[1] * bc[1];
-        s2 += ac[2] * bc[2];
-        s3 += ac[3] * bc[3];
+        acc[0] += ac[0] * bc[0];
+        acc[1] += ac[1] * bc[1];
+        acc[2] += ac[2] * bc[2];
+        acc[3] += ac[3] * bc[3];
+        acc[4] += ac[4] * bc[4];
+        acc[5] += ac[5] * bc[5];
+        acc[6] += ac[6] * bc[6];
+        acc[7] += ac[7] * bc[7];
     }
     let rem: f32 = a_chunks
         .remainder()
@@ -605,7 +648,9 @@ fn dot_slice(a: &[f32], b: &[f32]) -> f32 {
         .zip(b_chunks.remainder().iter())
         .map(|(&x, &y)| x * y)
         .sum();
-    (s0 + s1) + (s2 + s3) + rem
+    let s01 = (acc[0] + acc[1]) + (acc[2] + acc[3]);
+    let s23 = (acc[4] + acc[5]) + (acc[6] + acc[7]);
+    (s01 + s23) + rem
 }
 
 #[inline]
@@ -785,5 +830,55 @@ mod tests {
             "Theta->Gamma Hebbian Consolidation: p('science') {:.4} ({:?}) -> {:.4} ({:?})",
             before.probabilities[2], before.gate_status, after.top_prob, after.gate_status
         );
+    }
+
+    #[test]
+    fn ttt_8lane_avx2_and_2t_b16_parallel_deterministic_parity() {
+        let a: Vec<f32> = (0..389).map(|i| ((i as f32) - 190.0) * 0.007).collect();
+        let b: Vec<f32> = (0..389).map(|i| ((388 - i) as f32) * 0.005 - 0.8).collect();
+        let ref_dot: f64 = a
+            .iter()
+            .zip(&b)
+            .map(|(&x, &y)| f64::from(x) * f64::from(y))
+            .sum();
+        assert!((f64::from(dot_slice(&a, &b)) - ref_dot).abs() < 1e-4);
+
+        let classes = vec![
+            "alpha".to_string(),
+            "beta".to_string(),
+            "gamma".to_string(),
+            "delta".to_string(),
+        ];
+        let dim = 64;
+        let mut train_x = Vec::new();
+        let mut train_y = Vec::new();
+        for i in 0..80 {
+            let cls = i % 4;
+            let mut v = vec![0.0f32; dim];
+            v[cls * 8] = 2.5;
+            v[(i * 7) % dim] += 0.25;
+            train_x.push(v);
+            train_y.push(classes[cls].clone());
+        }
+        let mut head = TttHead::fit(&train_x, &train_y, classes, 16, 1.0, 120, 0.05).expect("fit");
+        head.calibrate_conformal(&train_x[..20], &train_y[..20], 0.10)
+            .expect("calibrate");
+
+        let mut batch = Vec::with_capacity(128);
+        for i in 0..128 {
+            batch.push(train_x[i % train_x.len()].clone());
+        }
+
+        let seq = head.predict_batch_conformal(&batch, 16);
+        let par = head.predict_batch_conformal_parallel(&batch, 16, 2);
+        assert_eq!(seq.len(), par.len());
+        for (s, p) in seq.iter().zip(&par) {
+            assert_eq!(s.top_index, p.top_index);
+            assert_eq!(s.gate_status, p.gate_status);
+            assert_eq!(s.prediction_set, p.prediction_set);
+            for (&sp, &pp) in s.probabilities.iter().zip(&p.probabilities) {
+                assert!((sp - pp).abs() < 1e-6);
+            }
+        }
     }
 }

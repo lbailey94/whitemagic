@@ -147,6 +147,15 @@ pub struct GanaMansion {
     pub curated_pray_skill: &'static str,
 }
 
+impl GanaMansion {
+    /// Returns the bijectively paired operator in the 28-Opcode Autiot-Gana Nonary Hyperlanguage (`AUTIOT_GANA_28`).
+    #[must_use]
+    pub const fn autiot_operator(self) -> &'static crate::zodiac_arcana::AutiotGanaOperator {
+        let idx = (self.id.saturating_sub(1) as usize) % GANA_COUNT;
+        &crate::zodiac_arcana::AUTIOT_GANA_28[idx]
+    }
+}
+
 /// The Canonical 28 Lunar Mansion Ganas (二十八宿).
 pub const GANA_CATALOG: [GanaMansion; GANA_COUNT] = [
     // ── East Azure Dragon (1..=7) — Wood ──

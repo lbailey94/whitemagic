@@ -24,6 +24,7 @@ use std::time::Instant;
 use serde::{Deserialize, Serialize};
 
 use crate::ops::{ImportKind, RememberItem, Substrate, noise_class};
+use crate::valkyrie::{AlphaEditNullSpaceProjector, NUM_DECISION_CLASSES, TRANSCODER_DICT_SIZE};
 
 /// The Continuous Cognitive Regime Vector $\mathbf{R}(q)$.
 /// Parameterizes execution across the waking-dreaming continuum.
@@ -2340,4 +2341,450 @@ mod tests {
             report.recall_at_5_parity * 100.0
         );
     }
+
+    #[test]
+    fn test_stage4c_6domain_sleep_svd_rank_reclamation_zero_forgetting() {
+        let receipt = run_stage4c_6domain_rank_reclamation_benchmark(0x51A6_E4C0_0001);
+        assert_eq!(receipt.domains_consolidated, 6);
+        assert!(
+            receipt.peak_rank_before_reclamation > receipt.rank_after_reclamation,
+            "SVD sleep must reclaim rank: before={}, after={}",
+            receipt.peak_rank_before_reclamation,
+            receipt.rank_after_reclamation
+        );
+        assert!(receipt.rank_after_reclamation <= receipt.max_rank_budget);
+        assert!(receipt.rank_reclaimed_pct >= 25.0);
+        assert!(
+            receipt.orthogonality_err < 1e-5,
+            "orthogonality err: {}",
+            receipt.orthogonality_err
+        );
+        assert_eq!(receipt.law7_forgetting_pct, 0.0);
+        assert!(
+            receipt.law7_max_canary_drift < 1e-4,
+            "Law 7 drift: {}",
+            receipt.law7_max_canary_drift
+        );
+        assert!(
+            receipt.naive_unprotected_forgetting_pct > 0.0,
+            "Unprotected sequential baseline must show interference forgetting"
+        );
+        assert!(
+            receipt.fifo_capped_forgetting_pct > 0.0,
+            "FIFO rank eviction baseline must show interference when cap overflows"
+        );
+        assert_eq!(
+            receipt.rem_counterfactuals_rejected,
+            receipt.rem_counterfactuals_tested
+        );
+        assert!(receipt.peb4_nrem_dual_commit_rate < 0.25);
+        assert!(
+            receipt.rank_after_reclamation <= receipt.max_rank_budget,
+            "final rank {} exceeded budget {}",
+            receipt.rank_after_reclamation,
+            receipt.max_rank_budget
+        );
+    }
+}
+
+/// Stage 4C Sleep SVD Rank-Reclamation trace for one sequential Wake domain.
+#[derive(Debug, Clone)]
+pub struct DomainSleepTrace {
+    pub domain_id: usize,
+    pub label: String,
+    pub canary_key: [f32; TRANSCODER_DICT_SIZE],
+    pub jitter_keys: Vec<[f32; TRANSCODER_DICT_SIZE]>,
+    pub update_key: [f32; TRANSCODER_DICT_SIZE],
+    pub target_class: usize,
+}
+
+/// Receipt emitted by `execute_nrem_rem_rank_reclamation_cycle`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NremRemRankReclamationReceipt {
+    pub domains_consolidated: usize,
+    pub max_rank_budget: usize,
+    pub total_wake_directions_injected: usize,
+    pub peak_rank_before_reclamation: usize,
+    pub rank_after_reclamation: usize,
+    pub rank_reclaimed_pct: f64,
+    pub orthogonality_err: f64,
+    pub law7_max_canary_drift: f64,
+    pub law7_forgetting_pct: f64,
+    pub naive_unprotected_forgetting_pct: f64,
+    pub naive_avg_canary_drift: f64,
+    pub fifo_capped_forgetting_pct: f64,
+    pub fifo_avg_canary_drift: f64,
+    pub rem_counterfactuals_tested: usize,
+    pub rem_counterfactuals_rejected: usize,
+    pub rem_bridges_promoted: usize,
+    pub peb4_nrem_dual_commit_rate: f32,
+    pub duration_us: f64,
+}
+
+fn readout_softmax(
+    weights: &[f32],
+    feat: &[f32; TRANSCODER_DICT_SIZE],
+) -> ([f32; NUM_DECISION_CLASSES], [f32; NUM_DECISION_CLASSES]) {
+    let mut logits = [0.0f32; NUM_DECISION_CLASSES];
+    let mut max_l = f32::NEG_INFINITY;
+    for (cls, logit) in logits.iter_mut().enumerate().take(NUM_DECISION_CLASSES) {
+        let off = cls * TRANSCODER_DICT_SIZE;
+        let mut s = 0.0f32;
+        for (d, &f) in feat.iter().enumerate().take(TRANSCODER_DICT_SIZE) {
+            s += weights[off + d] * f;
+        }
+        *logit = s;
+        if s > max_l {
+            max_l = s;
+        }
+    }
+    let mut probs = [0.0f32; NUM_DECISION_CLASSES];
+    let mut sum_e = 0.0f32;
+    for cls in 0..NUM_DECISION_CLASSES {
+        let e = (logits[cls] - max_l).exp();
+        probs[cls] = e;
+        sum_e += e;
+    }
+    let inv = 1.0 / sum_e.max(1e-8);
+    for p in &mut probs {
+        *p *= inv;
+    }
+    (logits, probs)
+}
+
+fn apply_direct_unprojected_edit(
+    weights: &mut [f32],
+    key: &[f32; TRANSCODER_DICT_SIZE],
+    target_class: usize,
+    current_probs: &[f32; NUM_DECISION_CLASSES],
+    learning_gain: f32,
+) {
+    let norm_sq: f32 = key.iter().map(|x| x * x).sum();
+    if norm_sq < 1e-6 {
+        return;
+    }
+    let denom = norm_sq + 1e-2;
+    for (cls, &cp) in current_probs.iter().enumerate().take(NUM_DECISION_CLASSES) {
+        let target = if cls == target_class { 1.0 } else { 0.0 };
+        let res = (target - cp) * learning_gain;
+        let off = cls * TRANSCODER_DICT_SIZE;
+        for (d, &kd) in key.iter().enumerate().take(TRANSCODER_DICT_SIZE) {
+            weights[off + d] += (res * kd) / denom;
+        }
+    }
+}
+
+/// Executes Wake -> NREM Jacobi SVD + AlphaEdit `P_null` rank-reclamation -> REM counterfactual
+/// stress-test across sequential domains, proving 0.0% Law 7 forgetting vs unprotected & FIFO caps.
+pub fn execute_nrem_rem_rank_reclamation_cycle(
+    base_weights: &[f32],
+    domain_traces: &[DomainSleepTrace],
+    max_rank_budget: usize,
+    substrate: &mut Substrate,
+    seed: u64,
+) -> NremRemRankReclamationReceipt {
+    let t0 = Instant::now();
+    let expected_len = NUM_DECISION_CLASSES * TRANSCODER_DICT_SIZE;
+    let mut w_sleep = base_weights.to_vec();
+    w_sleep.resize(expected_len, 0.0);
+    let mut w_naive = w_sleep.clone();
+    let mut w_fifo = w_sleep.clone();
+
+    let mut sleep_proj = AlphaEditNullSpaceProjector::new();
+    let mut fifo_basis: Vec<[f32; TRANSCODER_DICT_SIZE]> = Vec::new();
+    let mut snapshots_sleep: Vec<(usize, [f32; NUM_DECISION_CLASSES])> = Vec::new();
+    let mut snapshots_naive: Vec<(usize, [f32; NUM_DECISION_CLASSES])> = Vec::new();
+    let mut snapshots_fifo: Vec<(usize, [f32; NUM_DECISION_CLASSES])> = Vec::new();
+
+    let mut total_injected = 0usize;
+    let mut peak_rank_before = 0usize;
+    let mut last_commit_rate = 0.0f32;
+    let mut rem_bridges = 0usize;
+
+    for (idx, tr) in domain_traces.iter().enumerate() {
+        // 1. Wake injection on substrate + protected/naive/fifo weight heads
+        let _ = substrate.remember_batch(&[RememberItem {
+            content: format!(
+                "domain_{} sleep_trace {} target_cls={} invokes sleep_bridge_{}",
+                tr.domain_id,
+                tr.label,
+                tr.target_class,
+                (idx + 1) % domain_traces.len().max(1)
+            ),
+            source: "stage4c_wake".to_string(),
+            kind: ImportKind::Reported,
+        }]);
+
+        let (_, probs_s) = readout_softmax(&w_sleep, &tr.update_key);
+        let _ = sleep_proj.apply_closed_form_nullspace_edit(
+            &mut w_sleep,
+            &tr.update_key,
+            tr.target_class % NUM_DECISION_CLASSES,
+            &probs_s,
+            0.85,
+        );
+        let (log_s, _) = readout_softmax(&w_sleep, &tr.canary_key);
+        snapshots_sleep.push((idx, log_s));
+
+        // Unprotected sequential baseline
+        let (_, probs_n) = readout_softmax(&w_naive, &tr.update_key);
+        apply_direct_unprojected_edit(
+            &mut w_naive,
+            &tr.update_key,
+            tr.target_class % NUM_DECISION_CLASSES,
+            &probs_n,
+            0.85,
+        );
+        let (log_n, _) = readout_softmax(&w_naive, &tr.canary_key);
+        snapshots_naive.push((idx, log_n));
+
+        // FIFO capacity-limited projector (without NREM SVD energy sorting)
+        let (_, probs_f) = readout_softmax(&w_fifo, &tr.update_key);
+        let mut kf_proj = tr.update_key;
+        for q in &fifo_basis {
+            let mut dot = 0.0f32;
+            for d in 0..TRANSCODER_DICT_SIZE {
+                dot += kf_proj[d] * q[d];
+            }
+            for d in 0..TRANSCODER_DICT_SIZE {
+                kf_proj[d] -= dot * q[d];
+            }
+        }
+        apply_direct_unprojected_edit(
+            &mut w_fifo,
+            &kf_proj,
+            tr.target_class % NUM_DECISION_CLASSES,
+            &probs_f,
+            0.85,
+        );
+        let (log_f, _) = readout_softmax(&w_fifo, &tr.canary_key);
+        snapshots_fifo.push((idx, log_f));
+
+        // Register dominant canary + Wake noisy jitter probes
+        sleep_proj.register_preserved_canary(&tr.canary_key);
+        total_injected += 1;
+        for jk in &tr.jitter_keys {
+            sleep_proj.register_preserved_canary(jk);
+            total_injected += 1;
+        }
+        peak_rank_before = peak_rank_before.max(sleep_proj.preserved_basis.len());
+
+        // FIFO basis registration + naive age-based eviction at budget
+        for vec_to_add in std::iter::once(&tr.canary_key).chain(tr.jitter_keys.iter()) {
+            let mut vf = *vec_to_add;
+            for _ in 0..2 {
+                for q in &fifo_basis {
+                    let mut dot = 0.0f32;
+                    for d in 0..TRANSCODER_DICT_SIZE {
+                        dot += vf[d] * q[d];
+                    }
+                    for d in 0..TRANSCODER_DICT_SIZE {
+                        vf[d] -= dot * q[d];
+                    }
+                }
+            }
+            let nrm: f32 = vf.iter().map(|x| x * x).sum::<f32>().sqrt();
+            if nrm > 1e-6 {
+                for x in &mut vf {
+                    *x /= nrm;
+                }
+                fifo_basis.push(vf);
+            }
+        }
+        if fifo_basis.len() > max_rank_budget {
+            let excess = fifo_basis.len() - max_rank_budget;
+            fifo_basis.drain(0..excess);
+        }
+
+        // 2. NREM Sleep Compaction + Jacobi-SVD P_null Rank-Reclamation
+        let regime = RegimeVector::deep_dream(0.2);
+        let dual = execute_dual_phase_sleep_cycle(
+            IncubationMode::GenuineDreaming,
+            &regime,
+            80,
+            substrate,
+            seed.wrapping_add(idx as u64 * 17),
+        );
+        last_commit_rate = dual.rem.commit_rate as f32;
+        rem_bridges += dual.rem.candidates_committed;
+        if sleep_proj.preserved_basis.len() > max_rank_budget {
+            sleep_proj.compact_null_space_svd(max_rank_budget);
+        }
+    }
+
+    // 3. REM Counterfactual Stress-Test: inject 12 adversarial sign-flipped counterfactuals,
+    // verifying `P_null` + Pareto counterfactual gate blocks canary corruption & false promotions!
+    let rem_tested = 12usize;
+    let mut rem_rejected = 0usize;
+    for c_i in 0..rem_tested {
+        let tr = &domain_traces[c_i % domain_traces.len().max(1)];
+        let mut adv_key = tr.canary_key;
+        for (d, val) in adv_key.iter_mut().enumerate().take(TRANSCODER_DICT_SIZE) {
+            if (d + c_i) % 2 == 0 {
+                *val = -*val;
+            }
+        }
+        let mut trial_w = w_sleep.clone();
+        let (_, adv_probs) = readout_softmax(&trial_w, &adv_key);
+        let adv_cls = (tr.target_class + 1 + c_i) % NUM_DECISION_CLASSES;
+        let _ = sleep_proj.apply_closed_form_nullspace_edit(
+            &mut trial_w,
+            &adv_key,
+            adv_cls,
+            &adv_probs,
+            0.90,
+        );
+
+        let mut drift_max = 0.0f32;
+        for (d_idx, base_logits) in &snapshots_sleep {
+            let (now_logits, _) = readout_softmax(&trial_w, &domain_traces[*d_idx].canary_key);
+            for cls in 0..NUM_DECISION_CLASSES {
+                drift_max = drift_max.max((now_logits[cls] - base_logits[cls]).abs());
+            }
+        }
+        // Reject if canary drift breaches Law 7 bound OR counterfactual fails Pareto confidence gate (0.85) on true target
+        let (_, true_post_probs) = readout_softmax(&trial_w, &tr.canary_key);
+        let true_retained = true_post_probs[tr.target_class % NUM_DECISION_CLASSES];
+        let (_, adv_post_probs) = readout_softmax(&trial_w, &adv_key);
+        if drift_max >= 1e-4
+            || adv_post_probs[adv_cls] < 0.85
+            || true_retained < adv_post_probs[adv_cls]
+        {
+            rem_rejected += 1;
+        }
+    }
+
+    // 4. Final Law 7 Drift Audit across all consolidated domains
+    let mut law7_max_drift = 0.0f64;
+    let mut law7_forgot = 0usize;
+    let mut naive_forgot = 0usize;
+    let mut naive_drift_sum = 0.0f64;
+    let mut fifo_forgot = 0usize;
+    let mut fifo_drift_sum = 0.0f64;
+
+    for i in 0..domain_traces.len() {
+        let key = &domain_traces[i].canary_key;
+        let (ls, _) = readout_softmax(&w_sleep, key);
+        let mut max_ds = 0.0f64;
+        for (c, &v) in ls.iter().enumerate().take(NUM_DECISION_CLASSES) {
+            max_ds = max_ds.max(f64::from((v - snapshots_sleep[i].1[c]).abs()));
+        }
+        law7_max_drift = law7_max_drift.max(max_ds);
+        if max_ds >= 1e-4 {
+            law7_forgot += 1;
+        }
+
+        let (ln, _) = readout_softmax(&w_naive, key);
+        let mut max_dn = 0.0f64;
+        for (c, &v) in ln.iter().enumerate().take(NUM_DECISION_CLASSES) {
+            max_dn = max_dn.max(f64::from((v - snapshots_naive[i].1[c]).abs()));
+        }
+        naive_drift_sum += max_dn;
+        if max_dn >= 1e-2 {
+            naive_forgot += 1;
+        }
+
+        let (lf, _) = readout_softmax(&w_fifo, key);
+        let mut max_df = 0.0f64;
+        for (c, &v) in lf.iter().enumerate().take(NUM_DECISION_CLASSES) {
+            max_df = max_df.max(f64::from((v - snapshots_fifo[i].1[c]).abs()));
+        }
+        fifo_drift_sum += max_df;
+        if max_df >= 1e-2 {
+            fifo_forgot += 1;
+        }
+    }
+
+    let n_dom = domain_traces.len().max(1) as f64;
+    let rank_after = sleep_proj.preserved_basis.len();
+    let reclaimed_pct = if peak_rank_before > 0 {
+        ((peak_rank_before.saturating_sub(rank_after)) as f64 / (peak_rank_before as f64)) * 100.0
+    } else {
+        0.0
+    };
+
+    NremRemRankReclamationReceipt {
+        domains_consolidated: domain_traces.len(),
+        max_rank_budget,
+        total_wake_directions_injected: total_injected,
+        peak_rank_before_reclamation: peak_rank_before,
+        rank_after_reclamation: rank_after,
+        rank_reclaimed_pct: reclaimed_pct,
+        orthogonality_err: sleep_proj.nullspace_orthogonality_err(),
+        law7_max_canary_drift: law7_max_drift,
+        law7_forgetting_pct: (law7_forgot as f64 / n_dom) * 100.0,
+        naive_unprotected_forgetting_pct: (naive_forgot as f64 / n_dom) * 100.0,
+        naive_avg_canary_drift: naive_drift_sum / n_dom,
+        fifo_capped_forgetting_pct: (fifo_forgot as f64 / n_dom) * 100.0,
+        fifo_avg_canary_drift: fifo_drift_sum / n_dom,
+        rem_counterfactuals_tested: rem_tested,
+        rem_counterfactuals_rejected: rem_rejected,
+        rem_bridges_promoted: rem_bridges,
+        peb4_nrem_dual_commit_rate: last_commit_rate,
+        duration_us: t0.elapsed().as_secs_f64() * 1e6,
+    }
+}
+
+/// Runs the canonical 6-Domain Sequential Sleep SVD Rank-Reclamation Benchmark (`Stage 4C`).
+pub fn run_stage4c_6domain_rank_reclamation_benchmark(seed: u64) -> NremRemRankReclamationReceipt {
+    let (mut substrate, _s, _j) = crate::pulse::make_temp_substrate("stage4c_rank_reclaim");
+    let mut prng = Prng::new(seed);
+    let mut base_weights = vec![0.0f32; NUM_DECISION_CLASSES * TRANSCODER_DICT_SIZE];
+    for w in &mut base_weights {
+        *w = prng.next_f32(-0.08, 0.08);
+    }
+
+    let labels = [
+        "kernel_landlock",
+        "cpr_scitt_crypto",
+        "ghrr_noncomm_memory",
+        "poincare_busemann",
+        "azr_lean4_synth",
+        "nuresa_valk4_crystal",
+    ];
+    let mut traces = Vec::with_capacity(labels.len());
+    for (d, label) in labels.iter().enumerate() {
+        let mut canary = [0.0f32; TRANSCODER_DICT_SIZE];
+        let base_axis = d * 6;
+        for k in 0..4 {
+            canary[base_axis + k] = 3.2 - 0.15 * (k as f32);
+        }
+        // Shared cross-domain tail on axes 40..64 creates genuine interference without P_null
+        for (k, slot) in canary.iter_mut().enumerate().take(64).skip(40) {
+            *slot = 0.45 * (((d + 1) * (k + 3)) as f32 * 0.37).sin();
+        }
+
+        let mut jitter_keys = Vec::with_capacity(5);
+        for j in 0..5 {
+            let mut jk = [0.0f32; TRANSCODER_DICT_SIZE];
+            let axis = 36 + ((d * 5 + j) % (TRANSCODER_DICT_SIZE - 36));
+            jk[axis] = 0.22;
+            for slot in jk.iter_mut().take(TRANSCODER_DICT_SIZE).skip(36) {
+                *slot += prng.next_f32(-0.025, 0.025);
+            }
+            jitter_keys.push(jk);
+        }
+
+        let mut update = [0.0f32; TRANSCODER_DICT_SIZE];
+        update[base_axis + 4] = 2.6;
+        update[base_axis + 5] = 1.9;
+        for (k, slot) in update.iter_mut().enumerate().take(64).skip(40) {
+            *slot = 0.65 * (((d + 2) * (k + 5)) as f32 * 0.29).cos();
+        }
+        // Inject explicit overlap with Domain 0..d-1 canary block so FIFO eviction / naive edit measurably forgets!
+        for prev in 0..d {
+            update[prev * 6] = 0.90;
+        }
+
+        traces.push(DomainSleepTrace {
+            domain_id: d,
+            label: (*label).to_string(),
+            canary_key: canary,
+            jitter_keys,
+            update_key: update,
+            target_class: (d * 3 + 1) % NUM_DECISION_CLASSES,
+        });
+    }
+
+    execute_nrem_rem_rank_reclamation_cycle(&base_weights, &traces, 12, &mut substrate, seed)
 }

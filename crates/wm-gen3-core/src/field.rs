@@ -213,8 +213,17 @@ pub fn tokenize(text: &str) -> Vec<String> {
 }
 
 fn push_token(out: &mut Vec<String>, seen: &mut std::collections::HashSet<String>, token: &str) {
-    if token.len() >= 2 && !STOPWORDS.contains(&token) && seen.insert(token.to_string()) {
-        out.push(token.to_string());
+    if token.len() >= 2 && !STOPWORDS.contains(&token) {
+        let bounded = if token.len() > 128 {
+            let h1 = crate::ghrr_algebra::fnv1a_64(token.as_bytes());
+            let h2 = crate::ghrr_algebra::fnv1a_64(&token.as_bytes()[token.len() / 2..]);
+            format!("tokh_{h1:016x}{h2:016x}")
+        } else {
+            token.to_string()
+        };
+        if seen.insert(bounded.clone()) {
+            out.push(bounded);
+        }
     }
 }
 

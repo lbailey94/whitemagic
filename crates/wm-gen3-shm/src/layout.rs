@@ -48,7 +48,11 @@ pub struct ShmSuperblock {
     pub tuple_futex: AtomicU32,
     pub stigmergy_futex: AtomicU32,
 
-    pub _reserved: [u8; 3968],
+    // Bump cursor for Arena out-of-line variable payloads (`>= ARENA_DATA_START`)
+    pub arena_cursor: AtomicU64,
+    pub _arena_pad: u64,
+
+    pub _reserved: [u8; 3952],
 }
 
 /// Worker Registration & Heartbeat Slot (64 bytes = exact 1 L1D cache-line).
@@ -145,4 +149,20 @@ pub const STIGMERGY_SIZE: usize = MAX_PHEROMONES * std::mem::size_of::<ShmPherom
 pub const ARENA_OFFSET: usize = STIGMERGY_OFFSET + STIGMERGY_SIZE; // 50,417,664
 pub const ARENA_SIZE: usize = SHM_TOTAL_SIZE - ARENA_OFFSET; // 16,691,200 bytes (~15.91 MiB)
 
+pub const TUPLE_INLINE_MAX: usize = 384;
+pub const ARENA_BITSET_WORDS: usize = MAX_TUPLES / 64; // 512 u64s = 4 KiB
+pub const ARENA_FREE_CLASSES: usize = 12; // 512 B .. 1 MiB power-of-two size classes
+pub const ARENA_BLOCK_HEADER_SIZE: usize = 8; // [cap_bytes: u32, next_or_tag: u32]
+pub const ARENA_DATA_START: usize = 8192;
+
+/// First 8 KiB of the SHM Arena: lock-free tuple slot occupancy bitset + segregated free-list heads.
+#[repr(C, align(4096))]
+pub struct ShmArenaHeader {
+    pub occupancy_bitset: [AtomicU64; ARENA_BITSET_WORDS],
+    pub free_heads: [AtomicU64; ARENA_FREE_CLASSES],
+    pub free_tags: [AtomicU64; ARENA_FREE_CLASSES],
+    pub _meta_pad: [u8; 4096 - ARENA_FREE_CLASSES * 16],
+}
+
 const _: () = assert!(ARENA_OFFSET + ARENA_SIZE == SHM_TOTAL_SIZE);
+const _: () = assert!(std::mem::size_of::<ShmArenaHeader>() == ARENA_DATA_START);

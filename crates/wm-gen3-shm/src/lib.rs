@@ -247,10 +247,12 @@ impl ShmSubstrate {
         Some(ShmMpmcQueue::new(header_ptr, cells_ptr))
     }
 
-    /// Access the Linda associative tuple table.
+    /// Access the Linda associative tuple table (wired to variable-length Arena + bitset index).
     pub fn tuple_table(&self) -> ShmTupleTable<'_> {
         let ptr = unsafe { self.mmap.as_ptr().add(TUPLE_TABLE_OFFSET) as *mut ShmTupleSlot };
-        ShmTupleTable::new(ptr)
+        let arena_ptr = unsafe { self.mmap.as_ptr().add(ARENA_OFFSET) as *mut u8 };
+        let cursor_ptr = &self.superblock().arena_cursor as *const std::sync::atomic::AtomicU64;
+        ShmTupleTable::with_arena(ptr, arena_ptr, cursor_ptr)
     }
 
     /// Access the digital stigmergic pheromone matrix.
@@ -333,6 +335,7 @@ impl ShmSubstrate {
             (*sb).tuple_table_offset = TUPLE_TABLE_OFFSET as u64;
             (*sb).stigmergy_offset = STIGMERGY_OFFSET as u64;
             (*sb).arena_offset = ARENA_OFFSET as u64;
+            (*sb).arena_cursor = std::sync::atomic::AtomicU64::new(ARENA_DATA_START as u64);
 
             // Initialize 4 MPMC rings
             let ring_offsets = [RING_0_OFFSET, RING_1_OFFSET, RING_2_OFFSET, RING_3_OFFSET];
@@ -375,11 +378,55 @@ impl ShmTupleSpace {
         Self { substrate }
     }
 
-    /// Deposit a tuple into the shared space and wake waiters.
+    /// Deposit a tuple into the shared space and wake all waiting consumers via `SYS_futex`.
     pub fn out(&self, tuple: &RawTuple) -> Result<Uuid, &'static str> {
         let id = self.substrate.tuple_table().out(tuple)?;
-        self.substrate.futex_wake_tuple(1);
+        self.substrate.futex_wake_tuple(i32::MAX);
         Ok(id)
+    }
+
+    /// Block with zero-spin `SYS_futex` until a matching tuple arrives or `timeout` elapses.
+    pub fn wait_in_matching(
+        &self,
+        kind: Option<u32>,
+        resource_hash: Option<u64>,
+        timeout: std::time::Duration,
+    ) -> Option<RawTuple> {
+        let deadline = std::time::Instant::now() + timeout;
+        loop {
+            let seq = self
+                .substrate
+                .superblock()
+                .tuple_futex
+                .load(Ordering::Acquire);
+            let now_ms = SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0);
+            if let Some(t) = self.in_matching(kind, resource_hash, now_ms) {
+                return Some(t);
+            }
+            let now_inst = std::time::Instant::now();
+            if now_inst >= deadline {
+                return None;
+            }
+            let rem_ms = deadline.duration_since(now_inst).as_millis().max(1) as u64;
+            self.substrate.futex_wait_tuple(seq, Some(rem_ms));
+        }
+    }
+
+    /// Zero-poll async `tokio` bridge backed by `SYS_futex` on the blocking pool.
+    pub async fn wait_in_matching_async(
+        &self,
+        kind: Option<u32>,
+        resource_hash: Option<u64>,
+        timeout: std::time::Duration,
+    ) -> Option<RawTuple> {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || this.wait_in_matching(kind, resource_hash, timeout))
+            .await
+            .ok()
+            .flatten()
     }
 
     /// Read and take matching tuple.

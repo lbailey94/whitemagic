@@ -79,13 +79,29 @@ fn main() {
         }
     }
     let gated_env = std::env::var("WM_GEN3_PROJECTION_GATED").unwrap_or_default();
-    let (projection_gated, projection_gate_count) = match gated_env.as_str() {
-        "1" | "true" => (true, false),
-        "count" => (false, true),
-        _ => (false, false),
+    let (projection_gated, projection_gate_count, projection_gate_multi) = match gated_env.as_str()
+    {
+        "1" | "true" => (true, false, false),
+        "count" => (false, true, false),
+        "multi" | "stage3c" => (false, false, true),
+        _ => (false, false, false),
     };
     substrate.set_projection_gated(projection_gated);
     substrate.set_projection_gate_count(projection_gate_count);
+    substrate.set_projection_gate_multi(projection_gate_multi);
+    let hybrid_rrf = std::env::var("WM_GEN3_HYBRID_RRF")
+        .map(|v| v == "1" || v == "true")
+        .unwrap_or(false);
+    substrate.set_hybrid_rrf(hybrid_rrf);
+    let lazy_projection = std::env::var("WM_GEN3_LAZY_PROJECTION")
+        .map(|v| v == "1" || v == "true")
+        .unwrap_or(false);
+    substrate.set_lazy_projection(lazy_projection);
+    let stage4a_scoring = std::env::var("WM_GEN3_STAGE4A")
+        .map(|v| v == "1" || v == "true")
+        .unwrap_or(false);
+    substrate.set_stage4a_scoring(stage4a_scoring);
+    substrate.set_rerank_spore(wm_gen3_core::try_load_default_wm7d_spore());
     match std::env::var("WM_GEN3_ARBITRATION").as_deref() {
         Ok("structural") => {
             substrate.set_arbitration(wm_gen3_core::ops::Arbitration::Structural);
@@ -103,7 +119,9 @@ fn main() {
         .map(|v| v != "0")
         .unwrap_or(true);
     substrate.set_noise_enabled(noise_enabled);
-    let gate_label = if projection_gate_count {
+    let gate_label = if projection_gate_multi {
+        "multi"
+    } else if projection_gate_count {
         "count"
     } else if projection_gated {
         "floor"
@@ -309,26 +327,39 @@ fn handle_route(
                 })
                 .collect();
             let results = substrate.remember_batch(&remember);
-            let errors: Vec<String> = results
-                .iter()
-                .filter_map(|r| r.as_ref().err().cloned())
-                .collect();
-            let ids: Vec<u64> = results
-                .iter()
-                .filter_map(|r| r.as_ref().ok().copied())
-                .collect();
+            let mut errors: Vec<String> = Vec::new();
+            let mut ids: Vec<u64> = Vec::with_capacity(remember.len());
+            let mut skipped_duplicates = 0usize;
+            for (idx, r) in results.iter().enumerate() {
+                match r {
+                    Ok(id) => ids.push(*id),
+                    Err(err) if err == "duplicate_exact" => {
+                        skipped_duplicates += 1;
+                        let item = &remember[idx];
+                        let existing_id = substrate
+                            .exact_duplicate_id(&item.content, &item.source, item.kind)
+                            .ok()
+                            .flatten()
+                            .unwrap_or(0);
+                        ids.push(existing_id);
+                    }
+                    Err(err) => errors.push(err.clone()),
+                }
+            }
             if !errors.is_empty() {
                 return Some(json!({
                     "status": "error",
                     "failed": errors.len(),
                     "errors": errors,
                     "ids": ids,
+                    "skipped_duplicates": skipped_duplicates,
                 }));
             }
             Some(json!({
                 "status": "success",
                 "ids": ids,
                 "count": remember.len(),
+                "skipped_duplicates": skipped_duplicates,
                 "sweep": {
                     "status": "not_requested",
                     "note": "batch ingest no longer triggers an automatic sweep (Gate 9A D4); call gen3.think_sweep explicitly",
@@ -1295,6 +1326,18 @@ fn handle_route(
                 },
                 "synthesized_skeletons_count": telemetry.synthesized_skeletons.len(),
                 "total_duration_us": telemetry.total_duration_us,
+            }))
+        }
+        "sleep.rank_reclaim" => {
+            let seed = args
+                .get("seed")
+                .and_then(Value::as_u64)
+                .unwrap_or(0x51A6_E4C0_0001);
+            let receipt = wm_gen3_core::dream::run_stage4c_6domain_rank_reclamation_benchmark(seed);
+            Some(json!({
+                "status": "success",
+                "route": "sleep.rank_reclaim",
+                "receipt": receipt,
             }))
         }
         "dream.incubate" => {

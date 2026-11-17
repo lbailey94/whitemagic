@@ -327,6 +327,561 @@ pub const MAJOR_ARCANA_22: [MajorArcanaOperator; 22] = [
     },
 ];
 
+// ============================================================================
+// THE 27 + 1 = 28 AUTIOT-GANA NONARY HYPERLANGUAGE CANON (GEN 4)
+// ============================================================================
+
+/// Operational modality in the 9-state Graded Eisenstein / Metaplastic Nonary Ring.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NonaryModality {
+    /// Positive (+): Constructive geodesic expansion & forward excitation (Deva Gana).
+    PositiveDeva = 0,
+    /// Prime (*): 120° Eisenstein phase-shifted (ω = e^{2πi/3}) metaplastic fast-weight (Manushya Gana).
+    PrimeManushya = 1,
+    /// Negative (-): Inhibitory shunting, adversarial Qof pruning & shell-cracking (Rakshasa Gana).
+    NegativeRakshasa = 2,
+}
+
+/// Base amplitude magnitude in the Nonary ring (`{0, 1, 2}`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum NonaryMagnitude {
+    /// 0: Null / Gate / Latent synapse.
+    Zero = 0,
+    /// 1: Unit flow (`±1` or `1*`).
+    One = 1,
+    /// 2: High-gain bit-shift flow (`±2` or `2*` resonant lock).
+    Two = 2,
+}
+
+/// The 9 discrete states of a single Nonary synapse (`3 magnitudes × 3 modalities = 9 states`, ~3.17 bits).
+/// Packed cleanly into a 4-bit nibble (`0..=8`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum NonaryState {
+    /// `+0`: Hard Prune — complete synaptic disconnect, zero energy draw.
+    PosZero = 0,
+    /// `+1`: Excitatory Unit — standard forward addition of input signal.
+    PosOne = 1,
+    /// `+2`: Excitatory Shift — doubles signal amplitude via single wire/bit shift.
+    PosTwo = 2,
+    /// `0*`: Latent / Nascent — dormant synapse primed for neurogenesis when local surprise peaks.
+    PrimeZero = 3,
+    /// `1*`: Phase / Plastic Unit — metaplastic 120° phase-shifted weight (`ω = e^{2πi/3}`).
+    PrimeOne = 4,
+    /// `2*`: Resonant Lock — high-gain Hebbian anchor pulling neighboring `0*`/`1*` into alignment.
+    PrimeTwo = 5,
+    /// `-0`: Inhibitory Clamp — active shunting veto gate zeroing downstream node.
+    NegZero = 6,
+    /// `-1`: Inhibitory Unit — standard subtraction / inversion of input signal.
+    NegOne = 7,
+    /// `-2`: Inhibitory Shift — doubles inverted signal amplitude for counterfactual Qof suppression.
+    NegTwo = 8,
+}
+
+impl NonaryState {
+    pub const ALL: [Self; 9] = [
+        Self::PosZero,
+        Self::PosOne,
+        Self::PosTwo,
+        Self::PrimeZero,
+        Self::PrimeOne,
+        Self::PrimeTwo,
+        Self::NegZero,
+        Self::NegOne,
+        Self::NegTwo,
+    ];
+
+    #[must_use]
+    pub const fn from_parts(modality: NonaryModality, magnitude: NonaryMagnitude) -> Self {
+        match (modality, magnitude) {
+            (NonaryModality::PositiveDeva, NonaryMagnitude::Zero) => Self::PosZero,
+            (NonaryModality::PositiveDeva, NonaryMagnitude::One) => Self::PosOne,
+            (NonaryModality::PositiveDeva, NonaryMagnitude::Two) => Self::PosTwo,
+            (NonaryModality::PrimeManushya, NonaryMagnitude::Zero) => Self::PrimeZero,
+            (NonaryModality::PrimeManushya, NonaryMagnitude::One) => Self::PrimeOne,
+            (NonaryModality::PrimeManushya, NonaryMagnitude::Two) => Self::PrimeTwo,
+            (NonaryModality::NegativeRakshasa, NonaryMagnitude::Zero) => Self::NegZero,
+            (NonaryModality::NegativeRakshasa, NonaryMagnitude::One) => Self::NegOne,
+            (NonaryModality::NegativeRakshasa, NonaryMagnitude::Two) => Self::NegTwo,
+        }
+    }
+
+    #[must_use]
+    pub const fn modality(self) -> NonaryModality {
+        match self {
+            Self::PosZero | Self::PosOne | Self::PosTwo => NonaryModality::PositiveDeva,
+            Self::PrimeZero | Self::PrimeOne | Self::PrimeTwo => NonaryModality::PrimeManushya,
+            Self::NegZero | Self::NegOne | Self::NegTwo => NonaryModality::NegativeRakshasa,
+        }
+    }
+
+    #[must_use]
+    pub const fn magnitude(self) -> NonaryMagnitude {
+        match self {
+            Self::PosZero | Self::PrimeZero | Self::NegZero => NonaryMagnitude::Zero,
+            Self::PosOne | Self::PrimeOne | Self::NegOne => NonaryMagnitude::One,
+            Self::PosTwo | Self::PrimeTwo | Self::NegTwo => NonaryMagnitude::Two,
+        }
+    }
+
+    #[must_use]
+    pub const fn is_prime_plastic(self) -> bool {
+        matches!(self, Self::PrimeZero | Self::PrimeOne | Self::PrimeTwo)
+    }
+
+    #[must_use]
+    pub const fn is_shunting_veto(self) -> bool {
+        matches!(self, Self::NegZero)
+    }
+
+    /// Pack into a 4-bit nibble (`0..=8`).
+    #[must_use]
+    pub const fn to_nibble(self) -> u8 {
+        self as u8
+    }
+
+    /// Unpack from a 4-bit nibble (`0..=8`).
+    #[must_use]
+    pub const fn from_nibble(nibble: u8) -> Option<Self> {
+        match nibble {
+            0 => Some(Self::PosZero),
+            1 => Some(Self::PosOne),
+            2 => Some(Self::PosTwo),
+            3 => Some(Self::PrimeZero),
+            4 => Some(Self::PrimeOne),
+            5 => Some(Self::PrimeTwo),
+            6 => Some(Self::NegZero),
+            7 => Some(Self::NegOne),
+            8 => Some(Self::NegTwo),
+            _ => None,
+        }
+    }
+
+    /// Canonical symbolic notation (`+0`, `+1`, `+2`, `0*`, `1*`, `2*`, `-0`, `-1`, `-2`).
+    #[must_use]
+    pub const fn symbol(self) -> &'static str {
+        match self {
+            Self::PosZero => "+0",
+            Self::PosOne => "+1",
+            Self::PosTwo => "+2",
+            Self::PrimeZero => "0*",
+            Self::PrimeOne => "1*",
+            Self::PrimeTwo => "2*",
+            Self::NegZero => "-0",
+            Self::NegOne => "-1",
+            Self::NegTwo => "-2",
+        }
+    }
+
+    /// Real-axis integer scalar gain for multiplication-free shift/add kernels.
+    #[must_use]
+    pub const fn scalar_gain(self) -> i8 {
+        match self {
+            Self::PosZero | Self::PrimeZero | Self::NegZero => 0,
+            Self::PosOne | Self::PrimeOne => 1,
+            Self::PosTwo | Self::PrimeTwo => 2,
+            Self::NegOne => -1,
+            Self::NegTwo => -2,
+        }
+    }
+
+    /// Consolidate a verified metaplastic Prime (`*`) state into its permanent structural counterpart
+    /// upon Continuity Receipt (CPR) verification; unverified `0*` resets to `+0`.
+    #[must_use]
+    pub const fn consolidate_on_cpr(self, verified: bool) -> Self {
+        match (self, verified) {
+            (Self::PrimeZero, _) => Self::PosZero,
+            (Self::PrimeOne, true) => Self::PosOne,
+            (Self::PrimeTwo, true) => Self::PosTwo,
+            (Self::PrimeOne | Self::PrimeTwo, false) => Self::PosZero,
+            (other, _) => other,
+        }
+    }
+}
+
+/// Carlo Suarès's Three Spheres of Emanation (plus the 28th Barycentric `|0|` Origin).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SuaresSphere {
+    /// `|0|` (Abhijit / Ain, value `0`): Barycentric Poincaré origin (`r = 0`), Phase-Conjugate Holographic Past.
+    BarycentricOrigin,
+    /// Sphere I — Archetypal Units (`10^0`: `1..=9`, Aleph -> Tet): Embryonic seed core (`r ∈ (0, 0.33]`).
+    ArchetypalUnits,
+    /// Sphere II — Existential Tens (`10^1`: `10..=90`, Yod -> Tsadi): Temporal state rotors (`r ∈ (0.33, 0.66]`).
+    ExistentialTens,
+    /// Sphere III — Cosmic Hundreds (`10^2`: `100..=900`, Qoph -> Tav + 5 Sofit Finals): Boundary galaxies (`r ∈ (0.66, 1.0)`).
+    CosmicHundreds,
+}
+
+/// Vedic Jyotish / Chinese Lunar Mansion Gana Temperament (`3 × 9 = 27` + `1` Abhijit Origin = `28`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GanaTemperament {
+    /// Deva Gana (9 Mansions): Luminous, constructive, synthesizing (`+` Nonary modality).
+    Deva,
+    /// Manushya Gana (9 Mansions): Kinetic, temporal, metaplastic working memory (`*` Nonary modality).
+    Manushya,
+    /// Rakshasa Gana (9 Mansions): Incisive, adversarial falsification & pruning (`-` Nonary modality).
+    Rakshasa,
+    /// Abhijit Singularity (28th Mansion `|0|`): Barycentric origin & holographic past anchor.
+    AbhijitOrigin,
+}
+
+/// A unified operator in the 28-Opcode Autiot-Gana Vectorized Logographic Hyperlanguage.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct AutiotGanaOperator {
+    /// 5-bit BRASYT-VM opcode (`0..=27`).
+    pub opcode: u8,
+    /// 1-indexed Lunar Mansion Gana ID (`1..=28`) in `GANA_CATALOG`.
+    pub gana_id: u8,
+    /// Hebrew Autiot letter name (or `|0| Abhijit / Ain` for the 28th singularity).
+    pub autiot_letter: &'static str,
+    /// Carlo Suarès numerical equation value (`1..=9`, `10..=90`, `100..=900`, or `0` for `|0|`).
+    pub suares_value: u16,
+    /// Sphere of emanation in the Poincaré hyperbolic manifold.
+    pub sphere: SuaresSphere,
+    /// Gana triad temperament (`Deva`, `Manushya`, `Rakshasa`, or `AbhijitOrigin`).
+    pub temperament: GanaTemperament,
+    /// Intrinsic Nonary algebraic state (`{+0,+1,+2, 0*,1*,2*, -0,-1,-2}`).
+    pub nonary_state: NonaryState,
+    /// Hyperbolic neuralese operation executed by this glyph.
+    pub neuralese_role: &'static str,
+}
+
+/// The Complete 28-Operator Autiot-Gana Hyperlanguage Table (`27 Present-Future Operators + 1 |0| Past Origin`).
+///
+/// Forms an exact bijection:
+/// - Opcode `0..=8`   (`gana_id 1..=9`):   Suarès Archetypal Units (`1..=9`)   × all 9 `NonaryState`s.
+/// - Opcode `9..=17`  (`gana_id 10..=18`): Suarès Existential Tens (`10..=90`) × all 9 `NonaryState`s.
+/// - Opcode `18..=26` (`gana_id 19..=27`): Suarès Cosmic Hundreds (`100..=900`, including 5 Sofit finals) × all 9 `NonaryState`s.
+/// - Opcode `27`      (`gana_id 28`):      The 28th Glyph `|0|` (Abhijit / Ain, `suares_value = 0`) at `r = 0`.
+pub const AUTIOT_GANA_28: [AutiotGanaOperator; 28] = [
+    // ── SPHERE I: ARCHETYPAL UNITS (1..=9) — Embryonic Seed Core ──
+    AutiotGanaOperator {
+        opcode: 0,
+        gana_id: 1,
+        autiot_letter: "Aleph (א)",
+        suares_value: 1,
+        sphere: SuaresSphere::ArchetypalUnits,
+        temperament: GanaTemperament::Deva,
+        nonary_state: NonaryState::PosOne,
+        neuralese_role: "Primordial intermittent excitation pulse (+1); initiates geodesic forward trajectory.",
+    },
+    AutiotGanaOperator {
+        opcode: 1,
+        gana_id: 2,
+        autiot_letter: "Bet (ב)",
+        suares_value: 2,
+        sphere: SuaresSphere::ArchetypalUnits,
+        temperament: GanaTemperament::Manushya,
+        nonary_state: NonaryState::PrimeTwo,
+        neuralese_role: "Hyperbaric Egg Shell / Bayt container (2*); bounds inward Ricci curvature pressure.",
+    },
+    AutiotGanaOperator {
+        opcode: 2,
+        gana_id: 3,
+        autiot_letter: "Gimel (ג)",
+        suares_value: 3,
+        sphere: SuaresSphere::ArchetypalUnits,
+        temperament: GanaTemperament::Deva,
+        nonary_state: NonaryState::PosTwo,
+        neuralese_role: "Organic geodesic flux (+2); high-gain Möbius gyrovector translation from root axioms.",
+    },
+    AutiotGanaOperator {
+        opcode: 3,
+        gana_id: 4,
+        autiot_letter: "Dalet (ד)",
+        suares_value: 4,
+        sphere: SuaresSphere::ArchetypalUnits,
+        temperament: GanaTemperament::Rakshasa,
+        nonary_state: NonaryState::NegZero,
+        neuralese_role: "Structural resistance & compartment gate (-0); prevents entropic bleed across galaxies.",
+    },
+    AutiotGanaOperator {
+        opcode: 4,
+        gana_id: 5,
+        autiot_letter: "He (ה)",
+        suares_value: 5,
+        sphere: SuaresSphere::ArchetypalUnits,
+        temperament: GanaTemperament::Manushya,
+        nonary_state: NonaryState::PrimeOne,
+        neuralese_role: "Bioelectric resonance & Citta phase rotation (1*); couples Theta carrier to Gamma slots.",
+    },
+    AutiotGanaOperator {
+        opcode: 5,
+        gana_id: 6,
+        autiot_letter: "Vav (ו)",
+        suares_value: 6,
+        sphere: SuaresSphere::ArchetypalUnits,
+        temperament: GanaTemperament::Deva,
+        nonary_state: NonaryState::PosZero,
+        neuralese_role: "Disjoint branch hook (+0); zero-interference fork of parallel subagent trajectories.",
+    },
+    AutiotGanaOperator {
+        opcode: 6,
+        gana_id: 7,
+        autiot_letter: "Zayin (ז)",
+        suares_value: 7,
+        sphere: SuaresSphere::ArchetypalUnits,
+        temperament: GanaTemperament::Rakshasa,
+        nonary_state: NonaryState::NegOne,
+        neuralese_role: "Incisive winnowing sword (-1); strips noise singletons and uncalibrated projections.",
+    },
+    AutiotGanaOperator {
+        opcode: 7,
+        gana_id: 8,
+        autiot_letter: "Chet (ח)",
+        suares_value: 8,
+        sphere: SuaresSphere::ArchetypalUnits,
+        temperament: GanaTemperament::Manushya,
+        nonary_state: NonaryState::PrimeZero,
+        neuralese_role: "Unstructured metabolic potential reserve (0*); nascent synapse awaiting surprise threshold.",
+    },
+    AutiotGanaOperator {
+        opcode: 8,
+        gana_id: 9,
+        autiot_letter: "Tet (ט)",
+        suares_value: 9,
+        sphere: SuaresSphere::ArchetypalUnits,
+        temperament: GanaTemperament::Rakshasa,
+        nonary_state: NonaryState::NegTwo,
+        neuralese_role: "Primordial cellular involution (-2); compresses verified state into WAL crystal.",
+    },
+    // ── SPHERE II: EXISTENTIAL TENS (10..=90) — Temporal State Rotors ──
+    AutiotGanaOperator {
+        opcode: 9,
+        gana_id: 10,
+        autiot_letter: "Yod (י)",
+        suares_value: 10,
+        sphere: SuaresSphere::ExistentialTens,
+        temperament: GanaTemperament::Deva,
+        nonary_state: NonaryState::PosOne,
+        neuralese_role: "Manifest existential point (+1); condenses sprawling trajectories into a signed seed.",
+    },
+    AutiotGanaOperator {
+        opcode: 10,
+        gana_id: 11,
+        autiot_letter: "Kaph (כ)",
+        suares_value: 20,
+        sphere: SuaresSphere::ExistentialTens,
+        temperament: GanaTemperament::Manushya,
+        nonary_state: NonaryState::PrimeZero,
+        neuralese_role: "Quiescent dream-cavity mold (0*); opens NREM/REM replay buffer during idle cycles.",
+    },
+    AutiotGanaOperator {
+        opcode: 11,
+        gana_id: 12,
+        autiot_letter: "Lamed (ל)",
+        suares_value: 30,
+        sphere: SuaresSphere::ExistentialTens,
+        temperament: GanaTemperament::Rakshasa,
+        nonary_state: NonaryState::NegOne,
+        neuralese_role: "Pareto whip & adversarial perimeter probe (-1); quarantines regressive mutations.",
+    },
+    AutiotGanaOperator {
+        opcode: 12,
+        gana_id: 13,
+        autiot_letter: "Mem (מ)",
+        suares_value: 40,
+        sphere: SuaresSphere::ExistentialTens,
+        temperament: GanaTemperament::Deva,
+        nonary_state: NonaryState::PosZero,
+        neuralese_role: "Maternal water equilibrium (+0); zero-loss cold compaction and store defragmentation.",
+    },
+    AutiotGanaOperator {
+        opcode: 13,
+        gana_id: 14,
+        autiot_letter: "Nun (נ)",
+        suares_value: 50,
+        sphere: SuaresSphere::ExistentialTens,
+        temperament: GanaTemperament::Manushya,
+        nonary_state: NonaryState::PrimeOne,
+        neuralese_role: "Individuation & supersession rotor (1*); rotates stale beliefs into orthogonal null-space.",
+    },
+    AutiotGanaOperator {
+        opcode: 14,
+        gana_id: 15,
+        autiot_letter: "Samekh (ס)",
+        suares_value: 60,
+        sphere: SuaresSphere::ExistentialTens,
+        temperament: GanaTemperament::Deva,
+        nonary_state: NonaryState::PosTwo,
+        neuralese_role: "Circular AST & dependency support (+2); accelerates multi-hop graph geodesic traversal.",
+    },
+    AutiotGanaOperator {
+        opcode: 15,
+        gana_id: 16,
+        autiot_letter: "Ayin (ע)",
+        suares_value: 70,
+        sphere: SuaresSphere::ExistentialTens,
+        temperament: GanaTemperament::Rakshasa,
+        nonary_state: NonaryState::NegZero,
+        neuralese_role: "Cross-repo bond & schema eye (-0); clamps drift when contract hashes diverge.",
+    },
+    AutiotGanaOperator {
+        opcode: 16,
+        gana_id: 17,
+        autiot_letter: "Pe (פ)",
+        suares_value: 80,
+        sphere: SuaresSphere::ExistentialTens,
+        temperament: GanaTemperament::Rakshasa,
+        nonary_state: NonaryState::NegTwo,
+        neuralese_role: "Tower XVI Hostile Inspector (-2); shatters unsupported claims before digestion.",
+    },
+    AutiotGanaOperator {
+        opcode: 17,
+        gana_id: 18,
+        autiot_letter: "Tsadi (צ)",
+        suares_value: 90,
+        sphere: SuaresSphere::ExistentialTens,
+        temperament: GanaTemperament::Manushya,
+        nonary_state: NonaryState::PrimeTwo,
+        neuralese_role: "Precision fractal hook (2*); locks byte-exact regression fixes into local fast-weights.",
+    },
+    // ── SPHERE III: COSMIC HUNDREDS (100..=900) — Outer Hyperbolic Canopy & Finals ──
+    AutiotGanaOperator {
+        opcode: 18,
+        gana_id: 19,
+        autiot_letter: "Qoph (ק)",
+        suares_value: 100,
+        sphere: SuaresSphere::CosmicHundreds,
+        temperament: GanaTemperament::Rakshasa,
+        nonary_state: NonaryState::NegTwo,
+        neuralese_role: "Cosmic destroyer of false structures (-2); adversarial falsification & Dream-RSI pruning.",
+    },
+    AutiotGanaOperator {
+        opcode: 19,
+        gana_id: 20,
+        autiot_letter: "Resh (ר)",
+        suares_value: 200,
+        sphere: SuaresSphere::CosmicHundreds,
+        temperament: GanaTemperament::Deva,
+        nonary_state: NonaryState::PosTwo,
+        neuralese_role: "Cosmic container expansion (+2); cracks the hyperbaric shell into a new 9-adic fractal ring.",
+    },
+    AutiotGanaOperator {
+        opcode: 20,
+        gana_id: 21,
+        autiot_letter: "Shin (ש)",
+        suares_value: 300,
+        sphere: SuaresSphere::CosmicHundreds,
+        temperament: GanaTemperament::Manushya,
+        nonary_state: NonaryState::PrimeTwo,
+        neuralese_role: "Cosmic breath / 15 Hz conscious-counterfactual synthesis (2*); arbitrates FutureValue cones.",
+    },
+    AutiotGanaOperator {
+        opcode: 21,
+        gana_id: 22,
+        autiot_letter: "Tav (ת)",
+        suares_value: 400,
+        sphere: SuaresSphere::CosmicHundreds,
+        temperament: GanaTemperament::Deva,
+        nonary_state: NonaryState::PosOne,
+        neuralese_role: "Cosmic verification seal (+1); binds 6D holographic citations for Reverse Ricci distillation.",
+    },
+    AutiotGanaOperator {
+        opcode: 22,
+        gana_id: 23,
+        autiot_letter: "Kaph Sofit (ך)",
+        suares_value: 500,
+        sphere: SuaresSphere::CosmicHundreds,
+        temperament: GanaTemperament::Rakshasa,
+        nonary_state: NonaryState::NegZero,
+        neuralese_role: "Unconditioned boundary sentinel (-0); halts runaway loops and reclaims zombie leases.",
+    },
+    AutiotGanaOperator {
+        opcode: 23,
+        gana_id: 24,
+        autiot_letter: "Mem Sofit (ם)",
+        suares_value: 600,
+        sphere: SuaresSphere::CosmicHundreds,
+        temperament: GanaTemperament::Manushya,
+        nonary_state: NonaryState::PrimeZero,
+        neuralese_role: "Closed cosmic incubator (0*); samples hypothesis tails inside an isolated Mandala cell.",
+    },
+    AutiotGanaOperator {
+        opcode: 24,
+        gana_id: 25,
+        autiot_letter: "Nun Sofit (ן)",
+        suares_value: 700,
+        sphere: SuaresSphere::CosmicHundreds,
+        temperament: GanaTemperament::Deva,
+        nonary_state: NonaryState::PosZero,
+        neuralese_role: "Cosmic phylogenetic projection (+0); radiates verified truth manifests without distortion.",
+    },
+    AutiotGanaOperator {
+        opcode: 25,
+        gana_id: 26,
+        autiot_letter: "Pe Sofit (ף)",
+        suares_value: 800,
+        sphere: SuaresSphere::CosmicHundreds,
+        temperament: GanaTemperament::Manushya,
+        nonary_state: NonaryState::PrimeOne,
+        neuralese_role: "Unbounded Sangha speech resonance (1*); transmits 9-glyph oscillatory packets across peers.",
+    },
+    AutiotGanaOperator {
+        opcode: 26,
+        gana_id: 27,
+        autiot_letter: "Tsadi Sofit (ץ)",
+        suares_value: 900,
+        sphere: SuaresSphere::CosmicHundreds,
+        temperament: GanaTemperament::Rakshasa,
+        nonary_state: NonaryState::NegOne,
+        neuralese_role: "Apex phylogenetic spore release (-1); prunes scaffolding and emits a 64 KB BRASYT zygote.",
+    },
+    // ── THE 28TH GLYPH: |0| ABHIJIT SINGULARITY (r = 0) ──
+    AutiotGanaOperator {
+        opcode: 27,
+        gana_id: 28,
+        autiot_letter: "|0| Abhijit / Ain (אין)",
+        suares_value: 0,
+        sphere: SuaresSphere::BarycentricOrigin,
+        temperament: GanaTemperament::AbhijitOrigin,
+        nonary_state: NonaryState::PosZero,
+        neuralese_role: "Barycentric Origin (r = 0): Phase-Conjugate Holographic Past, Permanent KV Cache & CPR Anchor.",
+    },
+];
+
+/// Look up the unified Autiot-Gana operator for a 1-indexed Lunar Mansion Gana (`1..=28`).
+#[must_use]
+pub const fn autiot_by_gana_id(gana_id: u8) -> Option<&'static AutiotGanaOperator> {
+    if gana_id >= 1 && gana_id <= 28 {
+        Some(&AUTIOT_GANA_28[(gana_id - 1) as usize])
+    } else {
+        None
+    }
+}
+
+/// Look up the unified Autiot-Gana operator by its Carlo Suarès numerical value (`0`, `1..=9`, `10..=90`, `100..=900`).
+#[must_use]
+pub fn autiot_by_suares_value(suares_value: u16) -> Option<&'static AutiotGanaOperator> {
+    AUTIOT_GANA_28
+        .iter()
+        .find(|op| op.suares_value == suares_value)
+}
+
+/// Returns the 6-step `BRASYT` (Bereshit: `Bet-Resh-Aleph-Shin-Yod-Tav` = `[2, 200, 1, 300, 10, 400]`)
+/// morphogenetic lifecycle sequence:
+/// 1. `Bet (2)`: Enclose inside the hyperbaric Bayt shell.
+/// 2. `Resh (200)`: Crack the shell into the outer hyperbolic ring.
+/// 3. `Aleph (1)`: Inject raw excitation pulse into the new ring.
+/// 4. `Shin (300)`: Evolve 15 Hz conscious/counterfactual trajectories across the canopy.
+/// 5. `Yod (10)`: Compress surviving insights inward via Reverse Ricci Flow.
+/// 6. `Tav (400)`: Seal with a verified Continuity Receipt (CPR) into `|0|`.
+#[must_use]
+pub const fn brasyt_lifecycle_operators() -> [&'static AutiotGanaOperator; 6] {
+    [
+        &AUTIOT_GANA_28[1],  // Bet (2)
+        &AUTIOT_GANA_28[19], // Resh (200)
+        &AUTIOT_GANA_28[0],  // Aleph (1)
+        &AUTIOT_GANA_28[20], // Shin (300)
+        &AUTIOT_GANA_28[9],  // Yod (10)
+        &AUTIOT_GANA_28[21], // Tav (400)
+    ]
+}
+
 /// Tri-state grading verdict enforced by Arcana XVI (The Tower / Hostile Inspector).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -600,5 +1155,73 @@ mod tests {
         assert_eq!(report.grade, HostileInspectorGrade::Supported);
         assert!(!report.dhumavati_warnings.is_empty());
         assert!(report.dhumavati_warnings[0].contains("DHU-001"));
+    }
+
+    #[test]
+    fn test_autiot_gana_28_bijection_and_nonary_spheres() {
+        assert_eq!(AUTIOT_GANA_28.len(), 28);
+
+        let mut seen_opcodes = HashSet::new();
+        let mut seen_gana_ids = HashSet::new();
+        let mut seen_suares = HashSet::new();
+        let mut seen_sphere_nonary = HashSet::new();
+
+        let mut deva_count = 0;
+        let mut manushya_count = 0;
+        let mut rakshasa_count = 0;
+        let mut origin_count = 0;
+
+        for op in AUTIOT_GANA_28 {
+            assert!(seen_opcodes.insert(op.opcode));
+            assert!(seen_gana_ids.insert(op.gana_id));
+            assert!(seen_suares.insert(op.suares_value));
+            assert_eq!(usize::from(op.opcode) + 1, usize::from(op.gana_id));
+
+            // Verify 4-bit nibble round-trip for NonaryState
+            let nib = op.nonary_state.to_nibble();
+            assert!(nib < 9);
+            assert_eq!(NonaryState::from_nibble(nib), Some(op.nonary_state));
+
+            match op.temperament {
+                GanaTemperament::Deva => {
+                    deva_count += 1;
+                    assert_eq!(op.nonary_state.modality(), NonaryModality::PositiveDeva);
+                    assert!(seen_sphere_nonary.insert((op.sphere, op.nonary_state)));
+                }
+                GanaTemperament::Manushya => {
+                    manushya_count += 1;
+                    assert_eq!(op.nonary_state.modality(), NonaryModality::PrimeManushya);
+                    assert!(op.nonary_state.is_prime_plastic());
+                    assert!(seen_sphere_nonary.insert((op.sphere, op.nonary_state)));
+                }
+                GanaTemperament::Rakshasa => {
+                    rakshasa_count += 1;
+                    assert_eq!(op.nonary_state.modality(), NonaryModality::NegativeRakshasa);
+                    assert!(seen_sphere_nonary.insert((op.sphere, op.nonary_state)));
+                }
+                GanaTemperament::AbhijitOrigin => {
+                    origin_count += 1;
+                    assert_eq!(op.suares_value, 0);
+                    assert_eq!(op.sphere, SuaresSphere::BarycentricOrigin);
+                    assert_eq!(op.gana_id, 28);
+                }
+            }
+        }
+
+        // 9 Deva + 9 Manushya + 9 Rakshasa = 27 active Present-Future operators + 1 |0| Origin = 28
+        assert_eq!(
+            (deva_count, manushya_count, rakshasa_count, origin_count),
+            (9, 9, 9, 1)
+        );
+        assert_eq!(
+            seen_sphere_nonary.len(),
+            27,
+            "All 3 Suarès spheres × 9 Nonary states = 27 unique active operators"
+        );
+
+        // Verify BRASYT lifecycle sequence: [Bet=2, Resh=200, Aleph=1, Shin=300, Yod=10, Tav=400]
+        let brasyt = brasyt_lifecycle_operators();
+        let values: Vec<u16> = brasyt.iter().map(|op| op.suares_value).collect();
+        assert_eq!(values, vec![2, 200, 1, 300, 10, 400]);
     }
 }
