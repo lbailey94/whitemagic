@@ -374,6 +374,9 @@ if args[:2] == ['checkout', '--detach']:
 if args[:2] == ['log', '-1']:
     print('fake-tag-commit')
     raise SystemExit(0)
+if args == ['rev-parse', 'HEAD']:
+    print('a' * 40)
+    raise SystemExit(0)
 raise SystemExit('unexpected git '+repr(args))
 """)
             git.chmod(0o755)
@@ -387,7 +390,8 @@ ident=f'path+file:///tag#{name}@{version}'
 print(json.dumps({'packages':[{'id':ident,'name':name,'publish':None,'dependencies':[]}], 'workspace_members':[ident]}))
 """)
             cargo.chmod(0o755)
-            env = dict(os.environ, PATH=f"{fakebin}:{os.environ['PATH']}", RUNNER_TEMP=str(runner))
+            env = dict(os.environ, PATH=f"{fakebin}:{os.environ['PATH']}", RUNNER_TEMP=str(runner),
+                       WORKFLOW_RUN_HEAD_SHA="a" * 40)
             proc = subprocess.run(["bash", "-eu", "-c", shell], cwd=checkout, env=env, text=True, capture_output=True)
             self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
             saved = runner / "release_health.py"
@@ -417,6 +421,44 @@ print(json.dumps({'packages':[{'id':ident,'name':name,'publish':None,'dependenci
             self.assertEqual(crates["total"], 1)
             self.assertEqual(cargo_log.read_text(), "9.3.4 wm-core")
 
+            env["WORKFLOW_RUN_HEAD_SHA"] = "b" * 40
+            drift = subprocess.run(["bash", "-eu", "-c", shell], cwd=checkout, env=env, text=True, capture_output=True)
+            self.assertNotEqual(drift.returncode, 0)
+            self.assertIn("but Release ran at", drift.stdout)
+
+    def test_health_uses_tagged_push_or_explicit_probe_version(self) -> None:
+        text = WORKFLOW.read_text()
+        gate = text.split("    if: >-\n", 1)[1].split("    permissions:", 1)[0]
+        self.assertIn("github.event_name != 'workflow_run'", gate)
+        self.assertIn("github.event.workflow_run.conclusion == 'success'", gate)
+        self.assertIn("github.event.workflow_run.event == 'push'", gate)
+        self.assertIn("startsWith(github.event.workflow_run.head_branch, 'v')", gate)
+
+        section = text.split("      - name: Resolve version\n", 1)[1].split("        run: |\n", 1)[1].split("\n      - ", 1)[0]
+        shell = "\n".join(line[10:] for line in section.splitlines() if line.startswith("          "))
+        cases = (
+            ("workflow_run", "v11.3.0-alpha.1", "", "11.3.0-alpha.1"),
+            ("workflow_run", "", "", None),
+            ("workflow_run", "v11.3.0-alpha.1 trailing text", "", None),
+            ("workflow_dispatch", "", "11.2.1", "11.2.1"),
+            ("schedule", "", "", "11.3.0-alpha.2"),
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            gh = root / "gh"
+            gh.write_text("#!/usr/bin/env bash\necho v11.3.0-alpha.2\n")
+            gh.chmod(0o755)
+            output = root / "output"
+            for event, tag, explicit_version, version in cases:
+                with self.subTest(event=event, tag=tag, explicit_version=explicit_version):
+                    output.write_text("")
+                    env = dict(os.environ, PATH=f"{root}:{os.environ['PATH']}", EVENT_NAME=event,
+                               WORKFLOW_RUN_HEAD_BRANCH=tag, INPUT_VERSION=explicit_version,
+                               GITHUB_REPO="lbailey94/whitemagic", GITHUB_OUTPUT=str(output))
+                    proc = subprocess.run(["bash", "-eu", "-c", shell], env=env, text=True, capture_output=True)
+                    self.assertEqual(proc.returncode == 0, version is not None, proc.stderr or proc.stdout)
+                    self.assertEqual(output.read_text(), f"version={version}\n" if version else "")
+
     def test_checker_is_saved_before_tag_checkout_and_used_for_both_probes(self) -> None:
         text = WORKFLOW.read_text()
         save = text.index('cp scripts/release_health.py "$RUNNER_TEMP/release_health.py"')
@@ -435,37 +477,36 @@ print(json.dumps({'packages':[{'id':ident,'name':name,'publish':None,'dependenci
         self.assertIn('"$TREE_V" = "$V"', text)
         self.assertEqual(tag_version.split('.')[0], '9')
 
-    def test_saved_checker_selects_v9_asset_matrix_for_old_tag(self) -> None:
+    def test_saved_checker_selects_the_expected_asset_matrix_for_each_tag(self) -> None:
         sys.path.insert(0, str(ROOT / "scripts"))
         import release_health as checker
-        original = (checker.TARGETS, checker.COMPRESSED_TARGETS, checker.REQUIRED_RELEASE_ASSETS,
-                    checker.EXPECTED_MANIFEST_TARGETS, checker.probe_all)
-        try:
-            observed = {}
-            checker.probe_all = lambda repo, version: observed.update({
-                "version": version, "targets": set(checker.TARGETS),
-                "manifest": set(checker.EXPECTED_MANIFEST_TARGETS),
-                "required": set(checker.REQUIRED_RELEASE_ASSETS),
-            }) or {"status": "healthy", "version": version, "registries": {}}
-            old_argv = sys.argv
-            sys.argv = ["release_health.py", "--version", "9.3.4", "--profile", "auto", "--quiet"]
-            try:
-                self.assertEqual(checker.main(), 0)
-            finally:
-                sys.argv = old_argv
-            self.assertIn("wm-linux-x86_64-musl", observed["targets"])
-            self.assertIn("wm-windows-x86_64.exe", observed["targets"])
-            self.assertNotIn("wm-windows-x86_64.exe.gz", observed["required"])
-            self.assertNotIn("wm-windows-x86_64.exe.gz.sha256", observed["required"])
-            self.assertEqual(observed["version"], "9.3.4")
-            sys.argv = ["release_health.py", "--version", "10.4.0", "--profile", "auto", "--quiet"]
-            checker.probe_all = lambda repo, version: observed.update({"version": version, "targets": set(checker.TARGETS), "required": set(checker.REQUIRED_RELEASE_ASSETS)}) or {"status":"healthy","version":version,"registries":{}}
-            self.assertEqual(checker.main(), 0)
-            self.assertIn("wm-linux-x86_64", observed["targets"])
-            self.assertNotIn("wm-linux-x86_64-musl", observed["targets"])
-        finally:
-            (checker.TARGETS, checker.COMPRESSED_TARGETS, checker.REQUIRED_RELEASE_ASSETS,
-             checker.EXPECTED_MANIFEST_TARGETS, checker.probe_all) = original
+        from unittest.mock import patch
+
+        baseline = {"wm-linux-x86_64", "wm-linux-aarch64", "wm-macos-aarch64"}
+        win = {"wm-windows-x86_64.exe"}
+        full = baseline | win | {"wm-macos-x86_64"}
+        musl = {"wm-linux-x86_64-musl", "wm-linux-aarch64-musl"}
+        cases = (
+            ("11.3.0-alpha.1", full),
+            ("9.3.4", full | musl),
+            ("10.0.0-alpha.1", full | musl),
+            ("10.0.0-alpha", baseline | win),
+            ("10.2.0-alpha.1", baseline | win),
+            ("10.2.0-alpha.2", baseline),
+            ("10.7.1", baseline),
+            ("11.2.1", baseline),
+            ("11.3.0", full),
+        )
+        for version, targets in cases:
+            with self.subTest(version=version), patch.object(checker, "fetch_json", return_value=(404, {})):
+                result = checker.probe_github("lbailey94/whitemagic", version)
+                expected = {"release-manifest.json", "release-manifest.json.sig"}
+                for target in targets:
+                    expected.update((target, f"{target}.sha256"))
+                    if not target.endswith(".exe"):
+                        expected.update((f"{target}.gz", f"{target}.gz.sha256"))
+                self.assertEqual(set(result["missing_assets"]), expected)
+                self.assertEqual(result["required_assets"], len(expected))
 
     def test_final_gate_binds_each_certification_to_verified_manifest(self) -> None:
         text = WORKFLOW.read_text()

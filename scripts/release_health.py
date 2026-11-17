@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -45,51 +46,25 @@ import tempfile
 
 UA = "wm-release-health/1.0 (+https://github.com/lbailey94/whitemagic)"
 DEFAULT_RELEASE_PUBKEY = "aade884b035d2f92333843faba153eb83b201d1d1db63e25d642d82f4b12770e"
-# Mirrors the release.yml build matrix. Linux and macOS arm64 ship with
-# fastembed/ONNX; Intel macOS and Windows x86_64 ship pure-Rust zero-DLL builds
-# (--no-default-features --features system05). Keep this list in lockstep with
-# the release.yml matrix: a stale entry here is a guaranteed false LAGGING.
-TARGETS = [
-    "wm-linux-x86_64",
-    "wm-linux-aarch64",
-    "wm-macos-aarch64",
-    "wm-macos-x86_64",
-    "wm-windows-x86_64.exe",
-]
-EXPECTED_MANIFEST_TARGETS = {
+# Select the expected matrix from the tag independently of its manifest.
+GEN3_THREE_TARGETS = {
     "linux-x86_64": "wm-linux-x86_64",
     "linux-aarch64": "wm-linux-aarch64",
     "macos-aarch64": "wm-macos-aarch64",
+}
+GEN3_EARLY_WINDOWS_TARGETS = {
+    **GEN3_THREE_TARGETS,
+    "windows-x86_64": "wm-windows-x86_64.exe",
+}
+GEN3_FIVE_TARGETS = {
+    **GEN3_EARLY_WINDOWS_TARGETS,
     "macos-x86_64": "wm-macos-x86_64",
-    "windows-x86_64": "wm-windows-x86_64.exe",
 }
-V9_TARGETS = [
-    "wm-linux-x86_64", "wm-linux-x86_64-musl", "wm-linux-aarch64",
-    "wm-linux-aarch64-musl", "wm-macos-aarch64", "wm-macos-x86_64",
-    "wm-windows-x86_64.exe",
-]
-V9_EXPECTED_MANIFEST_TARGETS = {
-    "linux-x86_64": "wm-linux-x86_64", "linux-x86_64-musl": "wm-linux-x86_64-musl",
-    "linux-aarch64": "wm-linux-aarch64", "linux-aarch64-musl": "wm-linux-aarch64-musl",
-    "macos-aarch64": "wm-macos-aarch64", "macos-x86_64": "wm-macos-x86_64",
-    "windows-x86_64": "wm-windows-x86_64.exe",
+V9_TARGETS = {
+    **GEN3_FIVE_TARGETS,
+    "linux-x86_64-musl": "wm-linux-x86_64-musl",
+    "linux-aarch64-musl": "wm-linux-aarch64-musl",
 }
-# Distributables are published gzip'd alongside the raw binary on POSIX targets
-# (2026-09-21, slow-link accessibility); Windows ships raw .exe + .sha256.
-COMPRESSED_TARGETS = [t for t in TARGETS if not t.endswith(".exe")]
-REQUIRED_RELEASE_ASSETS = (
-    [
-        asset
-        for target in TARGETS
-        for asset in (target, f"{target}.sha256")
-    ]
-    + [asset for target in COMPRESSED_TARGETS for asset in (f"{target}.gz", f"{target}.gz.sha256")]
-    + ["release-manifest.json", "release-manifest.json.sig"]
-)
-CURRENT_TARGETS = tuple(TARGETS)
-CURRENT_COMPRESSED_TARGETS = tuple(COMPRESSED_TARGETS)
-CURRENT_REQUIRED_RELEASE_ASSETS = tuple(REQUIRED_RELEASE_ASSETS)
-CURRENT_EXPECTED_MANIFEST_TARGETS = dict(EXPECTED_MANIFEST_TARGETS)
 NPM_PACKAGE = "whitemagic-mcp"
 DOCKER_REPO = "lbailey94/whitemagic"
 MCP_SERVER = "io.github.lbailey94/whitemagic-mcp"
@@ -198,21 +173,53 @@ def latest_version(repo: str) -> str:
     return tag.lstrip("v")
 
 
-def probe_github(repo: str, version: str, pubkey_hex: str | None = None) -> dict:
+def expected_manifest_targets(version: str, profile: str = "auto") -> dict[str, str]:
+    if profile == "v9":
+        return V9_TARGETS
+    if profile == "v10":
+        return GEN3_THREE_TARGETS
+
+    major, minor, _patch = map(int, version.split("-", 1)[0].split("."))
+    if major == 9 or version == "10.0.0-alpha.1":
+        return V9_TARGETS
+    if version in {"10.0.0-alpha", "10.2.0-alpha", "10.2.0-alpha.1"}:
+        return GEN3_EARLY_WINDOWS_TARGETS
+    if (major, minor) >= (11, 3):
+        return GEN3_FIVE_TARGETS
+    return GEN3_THREE_TARGETS
+
+
+def required_release_assets(targets: dict[str, str]) -> list[str]:
+    # POSIX releases include gzip assets. Windows ships only the raw .exe.
+    return (
+        [asset for target in targets.values() for asset in (target, f"{target}.sha256")]
+        + [
+            asset for target in targets.values() if not target.endswith(".exe")
+            for asset in (f"{target}.gz", f"{target}.gz.sha256")
+        ]
+        + ["release-manifest.json", "release-manifest.json.sig"]
+    )
+
+
+def probe_github(
+    repo: str, version: str, pubkey_hex: str | None = None, *, profile: str = "auto",
+) -> dict:
+    expected_targets = expected_manifest_targets(version, profile)
+    required_assets = required_release_assets(expected_targets)
     url = f"https://api.github.com/repos/{repo}/releases/tags/v{version}"
     status, data = fetch_json(url)
-    base = {"url": url, "required_assets": len(REQUIRED_RELEASE_ASSETS)}
+    base = {"url": url, "required_assets": len(required_assets)}
     if status is None:
         return {**base, "status": "unreachable", "error": data}
     if status == 404:
-        return {**base, "status": "missing", "missing_assets": REQUIRED_RELEASE_ASSETS}
+        return {**base, "status": "missing", "missing_assets": required_assets}
     assets_by_name = {
         asset.get("name"): asset
         for asset in (data or {}).get("assets", [])
         if isinstance(asset, dict) and asset.get("name")
     }
     names = set(assets_by_name.keys())
-    missing = [a for a in REQUIRED_RELEASE_ASSETS if a not in names]
+    missing = [asset for asset in required_assets if asset not in names]
     manifest_error = None
     manifest_sha256 = None
     manifest_signature_valid = False
@@ -246,14 +253,14 @@ def probe_github(repo: str, version: str, pubkey_hex: str | None = None) -> dict
                 m_targets = m_data.get("targets")
                 if not isinstance(m_targets, dict):
                     manifest_error = "manifest missing targets object"
-                elif set(m_targets.keys()) != set(EXPECTED_MANIFEST_TARGETS.keys()):
+                elif m_targets.keys() != expected_targets.keys():
                     manifest_error = (
                         f"manifest target matrix {sorted(m_targets.keys())} != "
-                        f"expected {sorted(EXPECTED_MANIFEST_TARGETS.keys())}"
+                        f"expected {sorted(expected_targets)}"
                     )
                 else:
                     integrity_errors = []
-                    for t_key, asset_name in sorted(EXPECTED_MANIFEST_TARGETS.items()):
+                    for t_key, asset_name in sorted(expected_targets.items()):
                         t_decl = m_targets.get(t_key) or {}
                         expected_url = f"{base_dl}/{asset_name}"
                         t_url = str(t_decl.get("url") or "")
@@ -431,9 +438,9 @@ def probe_mcp_registry(version: str) -> dict:
     }
 
 
-def probe_all(repo: str, version: str) -> dict:
+def probe_all(repo: str, version: str, *, profile: str = "auto") -> dict:
     registries = {
-        "github-release": probe_github(repo, version),
+        "github-release": probe_github(repo, version, profile=profile),
         "crates.io": probe_crates(version),
         "npm": probe_npm(version),
         "docker": probe_docker(version),
@@ -505,13 +512,6 @@ def summarize(record: dict) -> None:
 
 
 def main() -> int:
-    global TARGETS, COMPRESSED_TARGETS, REQUIRED_RELEASE_ASSETS, EXPECTED_MANIFEST_TARGETS
-    # `main()` is also called more than once in embedded checks. Restore the
-    # trusted current profile before selecting the requested tag profile.
-    TARGETS = list(CURRENT_TARGETS)
-    COMPRESSED_TARGETS = list(CURRENT_COMPRESSED_TARGETS)
-    REQUIRED_RELEASE_ASSETS = list(CURRENT_REQUIRED_RELEASE_ASSETS)
-    EXPECTED_MANIFEST_TARGETS = dict(CURRENT_EXPECTED_MANIFEST_TARGETS)
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--version", default=None)
     ap.add_argument("--repo", default="lbailey94/whitemagic")
@@ -523,17 +523,9 @@ def main() -> int:
     args = ap.parse_args()
 
     version = args.version or latest_version(args.repo)
-    profile = args.profile
-    if profile == "auto":
-        profile = "v9" if version.split(".", 1)[0] == "9" else "v10"
-    if profile == "v9":
-        TARGETS = list(V9_TARGETS)
-        COMPRESSED_TARGETS = [target for target in V9_TARGETS if not target.endswith(".exe")]
-        EXPECTED_MANIFEST_TARGETS = dict(V9_EXPECTED_MANIFEST_TARGETS)
-        REQUIRED_RELEASE_ASSETS = ([a for t in TARGETS for a in (t, f"{t}.sha256")]
-            + [a for t in COMPRESSED_TARGETS for a in (f"{t}.gz", f"{t}.gz.sha256")]
-            + ["release-manifest.json", "release-manifest.json.sig"])
-    record = probe_all(args.repo, version)
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.]+)?", version):
+        ap.error(f"expected a release version X.Y.Z[-suffix], got {version!r}")
+    record = probe_all(args.repo, version, profile=args.profile)
 
     if args.json == "-":
         print(json.dumps(record, indent=2, sort_keys=True))

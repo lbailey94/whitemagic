@@ -23,7 +23,11 @@ jobs:
   reconcile:
     name: Probe distribution health, verify artifacts, certify installs
     runs-on: ubuntu-24.04
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
     permissions:
       contents: write
       id-token: write
@@ -40,25 +44,18 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
         run: |
           set -eu
-          V="$INPUT_VERSION"
-          if [ -z "$V" ] && [ "$EVENT_NAME" = "workflow_run" ]; then
-            # A prerelease never appears in releases/latest, so the tag that
-            # triggered the Release run is the only honest source here.
-            V="$WORKFLOW_RUN_HEAD_BRANCH"
-            V="${V#v}"
-          fi
-          if [ -z "$V" ]; then
-            # Newest release, prereleases included (the alpha channel is the
-            # normal release here; releases/latest excludes prereleases and
-            # would leave the monitor probing a stale stable). Newest first
-            # by created_at. A gh failure must never leak its JSON error body
-            # into later steps — that exact bug fed `{"message":"Not Found"}`
-            # into `git fetch` and exited 127 (2026-10-05).
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            # The tagged Release run identifies the exact version, including prereleases.
+            V="${WORKFLOW_RUN_HEAD_BRANCH#v}"
+          elif [ -n "$INPUT_VERSION" ]; then
+            V="$INPUT_VERSION"
+          else
+            # Scheduled or unspecified manual probes include prereleases.
             V="$(gh api "repos/${GITHUB_REPO}/releases?per_page=1" \
               --jq '.[0].tag_name // empty' 2>/dev/null || true)"
             V="${V#v}"
           fi
-          if ! [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+          if ! [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
             echo "::error::could not resolve a release version (got: '${V}')"
             exit 1
           fi
@@ -70,6 +67,8 @@ jobs:
         # the crate list, npm package, and Dockerfile are version-specific.
         # Probing an old release with main's scripts was the 2026-10-04
         # false-LAGGING class (main's gen3 crate list vs a v9 release).
+        env:
+          WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -eu
           V="${{ steps.version.outputs.version }}"
@@ -81,6 +80,11 @@ jobs:
           cp scripts/release_channels.py "$RUNNER_TEMP/release_channels.py"
           git fetch --depth=1 origin "refs/tags/v${V}"
           git checkout --detach FETCH_HEAD
+          TAG_SHA="$(git rev-parse HEAD)"
+          if [ -n "$WORKFLOW_RUN_HEAD_SHA" ] && [ "$TAG_SHA" != "$WORKFLOW_RUN_HEAD_SHA" ]; then
+            echo "::error::tag v$V is at $TAG_SHA, but Release ran at $WORKFLOW_RUN_HEAD_SHA"
+            exit 1
+          fi
           TREE_V="$(python3 -c "import tomllib;print(tomllib.load(open('Cargo.toml','rb'))['workspace']['package']['version'])")"
           [ "$TREE_V" = "$V" ] || { echo "::error::tag v${V} tree declares workspace version ${TREE_V}"; exit 1; }
           echo "probing from tag v${V} tree ($(git log -1 --format='%h %s'))"

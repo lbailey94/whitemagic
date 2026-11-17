@@ -77,8 +77,9 @@ class ReleaseManifestFactsTest(unittest.TestCase):
                 expected.add(f"{filename}.gz")
                 expected.add(f"{filename}.gz.sha256")
         expected |= {"release-manifest.json", "release-manifest.json.sig"}
-        self.assertEqual(set(rh.REQUIRED_RELEASE_ASSETS), expected)
-        self.assertEqual(len(rh.REQUIRED_RELEASE_ASSETS), len(expected))
+        assets = rh.required_release_assets(rh.expected_manifest_targets("11.3.0-alpha.1"))
+        self.assertEqual(set(assets), expected)
+        self.assertEqual(len(assets), len(expected))
 
     def test_load_tests_and_benchmarks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -181,12 +182,13 @@ class ReleaseManifestFactsTest(unittest.TestCase):
             pub_hex = pub_der.read_bytes()[-32:].hex()
             good_sha = "a" * 64
             wrong_sha = "b" * 64
-            base_dl = "https://github.com/lbailey94/whitemagic/releases/download/v10.3.0"
+            version = "11.3.0-alpha.1"
+            base_dl = f"https://github.com/lbailey94/whitemagic/releases/download/v{version}"
 
             def make_signed_manifest(linux_sha: str) -> tuple[bytes, bytes]:
                 doc = {
                     "schema": 1,
-                    "version": "10.3.0",
+                    "version": version,
                     "channel": "open alpha",
                     "targets": {
                         "linux-x86_64": {
@@ -248,7 +250,7 @@ class ReleaseManifestFactsTest(unittest.TestCase):
                 "published_at": "2026-10-16T00:00:00Z",
                 "assets": [
                     {"name": name, "size": 1000, "digest": f"sha256:{good_sha}"}
-                    for name in rh.REQUIRED_RELEASE_ASSETS
+                    for name in rh.required_release_assets(rh.expected_manifest_targets(version))
                 ],
             }
 
@@ -266,7 +268,7 @@ class ReleaseManifestFactsTest(unittest.TestCase):
             with patch.object(rh, "fetch_json", return_value=(200, gh_release)), patch.object(
                 rh, "fetch_bytes", side_effect=fake_fetch_bytes_bad
             ):
-                res = rh.probe_github("lbailey94/whitemagic", "10.3.0", pubkey_hex=pub_hex)
+                res = rh.probe_github("lbailey94/whitemagic", version, pubkey_hex=pub_hex)
                 self.assertEqual(res["status"], "lagging")
                 self.assertTrue(res["manifest_signature_valid"])
                 self.assertEqual(res["artifact_integrity"], "failed")
@@ -286,7 +288,7 @@ class ReleaseManifestFactsTest(unittest.TestCase):
             with patch.object(rh, "fetch_json", return_value=(200, gh_release)), patch.object(
                 rh, "fetch_bytes", side_effect=fake_fetch_bytes_good
             ):
-                res2 = rh.probe_github("lbailey94/whitemagic", "10.3.0", pubkey_hex=pub_hex)
+                res2 = rh.probe_github("lbailey94/whitemagic", version, pubkey_hex=pub_hex)
                 self.assertEqual(res2["status"], "live")
                 self.assertTrue(res2["manifest_signature_valid"])
                 self.assertEqual(res2["artifact_integrity"], "verified")
@@ -302,7 +304,7 @@ class ReleaseManifestFactsTest(unittest.TestCase):
                             else:
                                 asset[field] = value
                     with patch.object(rh, "fetch_json", return_value=(200, broken_release)):
-                        failed = rh.probe_github("lbailey94/whitemagic", "10.3.0", pubkey_hex=pub_hex)
+                        failed = rh.probe_github("lbailey94/whitemagic", version, pubkey_hex=pub_hex)
                     self.assertEqual(failed["status"], "lagging")
                     self.assertEqual(failed["artifact_integrity"], "failed")
                     self.assertIn("missing or invalid" if field == "size" else "unsupported", failed["manifest_error"])
