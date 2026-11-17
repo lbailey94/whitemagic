@@ -19,6 +19,8 @@ pub mod shortlist_receipt;
 pub mod receipt_verify;
 
 pub mod deliberation;
+pub mod doctor;
 pub mod grimoire;
+pub mod setup;
 pub mod starter_galaxy;
 pub mod systemtwo;

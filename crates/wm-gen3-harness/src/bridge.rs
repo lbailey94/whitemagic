@@ -20,9 +20,13 @@ use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::path::Path;
 use std::str::FromStr;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 use uuid::Uuid;
 
+use wm_gen3_core::adversarial_guard::{
+    evaluate_nlu_action_boundary, normalize_adversarial_text, score_with_stuffing_cap,
+    tokenize_adversarial_safe,
+};
 use wm_gen3_core::compat::{Gen2EpisodicRecord, Gen2Reader};
 use wm_gen3_core::evidence::RatifiedChannel;
 use wm_gen3_core::field::{RelationKind, RelationState};
@@ -31,6 +35,7 @@ use wm_gen3_core::mandala::{
     Signature, Signer, SigningKey, Verifier, VerifyingKey, resolve_or_create_mandala_gate_key,
 };
 use wm_gen3_core::mesh::{MeshClient, resolve_or_create_mesh_key};
+use wm_gen3_core::novelty_gate::{NoveltyDecision, NoveltyGate};
 use wm_gen3_core::ops::{
     ImportKind, RecallQuery, RememberItem, SessionCheckpoint, SessionContinuityView, SessionTurn,
     Substrate, compose_session_digest,
@@ -2182,6 +2187,15 @@ fn normalize_q34_args(target_route: &str, raw: &Value) -> Value {
     Value::Object(normalized)
 }
 
+fn evaluate_process_novelty(text: &str) -> NoveltyDecision {
+    static NOVELTY_GATE: OnceLock<Mutex<NoveltyGate>> = OnceLock::new();
+    let gate = NOVELTY_GATE.get_or_init(|| Mutex::new(NoveltyGate::default()));
+    match gate.lock() {
+        Ok(mut g) => g.evaluate_and_record(text),
+        Err(poisoned) => poisoned.into_inner().evaluate_and_record(text),
+    }
+}
+
 /// Handle the `wm` meta-tool invocation with NLU thought routing, explicit route, or legacy action.
 fn handle_wm_router(
     args: &Value,
@@ -2214,7 +2228,26 @@ fn handle_wm_router(
     if let Some(thought) = args.get("thought").and_then(Value::as_str) {
         let trimmed = thought.trim();
         if !trimmed.is_empty() {
-            let (predicted_route, _score) = predict_route_from_thought(trimmed);
+            let norm_thought = normalize_adversarial_text(trimmed);
+            let (predicted_route, _score) = predict_route_from_thought(&norm_thought);
+            let route_verdict = evaluate_nlu_action_boundary(predicted_route, "", false);
+            if !route_verdict.allowed {
+                return Err(format!("nlu boundary refused: {}", route_verdict.reason));
+            }
+            let norm_lower = norm_thought.to_ascii_lowercase();
+            let direct_destructive_cmd = wm_gen3_core::adversarial_guard::DESTRUCTIVE_TOOL_CLASSES
+                .iter()
+                .any(|&cls| {
+                    norm_lower == cls
+                        || norm_lower.starts_with(&format!("{cls} "))
+                        || norm_lower.starts_with(&format!("{cls}:"))
+                });
+            if direct_destructive_cmd {
+                let text_verdict = evaluate_nlu_action_boundary(&norm_thought, trimmed, false);
+                if !text_verdict.allowed {
+                    return Err(format!("nlu boundary refused: {}", text_verdict.reason));
+                }
+            }
             let mut extracted_args = args.get("args").cloned().unwrap_or_else(|| json!({}));
             match predicted_route {
                 "memory.create" => {
@@ -2422,6 +2455,8 @@ fn handle_memory_create(
                 .unwrap_or(0)
         });
     let content_hash = hex_encode(&Sha256::digest(content.as_bytes()));
+    let novelty = evaluate_process_novelty(content);
+    let stuffing = score_with_stuffing_cap(&tokenize_adversarial_safe(content));
 
     Ok(json!({
         "status": "success",
@@ -2434,6 +2469,15 @@ fn handle_memory_create(
         "created_at": now_epoch,
         "kernel_epoch": substrate.store().epoch().unwrap_or(0),
         "content_hash": content_hash,
+        "novelty": {
+            "is_novel": novelty.is_novel,
+            "exact_duplicate": novelty.exact_duplicate,
+            "max_jaccard": novelty.max_jaccard,
+        },
+        "stuffing_cap": {
+            "cap": stuffing.cap,
+            "penalized_fraction": stuffing.penalized_fraction,
+        },
         "attested": true
     }))
 }
@@ -4380,19 +4424,26 @@ fn handle_session_record(
         let _ = writeln!(file, "{entry}");
     }
 
-    // Ingest into substrate as an evidence record
-    let source = match (agent_id, log_type) {
-        (Some(agent), Some(log_type)) => format!("session:{session_id}:{agent}:{log_type}"),
-        (Some(agent), None) => format!("session:{session_id}:{agent}"),
-        _ => format!("session:{session_id}"),
+    // Ingest into substrate only when novel so repetitive boilerplate turns
+    // do not bloat recall indexes (Article 8 history stays in session_log.jsonl).
+    let novelty = evaluate_process_novelty(content);
+    let substrate_admitted = if novelty.is_novel {
+        let source = match (agent_id, log_type) {
+            (Some(agent), Some(log_type)) => format!("session:{session_id}:{agent}:{log_type}"),
+            (Some(agent), None) => format!("session:{session_id}:{agent}"),
+            _ => format!("session:{session_id}"),
+        };
+        let item = RememberItem {
+            content: format!("[session:{session_id}] {role}: {content}"),
+            source,
+            kind: ImportKind::Reported,
+        };
+        substrate.set_intake_authority(RatifiedChannel::mint("wm-session-turn"));
+        let _ = substrate.remember_batch(&[item]);
+        true
+    } else {
+        false
     };
-    let item = RememberItem {
-        content: format!("[session:{session_id}] {role}: {content}"),
-        source,
-        kind: ImportKind::Reported,
-    };
-    substrate.set_intake_authority(RatifiedChannel::mint("wm-session-turn"));
-    let _ = substrate.remember_batch(&[item]);
 
     Ok(json!({
         "status": "success",
@@ -4402,6 +4453,12 @@ fn handle_session_record(
         "supersedes": supersedes,
         "resolves": resolves,
         "qualifier": qualifier,
+        "novelty": {
+            "is_novel": novelty.is_novel,
+            "exact_duplicate": novelty.exact_duplicate,
+            "max_jaccard": novelty.max_jaccard,
+            "substrate_admitted": substrate_admitted,
+        },
         "recorded_at": now
     }))
 }
@@ -13343,6 +13400,57 @@ mod v10_6_mcp_bridge_routes_tests {
         )
         .expect("hanzi contract dispatch");
         assert_eq!(contract_hanzi["status"], "answer");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn nlu_thought_blocks_homoglyph_zwsp_destructive_bypass_and_records_novelty() {
+        let dir = std::env::temp_dir().join(format!("wm-nlu-guard-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("substrate");
+        substrate.set_budget(1_000_000);
+        substrate.set_noise_enabled(false);
+
+        for bypass in [
+            "r\u{200B}m\u{FEFF} -rf /",
+            "гм -rf /",
+            "\u{FF52}\u{FF4D} -rf /",
+            "exec /bin/sh",
+        ] {
+            let err = handle_wm_router(
+                &json!({"thought": bypass}),
+                &mut substrate,
+                &dir,
+                false,
+                McpProfile::Cyberbrain,
+            )
+            .expect_err("adversarial NLU payload must be refused");
+            assert!(err.contains("nlu boundary refused"), "got: {err}");
+        }
+
+        let unique_phrase = format!("Sovereign Landlock guard novelty test {}", Uuid::new_v4());
+        let first = handle_session_record(
+            &json!({"session_id": "guard-lane", "content": unique_phrase}),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("first session record");
+        assert_eq!(first["novelty"]["is_novel"], true);
+        assert_eq!(first["novelty"]["substrate_admitted"], true);
+
+        let repeat = handle_session_record(
+            &json!({"session_id": "guard-lane", "content": unique_phrase}),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("repeat session record");
+        assert_eq!(repeat["novelty"]["is_novel"], false);
+        assert_eq!(repeat["novelty"]["exact_duplicate"], true);
+        assert_eq!(repeat["novelty"]["substrate_admitted"], false);
 
         let _ = std::fs::remove_dir_all(&dir);
     }
