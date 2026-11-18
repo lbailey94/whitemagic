@@ -366,7 +366,7 @@ impl AuditAttestation {
     ) -> Self {
         let agent_id = agent_id.into();
         let action_name = action_name.into();
-        let timestamp_utc = chrono::Utc::now().to_rfc3339();
+        let timestamp_utc = crate::temporal::now_rfc3339_utc();
 
         let mut payload_hasher = Sha256::new();
         payload_hasher.update(payload_bytes);

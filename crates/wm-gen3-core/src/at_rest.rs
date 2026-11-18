@@ -1052,7 +1052,7 @@ fn initialize(
         format_version: KEYRING_FORMAT_VERSION,
         mode: config.mode,
         key_source: resolved.key_source.to_string(),
-        created_at: chrono::Utc::now().to_rfc3339(),
+        created_at: crate::temporal::now_rfc3339_utc(),
         argon2: resolved.argon2.clone(),
     };
     let meta_json = serde_json::to_vec(&meta)

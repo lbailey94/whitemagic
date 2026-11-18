@@ -4,11 +4,12 @@
 //! decaying environmental traces (pheromones) directly on the workspace/AST nodes
 //! rather than generating high-overhead natural language chat messages.
 
-use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
+
+use crate::temporal::utc_now_millis;
 
 /// The functional intent of a digital pheromone trace.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -60,7 +61,7 @@ impl Pheromone {
         half_life_ms: u64,
         issuer: impl Into<String>,
     ) -> Self {
-        let now_ms = Utc::now().timestamp_millis().max(0) as u64;
+        let now_ms = utc_now_millis();
         Self {
             id: Uuid::new_v4(),
             target_path: target_path.into(),

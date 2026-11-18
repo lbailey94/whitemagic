@@ -31,12 +31,13 @@
 //! (not a full scan), and the brute-force vector pass stays behind the existing
 //! projection gates (`set_projection_gated`/`set_projection_gate_count`).
 
-use chrono::Utc;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 use std::time::Instant;
 use uuid::Uuid;
+
+use crate::temporal::OffsetDateTime;
 
 use crate::constitution::{ConstitutionView, INVARIANTS};
 use crate::evidence::{Domain, EvidenceStore, Refusal};
@@ -843,7 +844,7 @@ pub struct Substrate {
     pub(crate) audit_events_count: usize,
     /// Deterministic temporal acceptance clock available only to core unit tests.
     #[cfg(test)]
-    temporal_test_clock: Option<chrono::DateTime<Utc>>,
+    temporal_test_clock: Option<OffsetDateTime>,
     #[cfg(test)]
     temporal_test_fail_append: bool,
 }
@@ -861,16 +862,16 @@ impl Substrate {
         }
     }
 
-    fn temporal_now_utc(&self) -> chrono::DateTime<Utc> {
+    fn temporal_now_utc(&self) -> OffsetDateTime {
         #[cfg(test)]
         if let Some(now) = self.temporal_test_clock {
             return now;
         }
-        Utc::now()
+        crate::temporal::utc_now()
     }
 
     #[cfg(test)]
-    fn set_temporal_test_clock(&mut self, now: chrono::DateTime<Utc>) {
+    fn set_temporal_test_clock(&mut self, now: OffsetDateTime) {
         self.temporal_test_clock = Some(now);
     }
 
@@ -1299,7 +1300,7 @@ impl Substrate {
                 continue;
             }
             let at = t::parse_instant(valid_at.as_deref().unwrap_or(&now))?;
-            let mut terminated_at: HashMap<u64, chrono::DateTime<Utc>> = HashMap::new();
+            let mut terminated_at: HashMap<u64, OffsetDateTime> = HashMap::new();
             for e in &all {
                 if let Some(id) = e.supersedes {
                     let correction =
@@ -5041,7 +5042,7 @@ impl Substrate {
             "data_bytes": stats.data_bytes,
             "map_bytes": stats.map_bytes,
             "map_used": stats.used_fraction,
-            "ts": chrono::Utc::now().to_rfc3339(),
+            "ts": crate::temporal::now_rfc3339_utc(),
         });
         use std::io::Write;
         let path = self.store.path().join("stats_history.jsonl");
@@ -7808,7 +7809,7 @@ pub fn compose_session_digest(
     turns: &[SessionTurn],
     checkpoint: Option<&SessionContinuityView>,
 ) -> (String, serde_json::Value) {
-    let generated_at = chrono::Utc::now().to_rfc3339();
+    let generated_at = crate::temporal::now_rfc3339_utc();
     let mut markdown = String::new();
     markdown.push_str(&format!("# Session Digest: {session_id}\n\n"));
     markdown.push_str(&format!("_Generated: {generated_at}_\n\n"));
@@ -8024,9 +8025,7 @@ mod tests {
         let new = ids[1].as_ref().unwrap().to_owned();
         s.record_revision(old, new, "move correction").unwrap();
         s.set_temporal_test_clock(
-            chrono::DateTime::parse_from_rfc3339("2026-06-14T12:00:00Z")
-                .unwrap()
-                .with_timezone(&Utc),
+            crate::temporal::parse_rfc3339_utc("2026-06-14T12:00:00Z").unwrap(),
         );
         let old_req = temporal_request(
             old,
@@ -8042,9 +8041,7 @@ mod tests {
         )
         .unwrap();
         s.set_temporal_test_clock(
-            chrono::DateTime::parse_from_rfc3339("2026-06-16T09:00:00Z")
-                .unwrap()
-                .with_timezone(&Utc),
+            crate::temporal::parse_rfc3339_utc("2026-06-16T09:00:00Z").unwrap(),
         );
         let mut replacement = temporal_request(
             new,
@@ -8093,9 +8090,7 @@ mod tests {
         assert_eq!(effective.groups[0].status, S::Resolved);
         assert_eq!(effective.groups[0].evidence[0].value, "Portland");
         s.set_temporal_test_clock(
-            chrono::DateTime::parse_from_rfc3339("2026-07-02T12:00:00Z")
-                .unwrap()
-                .with_timezone(&Utc),
+            crate::temporal::parse_rfc3339_utc("2026-07-02T12:00:00Z").unwrap(),
         );
         let current = s
             .query_temporal(temporal_query(M::Current, Some("city"), None, None))
@@ -8307,9 +8302,7 @@ mod tests {
         let late = *ids[1].as_ref().unwrap();
         let auth = crate::evidence::RatifiedChannel::stub("core-unit-tests");
         s.set_temporal_test_clock(
-            chrono::DateTime::parse_from_rfc3339("2026-06-01T00:00:00Z")
-                .unwrap()
-                .with_timezone(&Utc),
+            crate::temporal::parse_rfc3339_utc("2026-06-01T00:00:00Z").unwrap(),
         );
         s.assert_temporal(
             &auth,
@@ -8324,9 +8317,7 @@ mod tests {
         )
         .unwrap();
         s.set_temporal_test_clock(
-            chrono::DateTime::parse_from_rfc3339("2026-06-03T00:00:00Z")
-                .unwrap()
-                .with_timezone(&Utc),
+            crate::temporal::parse_rfc3339_utc("2026-06-03T00:00:00Z").unwrap(),
         );
         s.assert_temporal(
             &auth,

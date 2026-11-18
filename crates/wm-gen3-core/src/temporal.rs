@@ -3,12 +3,15 @@
 //! These assertions preserve what an operator supplied and when this process
 //! accepted it. They do not establish that the asserted value is true.
 
-use chrono::{DateTime, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
+pub use time::OffsetDateTime;
+use time::format_description::well_known::Rfc3339;
+use time::macros::format_description;
+use time::{Date, UtcOffset};
 
 #[cfg(unix)]
 fn validate_private_file(file: &File, description: &str) -> Result<(), TemporalError> {
@@ -260,7 +263,123 @@ struct DigestBody<'a> {
     prev_digest: &'a str,
 }
 
-pub(crate) fn parse_instant(input: &str) -> Result<DateTime<Utc>, TemporalError> {
+/// Current UTC timestamp.
+#[must_use]
+pub fn utc_now() -> OffsetDateTime {
+    OffsetDateTime::now_utc()
+}
+
+/// Current Unix epoch milliseconds floored at 0.
+#[must_use]
+pub fn utc_now_millis() -> u64 {
+    (OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000).max(0) as u64
+}
+
+/// Parse an RFC 3339 timestamp and normalize it to UTC.
+pub fn parse_rfc3339_utc(input: &str) -> Result<OffsetDateTime, TemporalError> {
+    OffsetDateTime::parse(input, &Rfc3339)
+        .map(|dt| dt.to_offset(UtcOffset::UTC))
+        .map_err(|_| TemporalError("invalid RFC3339 instant".into()))
+}
+
+/// Parse a strict `YYYY-MM-DD` calendar date as UTC midnight (`00:00:00Z`).
+pub fn parse_iso_date_midnight_utc(input: &str) -> Result<OffsetDateTime, String> {
+    let date_fmt = format_description!("[year]-[month]-[day]");
+    let date = Date::parse(input, date_fmt).map_err(|_| format!("invalid ISO date: {input}"))?;
+    if format!(
+        "{:04}-{:02}-{:02}",
+        date.year(),
+        date.month() as u8,
+        date.day()
+    ) != input
+    {
+        return Err(format!("invalid ISO date: {input}"));
+    }
+    Ok(date.midnight().assume_utc())
+}
+
+/// Format a timestamp in UTC RFC 3339 with `+00:00` and AutoSi fractional precision.
+#[must_use]
+pub fn format_rfc3339_utc(value: OffsetDateTime) -> String {
+    let utc = value.to_offset(UtcOffset::UTC);
+    let nanos = utc.nanosecond();
+    let base = format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}",
+        utc.year(),
+        utc.month() as u8,
+        utc.day(),
+        utc.hour(),
+        utc.minute(),
+        utc.second()
+    );
+    if nanos == 0 {
+        format!("{base}+00:00")
+    } else if nanos % 1_000_000 == 0 {
+        format!("{base}.{:03}+00:00", nanos / 1_000_000)
+    } else if nanos % 1_000 == 0 {
+        format!("{base}.{:06}+00:00", nanos / 1_000)
+    } else {
+        format!("{base}.{nanos:09}+00:00")
+    }
+}
+
+/// Format the current UTC instant in RFC 3339 (`+00:00`).
+#[must_use]
+pub fn now_rfc3339_utc() -> String {
+    format_rfc3339_utc(utc_now())
+}
+
+/// Format a UTC timestamp as compact `YYYYMMDDTHHMMSS.NNNNNNNNNZ`.
+#[must_use]
+pub fn format_compact_utc_nanos(value: OffsetDateTime) -> String {
+    let utc = value.to_offset(UtcOffset::UTC);
+    format!(
+        "{:04}{:02}{:02}T{:02}{:02}{:02}.{:09}Z",
+        utc.year(),
+        utc.month() as u8,
+        utc.day(),
+        utc.hour(),
+        utc.minute(),
+        utc.second(),
+        utc.nanosecond()
+    )
+}
+
+/// Format a UTC timestamp as compact `YYYYMMDDHHMMSS`.
+#[must_use]
+pub fn format_compact_utc_secs(value: OffsetDateTime) -> String {
+    let utc = value.to_offset(UtcOffset::UTC);
+    format!(
+        "{:04}{:02}{:02}{:02}{:02}{:02}",
+        utc.year(),
+        utc.month() as u8,
+        utc.day(),
+        utc.hour(),
+        utc.minute(),
+        utc.second()
+    )
+}
+
+/// Return `(YYYY-MM-DD, YYYY-MM-DDTHH:MM:SSZ)` for UTC board timestamps.
+#[must_use]
+pub fn format_board_date_and_stamp(value: OffsetDateTime) -> (String, String) {
+    let utc = value.to_offset(UtcOffset::UTC);
+    let date = format!(
+        "{:04}-{:02}-{:02}",
+        utc.year(),
+        utc.month() as u8,
+        utc.day()
+    );
+    let stamp = format!(
+        "{date}T{:02}:{:02}:{:02}Z",
+        utc.hour(),
+        utc.minute(),
+        utc.second()
+    );
+    (date, stamp)
+}
+
+pub(crate) fn parse_instant(input: &str) -> Result<OffsetDateTime, TemporalError> {
     if input.len() > 64 || !input.contains('T') {
         return Err(TemporalError("time must be offset-bearing RFC3339".into()));
     }
@@ -269,12 +388,20 @@ pub(crate) fn parse_instant(input: &str) -> Result<DateTime<Utc>, TemporalError>
             "leap-second representations are not accepted".into(),
         ));
     }
-    let parsed = DateTime::parse_from_rfc3339(input)
-        .map_err(|_| TemporalError("invalid RFC3339 instant".into()))?;
-    Ok(parsed.with_timezone(&Utc))
+    parse_rfc3339_utc(input)
 }
-pub(crate) fn format_instant(value: DateTime<Utc>) -> String {
-    value.to_rfc3339_opts(SecondsFormat::Nanos, true)
+pub(crate) fn format_instant(value: OffsetDateTime) -> String {
+    let utc = value.to_offset(UtcOffset::UTC);
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:09}Z",
+        utc.year(),
+        utc.month() as u8,
+        utc.day(),
+        utc.hour(),
+        utc.minute(),
+        utc.second(),
+        utc.nanosecond()
+    )
 }
 pub(crate) fn normalize_bound(bound: &TemporalBound) -> Result<TemporalBound, TemporalError> {
     match bound {
@@ -305,7 +432,7 @@ pub(crate) enum Applicability {
 pub(crate) fn applicability(
     from: &TemporalBound,
     until: &TemporalBound,
-    at: DateTime<Utc>,
+    at: OffsetDateTime,
 ) -> Result<Applicability, TemporalError> {
     let lo = match from {
         TemporalBound::Instant { at: x } => {
@@ -744,4 +871,44 @@ pub(crate) fn append_torn_for_test(path: &Path, entry: &LedgerEntry) -> Result<(
     f.write_all(&bytes[..bytes.len() / 2])
         .and_then(|_| f.sync_all())
         .map_err(|e| TemporalError(e.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rfc3339_formatting_matches_chronos_autosi_utc_offsets() {
+        let sec = parse_rfc3339_utc("2026-03-04T05:06:07Z").unwrap();
+        assert_eq!(format_rfc3339_utc(sec), "2026-03-04T05:06:07+00:00");
+        assert_eq!(format_instant(sec), "2026-03-04T05:06:07.000000000Z");
+
+        let ms = parse_rfc3339_utc("2026-03-04T05:06:07.120000000-04:00").unwrap();
+        assert_eq!(format_rfc3339_utc(ms), "2026-03-04T09:06:07.120+00:00");
+
+        let us = parse_rfc3339_utc("2026-03-04T05:06:07.123400Z").unwrap();
+        assert_eq!(format_rfc3339_utc(us), "2026-03-04T05:06:07.123400+00:00");
+
+        let ns = parse_rfc3339_utc("2026-03-04T05:06:07.000000009Z").unwrap();
+        assert_eq!(
+            format_rfc3339_utc(ns),
+            "2026-03-04T05:06:07.000000009+00:00"
+        );
+        assert_eq!(format_compact_utc_nanos(ns), "20260304T050607.000000009Z");
+        assert_eq!(format_compact_utc_secs(ns), "20260304050607");
+        assert_eq!(
+            format_board_date_and_stamp(ns),
+            ("2026-03-04".to_string(), "2026-03-04T05:06:07Z".to_string())
+        );
+    }
+
+    #[test]
+    fn iso_date_and_instant_validation_preserve_strictness() {
+        let midnight = parse_iso_date_midnight_utc("2026-02-28").unwrap();
+        assert_eq!(format_rfc3339_utc(midnight), "2026-02-28T00:00:00+00:00");
+        assert!(parse_iso_date_midnight_utc("2026-2-28").is_err());
+        assert!(parse_iso_date_midnight_utc("2026-02-30").is_err());
+        assert!(parse_instant("2026-02-28 00:00:00Z").is_err());
+        assert!(parse_instant("2026-02-28T23:59:60Z").is_err());
+    }
 }

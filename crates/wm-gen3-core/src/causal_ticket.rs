@@ -3,7 +3,6 @@
 //! Replaces conversational text negotiations of safety with cryptographically signed,
 //! Pearl SCM Level 2/3 interventional utility proofs bound to kernel Landlock LSM tokens.
 
-use chrono::Utc;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -12,6 +11,7 @@ use std::path::PathBuf;
 use uuid::Uuid;
 
 use crate::mandala::{LandlockSandbox, MandalaError, SandboxRuleset, WorkspaceClaim};
+use crate::temporal::utc_now_millis;
 
 /// Errors relating to causal capability tickets.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -240,7 +240,7 @@ impl CausalCapabilityTicket {
         issuer_id: impl Into<String>,
         signing_key: &SigningKey,
     ) -> Self {
-        let now_ms = Utc::now().timestamp_millis().max(0) as u64;
+        let now_ms = utc_now_millis();
         let expires_at_ms = now_ms + ttl_ms.max(1000);
         let issuer_pk = signing_key.verifying_key().to_bytes();
 

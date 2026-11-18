@@ -722,7 +722,7 @@ impl CausalInterventionReceipt {
         backdoor_set: &[String],
         scm: &StructuralCausalModel,
     ) -> Self {
-        let timestamp_utc = chrono::Utc::now().to_rfc3339();
+        let timestamp_utc = crate::temporal::now_rfc3339_utc();
         let verifying_key = hex_encode(&signing_key.verifying_key().to_bytes());
 
         // Compute deterministic hash of the causal model DAG structure

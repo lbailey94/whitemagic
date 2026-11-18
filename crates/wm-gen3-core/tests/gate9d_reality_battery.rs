@@ -10,10 +10,11 @@ use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use chrono::Utc;
 use lmdb::{DatabaseFlags, Environment, Transaction, WriteFlags};
 use serde_json::json;
 use uuid::Uuid;
+
+use wm_gen3_core::temporal::utc_now;
 
 use wm_gen3_core::capability::{CapabilityError, NullifierKey, NullifierSet};
 use wm_gen3_core::compat::{
@@ -74,7 +75,7 @@ fn create_sample_gen2_record(
         is_private: false,
         model_exclude: false,
         evidence: Vec::new(),
-        created_at: Utc::now(),
+        created_at: utc_now(),
     }
 }
 

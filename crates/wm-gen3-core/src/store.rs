@@ -944,7 +944,7 @@ impl Store {
                     done: false,
                 },
             );
-            ledger.updated_at = chrono::Utc::now().to_rfc3339();
+            ledger.updated_at = crate::temporal::now_rfc3339_utc();
             at_rest::write_migration_ledger(&self.env, keyring, &ledger)?;
         }
 
@@ -961,7 +961,7 @@ impl Store {
                 },
             );
         }
-        ledger.updated_at = chrono::Utc::now().to_rfc3339();
+        ledger.updated_at = crate::temporal::now_rfc3339_utc();
         at_rest::write_migration_ledger(&self.env, keyring, &ledger)?;
         report.sealed = sealed_now;
         report.done = true;

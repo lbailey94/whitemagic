@@ -4,10 +4,11 @@
 //! via atomic operations on typed data tuples (`out`, `in`, `rd`) residing in memory or `/dev/shm`,
 //! bypassing natural language chat serialization for operational handshakes.
 
-use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
+
+use crate::temporal::utc_now_millis;
 
 /// Typed payload categories for coordination tuples.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -152,7 +153,7 @@ pub struct Tuple {
 impl Tuple {
     /// Creates a new tuple with the given kind and time-to-live in milliseconds.
     pub fn new(kind: TupleKind, ttl_ms: u64) -> Self {
-        let now_ms = Utc::now().timestamp_millis().max(0) as u64;
+        let now_ms = utc_now_millis();
         let expires_at_ms = if ttl_ms == 0 { 0 } else { now_ms + ttl_ms };
         Self {
             id: Uuid::new_v4(),

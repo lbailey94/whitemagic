@@ -8113,7 +8113,7 @@ fn compact_tmp_dir(store_path: &Path) -> PathBuf {
 }
 
 fn compact_timestamp() -> String {
-    chrono::Utc::now().format("%Y%m%dT%H%M%S%.9fZ").to_string()
+    wm_gen3_core::temporal::format_compact_utc_nanos(wm_gen3_core::temporal::utc_now())
 }
 
 fn fsync_dir(path: &Path) {
@@ -8139,7 +8139,7 @@ struct CompactJournal {
 
 impl CompactJournal {
     fn copy(tmp: &Path) -> Self {
-        let now = chrono::Utc::now().to_rfc3339();
+        let now = wm_gen3_core::temporal::now_rfc3339_utc();
         Self {
             phase: "copy".to_string(),
             tmp: tmp.display().to_string(),
@@ -8151,7 +8151,7 @@ impl CompactJournal {
 
     fn set_phase(&mut self, phase: &str) {
         self.phase = phase.to_string();
-        self.updated_at = chrono::Utc::now().to_rfc3339();
+        self.updated_at = wm_gen3_core::temporal::now_rfc3339_utc();
     }
 }
 
@@ -9315,7 +9315,7 @@ fn run_session_command(cmd: SessionCommands, store_path: &Path) {
                 open_flags,
                 context_token,
                 representation: None,
-                timestamp_iso: Some(chrono::Utc::now().to_rfc3339()),
+                timestamp_iso: Some(wm_gen3_core::temporal::now_rfc3339_utc()),
                 lessons,
                 corrections,
                 identity_invariants,
@@ -11204,10 +11204,16 @@ fn print_census_report(census: &Gen2Census) {
     println!("Private Records:     {}", census.private_records);
     println!("Model-Excluded:      {}", census.model_exclude_records);
     if let Some(earliest) = census.earliest_record {
-        println!("Earliest Record:     {}", earliest.to_rfc3339());
+        println!(
+            "Earliest Record:     {}",
+            wm_gen3_core::temporal::format_rfc3339_utc(earliest)
+        );
     }
     if let Some(latest) = census.latest_record {
-        println!("Latest Record:       {}", latest.to_rfc3339());
+        println!(
+            "Latest Record:       {}",
+            wm_gen3_core::temporal::format_rfc3339_utc(latest)
+        );
     }
     println!("\nEvent Kinds:");
     for (k, v) in &census.kinds {
