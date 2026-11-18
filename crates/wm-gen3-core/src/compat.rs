@@ -12,13 +12,13 @@ use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use chrono::{DateTime, Utc};
 use lmdb::{Cursor, Database, Environment, EnvironmentFlags, Transaction};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
 use crate::ops::{ImportKind, RememberItem, Substrate};
+use crate::temporal::{OffsetDateTime, format_rfc3339_utc, parse_rfc3339_utc, utc_now};
 
 fn bytes_to_hex(bytes: &[u8]) -> String {
     let mut s = String::with_capacity(bytes.len() * 2);
@@ -193,7 +193,8 @@ pub struct Gen2EpisodicRecord {
     #[serde(default)]
     pub model_exclude: bool,
     pub evidence: Vec<Gen2EvidenceRef>,
-    pub created_at: DateTime<Utc>,
+    #[serde(with = "time::serde::rfc3339")]
+    pub created_at: OffsetDateTime,
 }
 
 impl Gen2EpisodicRecord {
@@ -249,8 +250,10 @@ pub struct Gen2Census {
     pub sources: BTreeMap<String, u64>,
     pub validity: BTreeMap<String, u64>,
     pub distinct_sessions: usize,
-    pub earliest_record: Option<DateTime<Utc>>,
-    pub latest_record: Option<DateTime<Utc>>,
+    #[serde(with = "time::serde::rfc3339::option")]
+    pub earliest_record: Option<OffsetDateTime>,
+    #[serde(with = "time::serde::rfc3339::option")]
+    pub latest_record: Option<OffsetDateTime>,
     pub private_records: u64,
     pub model_exclude_records: u64,
 }
@@ -390,8 +393,8 @@ impl Gen2Reader {
         let mut sources: BTreeMap<String, u64> = BTreeMap::new();
         let mut validity: BTreeMap<String, u64> = BTreeMap::new();
         let mut sessions: HashSet<Uuid> = HashSet::new();
-        let mut earliest_record: Option<DateTime<Utc>> = None;
-        let mut latest_record: Option<DateTime<Utc>> = None;
+        let mut earliest_record: Option<OffsetDateTime> = None;
+        let mut latest_record: Option<OffsetDateTime> = None;
         let mut private_records = 0u64;
         let mut model_exclude_records = 0u64;
 
@@ -497,7 +500,7 @@ impl Gen2Reader {
                         raw_key_hex: key_hex,
                         raw_val_len: val.len(),
                         reason: format!("InvalidKeyLength: expected 16, got {}", key.len()),
-                        timestamp: Utc::now(),
+                        timestamp: utc_now(),
                     });
                     continue;
                 }
@@ -513,14 +516,14 @@ impl Gen2Reader {
                                     record.content_hash,
                                     Gen2EpisodicRecord::compute_content_hash(&record.content)
                                 ),
-                                timestamp: Utc::now(),
+                                timestamp: utc_now(),
                             });
                         } else if record.content.trim().is_empty() {
                             quarantined.push(QuarantinedGen2Record {
                                 raw_key_hex: key_hex,
                                 raw_val_len: val.len(),
                                 reason: "EmptyContent".to_string(),
-                                timestamp: Utc::now(),
+                                timestamp: utc_now(),
                             });
                         } else {
                             valid_records.push(record);
@@ -531,7 +534,7 @@ impl Gen2Reader {
                             raw_key_hex: key_hex,
                             raw_val_len: val.len(),
                             reason: format!("MsgPackDecodeError: {e}"),
-                            timestamp: Utc::now(),
+                            timestamp: utc_now(),
                         });
                     }
                 }
@@ -548,7 +551,8 @@ pub struct QuarantinedGen2Record {
     pub raw_key_hex: String,
     pub raw_val_len: usize,
     pub reason: String,
-    pub timestamp: DateTime<Utc>,
+    #[serde(with = "time::serde::rfc3339")]
+    pub timestamp: OffsetDateTime,
 }
 
 /// Options controlling legacy store migration into Gen3.
@@ -611,7 +615,8 @@ pub struct MigrationReceipt {
     pub duplicate_skipped: usize,
     pub quarantined_count: usize,
     pub target_epoch: u64,
-    pub timestamp: DateTime<Utc>,
+    #[serde(with = "time::serde::rfc3339")]
+    pub timestamp: OffsetDateTime,
     pub receipt_digest: String,
     /// v9 galaxy-substrate rows scanned (decoded + undecodable), across all
     /// discovered galaxy DBIs. Reported separately from the episodic
@@ -650,7 +655,7 @@ impl MigrationReceipt {
         skipped: usize,
         quarantined: usize,
         epoch: u64,
-        ts: &DateTime<Utc>,
+        ts: &OffsetDateTime,
     ) -> String {
         let mut hasher = Sha256::new();
         hasher.update(source.to_string_lossy().as_bytes());
@@ -667,7 +672,7 @@ impl MigrationReceipt {
         hasher.update(b":");
         hasher.update(epoch.to_string().as_bytes());
         hasher.update(b":");
-        hasher.update(ts.to_rfc3339().as_bytes());
+        hasher.update(format_rfc3339_utc(*ts).as_bytes());
         crate::hex_encode(&hasher.finalize())
     }
 }
@@ -774,7 +779,7 @@ pub fn migrate_gen2_to_gen3_with_authority(
                             raw_key_hex: orig.id.as_hyphenated().to_string(),
                             raw_val_len: orig.content.len(),
                             reason: format!("RefusedByKernel: {err}"),
-                            timestamp: Utc::now(),
+                            timestamp: utc_now(),
                         });
                     }
                 }
@@ -821,7 +826,7 @@ pub fn migrate_gen2_to_gen3_with_authority(
                     raw_key_hex: format!("<{db}>"),
                     raw_val_len: 0,
                     reason: format!("GalaxyScanError[{db}]: {err}"),
-                    timestamp: Utc::now(),
+                    timestamp: utc_now(),
                 });
                 continue;
             }
@@ -890,7 +895,7 @@ pub fn migrate_gen2_to_gen3_with_authority(
                                 raw_key_hex: orig.id.as_hyphenated().to_string(),
                                 raw_val_len: orig.content.len(),
                                 reason: format!("RefusedByKernel[{db}]: {err}"),
-                                timestamp: Utc::now(),
+                                timestamp: utc_now(),
                             });
                         }
                     }
@@ -929,7 +934,7 @@ pub fn migrate_gen2_to_gen3_with_authority(
     }
 
     let target_epoch = substrate.store().epoch().unwrap_or(0);
-    let now = Utc::now();
+    let now = utc_now();
     let digest = MigrationReceipt::compute_digest(
         reader.path(),
         substrate.store().path(),
@@ -1266,7 +1271,8 @@ pub struct Gen2GalaxyRecord {
     pub db: String,
     pub id: Uuid,
     pub content: String,
-    pub created_at: DateTime<Utc>,
+    #[serde(with = "time::serde::rfc3339")]
+    pub created_at: OffsetDateTime,
     pub tags: Vec<String>,
     pub importance: f32,
     pub is_private: bool,
@@ -1331,7 +1337,8 @@ fn default_turn_role() -> String {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Gen2SessionRecord {
     pub record_id: Uuid,
-    pub created_at: DateTime<Utc>,
+    #[serde(with = "time::serde::rfc3339")]
+    pub created_at: OffsetDateTime,
     pub tags: Vec<String>,
     pub record_type: String,
     pub source_type: String,
@@ -1371,7 +1378,8 @@ pub struct SessionMigrationReceipt {
     pub quarantined: usize,
     pub decode_skipped: usize,
     pub sessions: usize,
-    pub timestamp: DateTime<Utc>,
+    #[serde(with = "time::serde::rfc3339")]
+    pub timestamp: OffsetDateTime,
     pub receipt_digest: String,
     /// Per-lane migrated/duplicate/skip accounting (`session_turn`,
     /// `session_start`, `checkpoint`, `session_end`, `message`).
@@ -1400,7 +1408,7 @@ impl SessionMigrationReceipt {
         skipped: usize,
         quarantined: usize,
         decode_skipped: usize,
-        ts: &DateTime<Utc>,
+        ts: &OffsetDateTime,
     ) -> String {
         let mut hasher = Sha256::new();
         hasher.update(source.to_string_lossy().as_bytes());
@@ -1417,7 +1425,7 @@ impl SessionMigrationReceipt {
         hasher.update(b":");
         hasher.update(decode_skipped.to_string().as_bytes());
         hasher.update(b":");
-        hasher.update(ts.to_rfc3339().as_bytes());
+        hasher.update(format_rfc3339_utc(*ts).as_bytes());
         crate::hex_encode(&hasher.finalize())
     }
 }
@@ -1466,7 +1474,7 @@ impl Gen2Reader {
                         raw_key_hex: bytes_to_hex(key),
                         raw_val_len: val.len(),
                         reason: format!("GalaxyDecodeError[{db_name}]: {e}"),
-                        timestamp: Utc::now(),
+                        timestamp: utc_now(),
                     }),
                 }
             }
@@ -1558,7 +1566,7 @@ impl Gen2Reader {
                     raw_key_hex: wrapper.id.as_hyphenated().to_string(),
                     raw_val_len: wrapper.content.len(),
                     reason: format!("EmptySessionContent[{}]", wrapper.db),
-                    timestamp: Utc::now(),
+                    timestamp: utc_now(),
                 });
                 continue;
             }
@@ -1601,7 +1609,7 @@ impl Gen2Reader {
                 timestamp /= 1000;
             }
             if timestamp == 0 {
-                timestamp = wrapper.created_at.timestamp().max(0) as u64;
+                timestamp = wrapper.created_at.unix_timestamp().max(0) as u64;
             }
 
             let sequence = object
@@ -1676,8 +1684,8 @@ fn decode_galaxy_record(
             .metadata
             .created_at
             .as_deref()
-            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-            .map_or_else(Utc::now, |d| d.with_timezone(&Utc));
+            .and_then(|s| parse_rfc3339_utc(s).ok())
+            .unwrap_or_else(utc_now);
         return Ok(Gen2GalaxyRecord {
             db: db_name.to_string(),
             id: legacy.metadata.id,
@@ -1719,8 +1727,8 @@ fn decode_galaxy_record(
         .metadata
         .created_at
         .as_deref()
-        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-        .map_or_else(Utc::now, |d| d.with_timezone(&Utc));
+        .and_then(|s| parse_rfc3339_utc(s).ok())
+        .unwrap_or_else(utc_now);
 
     Ok(Gen2GalaxyRecord {
         db: db_name.to_string(),
@@ -1926,7 +1934,7 @@ pub fn migrate_gen2_sessions_to_gen3_with_options(
         }
     }
 
-    let ts = Utc::now();
+    let ts = utc_now();
     let receipt_digest = SessionMigrationReceipt::compute_digest(
         reader.path(),
         session_log_path,
@@ -1984,7 +1992,7 @@ mod tests {
             is_private: false,
             model_exclude: false,
             evidence: Vec::new(),
-            created_at: Utc::now(),
+            created_at: utc_now(),
         };
 
         assert!(record.validate_hash());
@@ -2013,7 +2021,7 @@ mod tests {
             is_private: false,
             model_exclude: false,
             evidence: Vec::new(),
-            created_at: Utc::now(),
+            created_at: utc_now(),
         };
 
         let encoded = rmp_serde::to_vec(&original).expect("serialize");
@@ -2032,7 +2040,7 @@ mod tests {
                 "content_hash": "",
                 "tags": tags,
                 "importance": 0.8,
-                "created_at": Utc::now().to_rfc3339(),
+                "created_at": crate::temporal::now_rfc3339_utc(),
                 "model_exclude": false,
                 "is_private": false
             },
@@ -2318,7 +2326,7 @@ mod tests {
             is_private: false,
             model_exclude: false,
             evidence: Vec::new(),
-            created_at: Utc::now(),
+            created_at: utc_now(),
         }
     }
 
@@ -2579,7 +2587,7 @@ mod tests {
         assert_eq!(record.tags, vec!["legacy".to_string()]);
         assert_eq!(record.importance, 0.9);
         assert_eq!(
-            record.created_at.to_rfc3339(),
+            format_rfc3339_utc(record.created_at),
             "2026-01-02T03:04:05+00:00",
             "legacy created_at survives the positional decode"
         );
@@ -2833,7 +2841,10 @@ mod tests {
         assert_eq!(decoded.content, "minimum row content");
         assert_eq!(decoded.tags, vec!["min".to_string()]);
         assert_eq!(decoded.importance, 0.7, "importance must never default");
-        assert_eq!(decoded.created_at.to_rfc3339(), "2026-03-04T05:06:07+00:00");
+        assert_eq!(
+            format_rfc3339_utc(decoded.created_at),
+            "2026-03-04T05:06:07+00:00"
+        );
         assert!(
             scan.quarantined[0]
                 .reason

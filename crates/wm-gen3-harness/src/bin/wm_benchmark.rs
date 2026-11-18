@@ -264,7 +264,7 @@ fn run_ecosystem_benchmark_suite(args: &[String]) -> Result<(), Box<dyn std::err
             let receipt = serde_json::json!({
                 "suite": "10of10_ecosystem",
                 "status": "passed",
-                "timestamp_utc": chrono::Utc::now().to_rfc3339(),
+                "timestamp_utc": wm_gen3_core::temporal::now_rfc3339_utc(),
                 "metrics": {
                     "dual_clock_sleep_retention": dual_ret,
                     "naive_wall_clock_retention": naive_ret,

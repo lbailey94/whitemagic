@@ -11,7 +11,6 @@
 
 #![forbid(unsafe_code)]
 
-use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -22,6 +21,10 @@ use std::path::Path;
 use std::str::FromStr;
 use std::sync::{Mutex, OnceLock};
 use uuid::Uuid;
+use wm_gen3_core::temporal::{
+    format_board_date_and_stamp, format_rfc3339_utc, now_rfc3339_utc, parse_iso_date_midnight_utc,
+    parse_rfc3339_utc, utc_now,
+};
 
 use wm_gen3_core::adversarial_guard::{
     evaluate_nlu_action_boundary, normalize_adversarial_text, score_with_stuffing_cap,
@@ -4046,13 +4049,11 @@ fn parse_time_bound(raw: &str) -> Result<u64, String> {
             .parse::<u64>()
             .map_err(|e| format!("invalid epoch seconds '{text}': {e}"));
     }
-    if let Ok(timestamp) = DateTime::parse_from_rfc3339(text) {
-        return Ok(timestamp.timestamp().max(0) as u64);
+    if let Ok(timestamp) = parse_rfc3339_utc(text) {
+        return Ok(timestamp.unix_timestamp().max(0) as u64);
     }
-    if let Ok(date) = NaiveDate::parse_from_str(text, "%Y-%m-%d") {
-        if let Some(datetime) = date.and_hms_opt(0, 0, 0) {
-            return Ok(datetime.and_utc().timestamp().max(0) as u64);
-        }
+    if let Ok(datetime) = parse_iso_date_midnight_utc(text) {
+        return Ok(datetime.unix_timestamp().max(0) as u64);
     }
     Err(format!(
         "unsupported time bound '{text}' (use epoch seconds, RFC 3339, or YYYY-MM-DD)"
@@ -4761,14 +4762,14 @@ fn handle_session_continuity(
             let in_floor = since.is_none_or(|floor| {
                 view.timestamp_iso
                     .as_deref()
-                    .and_then(|ts| DateTime::parse_from_rfc3339(ts).ok())
-                    .is_none_or(|ts| ts.timestamp().max(0) as u64 >= floor)
+                    .and_then(|ts| parse_rfc3339_utc(ts).ok())
+                    .is_none_or(|ts| ts.unix_timestamp().max(0) as u64 >= floor)
             });
             let in_ceiling = until.is_none_or(|ceiling| {
                 view.timestamp_iso
                     .as_deref()
-                    .and_then(|ts| DateTime::parse_from_rfc3339(ts).ok())
-                    .is_none_or(|ts| ts.timestamp().max(0) as u64 <= ceiling)
+                    .and_then(|ts| parse_rfc3339_utc(ts).ok())
+                    .is_none_or(|ts| ts.unix_timestamp().max(0) as u64 <= ceiling)
             });
             in_floor && in_ceiling
         });
@@ -5186,7 +5187,7 @@ fn handle_session_checkpoint(
         open_flags,
         context_token,
         representation: None,
-        timestamp_iso: Some(Utc::now().to_rfc3339()),
+        timestamp_iso: Some(now_rfc3339_utc()),
         lessons,
         corrections,
         identity_invariants,
@@ -7401,9 +7402,7 @@ fn handle_sangha_post(args: &Value, readonly: bool) -> Result<Value, String> {
                 }
             }
             let seq = max_seq + 1;
-            let now = chrono::Utc::now();
-            let date_str = now.format("%Y-%m-%d").to_string();
-            let stamp_str = now.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+            let (date_str, stamp_str) = format_board_date_and_stamp(utc_now());
             let slug: String = title
                 .chars()
                 .filter(|c| c.is_ascii_alphanumeric() || *c == ' ' || *c == '-')
@@ -9557,7 +9556,7 @@ fn legacy_record_json(record: &Gen2EpisodicRecord) -> Value {
         "validity": record.validity.to_string(),
         "is_private": record.is_private,
         "model_exclude": record.model_exclude,
-        "created_at": record.created_at.to_rfc3339(),
+        "created_at": format_rfc3339_utc(record.created_at),
         "evidence_count": record.evidence.len(),
     })
 }

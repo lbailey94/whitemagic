@@ -6,10 +6,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::io::Read;
 
-use chrono::{DateTime, NaiveDate, Utc};
+use crate::temporal::{OffsetDateTime, parse_instant, parse_iso_date_midnight_utc};
 use serde::{Deserialize, Serialize};
-
-use crate::temporal::parse_instant;
 
 const MAX_INPUT_BYTES: usize = 1024 * 1024;
 const MAX_ASSERTIONS: usize = 512;
@@ -109,9 +107,9 @@ pub struct Verification {
 #[derive(Debug, Clone)]
 struct ParsedAssertion {
     raw: Assertion,
-    from: DateTime<Utc>,
-    until: Option<DateTime<Utc>>,
-    recorded: DateTime<Utc>,
+    from: OffsetDateTime,
+    until: Option<OffsetDateTime>,
+    recorded: OffsetDateTime,
 }
 
 /// Read and process a request without consuming more than the input limit plus
@@ -226,19 +224,11 @@ fn check_string(field: &str, value: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn parse_date(s: &str) -> Result<DateTime<Utc>, String> {
-    let date =
-        NaiveDate::parse_from_str(s, "%Y-%m-%d").map_err(|_| format!("invalid ISO date: {s}"))?;
-    if date.format("%Y-%m-%d").to_string() != s {
-        return Err(format!("invalid ISO date: {s}"));
-    }
-    let midnight = date
-        .and_hms_opt(0, 0, 0)
-        .ok_or_else(|| format!("invalid ISO date: {s}"))?;
-    Ok(DateTime::from_naive_utc_and_offset(midnight, Utc))
+fn parse_date(s: &str) -> Result<OffsetDateTime, String> {
+    parse_iso_date_midnight_utc(s)
 }
 
-fn parse_time(s: &str) -> Result<DateTime<Utc>, String> {
+fn parse_time(s: &str) -> Result<OffsetDateTime, String> {
     check_string("timestamp", s)?;
     if s.len() == 10 {
         return parse_date(s);

@@ -1610,7 +1610,7 @@ impl SyncBundle {
         substrate.set_budget(old_budget);
 
         let target_epoch = substrate.store().epoch().unwrap_or(0);
-        let timestamp = chrono::Utc::now().to_rfc3339();
+        let timestamp = crate::temporal::now_rfc3339_utc();
 
         let receipt_digest = {
             let mut hasher = Sha256::new();

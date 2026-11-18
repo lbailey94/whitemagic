@@ -220,7 +220,10 @@ fn create_backup_at(path: &Path, ts: &str) -> Result<PathBuf, String> {
 }
 
 fn create_backup(path: &Path) -> Result<PathBuf, String> {
-    create_backup_at(path, &chrono::Utc::now().format("%Y%m%d%H%M%S").to_string())
+    create_backup_at(
+        path,
+        &wm_gen3_core::temporal::format_compact_utc_secs(wm_gen3_core::temporal::utc_now()),
+    )
 }
 
 fn ensure_parent(path: &Path) -> Result<(), String> {
