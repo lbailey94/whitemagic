@@ -238,10 +238,11 @@ test("ensureBinary falls back to the raw binary when the .gz is absent", async (
   }
 });
 
-test("linux falls back to the glibc asset when the musl build is absent", async () => {
+test("linux tries musl first on cold install and reuses a compatible GNU cache offline", async () => {
   const cache = tempCache();
   const glibc = "wm-linux-x86_64";
   try {
+    const options = { cacheRoot: cache, tag: TAG, p: "linux", a: "x64", log: () => {} };
     const urls = [];
     const glibcFetch = okFetch((url) => {
       if (url.includes("musl")) return null; // v10 releases are glibc-only
@@ -253,18 +254,25 @@ test("linux falls back to the glibc asset when the musl build is absent", async 
       urls.push(url);
       return glibcFetch(url);
     };
-    const bin = await ensureBinary({
-      fetchImpl,
-      cacheRoot: cache,
-      tag: TAG,
-      p: "linux",
-      a: "x64",
-      log: () => {},
-    });
+    const bin = await ensureBinary({ ...options, fetchImpl });
     assert.equal(bin, cachedBinaryPath(glibc, TAG, cache));
     assert.deepEqual(readFileSync(bin), BINARY, "glibc compressed binary restored byte-exact");
-    assert.ok(urls.some((u) => u.includes("musl")), "musl candidate is tried first");
+    assert.ok(urls[0].includes("musl"), "musl candidate is tried first");
     assert.ok(urls.some((u) => u.endsWith(`/${glibc}.gz`)), "falls through to the glibc .gz");
+
+    const offline = await ensureBinary({
+      ...options,
+      glibcVersion: "2.39",
+      fetchImpl: async (url) => assert.fail(`unexpected network request: ${url}`),
+    });
+    assert.equal(offline, bin);
+
+    const olderRuntime = await ensureBinary({
+      ...options,
+      glibcVersion: "2.35",
+      fetchImpl: releaseFetchGz,
+    });
+    assert.equal(olderRuntime, cachedBinaryPath(ASSET, TAG, cache));
   } finally {
     rmSync(cache, { recursive: true, force: true });
   }

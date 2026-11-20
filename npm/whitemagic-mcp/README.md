@@ -17,10 +17,9 @@ without a manual download step.
 
 Use Node.js 18 or later and an internet connection. The package downloads and
 checksum-verifies the official `wm` binary on first run. Pin an exact published
-package and inspect its matching release assets. This source checkout's
-version is not installable until its package and native release are published.
-The `latest` and `next` dist-tags are independent selectors controlled by
-release health; neither is a permanent alias for a generation.
+package and inspect its matching release assets. Registry installs use the
+published launcher code for that version. The `latest` and `next` dist-tags
+are independent selectors controlled by release health.
 
 ```bash
 npx -y whitemagic-mcp@11.2.1 --version  # wm 11.2.1
@@ -54,9 +53,11 @@ The binary is cached under `~/.cache/whitemagic/bin/<release-tag>/`
 release with `whitemagic-mcp@11.2.1`, or override the release
 tag with `WHITEMAGIC_RELEASE`.
 
-On Linux, the published 11.2.1 launcher can check for a preferred binary on
-GitHub even when it already has the working binary cached. For offline use,
-install the native binary while online and run it directly.
+The npm package and the native binary have separate caches. For offline npm
+use with a launcher that supports verified cache reuse, install the package
+and run it once online, then pass `--offline` to `npx`. Earlier Linux
+launchers can check GitHub for a preferred binary with a working binary
+already cached. The native binary can run directly offline after installation.
 
 ## Try it without installing (hosted read-only lane)
 
