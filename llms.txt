@@ -6,22 +6,29 @@ WhiteMagic gives an AI coding agent durable project memory: explicit MCP routes,
 
 ## Install
 
-One-line installer (resolves the latest release, verifies the checksum):
+The checksum-verifying installer uses Gen 3 v11.2.1 on Linux x86-64/ARM64
+with glibc 2.39 or newer and Apple Silicon macOS.
 
-```bash
-curl -fsSL https://www.whitemagic.dev/install.sh?ref=gen3-llms | sh
+```sh
+curl -fsSL 'https://www.whitemagic.dev/install.sh?ref=gen3-llms' | sh -s -- --version v11.2.1 --dir "$HOME/.local/bin"
+"$HOME/.local/bin/wm" --version
+"$HOME/.local/bin/wm" grimoire --plan
 ```
 
-Or download the binary from the [latest release](https://github.com/lbailey94/whitemagic/releases), verify with `sha256sum -c`, and move it to `~/.local/bin/wm`.
+See the [install guide](https://www.whitemagic.dev/install) for manual checksums,
+the Gen 2 Windows/Intel macOS fallback, and a first save-and-recall exercise.
 
 ## Connect an MCP client
+
+Use the [recipe for your client](https://www.whitemagic.dev/install#clients).
+For clients accepting `mcpServers` JSON, supply real absolute paths:
 
 ```json
 {
   "mcpServers": {
     "whitemagic": {
-      "command": "wm",
-      "args": ["serve", "--profile", "cyberbrain"]
+      "command": "/absolute/path/to/wm",
+      "args": ["--store", "/absolute/path/to/whitemagic/gen3", "serve", "--profile", "cyberbrain"]
     }
   }
 }
@@ -47,6 +54,7 @@ receipt-verification API runs at <https://api.whitemagic.dev> (`/health` and
 ## Verify
 
 ```bash
+export PATH="$HOME/.local/bin:$PATH"
 wm --version          # wm 11.2.1 (Gen3 line)
 wm selftest --json    # install invariant + host_status/host_health
 wm selftest --strict  # exit 1 only when the host verdict is critical
