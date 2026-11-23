@@ -55,6 +55,44 @@ use crate::store::Store;
 use crate::sweep::{LIFECYCLE_AGE_SWEEPS, SWEEP_PROFILE_V1, SweepOutcome, UsageSnapshotIssuer};
 use crate::sweep_planner::{SweepPlanInputs, plan_sweep};
 
+/// Corpus, file, and spec imports are documents, not dialogue turns.
+fn is_non_conversational_doc_source(source: &str) -> bool {
+    let lower = source.trim().to_ascii_lowercase();
+    lower.starts_with("corpus:")
+        || lower.starts_with("doc:")
+        || lower.starts_with("file:")
+        || lower.starts_with("spec:")
+        || lower.contains(",ingest:")
+        || lower.contains(",v9db:")
+}
+
+/// Session id from a conversational `role,session` source.
+/// Document imports (`corpus:`, `doc:`, `file:`, `spec:`, ingest/v9db) yield `None`.
+fn conversational_session_id(source: &str) -> Option<&str> {
+    if is_non_conversational_doc_source(source) {
+        return None;
+    }
+    source
+        .split(',')
+        .nth(1)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+}
+
+/// Stage 4A potion cosine floor. Un-evidenced (zero-lexical) dense hits abstain
+/// higher unless the query is an open preference, which keeps the softer gate.
+fn stage4a_potion_floor(projection_ran: bool, open_pref_q: bool, zero_lexical: bool) -> f32 {
+    if open_pref_q {
+        if projection_ran { 0.32 } else { 0.34 }
+    } else if zero_lexical {
+        0.44
+    } else if projection_ran {
+        0.36
+    } else {
+        0.34
+    }
+}
+
 pub(crate) fn file_sha256(path: &Path) -> Result<String, std::io::Error> {
     use sha2::{Digest, Sha256};
     use std::io::Read;
@@ -3609,7 +3647,8 @@ impl Substrate {
         if !potion_ranked.is_empty() {
             if projection_ran {
                 let take_n = if open_pref_q { 28 } else { 16 };
-                let floor_c = if open_pref_q { 0.32 } else { 0.36 };
+                let floor_c =
+                    stage4a_potion_floor(projection_ran, open_pref_q, counts.is_empty());
                 for &(id, c) in potion_ranked.iter().take(take_n) {
                     if c < floor_c {
                         break;
@@ -3628,7 +3667,8 @@ impl Substrate {
                 }
             } else {
                 let take_n = 28;
-                let floor_c = 0.34;
+                let floor_c =
+                    stage4a_potion_floor(projection_ran, open_pref_q, counts.is_empty());
                 for &(id, c) in potion_ranked.iter().take(take_n) {
                     if c < floor_c {
                         break;
@@ -3925,8 +3965,11 @@ impl Substrate {
                 let Some(seed_rec) = self.store.get_record(seed_id).ok().flatten() else {
                     continue;
                 };
+                if is_non_conversational_doc_source(seed_rec.source()) {
+                    continue;
+                }
                 let seed_asst = is_asst_role(seed_rec.source(), seed_rec.content());
-                let seed_sess = seed_rec.source().split(',').nth(1).unwrap_or("");
+                let seed_sess = conversational_session_id(seed_rec.source()).unwrap_or("");
                 if !asst_recall_q && seed_asst {
                     for adj_id in [seed_id.saturating_sub(1), seed_id.saturating_add(1)] {
                         if adj_id == 0 || adj_id == seed_id {
@@ -3939,7 +3982,11 @@ impl Substrate {
                         if visible
                             && let Some(adj_rec) = self.store.get_record(adj_id).ok().flatten()
                         {
-                            let adj_sess = adj_rec.source().split(',').nth(1).unwrap_or("");
+                            if is_non_conversational_doc_source(adj_rec.source()) {
+                                continue;
+                            }
+                            let adj_sess =
+                                conversational_session_id(adj_rec.source()).unwrap_or("");
                             if seed_sess.is_empty() || adj_sess == seed_sess {
                                 let adj_txt = adj_rec.content();
                                 if !is_asst_role(adj_rec.source(), adj_txt) {
@@ -4004,7 +4051,11 @@ impl Substrate {
                             .is_none_or(|sc| self.record_in_view(next_id, sc));
                     if visible && let Some(next_rec) = self.store.get_record(next_id).ok().flatten()
                     {
-                        let next_sess = next_rec.source().split(',').nth(1).unwrap_or("");
+                        if is_non_conversational_doc_source(next_rec.source()) {
+                            continue;
+                        }
+                        let next_sess =
+                            conversational_session_id(next_rec.source()).unwrap_or("");
                         let ntxt = next_rec.content();
                         let nlow = ntxt.to_lowercase();
                         let is_clarify = nlow.contains("need a bit more information")
@@ -4044,7 +4095,10 @@ impl Substrate {
                     let Some(seed_rec) = self.store.get_record(seed_id).ok().flatten() else {
                         continue;
                     };
-                    let seed_sess = seed_rec.source().split(',').nth(1).unwrap_or("");
+                    if is_non_conversational_doc_source(seed_rec.source()) {
+                        continue;
+                    }
+                    let seed_sess = conversational_session_id(seed_rec.source()).unwrap_or("");
                     if seed_sess.is_empty() || !seen_pref_sessions.insert(seed_sess.to_string()) {
                         continue;
                     }
@@ -4068,7 +4122,11 @@ impl Substrate {
                         let Some(adj_rec) = self.store.get_record(adj_id).ok().flatten() else {
                             continue;
                         };
-                        let adj_sess = adj_rec.source().split(',').nth(1).unwrap_or("");
+                        if is_non_conversational_doc_source(adj_rec.source()) {
+                            continue;
+                        }
+                        let adj_sess =
+                            conversational_session_id(adj_rec.source()).unwrap_or("");
                         if adj_sess != seed_sess {
                             continue;
                         }
@@ -4291,7 +4349,7 @@ impl Substrate {
                 let mut top_sessions: Vec<String> = Vec::new();
                 for entry in scored.iter().take(6) {
                     if let Ok(Some(rec)) = self.store.get_record(entry.3) {
-                        let s = rec.source().split(',').nth(1).unwrap_or("");
+                        let s = conversational_session_id(rec.source()).unwrap_or("");
                         if !s.is_empty() && !top_sessions.iter().any(|x| x == s) {
                             top_sessions.push(s.to_string());
                             if top_sessions.len() >= 2 {
@@ -4308,7 +4366,7 @@ impl Substrate {
                             continue;
                         }
                         if let Ok(Some(rec)) = self.store.get_record(entry.3) {
-                            let s = rec.source().split(',').nth(1).unwrap_or("");
+                            let s = conversational_session_id(rec.source()).unwrap_or("");
                             if top_sessions.iter().any(|ts| ts == s) {
                                 pool_indices.push(idx);
                                 in_pool.insert(idx);
@@ -4387,7 +4445,12 @@ impl Substrate {
                         .as_ref()
                         .map(|r| r.source().to_string())
                         .unwrap_or_default();
-                    let cur_sess = source.split(',').nth(1).unwrap_or("").to_string();
+                    let doc_source = is_non_conversational_doc_source(&source);
+                    let cur_sess = if doc_source {
+                        String::new()
+                    } else {
+                        conversational_session_id(&source).unwrap_or("").to_string()
+                    };
                     if !cur_sess.is_empty() {
                         *sess_counts.entry(cur_sess.clone()).or_default() += 1;
                     }
@@ -4395,11 +4458,13 @@ impl Substrate {
 
                     let mut prev_lex = 0.0_f32;
                     let mut prev_is_uq = false;
-                    if id > 1
+                    if !doc_source
+                        && id > 1
                         && let Ok(Some(prec)) = self.store.get_record(id - 1)
+                        && !is_non_conversational_doc_source(prec.source())
                     {
                         let ps = prec.source();
-                        let p_sess = ps.split(',').nth(1).unwrap_or("");
+                        let p_sess = conversational_session_id(ps).unwrap_or("");
                         if cur_sess.is_empty() || p_sess == cur_sess {
                             prev_lex = stage4a_lex_scores.get(&(id - 1)).copied().unwrap_or(0.0);
                             let ptxt = prec.content();
@@ -4414,9 +4479,12 @@ impl Substrate {
 
                     let mut next_lex = 0.0_f32;
                     let mut next_is_a = false;
-                    if let Ok(Some(nrec)) = self.store.get_record(id + 1) {
+                    if !doc_source
+                        && let Ok(Some(nrec)) = self.store.get_record(id + 1)
+                        && !is_non_conversational_doc_source(nrec.source())
+                    {
                         let ns = nrec.source();
-                        let n_sess = ns.split(',').nth(1).unwrap_or("");
+                        let n_sess = conversational_session_id(ns).unwrap_or("");
                         if cur_sess.is_empty() || n_sess == cur_sess {
                             next_lex = stage4a_lex_scores.get(&(id + 1)).copied().unwrap_or(0.0);
                             next_is_a = ns.contains(":assistant,")
@@ -4426,19 +4494,22 @@ impl Substrate {
                     }
 
                     let mut coref_lex = prev_lex.max(next_lex);
-                    for delta in [-3_i64, -2, 2, 3] {
-                        let nid_i = (id as i64) + delta;
-                        if nid_i <= 0 {
-                            continue;
-                        }
-                        let nid = nid_i as u64;
-                        if let Some(&nl) = stage4a_lex_scores.get(&nid)
-                            && nl > coref_lex
-                            && let Ok(Some(nrec)) = self.store.get_record(nid)
-                        {
-                            let ns = nrec.source().split(',').nth(1).unwrap_or("");
-                            if cur_sess.is_empty() || ns == cur_sess {
-                                coref_lex = nl;
+                    if !doc_source {
+                        for delta in [-3_i64, -2, 2, 3] {
+                            let nid_i = (id as i64) + delta;
+                            if nid_i <= 0 {
+                                continue;
+                            }
+                            let nid = nid_i as u64;
+                            if let Some(&nl) = stage4a_lex_scores.get(&nid)
+                                && nl > coref_lex
+                                && let Ok(Some(nrec)) = self.store.get_record(nid)
+                                && !is_non_conversational_doc_source(nrec.source())
+                            {
+                                let ns = conversational_session_id(nrec.source()).unwrap_or("");
+                                if cur_sess.is_empty() || ns == cur_sess {
+                                    coref_lex = nl;
+                                }
                             }
                         }
                     }
@@ -5107,7 +5178,7 @@ impl Substrate {
                 let rec_opt = self.store.get_record(cid).ok().flatten();
                 let sess = rec_opt
                     .as_ref()
-                    .and_then(|r| r.source().split(',').nth(1))
+                    .and_then(|r| conversational_session_id(r.source()))
                     .unwrap_or("")
                     .to_string();
                 cand_sessions.push(sess);
@@ -10544,6 +10615,72 @@ mod tests {
         assert_eq!(decision["projection_ran"], false);
         assert_eq!(decision["projection_error"], false);
         assert_eq!(decision["semantic_candidates"], 0);
+    }
+
+    #[test]
+    fn stage4a_potion_floor_gates_zero_lexical_noise() {
+        assert_eq!(super::stage4a_potion_floor(true, true, true), 0.32);
+        assert_eq!(super::stage4a_potion_floor(false, true, true), 0.34);
+        assert_eq!(super::stage4a_potion_floor(true, true, false), 0.32);
+        assert_eq!(super::stage4a_potion_floor(false, true, false), 0.34);
+        assert_eq!(super::stage4a_potion_floor(true, false, true), 0.44);
+        assert_eq!(super::stage4a_potion_floor(false, false, true), 0.44);
+        assert_eq!(super::stage4a_potion_floor(true, false, false), 0.36);
+        assert_eq!(super::stage4a_potion_floor(false, false, false), 0.34);
+    }
+
+    #[test]
+    fn conversational_session_id_ignores_non_conversational_doc_sources() {
+        for src in [
+            "corpus:research:notes,ingest:v1",
+            "  DOC:manual,chapter",
+            "File:readme,section",
+            "spec:api,v2",
+            "chat,ingest:v1",
+            "chat,v9db:main",
+            "CORPUS:research:notes,session_1",
+        ] {
+            assert!(
+                super::is_non_conversational_doc_source(src),
+                "{src} is a document source"
+            );
+            assert_eq!(super::conversational_session_id(src), None, "{src}");
+        }
+        assert!(!super::is_non_conversational_doc_source("role:user,session_9"));
+        assert_eq!(
+            super::conversational_session_id("role:user, session_9"),
+            Some("session_9")
+        );
+        assert_eq!(super::conversational_session_id("role:user,  "), None);
+        assert_eq!(super::conversational_session_id("nosession"), None);
+    }
+
+    #[test]
+    fn stage4a_does_not_diffuse_adjacent_corpus_doc_sources() {
+        let mut s = substrate("stage4a-corpus-nodiffuse");
+        s.set_noise_enabled(false);
+        s.set_stage4a_scoring(true);
+        let unrelated = "The quarterly ledger lists oak furniture shipments and linen tariffs only.";
+        let mut assistant =
+            String::from("I'd be happy to recommend zircon teapot glaze for the kiln.\n");
+        while assistant.len() < 180 {
+            assistant.push_str("zircon teapot glaze remains the recommended ceramic finish. ");
+        }
+        let src = "corpus:research:notes,ingest:v1";
+        let ids = s.remember_batch(&[item_src(unrelated, src), item_src(&assistant, src)]);
+        assert!(ids.iter().all(Result::is_ok), "{ids:?}");
+        let first = *ids[0].as_ref().unwrap();
+        let second = *ids[1].as_ref().unwrap();
+        assert_eq!(second, first + 1, "docs must be adjacent ids");
+        let hits = s.recall_expect(&q("can you recommend zircon teapot glaze"));
+        assert!(
+            hits.iter().any(|h| h.id == second),
+            "assistant-styled corpus doc stays retrievable: {hits:?}"
+        );
+        assert!(
+            hits.iter().all(|h| h.id != first),
+            "unrelated adjacent corpus doc must not receive diffused support: {hits:?}"
+        );
     }
 }
 
