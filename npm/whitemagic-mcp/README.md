@@ -5,53 +5,59 @@ Persistent memory and session continuity for AI coding agents, over MCP.
 no telemetry by default, MIT — and every handoff can be signed as a
 verifiable [continuity receipt](https://www.whitemagic.dev/trust).
 
-Works with Claude Code, Claude Desktop, Cursor, Codex, VS Code, opencode,
-Antigravity, and Devin Desktop — per-client configs:
-https://www.whitemagic.dev/whitemagic/guide
+See the [client setup recipes](https://www.whitemagic.dev/install#clients)
+for Claude Code, Cursor, Codex CLI, and OpenCode.
 
 This package installs and runs the official `wm` binary from the
 [GitHub releases](https://github.com/lbailey94/whitemagic/releases)
 (checksum-verified at install time) so an MCP client can launch it
 without a manual download step.
 
-## Quick start (no install step)
+## First run with npm
 
-The local, full-write path straight from npm — the package downloads and
+Use Node.js 18 or later and an internet connection. The package downloads and
 checksum-verifies the official `wm` binary on first run. Pin an exact published
-package and inspect its matching release assets. This source checkout's
-version is not installable until its package and native release are published.
-The `latest` and `next` dist-tags are independent selectors controlled by
-release health; neither is a permanent alias for a generation.
+package and inspect its matching release assets. Registry installs use the
+published launcher code for that version. The `latest` and `next` dist-tags
+are independent selectors controlled by release health.
 
 ```bash
-npx -y whitemagic-mcp@11.3.0 serve --profile cyberbrain
+npx -y whitemagic-mcp@11.3.0 --version  # wm 11.3.0
+npx -y whitemagic-mcp@11.3.0 grimoire --plan
 ```
 
-MCP client config:
+The MCP client starts `serve` over stdio. For clients that accept `mcpServers`
+JSON, give the server a real absolute store path. `npx` and `node` must be on
+the client's PATH. For desktop clients without that PATH, use the
+[native installer and absolute `wm` path](https://www.whitemagic.dev/install#clients).
 
 ```json
 {
   "mcpServers": {
     "whitemagic": {
       "command": "npx",
-      "args": ["-y", "whitemagic-mcp@11.3.0", "serve", "--profile", "cyberbrain"]
+      "args": ["-y", "whitemagic-mcp@11.3.0", "--store", "/absolute/path/to/whitemagic/gen3", "serve", "--profile", "cyberbrain"]
     }
   }
 }
 ```
 
-Or try the binary directly:
+For local diagnostics:
 
 ```bash
 npx -y whitemagic-mcp@11.3.0 selftest   # invariant self-test + host diagnostics
-npx -y whitemagic-mcp@11.3.0 --version  # wm 11.3.0
-npx -y whitemagic-mcp@11.3.0 grimoire --plan  # preview detected client config targets
 ```
 
 The binary is cached under `~/.cache/whitemagic/bin/<release-tag>/`
 (respects `XDG_CACHE_HOME`). Pin the exact published
 release with `whitemagic-mcp@11.3.0`, or override the release
 tag with `WHITEMAGIC_RELEASE`.
+
+The npm package and the native binary have separate caches. For offline npm
+use with a launcher that supports verified cache reuse, install the package
+and run it once online, then pass `--offline` to `npx`. Earlier Linux
+launchers can check GitHub for a preferred binary with a working binary
+already cached. The native binary can run directly offline after installation.
 
 ## Try it without installing (hosted read-only lane)
 

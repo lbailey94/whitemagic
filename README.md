@@ -16,7 +16,7 @@ next session — without sending your memory store to any hosted service.
 {
   "mcpServers": {
     "whitemagic": {
-      "command": "wm",
+      "command": "/absolute/path/to/wm",
       "args": ["--store", "/absolute/path/to/whitemagic/gen3", "serve", "--profile", "cyberbrain"]
     }
   }
@@ -122,29 +122,29 @@ The supported alpha contract:
 
 ## Install
 
-Download the binary and its checksum from the
-[latest release](https://github.com/lbailey94/whitemagic/releases), then
-(substituting your platform's artifact name — for example
-`wm-linux-x86_64`, `wm-linux-aarch64`, or `wm-macos-aarch64`; the
-`.gz` variants decompress with `gunzip -c <file>.gz > <file>`):
+Install the published Gen 3 v11.3.0 on Linux x86-64 or ARM64 with glibc
+2.39 or newer, or on Apple Silicon macOS. For Windows and Intel macOS,
+use the [Gen 2 fallback instructions](https://www.whitemagic.dev/install#fallback).
 
-```bash
-sha256sum -c wm-linux-x86_64.sha256
-chmod +x wm-linux-x86_64
-mkdir -p ~/.local/bin && mv wm-linux-x86_64 ~/.local/bin/wm
+```sh
+curl -fsSL 'https://www.whitemagic.dev/install.sh?ref=readme' | sh -s -- --version v11.3.0 --dir "$HOME/.local/bin"
+"$HOME/.local/bin/wm" --version
+"$HOME/.local/bin/wm" grimoire --plan
 ```
 
-If `~/.local/bin` is not on your `PATH`:
+Use the absolute path to verify in the same terminal. Run
+`export PATH="$HOME/.local/bin:$PATH"` there to use `wm` by name. The Grimoire
+plan previews the store and detects client configuration locations. Confirm
+the connection in your MCP client after you configure it.
 
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
+For a manual install, use the [download and checksum instructions](https://www.whitemagic.dev/install#install).
 
-Or use the install script (resolves the latest release, picks the right
-artifact for your platform, and verifies the checksum automatically):
+Try one local memory with a temporary store. Each command launches a separate process.
 
-```bash
-curl -fsSL https://www.whitemagic.dev/install.sh?ref=readme | sh
+```sh
+wm_demo_store=$(mktemp -d) &&
+  "$HOME/.local/bin/wm" --store "$wm_demo_store" remember 'The demo project is Juniper.' &&
+  "$HOME/.local/bin/wm" --store "$wm_demo_store" recall 'Juniper'
 ```
 
 ### Other channels
@@ -164,18 +164,8 @@ Adoption snapshot (2026-10-16): 5,680 npm downloads · 6,173 Docker Hub pulls ·
 322 crates.io downloads. Package installs are independent of the installer and
 grew without any website CTA — the memory layer chooses its own doors.
 
-Verify the installation and see the product work end to end:
-
-```bash
-wm --version    # wm 11.3.0
-wm status       # display substrate status, epoch, record counts, and store health
-```
-
-`wm grimoire --plan` is 100% read-only (`0` disk writes even on missing or `--bare` stores) and reports detected client configuration targets without
-changing those files. Grimoire does not write client configurations; copy the MCP server
-command below into your client's configuration. `--json` prints a machine-
-readable report. `wm selftest` runs the full invariant check (a throwaway store
-plus host health); see
+`wm grimoire --plan --json` prints a machine-readable plan. `wm selftest`
+runs diagnostics against a throwaway store and checks host health. See
 [`docs/SELFTEST_AND_HOST_HEALTH.md`](docs/SELFTEST_AND_HOST_HEALTH.md).
 
 ## Everyday commands
@@ -199,16 +189,22 @@ binary line; `wm backup`, `wm restore`, and `wm verify-receipt` are natively sup
 
 ## Connect an MCP client
 
-Use this command for an MCP client. The explicit store keeps Gen3 data separate
-from the stable Gen2 store:
+Add WhiteMagic using your client's setup recipe and restart the client.
+[Claude Code](https://www.whitemagic.dev/install#claude-code) ·
+[Cursor](https://www.whitemagic.dev/install#cursor) ·
+[Codex CLI](https://www.whitemagic.dev/install#codex) ·
+[OpenCode](https://www.whitemagic.dev/install#opencode)
+
+The client starts the server over stdio. Use the preferred profile in its
+configuration and specify a Gen 3 store:
 
 ```bash
 wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile cyberbrain
 wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile full
 ```
 
-In the JSON configuration above, replace `/absolute/path/to/whitemagic/gen3`
-with the expanded path, for example the output of
+For clients using the `mcpServers` format above, substitute the executable's
+absolute path and the expanded store path, for example the output of
 `printf '%s\n' "$HOME/.local/share/whitemagic/gen3"`.
 
 The server communicates over stdio. Two profiles exist:

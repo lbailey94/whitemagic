@@ -149,6 +149,11 @@ function checksumMismatch(label, expected, actual) {
   );
 }
 
+function gnuCacheIsCompatible(glibcVersion = process.report?.getReport().header.glibcVersionRuntime) {
+  const [major, minor] = (glibcVersion ?? "").split(".").map(Number);
+  return major > 2 || (major === 2 && minor >= 39);
+}
+
 /**
  * Ensure a verified `wm` binary for this platform exists in the cache and
  * return its path. Fresh downloads go temp -> checksum -> chmod -> rename;
@@ -165,6 +170,7 @@ export async function ensureBinary({
   pkgVersion,
   p = platform(),
   a = arch(),
+  glibcVersion,
   log = console.error,
 } = {}) {
   const resolvedTag = tag ?? releaseTag(pkgVersion);
@@ -173,6 +179,18 @@ export async function ensureBinary({
     throw new Error(
       `no release asset for ${p}/${a} yet — install from source: https://github.com/${REPO}#install`,
     );
+  }
+
+  // A verified, compatible cache entry can be used offline. On an older or
+  // unknown Linux runtime, keep the existing musl-first resolution path.
+  for (const asset of candidates) {
+    const cached = cachedBinaryPath(asset, resolvedTag, cacheRoot);
+    if (
+      cacheIsValid(cached) &&
+      (p !== "linux" || asset.endsWith("-musl") || gnuCacheIsCompatible(glibcVersion))
+    ) {
+      return cached;
+    }
   }
 
   const binDir = join(cacheRoot, "whitemagic", "bin", resolvedTag);

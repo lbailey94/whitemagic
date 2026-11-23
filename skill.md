@@ -8,14 +8,31 @@ Local-first memory and session continuity for coding agents, exposed over MCP. A
 
 ## Install and verify
 
-```bash
-curl -fsSL https://www.whitemagic.dev/install.sh?ref=gen3-skill | sh
-wm --version         # expect: wm 11.3.0 (Gen3 line)
-wm --store "$HOME/.local/share/whitemagic/gen3" grimoire --plan
-                     # 100% read-only environment/store check + client-config target preview
-                     # 0 disk writes even on missing or --bare stores; does not edit client configs
-wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile cyberbrain
-                     # MCP stdio server using the separate Gen3 store
+On Linux x86-64 or ARM64 with glibc 2.39 or newer, or Apple Silicon macOS:
+
+```sh
+curl -fsSL 'https://www.whitemagic.dev/install.sh?ref=gen3-skill' | sh -s -- --version v11.3.0 --dir "$HOME/.local/bin"
+"$HOME/.local/bin/wm" --version
+"$HOME/.local/bin/wm" grimoire --plan
+```
+
+Use the full path in the same shell. Grimoire previews what the client setup
+would use. For Windows and Intel macOS, use the [Gen 2 fallback](https://www.whitemagic.dev/install#fallback)
+and that release's client instructions.
+
+To verify persistence before configuring a client, save a sample note and
+recall it in a second process using a temporary store.
+
+```sh
+wm_demo_store=$(mktemp -d) &&
+  "$HOME/.local/bin/wm" --store "$wm_demo_store" remember 'The demo project is Juniper.' &&
+  "$HOME/.local/bin/wm" --store "$wm_demo_store" recall 'Juniper'
+```
+
+For these optional commands, add the install directory to this shell's PATH.
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"
 wm selftest --json   # install invariant (throwaway store) + host_status/host_health
 wm selftest --strict # exit 1 only when the host verdict is critical
 wm wiki --out ./wiki # export store into a Merkle-anchored Holographic Wiki (_index.md)
@@ -33,13 +50,18 @@ Building from source instead: `cargo build --release` in this repository, then i
 
 ## Wire your MCP client
 
-Claude Desktop, Cursor, Codex, Gemini CLI, opencode — any MCP client:
+Use the [client setup recipes](https://www.whitemagic.dev/install#clients)
+for Claude Code, Cursor, Codex CLI, and OpenCode. For other clients, use the
+format their settings require. The client launches `serve` itself.
+
+For clients with an `mcpServers` configuration, substitute the installed
+binary's absolute path and the absolute path to the Gen 3 store:
 
 ```json
 {
   "mcpServers": {
     "whitemagic": {
-      "command": "wm",
+      "command": "/absolute/path/to/wm",
       "args": ["--store", "/absolute/path/to/whitemagic/gen3", "serve", "--profile", "cyberbrain"]
     }
   }
