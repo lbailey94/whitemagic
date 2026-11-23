@@ -71,6 +71,238 @@ pub(crate) fn file_sha256(path: &Path) -> Result<String, std::io::Error> {
     Ok(crate::hex_encode(&hasher.finalize()))
 }
 
+#[cfg(feature = "static-scout")]
+fn static_scout_enabled() -> bool {
+    !std::env::var("WM_GEN3_STATIC_SCOUT").is_ok_and(|flag| {
+        let t = flag.trim().to_ascii_lowercase();
+        t == "0" || t == "false" || t == "off"
+    })
+}
+
+#[cfg(feature = "static-scout")]
+fn resolve_static_scout_dir() -> Option<PathBuf> {
+    if !static_scout_enabled() {
+        return None;
+    }
+    if let Ok(explicit) = std::env::var("WM_GEN3_STATIC_SCOUT_MODEL") {
+        let trimmed = explicit.trim();
+        let low = trimmed.to_ascii_lowercase();
+        if low == "0" || low == "false" || low == "off" {
+            return None;
+        }
+        if !trimmed.is_empty() {
+            let p = PathBuf::from(trimmed);
+            if p.exists() {
+                return Some(p);
+            }
+        }
+    }
+    let home = std::env::var_os("HOME").map(PathBuf::from)?;
+    let base = home.join(".local/share/whitemagic/system05");
+    for name in ["potion-base-8M", "potion-base-32M"] {
+        let cand = base.join(name);
+        if cand.join("model.safetensors").exists() && cand.join("tokenizer.json").exists() {
+            return Some(cand);
+        }
+    }
+    None
+}
+
+#[cfg(feature = "static-scout")]
+fn static_scout_model() -> Option<&'static model2vec_rs::model::StaticModel> {
+    if !static_scout_enabled() {
+        return None;
+    }
+    static SCOUT: OnceLock<Option<model2vec_rs::model::StaticModel>> = OnceLock::new();
+    SCOUT
+        .get_or_init(|| {
+            let dir = resolve_static_scout_dir()?;
+            model2vec_rs::model::StaticModel::from_pretrained(&dir, None, Some(true), None).ok()
+        })
+        .as_ref()
+}
+
+#[cfg(feature = "static-scout")]
+const PREF_FACET_PROTOTYPES: [&str; 16] = [
+    "food cooking baking cookies recipes meals dinner kitchen ingredients dietary habits vegan vegetarian dairy",
+    "coffee tea espresso creamer milk oat beverages cocktails wine drinks bar brewing",
+    "movies television shows netflix cinema film documentaries anime theater series",
+    "music songs playlist concerts guitar piano violin instruments album headphones audio",
+    "books novels reading literature papers research publications journals articles conferences",
+    "outdoor sports cycling bike running hiking swimming gym workout climbing trails",
+    "travel vacation trip hotel lodging flight train commute driving subway city",
+    "home furniture bedroom living room decor lamps plants cleaning interior design",
+    "gardening homegrown vegetables herbs garden backyard dog cat pet animal aquarium",
+    "phone laptop smartphone battery camera lens photography computer gadgets tech software",
+    "shopping clothes apparel shoes jacket store brand gifts skin soap wardrobe",
+    "work career office colleagues meeting reunion school college university research",
+    "party dinner guests friends family gathering hosting potluck celebration weekend hangout",
+    "health allergies allergic asthma sneezing migraine sleep sensitive ergonomic doctor medical",
+    "money budget saving frugal repair DIY woodwork tools groceries co-op discount",
+    "art painting drawing crafts photography creative hobby pottery writing studio",
+];
+
+#[cfg(feature = "static-scout")]
+fn static_pref_anchors() -> Option<&'static Vec<Vec<f32>>> {
+    static ANCHORS: OnceLock<Option<Vec<Vec<f32>>>> = OnceLock::new();
+    ANCHORS
+        .get_or_init(|| {
+            let scout = static_scout_model()?;
+            let inputs: Vec<String> = PREF_FACET_PROTOTYPES
+                .iter()
+                .map(|&s| s.to_string())
+                .collect();
+            let vecs: Vec<Vec<f32>> = scout
+                .encode(&inputs)
+                .into_iter()
+                .map(l2_normalize_vec)
+                .collect();
+            (vecs.len() == 16).then_some(vecs)
+        })
+        .as_ref()
+}
+
+#[cfg(feature = "static-scout")]
+fn dot_unit(a: &[f32], b: &[f32]) -> f32 {
+    if a.len() != b.len() {
+        return 0.0;
+    }
+    a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
+}
+
+#[cfg(feature = "static-scout")]
+fn pack_turn_pref_mask(vec: &[f32], content: &str, anchors: &[Vec<f32>]) -> (u16, bool) {
+    if crate::ghrr_algebra::is_assistant_styled(content) {
+        return (0, false);
+    }
+    let trimmed = content.trim();
+    let pol = crate::ghrr_algebra::evaluate_preference_polarity(trimmed);
+    let is_decl = pol.has_decl_clause
+        && (pol.e_pos >= 0.30
+            || pol.e_neg >= 0.30
+            || pol.implicit_pref_count > 0
+            || crate::ghrr_algebra::first_person_user_score(&pol.declarative_text) >= 0.25);
+    let mut ranked = [(0usize, f32::NEG_INFINITY); 16];
+    let n_anc = anchors.len().min(16);
+    for (i, anc) in anchors.iter().take(n_anc).enumerate() {
+        ranked[i] = (i, dot_unit(vec, anc));
+    }
+    ranked[..n_anc].sort_by(|x, y| y.1.total_cmp(&x.1).then_with(|| x.0.cmp(&y.0)));
+    let mut mask = 0u16;
+    for (rank, &(bit, sc)) in ranked[..n_anc].iter().take(3).enumerate() {
+        if rank < 2 || sc >= 0.22 {
+            mask |= 1u16 << bit;
+        }
+    }
+    let low = content.to_lowercase();
+    if (mask & ((1u16 << 0) | (1u16 << 1))) != 0
+        && (low.contains("allerg")
+            || low.contains("intoleran")
+            || low.contains("dairy")
+            || low.contains("lactose")
+            || low.contains("gluten")
+            || low.contains("caffeine")
+            || low.contains("stomach"))
+    {
+        mask |= 1u16 << 13;
+    }
+    if (mask & (1u16 << 13)) != 0
+        && (low.contains("bedroom")
+            || low.contains("living room")
+            || low.contains("purifier")
+            || low.contains("dust")
+            || low.contains("pollen"))
+    {
+        mask |= 1u16 << 7;
+    }
+    (mask, is_decl)
+}
+
+#[cfg(feature = "static-scout")]
+struct QueryPrefProfile {
+    mask_top: u16,
+    broad_entropy: bool,
+    scores: [f32; 16],
+}
+
+#[cfg(feature = "static-scout")]
+fn build_query_pref_profile(qv: &[f32], anchors: &[Vec<f32>]) -> QueryPrefProfile {
+    let mut scores = [0.0_f32; 16];
+    let mut ranked: Vec<(usize, f32)> = Vec::with_capacity(16);
+    for (i, anc) in anchors.iter().take(16).enumerate() {
+        let s = dot_unit(qv, anc);
+        scores[i] = s;
+        ranked.push((i, s));
+    }
+    ranked.sort_by(|x, y| y.1.total_cmp(&x.1).then_with(|| x.0.cmp(&y.0)));
+    let top0 = ranked.first().map_or(0.0, |x| x.1);
+    let top3 = ranked.get(3).map_or(0.0, |x| x.1);
+    let spread = top0 - top3;
+    let broad_entropy = spread < 0.060;
+    let take_k = if broad_entropy { 5 } else { 3 };
+    let mut mask_top = 0u16;
+    for &(bit, _) in ranked.iter().take(take_k) {
+        mask_top |= 1u16 << bit;
+    }
+    // Food/beverages & health/allergies cross-bridge cleanly in focused dietary queries
+    if (mask_top & ((1u16 << 0) | (1u16 << 1))) != 0 {
+        mask_top |= 1u16 << 13;
+    }
+    if (mask_top & (1u16 << 13)) != 0 {
+        mask_top |= (1u16 << 0) | (1u16 << 7);
+    }
+    QueryPrefProfile {
+        mask_top,
+        broad_entropy,
+        scores,
+    }
+}
+
+#[cfg(feature = "static-scout")]
+fn score_turn_pref_alignment(pref: &QueryPrefProfile, turn_mask: u16, has_decl: bool) -> f32 {
+    if !has_decl {
+        return 0.0;
+    }
+    let overlap = pref.mask_top & turn_mask;
+    if overlap != 0 {
+        let mut best = 0.0_f32;
+        for bit in 0..16usize {
+            if (overlap & (1u16 << bit)) != 0 {
+                best = best.max(pref.scores[bit]);
+            }
+        }
+        let multi_bonus = (overlap.count_ones().saturating_sub(1).min(2) as f32) * 0.12;
+        (0.50 + 0.80 * best.max(0.0) + multi_bonus).clamp(0.42, 1.0)
+    } else if pref.broad_entropy {
+        // Broad/unconstrained query ("weekend activity"): gentle active-declaration prior
+        0.34
+    } else {
+        0.0
+    }
+}
+
+#[cfg(feature = "static-scout")]
+fn l2_normalize_vec(mut v: Vec<f32>) -> Vec<f32> {
+    let norm_sq: f32 = v.iter().map(|x| x * x).sum();
+    if norm_sq.is_finite() && norm_sq > 1e-12 {
+        let inv = norm_sq.sqrt().recip();
+        for x in &mut v {
+            *x *= inv;
+        }
+    }
+    v
+}
+
+#[cfg(feature = "static-scout")]
+fn truncate_scout_text(s: &str, max_bytes: usize) -> String {
+    if s.len() <= max_bytes {
+        s.to_string()
+    } else {
+        let cut = crate::ghrr_algebra::floor_char_boundary_safe(s, max_bytes);
+        s[..cut].to_string()
+    }
+}
+
 /// Derived vector projection status for a committed record.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -817,6 +1049,9 @@ pub struct Substrate {
     lazy_projection: bool,
     stage4a_scoring: bool,
     rerank_spore: Option<Arc<crate::rerank_spore::Wm7dRerankSpore>>,
+    fast_sem_cache: HashMap<u64, (u64, Vec<f32>)>,
+    fast_pref_masks: HashMap<u64, (u16, bool)>,
+    fast_sem_complete: bool,
     arbitration: Arbitration,
     dispersion_enabled: bool,
     intake_authority: Option<crate::evidence::RatifiedChannel>,
@@ -1531,6 +1766,9 @@ impl Substrate {
             lazy_projection: false,
             stage4a_scoring: false,
             rerank_spore: None,
+            fast_sem_cache: HashMap::new(),
+            fast_pref_masks: HashMap::new(),
+            fast_sem_complete: false,
             arbitration: Arbitration::PenaltyMultiplier,
             dispersion_enabled: false,
             intake_authority,
@@ -1791,6 +2029,49 @@ impl Substrate {
     #[must_use]
     pub fn rerank_spore(&self) -> Option<&Arc<crate::rerank_spore::Wm7dRerankSpore>> {
         self.rerank_spore.as_ref()
+    }
+
+    /// Warm `fast_sem_cache` with normalized static scout vectors (`potion-base-8M` / `32M`).
+    #[cfg_attr(not(feature = "static-scout"), allow(unused_variables))]
+    fn warm_static_scout_batch(&mut self, items: &[(u64, &str)]) {
+        if items.is_empty() {
+            return;
+        }
+        #[cfg(feature = "static-scout")]
+        if !self.suppress_intake_journal
+            && self.stage4a_scoring
+            && let Some(scout) = static_scout_model()
+        {
+            let mut missing_meta: Vec<(u64, u64)> = Vec::new();
+            let mut missing_texts: Vec<String> = Vec::new();
+            for &(rid, content) in items {
+                let fnv = crate::ghrr_algebra::fnv1a_64(content.as_bytes());
+                let needs = self.fast_sem_cache.get(&rid).is_none_or(|(h, _)| *h != fnv);
+                if needs {
+                    missing_meta.push((rid, fnv));
+                    missing_texts.push(truncate_scout_text(content, 6000));
+                }
+            }
+            if !missing_texts.is_empty() {
+                let vecs = scout.encode(&missing_texts);
+                let anchors = static_pref_anchors();
+                for (((rid, fnv), text), vec) in
+                    missing_meta.into_iter().zip(missing_texts.iter()).zip(vecs)
+                {
+                    let norm_vec = l2_normalize_vec(vec);
+                    if let Some(anc) = anchors {
+                        let mask_info = pack_turn_pref_mask(&norm_vec, text, anc);
+                        self.fast_pref_masks.insert(rid, mask_info);
+                    }
+                    self.fast_sem_cache.insert(rid, (fnv, norm_vec));
+                }
+            }
+            if self.fast_sem_cache.len() == self.store.record_count().unwrap_or(usize::MAX) {
+                self.fast_sem_complete = true;
+            }
+            return;
+        }
+        self.fast_sem_complete = false;
     }
 
     /// Build a compressed `RoaringMemoryIndex` indexing live records by `ConsentRing`
@@ -2223,10 +2504,17 @@ impl Substrate {
                 continue;
             }
             self.identity.insert(key, id);
+
             self.writes_used += 1;
             wrote += 1;
             results.push(Ok(id));
         }
+        let committed_pairs: Vec<(u64, &str)> = results
+            .iter()
+            .zip(items.iter())
+            .filter_map(|(res, item)| res.as_ref().ok().map(|&rid| (rid, item.content.as_str())))
+            .collect();
+        self.warm_static_scout_batch(&committed_pairs);
         let ids: Vec<u64> = results
             .iter()
             .filter_map(|r| r.as_ref().ok().copied())
@@ -2324,6 +2612,14 @@ impl Substrate {
         self.intake_authority = Some(authority);
         match result {
             Ok(results) => {
+                let committed_pairs: Vec<(u64, &str)> = results
+                    .iter()
+                    .zip(items.iter())
+                    .filter_map(|(res, item)| {
+                        res.as_ref().ok().map(|&rid| (rid, item.content.as_str()))
+                    })
+                    .collect();
+                self.warm_static_scout_batch(&committed_pairs);
                 let ids: Vec<u64> = results
                     .iter()
                     .filter_map(|result| result.as_ref().ok().copied())
@@ -2481,6 +2777,8 @@ impl Substrate {
                 .append(record)
                 .map_err(|e| format!("hydrate committed intake: {e:?}"))?;
             self.identity.insert(key, id);
+
+            self.warm_static_scout_batch(&[(id, request.content())]);
 
             if self.projection.is_some() && !self.lazy_projection {
                 let _ = self.repair_record_vector(id);
@@ -2741,10 +3039,32 @@ impl Substrate {
 
         for t in &tokens {
             let weight = idf_map.get(t).copied().unwrap_or(0.0);
+            let mut exact_ids: HashSet<u64> = HashSet::new();
             if let Ok(ids) = self.store.postings(t) {
                 for id in ids {
+                    exact_ids.insert(id);
                     *counts.entry(id).or_default() += 1;
                     *lex_matched_idf.entry(id).or_default() += weight;
+                }
+            }
+            if self.stage4a_scoring && t.len() >= 4 {
+                let stem = crate::ghrr_algebra::light_stem_english(t);
+                if stem != *t
+                    && let Ok(sids) = self.store.postings(&stem)
+                {
+                    let s_df = self.store.df(&stem).unwrap_or(0) as f32;
+                    let base_s = (1.0 + n as f32 / (1.0 + s_df)).ln();
+                    let s_w = if self.dispersion_enabled {
+                        base_s * self.dispersion_weight(&stem)
+                    } else {
+                        base_s
+                    } * 0.58;
+                    for id in sids {
+                        if !exact_ids.contains(&id) {
+                            *counts.entry(id).or_default() += 1;
+                            *lex_matched_idf.entry(id).or_default() += s_w;
+                        }
+                    }
                 }
             }
         }
@@ -2846,6 +3166,147 @@ impl Substrate {
             (HashMap::new(), Vec::new(), HashMap::new())
         };
 
+        // Stage 7D Fast Full-Corpus Static Semantic Scout (`potion-base-8M` / `32M`) Scan (`<0.5 ms` warm / `<3 ms` cold)
+        let open_pref_q =
+            self.stage4a_scoring && crate::ghrr_algebra::is_open_preference_query(&q.query);
+        #[cfg_attr(not(feature = "static-scout"), allow(unused_mut))]
+        let mut potion_ranked: Vec<(u64, f32)> = Vec::new();
+        #[cfg_attr(not(feature = "static-scout"), allow(unused_mut))]
+        let mut potion_max = 0.0_f32;
+        #[cfg_attr(not(feature = "static-scout"), allow(unused_mut))]
+        let mut pref_align_map: HashMap<u64, f32> = HashMap::new();
+        #[cfg(feature = "static-scout")]
+        let mut q_pref_profile: Option<QueryPrefProfile> = None;
+        #[cfg(feature = "static-scout")]
+        if self.stage4a_scoring
+            && let Some(scout) = static_scout_model()
+        {
+            if !(self.fast_sem_complete && n > 0 && self.fast_sem_cache.len() == n)
+                && let Ok(all_recs) = self.store.iter_records()
+            {
+                let mut missing_meta: Vec<(u64, u64)> = Vec::new();
+                let mut missing_texts: Vec<String> = Vec::new();
+                for rec in &all_recs {
+                    let rid = rec.id();
+                    if !self.recall_record_visible(rid, sanctuary_sealed) {
+                        continue;
+                    }
+                    if let Some(ref scope) = q.scope
+                        && !self.record_in_view(rid, scope)
+                    {
+                        continue;
+                    }
+                    let content = rec.content();
+                    let fnv = crate::ghrr_algebra::fnv1a_64(content.as_bytes());
+                    let needs = self.fast_sem_cache.get(&rid).is_none_or(|(h, _)| *h != fnv);
+                    if needs {
+                        missing_meta.push((rid, fnv));
+                        missing_texts.push(truncate_scout_text(content, 6000));
+                    }
+                }
+                if !missing_texts.is_empty() {
+                    let vecs = scout.encode(&missing_texts);
+                    let anchors = if open_pref_q {
+                        static_pref_anchors()
+                    } else {
+                        None
+                    };
+                    for (((rid, fnv), text), vec) in
+                        missing_meta.into_iter().zip(missing_texts.iter()).zip(vecs)
+                    {
+                        let norm_vec = l2_normalize_vec(vec);
+                        if let Some(anc) = anchors {
+                            let mask_info = pack_turn_pref_mask(&norm_vec, text, anc);
+                            self.fast_pref_masks.insert(rid, mask_info);
+                        }
+                        self.fast_sem_cache.insert(rid, (fnv, norm_vec));
+                    }
+                }
+                if open_pref_q
+                    && let Some(anc) = static_pref_anchors()
+                    && self.fast_pref_masks.len() < self.fast_sem_cache.len()
+                {
+                    for (&rid, (_, vec)) in &self.fast_sem_cache {
+                        if !self.fast_pref_masks.contains_key(&rid)
+                            && let Ok(Some(rec)) = self.store.get_record(rid)
+                        {
+                            let mask_info = pack_turn_pref_mask(vec, rec.content(), anc);
+                            self.fast_pref_masks.insert(rid, mask_info);
+                        }
+                    }
+                }
+                if q.scope.is_none() && !sanctuary_sealed && all_recs.len() == n {
+                    self.fast_sem_complete = true;
+                }
+            }
+            let qv_scout = l2_normalize_vec(scout.encode_single(&q.query));
+            if !qv_scout.is_empty() {
+                let qv_topic = if open_pref_q {
+                    let topic_core =
+                        crate::ghrr_algebra::extract_open_preference_topic_core(&q.query);
+                    if !topic_core.is_empty() && topic_core != q.query.trim() {
+                        let vt = l2_normalize_vec(scout.encode_single(&topic_core));
+                        (vt.len() == qv_scout.len()).then_some(vt)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+                if open_pref_q && let Some(anc) = static_pref_anchors() {
+                    let profile_vec = qv_topic.as_deref().unwrap_or(&qv_scout);
+                    q_pref_profile = Some(build_query_pref_profile(profile_vec, anc));
+                }
+                for (&rid, (_, vec)) in &self.fast_sem_cache {
+                    if vec.len() != qv_scout.len() {
+                        continue;
+                    }
+                    if !self.recall_record_visible(rid, sanctuary_sealed) {
+                        continue;
+                    }
+                    if let Some(ref scope) = q.scope
+                        && !self.record_in_view(rid, scope)
+                    {
+                        continue;
+                    }
+                    let c_full: f32 = qv_scout.iter().zip(vec.iter()).map(|(a, b)| a * b).sum();
+                    let c = if let Some(ref vt) = qv_topic {
+                        let c_top: f32 = vt.iter().zip(vec.iter()).map(|(a, b)| a * b).sum();
+                        0.55 * c_top + 0.45 * c_full
+                    } else {
+                        c_full
+                    };
+                    if c.is_finite() {
+                        potion_ranked.push((rid, c));
+                        if let Some(ref qp) = q_pref_profile
+                            && c >= 0.22
+                        {
+                            let (t_mask, t_decl) = self
+                                .fast_pref_masks
+                                .get(&rid)
+                                .copied()
+                                .unwrap_or((0, false));
+                            let align = score_turn_pref_alignment(qp, t_mask, t_decl);
+                            if align > 0.0 {
+                                pref_align_map.insert(rid, align);
+                            }
+                        }
+                    }
+                }
+                potion_ranked.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+                potion_max = potion_ranked.first().map_or(0.0, |x| x.1);
+            }
+        }
+
+        let lex_support_hint = if self.stage4a_scoring && !stage4a_pre_ranked.is_empty() {
+            stage4a_lex_scores
+                .get(&stage4a_pre_ranked[0])
+                .copied()
+                .unwrap_or(0.0)
+        } else {
+            0.0
+        };
+
         // Activation policy. Floor mode (GEN3-GATED-S-001): fire when max
         // lexical support over lexical candidates is below the declared D2 floor
         // (0.01). Count mode (GEN3-GATED-S-003): fire when fewer than two
@@ -2886,15 +3347,30 @@ impl Substrate {
                 .keys()
                 .filter(|id| sources.contains(id) || superseded_by.contains_key(id))
                 .count();
+            let consensus_confident = !potion_ranked.is_empty()
+                && !stage4a_pre_ranked.is_empty()
+                && counts.len() >= 2
+                && !crate::ghrr_algebra::is_open_preference_query(&q.query)
+                && ((stage4a_pre_ranked[0] == potion_ranked[0].0
+                    && lex_support_max >= 0.45
+                    && potion_max >= 0.44)
+                    || (lex_support_max >= 0.48
+                        && (lex_support_max - lex_support_second) >= 0.04
+                        && potion_max >= 0.42
+                        && potion_ranked
+                            .iter()
+                            .take(3)
+                            .any(|&(pid, _)| pid == stage4a_pre_ranked[0])));
             let fired = if self.projection_gate_multi {
                 // Stage 3C Multi-Incidence Sufficiency Gate + Stage 4A margin ambiguity trigger + Stage 6E open-preference trigger:
-                counts.len() < 2
+                let gate_raw = counts.len() < 2
                     || lex_support_max < 0.28
                     || (relation_involved < 2 && lex_support_max < 0.30)
                     || (self.stage4a_scoring
                         && (crate::ghrr_algebra::is_open_preference_query(&q.query)
                             || (lex_support_max < 0.62
-                                && (lex_support_max - lex_support_second) < 0.08)))
+                                && (lex_support_max - lex_support_second) < 0.08)));
+                if consensus_confident { false } else { gate_raw }
             } else if self.projection_gate_count {
                 counts.len() < 2
             } else {
@@ -2922,18 +3398,38 @@ impl Substrate {
         if run_projection {
             let pass_started = Instant::now();
             let mut lazy_pairs: Vec<(u64, Vec<f32>)> = Vec::new();
-            if self.lazy_projection && !counts.is_empty() {
+            if self.lazy_projection && (!counts.is_empty() || !potion_ranked.is_empty()) {
                 let open_pref_lazy =
                     self.stage4a_scoring && crate::ghrr_algebra::is_open_preference_query(&q.query);
                 let lazy_cap = if open_pref_lazy {
-                    32
+                    18
                 } else if self.stage4a_scoring {
-                    24
+                    20
                 } else {
                     q.candidate_limit.clamp(32, 48)
                 };
                 let mut ordered_pool: Vec<u64> = if !stage4a_pre_ranked.is_empty() {
-                    stage4a_pre_ranked.iter().copied().take(lazy_cap).collect()
+                    if open_pref_lazy {
+                        let mut pool = Vec::with_capacity(26);
+                        for &rid in stage4a_pre_ranked.iter().take(56) {
+                            let is_asst = pre_text_cache
+                                .get(&rid)
+                                .is_some_and(|t| crate::ghrr_algebra::is_assistant_styled(t));
+                            if is_asst {
+                                if rid > 1 && !pool.contains(&(rid - 1)) {
+                                    pool.push(rid - 1);
+                                }
+                            } else if !pool.contains(&rid) {
+                                pool.push(rid);
+                            }
+                            if pool.len() >= lazy_cap {
+                                break;
+                            }
+                        }
+                        pool
+                    } else {
+                        stage4a_pre_ranked.iter().copied().take(lazy_cap).collect()
+                    }
                 } else {
                     let mut tmp: Vec<u64> = counts.keys().copied().collect();
                     tmp.sort_by(|a, b| {
@@ -2948,25 +3444,60 @@ impl Substrate {
                     tmp
                 };
                 if self.stage4a_scoring {
-                    let seed_take = if open_pref_lazy { 12 } else { 6 };
-                    let top_seeds: Vec<u64> =
-                        ordered_pool.iter().copied().take(seed_take).collect();
-                    for sid in top_seeds {
-                        if sid > 1
-                            && pre_text_cache
-                                .get(&sid)
-                                .is_some_and(|t| crate::ghrr_algebra::is_assistant_styled(t))
-                            && !ordered_pool.contains(&(sid - 1))
-                        {
-                            ordered_pool.push(sid - 1);
+                    if !open_pref_lazy {
+                        let top_seeds: Vec<u64> = ordered_pool.iter().copied().take(6).collect();
+                        for sid in top_seeds {
+                            if sid > 1
+                                && pre_text_cache
+                                    .get(&sid)
+                                    .is_some_and(|t| crate::ghrr_algebra::is_assistant_styled(t))
+                                && !ordered_pool.contains(&(sid - 1))
+                            {
+                                ordered_pool.push(sid - 1);
+                            }
                         }
                     }
+                    if !potion_ranked.is_empty()
+                        && (counts.is_empty() || lex_support_hint < 0.42 || open_pref_lazy)
+                    {
+                        let scout_take = if counts.is_empty() {
+                            14
+                        } else if open_pref_lazy {
+                            8
+                        } else {
+                            6
+                        };
+                        let floor_pcos = if open_pref_lazy { 0.26 } else { 0.30 };
+                        let mut added = 0usize;
+                        for &(pid, pcos) in &potion_ranked {
+                            if !counts.is_empty() && pcos < floor_pcos {
+                                break;
+                            }
+                            if open_pref_lazy {
+                                let is_asst_p =
+                                    self.store.get_record(pid).ok().flatten().is_some_and(|r| {
+                                        r.source().contains(":assistant,")
+                                            || r.source().ends_with(":assistant")
+                                            || crate::ghrr_algebra::is_assistant_styled(r.content())
+                                    });
+                                if is_asst_p {
+                                    continue;
+                                }
+                            }
+                            if !ordered_pool.contains(&pid) {
+                                ordered_pool.push(pid);
+                                added += 1;
+                                if added >= scout_take {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if open_pref_lazy && ordered_pool.len() > 26 {
+                        ordered_pool.truncate(26);
+                    }
                 }
-                let snip_budget = if self.rerank_spore.is_some() {
-                    400
-                } else {
-                    560
-                };
+                let snip_budget = 560;
                 let mut missing_ids: Vec<u64> = Vec::new();
                 let mut missing_texts: Vec<String> = Vec::new();
                 for id in ordered_pool {
@@ -3028,7 +3559,9 @@ impl Substrate {
                                         (0.30 + 0.70 * ((c - TAU_GATE) / (1.0 - TAU_GATE)))
                                             .clamp(0.0, 1.0),
                                     )
-                                } else if !counts.is_empty() && c > sem_soft_tau {
+                                } else if (!counts.is_empty() || !potion_ranked.is_empty())
+                                    && c > sem_soft_tau
+                                {
                                     Some(
                                         (0.25 * ((c - sem_soft_tau) / (TAU_GATE - sem_soft_tau)))
                                             .clamp(0.0, 0.25),
@@ -3072,6 +3605,47 @@ impl Substrate {
                 }
             }
             projection_pass_ms = pass_started.elapsed().as_secs_f64() * 1000.0;
+        }
+        if !potion_ranked.is_empty() {
+            if projection_ran {
+                let take_n = if open_pref_q { 28 } else { 16 };
+                let floor_c = if open_pref_q { 0.32 } else { 0.36 };
+                for &(id, c) in potion_ranked.iter().take(take_n) {
+                    if c < floor_c {
+                        break;
+                    }
+                    let base_sup = ((c - 0.34) / 0.66 * 0.46).clamp(0.04, 0.46);
+                    let align = pref_align_map.get(&id).copied().unwrap_or(0.0);
+                    let sup = if open_pref_q && align >= 0.42 {
+                        (base_sup * (1.0 + 0.14 * align)).clamp(0.04, 0.54)
+                    } else {
+                        base_sup
+                    };
+                    let slot = semantic.entry(id).or_insert(0.0);
+                    if sup > *slot {
+                        *slot = sup;
+                    }
+                }
+            } else {
+                let take_n = 28;
+                let floor_c = 0.34;
+                for &(id, c) in potion_ranked.iter().take(take_n) {
+                    if c < floor_c {
+                        break;
+                    }
+                    let base_sup = ((c - 0.32) / 0.58).clamp(0.05, 0.88);
+                    let align = pref_align_map.get(&id).copied().unwrap_or(0.0);
+                    let sup = if open_pref_q && align >= 0.42 {
+                        (base_sup * (1.0 + 0.12 * align)).clamp(0.05, 0.92)
+                    } else {
+                        base_sup
+                    };
+                    let slot = semantic.entry(id).or_insert(0.0);
+                    if sup > *slot {
+                        *slot = sup;
+                    }
+                }
+            }
         }
         if let Some(scope) = &q.scope {
             semantic.retain(|id, _| self.record_in_view(*id, scope));
@@ -3344,7 +3918,7 @@ impl Substrate {
                 final_support.iter().map(|(&k, &v)| (k, v)).collect();
             top_seeds.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
             top_seeds.truncate(10);
-            for (seed_id, seed_sup) in top_seeds {
+            for &(seed_id, seed_sup) in &top_seeds {
                 if seed_sup < 0.30 {
                     continue;
                 }
@@ -3353,41 +3927,69 @@ impl Substrate {
                 };
                 let seed_asst = is_asst_role(seed_rec.source(), seed_rec.content());
                 let seed_sess = seed_rec.source().split(',').nth(1).unwrap_or("");
-                if !asst_recall_q && seed_asst && seed_id > 1 {
-                    let prev_id = seed_id - 1;
-                    let visible = self.recall_record_visible(prev_id, sanctuary_sealed)
-                        && q.scope
-                            .as_ref()
-                            .is_none_or(|sc| self.record_in_view(prev_id, sc));
-                    if visible && let Some(prev_rec) = self.store.get_record(prev_id).ok().flatten()
-                    {
-                        let prev_sess = prev_rec.source().split(',').nth(1).unwrap_or("");
-                        if seed_sess.is_empty() || prev_sess == seed_sess {
-                            let prev_txt = prev_rec.content();
-                            if !is_asst_role(prev_rec.source(), prev_txt) {
-                                let fp = crate::ghrr_algebra::first_person_user_score(prev_txt);
-                                let boost = if open_pref_q {
-                                    Some((seed_sup * 0.98 + 0.08 * fp).clamp(0.0, 1.0))
-                                } else if counts.contains_key(&prev_id) && fp >= 0.25 {
-                                    Some((seed_sup * 0.88).clamp(0.0, 1.0))
-                                } else {
-                                    None
-                                };
-                                if let Some(b_val) = boost {
-                                    let cur = final_support.get(&prev_id).copied().unwrap_or(0.0);
-                                    if b_val > cur {
-                                        final_support.insert(prev_id, b_val);
-                                        base_records.entry(prev_id).or_insert((
-                                            stage4a_lex_scores
-                                                .get(&prev_id)
-                                                .copied()
-                                                .unwrap_or(0.0),
-                                            semantic.get(&prev_id).copied().unwrap_or(0.0),
-                                            b_val,
-                                            prev_rec.created_at(),
-                                        ));
-                                        if !candidate_ids.contains(&prev_id) {
-                                            candidate_ids.push(prev_id);
+                if !asst_recall_q && seed_asst {
+                    for adj_id in [seed_id.saturating_sub(1), seed_id.saturating_add(1)] {
+                        if adj_id == 0 || adj_id == seed_id {
+                            continue;
+                        }
+                        let visible = self.recall_record_visible(adj_id, sanctuary_sealed)
+                            && q.scope
+                                .as_ref()
+                                .is_none_or(|sc| self.record_in_view(adj_id, sc));
+                        if visible
+                            && let Some(adj_rec) = self.store.get_record(adj_id).ok().flatten()
+                        {
+                            let adj_sess = adj_rec.source().split(',').nth(1).unwrap_or("");
+                            if seed_sess.is_empty() || adj_sess == seed_sess {
+                                let adj_txt = adj_rec.content();
+                                if !is_asst_role(adj_rec.source(), adj_txt) {
+                                    let fp = crate::ghrr_algebra::first_person_user_score(adj_txt);
+                                    let adj_lex =
+                                        stage4a_lex_scores.get(&adj_id).copied().unwrap_or(0.0);
+                                    let prev_was_q = seed_id > 1
+                                        && self
+                                            .store
+                                            .get_record(seed_id - 1)
+                                            .ok()
+                                            .flatten()
+                                            .is_some_and(|pr| pr.content().trim().ends_with('?'));
+                                    let boost = if open_pref_q
+                                        && (adj_id < seed_id || counts.contains_key(&adj_id))
+                                    {
+                                        Some((seed_sup * 0.98 + 0.08 * fp).clamp(0.0, 1.0))
+                                    } else if adj_id < seed_id
+                                        && counts.contains_key(&adj_id)
+                                        && fp >= 0.25
+                                    {
+                                        Some((seed_sup * 0.88).clamp(0.0, 1.0))
+                                    } else if adj_id == seed_id + 1
+                                        && counts.contains_key(&adj_id)
+                                        && !adj_txt.trim().ends_with('?')
+                                        && ((seed_rec.content().trim().ends_with('?')
+                                            && adj_lex >= 0.35)
+                                            || (prev_was_q && fp >= 0.25))
+                                    {
+                                        Some((seed_sup * 0.90).clamp(0.0, 1.0))
+                                    } else {
+                                        None
+                                    };
+                                    if let Some(b_val) = boost {
+                                        let cur =
+                                            final_support.get(&adj_id).copied().unwrap_or(0.0);
+                                        if b_val > cur {
+                                            final_support.insert(adj_id, b_val);
+                                            base_records.entry(adj_id).or_insert((
+                                                stage4a_lex_scores
+                                                    .get(&adj_id)
+                                                    .copied()
+                                                    .unwrap_or(0.0),
+                                                semantic.get(&adj_id).copied().unwrap_or(0.0),
+                                                b_val,
+                                                adj_rec.created_at(),
+                                            ));
+                                            if !candidate_ids.contains(&adj_id) {
+                                                candidate_ids.push(adj_id);
+                                            }
                                         }
                                     }
                                 }
@@ -3430,6 +4032,125 @@ impl Substrate {
                                 }
                             }
                         }
+                    }
+                }
+            }
+            if open_pref_q {
+                let mut seen_pref_sessions: HashSet<String> = HashSet::new();
+                for &(seed_id, seed_sup) in top_seeds.iter().take(4) {
+                    if seed_sup < 0.45 {
+                        continue;
+                    }
+                    let Some(seed_rec) = self.store.get_record(seed_id).ok().flatten() else {
+                        continue;
+                    };
+                    let seed_sess = seed_rec.source().split(',').nth(1).unwrap_or("");
+                    if seed_sess.is_empty() || !seen_pref_sessions.insert(seed_sess.to_string()) {
+                        continue;
+                    }
+                    let mut candidates_adj: Vec<(f32, u64, f32, u64)> = Vec::new();
+                    for delta in -6_i64..=6_i64 {
+                        if delta == 0 {
+                            continue;
+                        }
+                        let adj_i = (seed_id as i64) + delta;
+                        if adj_i <= 0 {
+                            continue;
+                        }
+                        let adj_id = adj_i as u64;
+                        let visible = self.recall_record_visible(adj_id, sanctuary_sealed)
+                            && q.scope
+                                .as_ref()
+                                .is_none_or(|sc| self.record_in_view(adj_id, sc));
+                        if !visible {
+                            continue;
+                        }
+                        let Some(adj_rec) = self.store.get_record(adj_id).ok().flatten() else {
+                            continue;
+                        };
+                        let adj_sess = adj_rec.source().split(',').nth(1).unwrap_or("");
+                        if adj_sess != seed_sess {
+                            continue;
+                        }
+                        let adj_txt = adj_rec.content();
+                        if is_asst_role(adj_rec.source(), adj_txt) {
+                            continue;
+                        }
+                        let pol_adj = crate::ghrr_algebra::evaluate_preference_polarity(adj_txt);
+                        if pol_adj.pure_question {
+                            continue;
+                        }
+                        let fp = crate::ghrr_algebra::first_person_user_score(adj_txt);
+                        let (mask, cached_decl) = self
+                            .fast_pref_masks
+                            .get(&adj_id)
+                            .copied()
+                            .unwrap_or((0, false));
+                        let is_decl = cached_decl
+                            || (pol_adj.has_decl_clause
+                                && (pol_adj.e_pos >= 0.30
+                                    || pol_adj.e_neg >= 0.30
+                                    || pol_adj.implicit_pref_count > 0
+                                    || fp >= 0.25));
+                        #[cfg(feature = "static-scout")]
+                        let (p_align, facet_match) = if let Some(ref qp) = q_pref_profile {
+                            let a_decl = score_turn_pref_alignment(qp, mask, is_decl);
+                            let a_any = if is_decl {
+                                a_decl
+                            } else {
+                                score_turn_pref_alignment(qp, mask, true)
+                            };
+                            if a_decl > 0.0 {
+                                pref_align_map.entry(adj_id).or_insert(a_decl);
+                            }
+                            (a_decl, a_any >= 0.42)
+                        } else {
+                            let a = pref_align_map.get(&adj_id).copied().unwrap_or(0.0);
+                            (a, a >= 0.42)
+                        };
+                        #[cfg(not(feature = "static-scout"))]
+                        let (p_align, facet_match) = {
+                            let _ = mask;
+                            let a = pref_align_map.get(&adj_id).copied().unwrap_or(0.0);
+                            (a, a >= 0.42)
+                        };
+                        let qualifies = (is_decl && p_align >= 0.42)
+                            || (delta.abs() <= 4 && facet_match)
+                            || (delta.abs() <= 2 && (is_decl || fp >= 0.22));
+                        if !qualifies {
+                            continue;
+                        }
+                        let mult = if p_align >= 0.42 || facet_match {
+                            0.64
+                        } else {
+                            0.52
+                        };
+                        let dist_decay = 1.0 - 0.025 * (delta.abs() as f32);
+                        let b_val =
+                            (seed_sup * mult * dist_decay + 0.04 * p_align).clamp(0.0, 0.45);
+                        let prio = (if facet_match { 0.45 } else { p_align })
+                            + if delta.abs() <= 2 { 0.15 } else { 0.0 }
+                            + 0.1 * fp;
+                        candidates_adj.push((prio, adj_id, b_val, adj_rec.created_at()));
+                    }
+                    candidates_adj.sort_by(|a, b| b.0.total_cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+                    for (_, adj_id, b_val, adj_created_at) in candidates_adj.into_iter().take(4) {
+                        let cur = final_support.get(&adj_id).copied().unwrap_or(0.0);
+                        if b_val > cur {
+                            final_support.insert(adj_id, b_val);
+                            base_records.entry(adj_id).or_insert((
+                                stage4a_lex_scores.get(&adj_id).copied().unwrap_or(0.0),
+                                semantic.get(&adj_id).copied().unwrap_or(0.0),
+                                b_val,
+                                adj_created_at,
+                            ));
+                            if !candidate_ids.contains(&adj_id) {
+                                candidate_ids.push(adj_id);
+                            }
+                        }
+                    }
+                    if seen_pref_sessions.len() >= 2 {
+                        break;
                     }
                 }
             }
@@ -3541,7 +4262,7 @@ impl Substrate {
             ));
         }
 
-        // Stage 7D Quantized `WM7D` Neural Reranker (`ColBERT MaxSim` + Banded Evidence Tie-Breaking)
+        // Stage 7D Quantized `WM7D` Neural Reranker (`ColBERT MaxSim` + Session-Coref + Residual MLP)
         if self.stage4a_scoring
             && !scored.is_empty()
             && let Some(ref spore) = self.rerank_spore
@@ -3551,30 +4272,112 @@ impl Substrate {
                     .then_with(|| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal))
                     .then(b.3.cmp(&a.3))
             });
+            let is_v3 = spore.version() >= 3;
             let top1_key = scored[0].0;
-            let band_floor = (top1_key - 0.25).max(0.45 * top1_key);
-            let rerank_n = scored
-                .iter()
-                .take(12)
-                .take_while(|row| row.0 >= band_floor)
-                .count();
+            let band_floor = if is_v3 {
+                (top1_key - 0.30).max(0.38 * top1_key)
+            } else {
+                (top1_key - 0.25).max(0.45 * top1_key)
+            };
+            let base_cap = if is_v3 { 16 } else { 12 };
+            let mut pool_indices: Vec<usize> = (0..scored.len())
+                .filter(|&i| scored[i].0 >= band_floor)
+                .take(base_cap)
+                .collect();
+
+            // Admit up to 4 sibling candidates from winning Top-2 sessions so same-session
+            // answer-bearing turns with lower isolated BM25 still enter WM7D evaluation.
+            if is_v3 && scored.len() > pool_indices.len() {
+                let mut top_sessions: Vec<String> = Vec::new();
+                for entry in scored.iter().take(6) {
+                    if let Ok(Some(rec)) = self.store.get_record(entry.3) {
+                        let s = rec.source().split(',').nth(1).unwrap_or("");
+                        if !s.is_empty() && !top_sessions.iter().any(|x| x == s) {
+                            top_sessions.push(s.to_string());
+                            if top_sessions.len() >= 2 {
+                                break;
+                            }
+                        }
+                    }
+                }
+                if !top_sessions.is_empty() {
+                    let mut extra_added = 0usize;
+                    let mut in_pool: HashSet<usize> = pool_indices.iter().copied().collect();
+                    for (idx, entry) in scored.iter().enumerate() {
+                        if in_pool.contains(&idx) {
+                            continue;
+                        }
+                        if let Ok(Some(rec)) = self.store.get_record(entry.3) {
+                            let s = rec.source().split(',').nth(1).unwrap_or("");
+                            if top_sessions.iter().any(|ts| ts == s) {
+                                pool_indices.push(idx);
+                                in_pool.insert(idx);
+                                extra_added += 1;
+                                if extra_added >= 4 || pool_indices.len() >= 20 {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            let max_rerank_pool = if open_pref_q { 28 } else { 20 };
+            if is_v3 && pool_indices.len() < max_rerank_pool {
+                let mut in_pool: HashSet<usize> = pool_indices.iter().copied().collect();
+                let mut sem_cands: Vec<(usize, f32)> = scored
+                    .iter()
+                    .enumerate()
+                    .filter(|(idx, e)| {
+                        !in_pool.contains(idx)
+                            && (e.2 >= 0.25
+                                || (open_pref_q
+                                    && pref_align_map.get(&e.3).copied().unwrap_or(0.0) >= 0.42))
+                    })
+                    .map(|(idx, e)| {
+                        let pa = pref_align_map.get(&e.3).copied().unwrap_or(0.0);
+                        (
+                            idx,
+                            e.2 + if open_pref_q && pa >= 0.42 {
+                                0.18 * pa
+                            } else {
+                                0.0
+                            },
+                        )
+                    })
+                    .collect();
+                sem_cands.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+                let extra_sem_take = if open_pref_q { 10 } else { 2 };
+                for (idx, _) in sem_cands.into_iter().take(extra_sem_take) {
+                    if in_pool.insert(idx) {
+                        pool_indices.push(idx);
+                        if pool_indices.len() >= max_rerank_pool {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            let rerank_n = pool_indices.len();
             if rerank_n >= 2 {
                 let mut lex_order: Vec<usize> = (0..rerank_n).collect();
                 lex_order.sort_by(|&ia, &ib| {
-                    scored[ib]
+                    scored[pool_indices[ib]]
                         .6
-                        .partial_cmp(&scored[ia].6)
+                        .partial_cmp(&scored[pool_indices[ia]].6)
                         .unwrap_or(std::cmp::Ordering::Equal)
                 });
                 let mut pre_rank_map = vec![0usize; rerank_n];
-                for (r, &idx) in lex_order.iter().enumerate() {
-                    pre_rank_map[idx] = r;
+                for (r, &pos) in lex_order.iter().enumerate() {
+                    pre_rank_map[pos] = r;
                 }
 
                 let mut cand_records: Vec<(String, String)> = Vec::with_capacity(rerank_n);
-                let mut adj_features: Vec<(f32, bool, f32, bool)> = Vec::with_capacity(rerank_n);
-                for entry in scored.iter().take(rerank_n) {
-                    let id = entry.3;
+                let mut adj_features: Vec<(f32, bool, f32, bool, f32)> =
+                    Vec::with_capacity(rerank_n);
+                let mut sess_names: Vec<String> = Vec::with_capacity(rerank_n);
+                let mut sess_counts: HashMap<String, usize> = HashMap::new();
+                for &s_idx in &pool_indices {
+                    let id = scored[s_idx].3;
                     let rec = self.store.get_record(id).ok().flatten();
                     let content = rec
                         .as_ref()
@@ -3584,7 +4387,11 @@ impl Substrate {
                         .as_ref()
                         .map(|r| r.source().to_string())
                         .unwrap_or_default();
-                    let cur_sess = source.split(',').nth(1).unwrap_or("");
+                    let cur_sess = source.split(',').nth(1).unwrap_or("").to_string();
+                    if !cur_sess.is_empty() {
+                        *sess_counts.entry(cur_sess.clone()).or_default() += 1;
+                    }
+                    sess_names.push(cur_sess.clone());
 
                     let mut prev_lex = 0.0_f32;
                     let mut prev_is_uq = false;
@@ -3618,19 +4425,58 @@ impl Substrate {
                         }
                     }
 
-                    adj_features.push((prev_lex, prev_is_uq, next_lex, next_is_a));
+                    let mut coref_lex = prev_lex.max(next_lex);
+                    for delta in [-3_i64, -2, 2, 3] {
+                        let nid_i = (id as i64) + delta;
+                        if nid_i <= 0 {
+                            continue;
+                        }
+                        let nid = nid_i as u64;
+                        if let Some(&nl) = stage4a_lex_scores.get(&nid)
+                            && nl > coref_lex
+                            && let Ok(Some(nrec)) = self.store.get_record(nid)
+                        {
+                            let ns = nrec.source().split(',').nth(1).unwrap_or("");
+                            if cur_sess.is_empty() || ns == cur_sess {
+                                coref_lex = nl;
+                            }
+                        }
+                    }
+
+                    adj_features.push((prev_lex, prev_is_uq, next_lex, next_is_a, coref_lex));
                     cand_records.push((content, source));
                 }
 
+                let fast_bi_scores: Vec<f32> = if spore.has_biencoder() {
+                    let qv_bi = spore.encode_biencoder_query(&q.query);
+                    let mut bi_scratch = crate::rerank_spore::BiEncoderScratch::default();
+                    cand_records
+                        .iter()
+                        .map(|(content, _)| {
+                            if qv_bi.is_empty() || content.is_empty() {
+                                0.0
+                            } else {
+                                let dv = spore.encode_biencoder_doc_into(content, &mut bi_scratch);
+                                let c: f32 = qv_bi.iter().zip(dv.iter()).map(|(a, b)| a * b).sum();
+                                if c.is_finite() { c.max(0.0) } else { 0.0 }
+                            }
+                        })
+                        .collect()
+                } else {
+                    vec![0.0; rerank_n]
+                };
+
                 let inputs: Vec<crate::rerank_spore::RerankCandidateInput<'_>> = (0..rerank_n)
-                    .map(|idx| {
-                        let (_key, support, sem, id, sup, _stratum, lex, created_at) = scored[idx];
+                    .map(|pos| {
+                        let s_idx = pool_indices[pos];
+                        let (_key, support, sem, id, sup, _stratum, lex, created_at) =
+                            scored[s_idx];
                         let recency_norm = if n > 0 {
                             created_at as f32 / n as f32
                         } else {
                             0.0
                         };
-                        let (ref content, ref source) = cand_records[idx];
+                        let (ref content, ref source) = cand_records[pos];
                         let temporal_hit = temporal_anchor
                             .as_ref()
                             .is_some_and(|d| content.contains(d.as_str()));
@@ -3639,7 +4485,15 @@ impl Substrate {
                             prev_turn_is_user_question,
                             next_turn_lex,
                             next_turn_is_asst,
-                        ) = adj_features[idx];
+                            session_coref_lex,
+                        ) = adj_features[pos];
+                        let sess_density_norm = if sess_names[pos].is_empty() {
+                            1.0 / (rerank_n as f32)
+                        } else {
+                            sess_counts.get(&sess_names[pos]).copied().unwrap_or(1) as f32
+                                / (rerank_n as f32)
+                        };
+                        let fast_bi_cos = fast_bi_scores[pos];
                         crate::rerank_spore::RerankCandidateInput {
                             record_id: id,
                             content,
@@ -3647,7 +4501,7 @@ impl Substrate {
                             lex_support: lex,
                             sem_support: sem,
                             hybrid_support: support,
-                            pre_rank: pre_rank_map[idx],
+                            pre_rank: pre_rank_map[pos],
                             recency_norm,
                             superseded: sup.is_some(),
                             temporal_hit,
@@ -3655,6 +4509,9 @@ impl Substrate {
                             prev_turn_is_user_question,
                             next_turn_lex,
                             next_turn_is_asst,
+                            session_coref_lex,
+                            fast_bi_cos,
+                            sess_density_norm,
                         }
                     })
                     .collect();
@@ -3666,14 +4523,23 @@ impl Substrate {
                         0.40 * f.maxsim_high_idf + 0.28 * f.maxsim_weighted + 0.32 * f.maxsim_min_c
                     })
                     .collect();
-                let mean_cb = colbert_raw.iter().sum::<f32>() / (rerank_n as f32);
-                let mean_rec =
-                    feats.iter().map(|f| f.recency_norm).sum::<f32>() / (rerank_n as f32);
-                let mean_lex = (0..rerank_n).map(|i| scored[i].6).sum::<f32>() / (rerank_n as f32);
+                let mean_n = rerank_n.min(12) as f32;
+                let mean_cb = colbert_raw.iter().take(12).sum::<f32>() / mean_n;
+                let mean_rec = feats.iter().take(12).map(|f| f.recency_norm).sum::<f32>() / mean_n;
+                let mean_lex = pool_indices
+                    .iter()
+                    .take(12)
+                    .map(|&si| scored[si].6)
+                    .sum::<f32>()
+                    / mean_n;
 
                 let q_low = q.query.to_lowercase();
                 let is_asst_q = crate::ghrr_algebra::is_assistant_recall_query(&q.query);
                 let is_open_pref_q = crate::ghrr_algebra::is_open_preference_query(&q.query);
+                let open_pref_q_sig = is_open_pref_q.then(|| {
+                    let core = crate::ghrr_algebra::extract_open_preference_topic_core(&q.query);
+                    crate::ghrr_algebra::pref_role_bound_qfhrr_signature(&core)
+                });
                 let is_money_q = q_low.contains("how much")
                     || q_low.contains("cost")
                     || q_low.contains("price")
@@ -3701,7 +4567,10 @@ impl Substrate {
                     || q_low.contains("earlier")
                     || q_low.contains("used to")
                     || q_low.contains("former")
-                    || q_low.contains("initial");
+                    || q_low.contains("initial")
+                    || q_low.contains(" before ")
+                    || q_low.contains(" first,")
+                    || q_low.contains(" first?");
                 let is_recency_tie_q = !is_previous_q
                     && (q_low.contains("most recent")
                         || q_low.contains("recently")
@@ -3712,37 +4581,84 @@ impl Substrate {
                         || q_low.contains("increase or decrease")
                         || q_low.contains("last month"));
 
-                for (idx, f) in feats.into_iter().enumerate() {
-                    let cb = colbert_raw[idx];
+                let mean_pref = if spore.version() >= 4 && is_open_pref_q {
+                    let pn = rerank_n.min(20) as f32;
+                    feats
+                        .iter()
+                        .take(20)
+                        .map(|f| {
+                            if f.pref_logit.is_finite() {
+                                f.pref_logit
+                            } else {
+                                0.0
+                            }
+                        })
+                        .sum::<f32>()
+                        / pn.max(1.0)
+                } else {
+                    0.0
+                };
+
+                for (pos, f) in feats.into_iter().enumerate() {
+                    let s_idx = pool_indices[pos];
+                    let cb = colbert_raw[pos];
                     if !cb.is_finite() {
                         continue;
                     }
                     let delta_cb = if is_asst_q {
                         (0.18 * (cb - mean_cb)).clamp(-0.04, 0.04)
+                    } else if is_v3 {
+                        (0.30 * (cb - mean_cb)).clamp(-0.07, 0.07)
                     } else {
-                        (0.36 * (cb - mean_cb)).clamp(-0.08, 0.08)
+                        (0.34 * (cb - mean_cb)).clamp(-0.08, 0.08)
                     };
-                    let content_low = cand_records[idx].0.to_lowercase();
+                    let is_v4 = spore.version() >= 4;
+                    let delta_mlp = if is_v3 && f.raw_logit.is_finite() {
+                        (0.12 * f.raw_logit).clamp(-0.03, 0.03)
+                    } else {
+                        0.0
+                    };
+                    let delta_pref_v4 = if is_v4 && is_open_pref_q && f.pref_logit.is_finite() {
+                        let raw_d = f.pref_logit - mean_pref;
+                        if raw_d > 0.0 {
+                            // Multiplicative TopicRelevance x UserStance gate:
+                            // Off-topic emotive user turns cannot hijack on-topic turns via
+                            // additive stance cues alone.
+                            let topic_rel = inputs[pos]
+                                .sem_support
+                                .max(inputs[pos].fast_bi_cos)
+                                .max(scored[s_idx].6);
+                            let topic_gate = ((topic_rel - 0.16) / 0.34).clamp(0.12, 1.0);
+                            (0.45 * raw_d * topic_gate).clamp(0.0, 0.24)
+                        } else {
+                            (0.55 * raw_d).clamp(-0.30, 0.0)
+                        }
+                    } else {
+                        0.0
+                    };
+                    let content_low = cand_records[pos].0.to_lowercase();
                     let has_asst_sep = content_low.contains("\nassistant:");
                     let speaker_delta = if !is_asst_q {
                         if f.tag_asst > 0.5 || (has_asst_sep && f.is_asst_styled) {
-                            if f.facts.proper_noun_count >= 2
-                                && f.first_person_u < 0.05
-                                && f.is_question_turn < 0.5
+                            if f.quotes_user_entity && !f.is_asst_styled && f.is_question_turn < 0.5
                             {
-                                -0.075
+                                -0.22
                             } else {
-                                -0.145
+                                -0.34
                             }
                         } else if f.tag_user < 0.5 && f.is_asst_styled && f.first_person_u < 0.15 {
-                            -0.105
+                            -0.20
                         } else if f.tag_user > 0.5 && f.first_person_u >= 0.35 {
                             0.025
                         } else {
                             0.0
                         }
                     } else if f.tag_asst > 0.5 {
-                        0.12
+                        if f.unanswered_q_trap >= 0.8 {
+                            -0.09
+                        } else {
+                            0.12
+                        }
                     } else if f.tag_user > 0.5 {
                         -0.06
                     } else {
@@ -3751,73 +4667,267 @@ impl Substrate {
                     let is_solicitation = content_low.contains("can you remind me")
                         || content_low.contains("can you give me")
                         || content_low.contains("can you tell me")
+                        || content_low.contains("can you help me")
                         || content_low.contains("could you recommend")
                         || content_low.contains("do you know any")
                         || content_low.contains("do you have any recommendations")
-                        || content_low.contains("do you have any suggestions");
+                        || content_low.contains("do you have any suggestions")
+                        || content_low.contains("do you have any tips")
+                        || content_low.contains("do you have any advice");
+                    let missing_quant_or_entity = if is_money_q {
+                        !f.facts.has_dollar
+                    } else if is_count_q || is_time_q {
+                        !f.facts.has_digit
+                            && !f.facts.has_num_word
+                            && !f.facts.has_explicit_duration
+                            && !f.facts.has_month_or_date
+                    } else {
+                        !f.facts.has_dollar && !f.facts.has_digit && f.facts.proper_noun_count == 0
+                    };
+                    let echoes_query_question = f.is_question_turn >= 0.9
+                        && (content_low.contains("can you remind me how")
+                            || content_low.contains("can you help me understand how")
+                            || (q_low.starts_with("do i have ")
+                                && content_low.contains("do i have ")));
                     let qtrap_delta = if !is_asst_q && !is_open_pref_q {
                         if f.is_meta_clarify
+                            || f.unanswered_q_trap >= 0.85
+                            || echoes_query_question
                             || (f.is_question_turn >= 0.9
                                 && is_solicitation
-                                && !f.facts.has_dollar
-                                && !f.facts.has_digit
-                                && f.facts.proper_noun_count == 0)
+                                && missing_quant_or_entity)
                         {
-                            -0.085
+                            -0.18
                         } else {
                             0.0
                         }
-                    } else if is_open_pref_q && f.tag_asst < 0.5 && f.first_person_u >= 0.40 {
-                        0.04
+                    } else if is_open_pref_q && f.tag_asst < 0.5 {
+                        let cand_id = scored[s_idx].3;
+                        let (mask_i, cached_decl_i) = self
+                            .fast_pref_masks
+                            .get(&cand_id)
+                            .copied()
+                            .unwrap_or((0, false));
+                        let pol =
+                            crate::ghrr_algebra::evaluate_preference_polarity(&cand_records[pos].0);
+                        let has_decl_i = cached_decl_i
+                            || (pol.has_decl_clause
+                                && (pol.e_pos >= 0.30
+                                    || pol.e_neg >= 0.30
+                                    || pol.implicit_pref_count > 0
+                                    || crate::ghrr_algebra::first_person_user_score(
+                                        &pol.declarative_text,
+                                    ) >= 0.25));
+                        #[cfg(feature = "static-scout")]
+                        let pref_align_i =
+                            pref_align_map.get(&cand_id).copied().unwrap_or_else(|| {
+                                q_pref_profile.as_ref().map_or(0.0, |qp| {
+                                    score_turn_pref_alignment(qp, mask_i, has_decl_i)
+                                })
+                            });
+                        #[cfg(not(feature = "static-scout"))]
+                        let pref_align_i = {
+                            let _ = mask_i;
+                            pref_align_map.get(&cand_id).copied().unwrap_or(0.0)
+                        };
+                        if is_v4 {
+                            // WM7D v4 carries its own trained preference contrastive head (`delta_pref_v4`);
+                            // add only a calibrated prototype facet alignment bonus when aligned.
+                            if has_decl_i && pref_align_i >= 0.42 {
+                                0.055 * pref_align_i
+                            } else {
+                                0.0
+                            }
+                        } else if pol.pure_question
+                            && (f.is_question_turn >= 0.85 || is_solicitation)
+                        {
+                            // Pure question-only solicitation with zero declarative clause
+                            -0.14
+                        } else if pol.has_decl_clause || has_decl_i {
+                            let decl_qfhrr_sim = open_pref_q_sig.map_or(0.0_f32, |qs| {
+                                if pol.has_decl_clause {
+                                    let ds = crate::ghrr_algebra::pref_role_bound_qfhrr_signature(
+                                        &pol.declarative_text,
+                                    );
+                                    qs.similarity(&ds)
+                                } else {
+                                    0.0
+                                }
+                            });
+                            let stance = ((pol.e_pos + pol.e_neg).min(1.0)
+                                + if pol.implicit_pref_count > 0 {
+                                    0.12
+                                } else {
+                                    0.0
+                                })
+                            .min(1.0);
+                            let pure_decl_turn =
+                                pol.has_decl_clause && !cand_records[pos].0.trim().ends_with('?');
+                            let sem_ok = inputs[pos].sem_support >= 0.24
+                                || inputs[pos].fast_bi_cos >= 0.34
+                                || pref_align_i >= 0.42
+                                || decl_qfhrr_sim >= 0.56;
+                            if f.first_person_u >= 0.25 || stance >= 0.30 || pref_align_i >= 0.42 {
+                                let mut boost = if pure_decl_turn { 0.055 } else { 0.030 };
+                                if sem_ok {
+                                    boost += 0.065 * stance;
+                                    if pref_align_i >= 0.42 {
+                                        boost += 0.075 * pref_align_i;
+                                    }
+                                }
+                                if decl_qfhrr_sim >= 0.54 {
+                                    boost +=
+                                        0.060 * ((decl_qfhrr_sim - 0.50) * 2.0).clamp(0.0, 1.0);
+                                }
+                                boost
+                            } else {
+                                0.0
+                            }
+                        } else {
+                            0.0
+                        }
                     } else {
                         0.0
                     };
                     let mut atype_delta = 0.0_f32;
+                    if !is_asst_q
+                        && !is_previous_q
+                        && (content_low.contains("actually, i ")
+                            || content_low.contains("i actually have ")
+                            || content_low.contains("i actually need ")
+                            || content_low.contains("i've actually found ")
+                            || content_low.contains("to correct myself")
+                            || content_low.contains("i've accumulated enough"))
+                    {
+                        atype_delta += 0.075;
+                    }
                     if is_money_q {
                         if f.facts.has_dollar {
-                            atype_delta += 0.075;
+                            atype_delta += 0.095;
                         } else if f.facts.has_digit {
                             atype_delta += 0.03;
-                        } else if f.is_question_turn >= 0.8 {
-                            atype_delta -= 0.04;
+                        } else if f.is_question_turn >= 0.8 || is_solicitation {
+                            atype_delta -= 0.075;
+                        } else {
+                            atype_delta -= 0.045;
                         }
                     } else if is_count_q {
                         if (f.facts.has_digit && !f.facts.has_dollar) || f.facts.has_num_word {
-                            atype_delta += 0.02;
+                            atype_delta += 0.065;
+                        } else if f.is_question_turn >= 0.8 || is_solicitation {
+                            atype_delta -= 0.095;
+                        } else {
+                            atype_delta -= 0.055;
                         }
                     } else if is_time_q {
-                        if f.facts.has_month_or_date {
-                            atype_delta += 0.045;
+                        if q_low.contains("how long") {
+                            if f.facts.has_explicit_duration {
+                                atype_delta += 0.115;
+                            } else if f.facts.has_month_or_date {
+                                atype_delta += 0.05;
+                            } else if f.facts.has_digit || f.facts.has_num_word {
+                                atype_delta += 0.03;
+                            } else {
+                                atype_delta -= 0.11;
+                            }
+                        } else if f.facts.has_explicit_duration {
+                            atype_delta += 0.07;
+                        } else if f.facts.has_month_or_date {
+                            atype_delta += 0.05;
                         } else if f.facts.has_digit || f.facts.has_num_word {
                             atype_delta += 0.025;
                         } else if f.is_question_turn >= 0.8 {
+                            atype_delta -= 0.05;
+                        } else {
                             atype_delta -= 0.03;
                         }
-                    } else if is_where_q && f.facts.proper_noun_count >= 1 {
-                        atype_delta += 0.045;
-                    }
-                    let recency_tie_delta =
-                        if is_recency_tie_q && (top1_key - scored[idx].0) <= 0.10 {
-                            0.115 * (f.recency_norm - mean_rec)
-                        } else if is_previous_q && (top1_key - scored[idx].0) <= 0.10 {
-                            let mut p_d = -0.055 * (f.recency_norm - mean_rec);
-                            if content_low.contains("previous") {
-                                p_d += 0.045;
-                            }
-                            p_d
+                    } else if is_where_q {
+                        if f.facts.proper_noun_count >= 1 {
+                            atype_delta += if f.facts.has_role_or_venue_prep {
+                                0.085
+                            } else {
+                                0.055
+                            };
+                        } else if f.is_question_turn >= 0.8 || f.unanswered_q_trap >= 0.8 {
+                            atype_delta -= 0.18;
                         } else {
-                            0.0
-                        };
-                    let lex_tie_delta = if is_asst_q {
-                        0.02 * (scored[idx].6 - mean_lex)
+                            atype_delta -= 0.095;
+                        }
+                    }
+                    let eff_coref = inputs[pos].session_coref_lex.max(scored[s_idx].6);
+                    let coref_delta = if !is_recency_tie_q
+                        && eff_coref >= 0.40
+                        && f.facts.density >= 0.18
+                        && f.unanswered_q_trap < 0.5
+                    {
+                        (0.055 * eff_coref).clamp(0.0, 0.045)
                     } else {
-                        0.06 * (scored[idx].6 - mean_lex)
+                        0.0
                     };
-                    let tie_sub = (delta_cb + atype_delta + recency_tie_delta + lex_tie_delta)
-                        .clamp(-0.14, 0.14);
-                    let total_delta = (speaker_delta + qtrap_delta + tie_sub).clamp(-0.20, 0.18);
-                    scored[idx].0 = (scored[idx].0 + total_delta).max(0.001);
-                    scored[idx].1 = (scored[idx].1 + 0.5 * total_delta).clamp(0.0, 1.0);
+                    let recency_margin = 0.22;
+                    let recency_tie_delta = if is_recency_tie_q
+                        && (top1_key - scored[s_idx].0) <= recency_margin
+                        && (scored[s_idx].6 >= 0.14 || inputs[pos].fast_bi_cos >= 0.45)
+                    {
+                        let mut rt = 0.30 * (f.recency_norm - mean_rec);
+                        if !is_asst_q && f.tag_asst < 0.5 {
+                            if f.unanswered_q_trap >= 0.8 || is_solicitation {
+                                rt -= 0.095;
+                            } else if f.is_question_turn >= 0.8 {
+                                rt -= 0.035;
+                            }
+                        }
+                        rt
+                    } else if is_previous_q
+                        && (top1_key - scored[s_idx].0) <= 0.22
+                        && (scored[s_idx].6 >= 0.14 || inputs[pos].fast_bi_cos >= 0.45)
+                    {
+                        let mut p_d = -0.14 * (f.recency_norm - mean_rec);
+                        if content_low.contains("previous role as")
+                            || content_low.contains("previously")
+                            || content_low.contains("used to")
+                        {
+                            p_d += 0.065;
+                        } else if (content_low.contains("previous")
+                            || content_low.contains("earlier")
+                            || content_low.contains("former")
+                            || content_low.contains("initial"))
+                            && f.facts.density >= 0.18
+                        {
+                            p_d += 0.04;
+                        }
+                        p_d
+                    } else {
+                        0.0
+                    };
+                    let lex_tie_delta = if is_asst_q {
+                        0.02 * (scored[s_idx].6 - mean_lex)
+                    } else {
+                        0.05 * (scored[s_idx].6 - mean_lex)
+                    };
+                    let tie_sub = (delta_cb
+                        + delta_mlp
+                        + atype_delta
+                        + coref_delta
+                        + recency_tie_delta
+                        + lex_tie_delta)
+                        .clamp(-0.24, 0.24);
+                    let max_up = if is_v4 && is_open_pref_q {
+                        0.52
+                    } else if is_open_pref_q {
+                        0.34
+                    } else {
+                        0.26
+                    };
+                    let min_down = if is_v4 && is_open_pref_q {
+                        -0.52
+                    } else {
+                        -0.42
+                    };
+                    let total_delta = (speaker_delta + qtrap_delta + delta_pref_v4 + tie_sub)
+                        .clamp(min_down, max_up);
+                    scored[s_idx].0 = (scored[s_idx].0 + total_delta).max(0.001);
+                    scored[s_idx].1 = (scored[s_idx].1 + total_delta).clamp(0.001, 1.0);
                 }
             }
         }
@@ -3978,17 +5088,30 @@ impl Substrate {
         };
         let target_n = limit.min(candidate_limit.max(1));
 
-        // Stage 7D Fast O(N^2) Anti-Redundancy MMR pass on top window (`<= 24`): keeps #1 untouched,
-        // then suppresses near-duplicate boilerplate echoes via sorted FNV-1a token hashes (< 0.05ms).
+        // Stage 7D Fast O(N^2) Anti-Redundancy & Session-Diversified MMR pass on top window (`<= 24`):
+        // keeps #1 untouched, then suppresses near-duplicate boilerplate echoes via sorted FNV-1a
+        // token hashes and applies `wave3_braid` session-family caps (`< 0.05ms`).
         if self.stage4a_scoring && self.rerank_spore.is_some() && scored.len() > 2 && target_n > 1 {
             let pool_n = scored.len().min(24.min(target_n.max(12)));
+            let mmr_intent = crate::wave3_braid::classify_query_intent_zero_token(&q.query);
+            let sess_family_cap: usize = match mmr_intent {
+                crate::wave3_braid::QueryIntentClass::CountingAggregation => 1,
+                crate::wave3_braid::QueryIntentClass::SequentialOrdering
+                | crate::wave3_braid::QueryIntentClass::TemporalBoundary
+                | crate::wave3_braid::QueryIntentClass::ImplicitPreference => 2,
+                crate::wave3_braid::QueryIntentClass::StandardFact => pool_n,
+            };
             let mut tok_hashes: Vec<Vec<u64>> = Vec::with_capacity(pool_n);
+            let mut cand_sessions: Vec<String> = Vec::with_capacity(pool_n);
             for &(_, _, _, cid, _, _, _, _) in &scored[..pool_n] {
-                let mut hashes: Vec<u64> = self
-                    .store
-                    .get_record(cid)
-                    .ok()
-                    .flatten()
+                let rec_opt = self.store.get_record(cid).ok().flatten();
+                let sess = rec_opt
+                    .as_ref()
+                    .and_then(|r| r.source().split(',').nth(1))
+                    .unwrap_or("")
+                    .to_string();
+                cand_sessions.push(sess);
+                let mut hashes: Vec<u64> = rec_opt
                     .map(|r| {
                         r.content()
                             .split(|c: char| !c.is_ascii_alphanumeric())
@@ -4030,8 +5153,14 @@ impl Substrate {
             let mut used = vec![false; pool_n];
             let mut max_sim = vec![0.0_f32; pool_n];
             let mut mmr_selected = Vec::with_capacity(pool_n);
+            let mut selected_sess_counts: HashMap<&str, usize> = HashMap::new();
             used[0] = true;
             mmr_selected.push(0usize);
+            if !cand_sessions[0].is_empty() {
+                *selected_sess_counts
+                    .entry(cand_sessions[0].as_str())
+                    .or_default() += 1;
+            }
             let mut last_sel = 0usize;
             for _step in 1..pool_n {
                 let last_stratum = scored[last_sel].5;
@@ -4054,7 +5183,18 @@ impl Substrate {
                     } else {
                         0.0
                     };
-                    let eff_key = c.0 - div_pen;
+                    let sess_pen = if !cand_sessions[cand_i].is_empty()
+                        && selected_sess_counts
+                            .get(cand_sessions[cand_i].as_str())
+                            .copied()
+                            .unwrap_or(0)
+                            >= sess_family_cap
+                    {
+                        0.08
+                    } else {
+                        0.0
+                    };
+                    let eff_key = c.0 - div_pen - sess_pen;
                     let better = match c.5.cmp(&best_key.0) {
                         std::cmp::Ordering::Less => true,
                         std::cmp::Ordering::Greater => false,
@@ -4071,6 +5211,11 @@ impl Substrate {
                 if let Some(bi) = best_i {
                     used[bi] = true;
                     mmr_selected.push(bi);
+                    if !cand_sessions[bi].is_empty() {
+                        *selected_sess_counts
+                            .entry(cand_sessions[bi].as_str())
+                            .or_default() += 1;
+                    }
                     last_sel = bi;
                 }
             }
@@ -6001,6 +7146,9 @@ impl Substrate {
                     self.store.remove_record_and_indexes(id).map_err(|error| {
                         format!("revision intent {operation} candidate cleanup failed: {error}")
                     })?;
+                    self.fast_sem_cache.remove(&id);
+                    self.fast_pref_masks.remove(&id);
+                    self.fast_sem_complete = false;
                     if !removal_finished.contains(&operation) {
                         self.append_store_sidecar(
                             "compensations.jsonl",
@@ -6252,6 +7400,9 @@ impl Substrate {
         self.store
             .remove_record_and_indexes(record_id)
             .map_err(|e| format!("candidate rollback failed: {e}"))?;
+        self.fast_sem_cache.remove(&record_id);
+        self.fast_pref_masks.remove(&record_id);
+        self.fast_sem_complete = false;
         let key = identity_key(
             record.content(),
             record.source(),
@@ -6889,6 +8040,9 @@ impl Substrate {
         self.store
             .remove_record_and_indexes(record_id)
             .map_err(|e| format!("erase_record_certified index removal failed: {e}"))?;
+        self.fast_sem_cache.remove(&record_id);
+        self.fast_pref_masks.remove(&record_id);
+        self.fast_sem_complete = false;
 
         // 2. Remove incident relations
         let _ = self
@@ -12730,5 +13884,46 @@ mod cache_boundary_tests {
         );
 
         let _ = std::fs::remove_dir_all(&path);
+    }
+
+    #[cfg(feature = "static-scout")]
+    #[test]
+    fn entropy_gated_preference_prototype_mask_and_bridge() {
+        let Some(scout) = static_scout_model() else {
+            return;
+        };
+        let Some(anchors) = static_pref_anchors() else {
+            return;
+        };
+        let v_dairy = l2_normalize_vec(scout.encode_single(
+            "I switched to lactose-free oat milk last month because regular dairy upsets my stomach.",
+        ));
+        let v_cycling = l2_normalize_vec(
+            scout.encode_single("I love long gravel bike rides in the woods on Sunday mornings."),
+        );
+        let (mask_dairy, decl_dairy) = pack_turn_pref_mask(
+            &v_dairy,
+            "I switched to lactose-free oat milk last month because regular dairy upsets my stomach.",
+            anchors,
+        );
+        let (mask_cyc, decl_cyc) = pack_turn_pref_mask(
+            &v_cycling,
+            "I love long gravel bike rides in the woods on Sunday mornings.",
+            anchors,
+        );
+        assert!(decl_dairy && decl_cyc);
+        assert_ne!(mask_dairy & ((1u16 << 0) | (1u16 << 1) | (1u16 << 13)), 0);
+        assert_ne!(mask_cyc & (1u16 << 5), 0);
+
+        let q_coffee = l2_normalize_vec(
+            scout.encode_single("Any suggestions for a new coffee creamer recipe?"),
+        );
+        let p_coffee = build_query_pref_profile(&q_coffee, anchors);
+        let s_dairy = score_turn_pref_alignment(&p_coffee, mask_dairy, decl_dairy);
+        let s_cyc = score_turn_pref_alignment(&p_coffee, mask_cyc, decl_cyc);
+        assert!(
+            s_dairy > s_cyc,
+            "focused coffee query must strongly prefer dairy/beverage turn ({s_dairy:.3}) over unrelated cycling turn ({s_cyc:.3})"
+        );
     }
 }

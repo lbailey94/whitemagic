@@ -47,7 +47,7 @@ receipt-verification API runs at <https://api.whitemagic.dev> (`/health` and
 ## Verify
 
 ```bash
-wm --version          # wm 11.2.1 (Gen3 line)
+wm --version          # wm 11.3.0 (Gen3 line)
 wm selftest --json    # install invariant + host_status/host_health
 wm selftest --strict  # exit 1 only when the host verdict is critical
 wm wave4-benchmark    # Wave-4 Takwin & trace-shrinking benchmark (PEB-23..25)

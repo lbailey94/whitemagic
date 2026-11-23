@@ -98,7 +98,7 @@ raw results remain retained; they are not rescored as independent evidence.
 
 ## Status
 
-**WhiteMagic Gen3** (the `wm` 11.2.1 line, unifying the Gen 2 v9 operational contract and CPR `0.5` bundle portability into the Gen 3 kernel). Release channel: **open
+**WhiteMagic Gen3** (the `wm` 11.3.0 line, unifying the Gen 2 v9 operational contract and CPR `0.5` bundle portability into the Gen 3 kernel). Release channel: **open
 alpha** — public alpha for MCP agents. The version number is a compatibility
 signal; the channel is an evidence claim (beta and stable each require their
 own exit conditions, not a version milestone).
@@ -150,9 +150,9 @@ curl -fsSL https://www.whitemagic.dev/install.sh?ref=readme | sh
 ### Other channels
 
 These commands are not one release. `npx whitemagic-mcp` follows the npm
-`latest` tag, which is the current open-alpha release (11.2.1).
+`latest` tag, which is the current open-alpha release (11.3.0).
 `cargo install whitemagic` and the Docker tag `9` are the Gen2 9.3.4 line.
-Docker Hub also publishes a tag for the current release, `11.2.1`.
+Docker Hub also publishes a tag for the current release, `11.3.0`.
 
 ```bash
 npx whitemagic-mcp serve                     # npm latest (open alpha)
@@ -167,7 +167,7 @@ grew without any website CTA — the memory layer chooses its own doors.
 Verify the installation and see the product work end to end:
 
 ```bash
-wm --version    # wm 11.2.1
+wm --version    # wm 11.3.0
 wm status       # display substrate status, epoch, record counts, and store health
 ```
 
@@ -195,7 +195,7 @@ wm --store "$HOME/.local/share/whitemagic/gen3" serve --profile cyberbrain
 
 The v9-only commands (`doctor`, `connect`, `setup`, `quickstart`,
 `update`, `seal`, `verify`, `trust`, `anchor`) belong to the `wm9`
-binary line; `wm backup`, `wm restore`, and `wm verify-receipt` are natively supported in `wm 11.2.1`.
+binary line; `wm backup`, `wm restore`, and `wm verify-receipt` are natively supported in `wm 11.3.0`.
 
 ## Connect an MCP client
 

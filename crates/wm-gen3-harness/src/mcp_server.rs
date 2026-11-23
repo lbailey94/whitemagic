@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::io::{self, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
@@ -50,6 +51,7 @@ const HTTP_SINGLETON_HEADERS: &[&str] = &[
     "mcp-protocol-version",
     "origin",
     "transfer-encoding",
+    "x-wm-profile",
 ];
 const MAX_CONNECTIONS: usize = 64;
 const SSE_KEEPALIVE: Duration = Duration::from_secs(15);
@@ -172,6 +174,16 @@ impl McpBackend {
     /// Handle one JSON-RPC request. Returns `None` for notifications.
     #[must_use]
     pub fn handle(&self, request: &Value) -> Option<Value> {
+        self.handle_with_profile(request, None)
+    }
+
+    /// Handle one JSON-RPC request with an optional per-request profile override.
+    #[must_use]
+    pub fn handle_with_profile(
+        &self,
+        request: &Value,
+        profile_override: Option<McpProfile>,
+    ) -> Option<Value> {
         if request.is_array() && contains_modern_request(request) {
             return Some(json_rpc_error(
                 Value::Null,
@@ -240,7 +252,7 @@ impl McpBackend {
                     "serverInfo": {
                         "name": "whitemagic-gen3",
                         "version": WM_VERSION,
-                        "profile": profile_name(*profile)
+                        "profile": profile_name(profile_override.unwrap_or(*profile))
                     }
                 }
             }),
@@ -260,7 +272,7 @@ impl McpBackend {
                     "serverInfo": {
                         "name": "whitemagic-gen3",
                         "version": WM_VERSION,
-                        "profile": profile_name(*profile),
+                        "profile": profile_name(profile_override.unwrap_or(*profile)),
                         "legacy": true,
                         "mode": "readonly",
                         "store": store_path.display().to_string()
@@ -281,7 +293,8 @@ impl McpBackend {
                     ..
                 },
             ) => {
-                let tools = get_tools_list_for_profile(*profile, *readonly);
+                let effective_profile = profile_override.unwrap_or(*profile);
+                let tools = get_tools_list_for_profile(effective_profile, *readonly);
                 let tool_schemas: Vec<ToolSchemaDefinition> = tools
                     .as_array()
                     .map(|arr| {
@@ -321,7 +334,7 @@ impl McpBackend {
                         "ttlMs": 0,
                         "cacheScope": "private",
                         "_meta": {
-                            "profile": profile_name(*profile),
+                            "profile": profile_name(effective_profile),
                             "context_cache_token": cache_token.cache_token,
                             "canonical_prefix_bytes": cache_token.canonical_prefix_bytes,
                             "estimated_prefix_tokens": cache_token.estimated_prefix_tokens,
@@ -332,7 +345,7 @@ impl McpBackend {
                     json!({
                         "tools": tools,
                         "_meta": {
-                            "profile": profile_name(*profile),
+                            "profile": profile_name(effective_profile),
                             "context_cache_token": cache_token.cache_token,
                             "canonical_prefix_bytes": cache_token.canonical_prefix_bytes,
                             "estimated_prefix_tokens": cache_token.estimated_prefix_tokens,
@@ -343,18 +356,19 @@ impl McpBackend {
                 json_rpc_result(id, result)
             }
             ("tools/list", Self::Legacy { profile, .. }) => {
+                let effective_profile = profile_override.unwrap_or(*profile);
                 let result = if modern {
                     json!({
                         "resultType": "complete",
                         "tools": get_legacy_tools_list(),
                         "ttlMs": 0,
                         "cacheScope": "private",
-                        "_meta": { "profile": profile_name(*profile), "legacy": true, "readonly": true }
+                        "_meta": { "profile": profile_name(effective_profile), "legacy": true, "readonly": true }
                     })
                 } else {
                     json!({
                         "tools": get_legacy_tools_list(),
-                        "_meta": { "profile": profile_name(*profile), "legacy": true, "readonly": true }
+                        "_meta": { "profile": profile_name(effective_profile), "legacy": true, "readonly": true }
                     })
                 };
                 json_rpc_result(id, result)
@@ -370,6 +384,7 @@ impl McpBackend {
                     ..
                 },
             ) => {
+                let effective_profile = profile_override.unwrap_or(*profile);
                 let name = request
                     .pointer("/params/name")
                     .and_then(Value::as_str)
@@ -393,7 +408,12 @@ impl McpBackend {
                             // progress.
                             let mut guard = substrate.lock().unwrap_or_else(|e| e.into_inner());
                             execute_hybrid_tool_call(
-                                name, args, &mut guard, store_path, *readonly, *profile,
+                                name,
+                                args,
+                                &mut guard,
+                                store_path,
+                                *readonly,
+                                effective_profile,
                             )
                         };
                         (verdict, advisories, result)
@@ -450,6 +470,7 @@ fn profile_name(profile: McpProfile) -> &'static str {
     match profile {
         McpProfile::Cyberbrain => "cyberbrain",
         McpProfile::Full => "full",
+        McpProfile::CodeMode => "codemode",
     }
 }
 
@@ -636,10 +657,20 @@ fn modern_http_error(
 
 /// Validate the 2026-07-28 Streamable HTTP binding before dispatch. Legacy
 /// requests without modern metadata keep their established HTTP behavior.
+#[cfg(test)]
 fn dispatch_http_json(
     backend: &McpBackend,
     body: &[u8],
     headers: &HashMap<String, String>,
+) -> (String, String) {
+    dispatch_http_json_with_profile(backend, body, headers, None)
+}
+
+fn dispatch_http_json_with_profile(
+    backend: &McpBackend,
+    body: &[u8],
+    headers: &HashMap<String, String>,
+    profile_override: Option<McpProfile>,
 ) -> (String, String) {
     let parsed = std::str::from_utf8(body)
         .map_err(|error| error.to_string())
@@ -647,7 +678,8 @@ fn dispatch_http_json(
             crate::receipt_verify::parse_strict_json(body).map_err(|error| error.to_string())
         });
     let Ok(request) = parsed else {
-        let response = dispatch_json(backend, body).unwrap_or_else(|| "{}".into());
+        let response =
+            dispatch_json_with_profile(backend, body, profile_override).unwrap_or_else(|| "{}".into());
         return ("400 Bad Request".into(), response);
     };
     let version_header = headers.get("mcp-protocol-version").map(String::as_str);
@@ -745,11 +777,13 @@ fn dispatch_http_json(
                 modern_http_error(id, "404 Not Found", -32601, "Method not found");
             return (status, response);
         }
-        let response = backend.handle(&request).unwrap_or_else(|| "{}".into());
+        let response = backend
+            .handle_with_profile(&request, profile_override)
+            .unwrap_or_else(|| "{}".into());
         return ("200 OK".into(), response.to_string());
     }
 
-    let response = dispatch_json(backend, body).unwrap_or_default();
+    let response = dispatch_json_with_profile(backend, body, profile_override).unwrap_or_default();
     if response.is_empty() {
         ("202 Accepted".into(), response)
     } else {
@@ -823,6 +857,16 @@ fn tool_call_envelope(
 /// Dispatch one HTTP body: single request or batch. `None` = notifications only.
 #[must_use]
 pub fn dispatch_json(backend: &McpBackend, body: &[u8]) -> Option<String> {
+    dispatch_json_with_profile(backend, body, None)
+}
+
+/// Dispatch one JSON-RPC request or batch with an optional per-request MCP profile override.
+#[must_use]
+pub fn dispatch_json_with_profile(
+    backend: &McpBackend,
+    body: &[u8],
+    profile_override: Option<McpProfile>,
+) -> Option<String> {
     let parsed = if body.len() > MAX_HTTP_BODY {
         Err(format!("request body exceeds {MAX_HTTP_BODY} byte limit"))
     } else {
@@ -847,7 +891,7 @@ pub fn dispatch_json(backend: &McpBackend, body: &[u8]) -> Option<String> {
         Value::Array(items) => {
             let responses: Vec<Value> = items
                 .iter()
-                .filter_map(|request| backend.handle(request))
+                .filter_map(|request| backend.handle_with_profile(request, profile_override))
                 .collect();
             if responses.is_empty() {
                 None
@@ -855,7 +899,9 @@ pub fn dispatch_json(backend: &McpBackend, body: &[u8]) -> Option<String> {
                 Some(Value::Array(responses).to_string())
             }
         }
-        other => backend.handle(&other).map(|response| response.to_string()),
+        other => backend
+            .handle_with_profile(&other, profile_override)
+            .map(|response| response.to_string()),
     }
 }
 
@@ -1084,7 +1130,8 @@ fn handle_conn(
 
     let path = target.split('?').next().unwrap_or("");
     let query = target.split_once('?').map_or("", |(_, query)| query);
-    let mcp_endpoint = (transport == NetworkTransport::Http && path == "/mcp")
+    let mcp_endpoint = (transport == NetworkTransport::Http
+        && matches!(path, "/mcp" | "/mcp/codemode"))
         || (transport == NetworkTransport::Sse && matches!(path, "/sse" | "/messages"));
     if mcp_endpoint
         && headers
@@ -1108,12 +1155,25 @@ fn handle_conn(
                 "transport": transport.name(),
                 "mode": ctx.backend.mode_name(),
                 "profile": profile_name(ctx.backend.profile()),
+                "supported_profiles": ["cyberbrain", "codemode", "full"],
                 "store": ctx.backend.store_path().display().to_string(),
             })
             .to_string();
             write_response(&mut stream, "200 OK", "application/json", body.as_bytes())
         }
-        ("POST", "/mcp") if transport == NetworkTransport::Http => {
+        ("POST", "/mcp" | "/mcp/codemode") if transport == NetworkTransport::Http => {
+            let profile_override = match resolve_http_profile_override(path, query, &headers) {
+                Ok(override_profile) => override_profile,
+                Err(msg) => {
+                    let body = json!({ "error": msg }).to_string();
+                    return write_response(
+                        &mut stream,
+                        "400 Bad Request",
+                        "application/json",
+                        body.as_bytes(),
+                    );
+                }
+            };
             let body = match read_body(&mut stream, &headers) {
                 Ok(body) => body,
                 Err(e) => {
@@ -1131,16 +1191,17 @@ fn handle_conn(
                     );
                 }
             };
-            let (status, text) = dispatch_http_json(&ctx.backend, &body, &headers);
+            let (status, text) =
+                dispatch_http_json_with_profile(&ctx.backend, &body, &headers, profile_override);
             write_response(&mut stream, &status, "application/json", text.as_bytes())
         }
-        ("GET", "/mcp") if transport == NetworkTransport::Http => write_response(
+        ("GET", "/mcp" | "/mcp/codemode") if transport == NetworkTransport::Http => write_response(
             &mut stream,
             "405 Method Not Allowed",
             "application/json",
             br#"{"error":"use POST /mcp; no standalone SSE stream is offered"}"#,
         ),
-        ("DELETE", "/mcp") => write_response(
+        ("DELETE", "/mcp" | "/mcp/codemode") => write_response(
             &mut stream,
             "405 Method Not Allowed",
             "application/json",
@@ -1490,6 +1551,47 @@ fn base64_digit(byte: u8) -> Option<u8> {
         b'/' => Some(63),
         _ => None,
     }
+}
+
+fn parse_http_profile_value(raw: &str, source: &str) -> Result<McpProfile, String> {
+    let normalized = raw.trim().to_ascii_lowercase();
+    McpProfile::from_str(&normalized).map_err(|e| format!("invalid {source} profile: {e}"))
+}
+
+fn resolve_http_profile_override(
+    path: &str,
+    query: &str,
+    headers: &HashMap<String, String>,
+) -> Result<Option<McpProfile>, String> {
+    let query_profile = query_param(query, "profile")
+        .map(|val| parse_http_profile_value(&val, "query 'profile'"))
+        .transpose()?;
+    let header_profile = headers
+        .get("x-wm-profile")
+        .map(|val| parse_http_profile_value(val, "X-WM-Profile"))
+        .transpose()?;
+    if let (Some(q), Some(h)) = (query_profile, header_profile) {
+        if q != h {
+            return Err(format!(
+                "conflicting profile override: query 'profile' is '{}' but X-WM-Profile is '{}'",
+                profile_name(q),
+                profile_name(h)
+            ));
+        }
+    }
+    let explicit = query_profile.or(header_profile);
+    if path == "/mcp/codemode" {
+        if let Some(profile) = explicit {
+            if profile != McpProfile::CodeMode {
+                return Err(format!(
+                    "endpoint /mcp/codemode requires codemode profile, got '{}'",
+                    profile_name(profile)
+                ));
+            }
+        }
+        return Ok(Some(McpProfile::CodeMode));
+    }
+    Ok(explicit)
 }
 
 fn query_param(query: &str, key: &str) -> Option<String> {
@@ -2398,5 +2500,196 @@ mod tests {
         assert_eq!(response["result"]["firebreak"]["verdict"], json!("allow"));
         drop(backend);
         std::fs::remove_dir_all(store).expect("remove isolated firebreak fixture");
+    }
+
+    fn http_post(ctx: Arc<ServerCtx>, target: &str, extra_headers: &str, payload: &Value) -> String {
+        let body = payload.to_string();
+        let req = format!(
+            "POST {target} HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\n{extra_headers}Content-Length: {}\r\n\r\n{body}",
+            body.len()
+        );
+        raw_http_exchange(ctx, req.as_bytes())
+    }
+
+    #[test]
+    fn http_multi_profile_negotiation_and_readonly_preservation() {
+        let store = std::env::temp_dir().join(format!(
+            "wm-http-multiprofile-{}",
+            uuid::Uuid::new_v4()
+        ));
+        let substrate = Substrate::open(&store, None, wm_gen3_core::constitution::default_view())
+            .expect("open isolated multi-profile fixture");
+        let backend = McpBackend::gen3(substrate, &store, McpProfile::Full, true);
+        let ctx = test_ctx(backend, None);
+
+        // GET /health advertises supported_profiles
+        let health_resp = raw_http_exchange(
+            Arc::clone(&ctx),
+            b"GET /health HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n",
+        );
+        assert!(health_resp.starts_with("HTTP/1.1 200 OK"), "{health_resp}");
+        let health_json = response_json(&health_resp);
+        assert_eq!(
+            health_json["supported_profiles"],
+            json!(["cyberbrain", "codemode", "full"])
+        );
+
+        let list_req = json!({"jsonrpc": "2.0", "id": 1, "method": "tools/list"});
+
+        // Default POST /mcp -> full (64 tools in readwrite, 63 in readonly with memory.temporal_assert withheld)
+        assert_eq!(
+            get_tools_list_for_profile(McpProfile::Full, false)
+                .as_array()
+                .map(Vec::len),
+            Some(64),
+            "full readwrite profile tool count"
+        );
+        let full_resp = http_post(Arc::clone(&ctx), "/mcp", "", &list_req);
+        assert!(full_resp.starts_with("HTTP/1.1 200 OK"), "{full_resp}");
+        let full_json = response_json(&full_resp);
+        assert_eq!(full_json["result"]["_meta"]["profile"], json!("full"));
+        assert_eq!(
+            full_json["result"]["tools"].as_array().map(Vec::len),
+            Some(63),
+            "full readonly profile tool count"
+        );
+
+        // /mcp/codemode, /mcp?profile=codemode, and X-WM-Profile: codemode all list exact 2 tools
+        for (target, headers) in [
+            ("/mcp/codemode", ""),
+            ("/mcp?profile=codemode", ""),
+            ("/mcp", "X-WM-Profile: codemode\r\n"),
+        ] {
+            let resp = http_post(Arc::clone(&ctx), target, headers, &list_req);
+            assert!(resp.starts_with("HTTP/1.1 200 OK"), "{target} {headers}: {resp}");
+            let body = response_json(&resp);
+            assert_eq!(body["result"]["_meta"]["profile"], json!("codemode"));
+            let tools = body["result"]["tools"].as_array().expect("tools array");
+            let names: Vec<&str> = tools
+                .iter()
+                .filter_map(|t| t.get("name").and_then(Value::as_str))
+                .collect();
+            assert_eq!(names, vec!["wm_perceive", "wm_execute"]);
+        }
+
+        // /mcp/codemode executes wm_perceive and wm_execute(compact=true)
+        let perceive_resp = http_post(
+            Arc::clone(&ctx),
+            "/mcp/codemode",
+            "",
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {
+                    "name": "wm_perceive",
+                    "arguments": { "scope": "ganas", "limit": 3 }
+                }
+            }),
+        );
+        assert!(perceive_resp.starts_with("HTTP/1.1 200 OK"), "{perceive_resp}");
+        let perceive_json = response_json(&perceive_resp);
+        assert_eq!(perceive_json["result"]["isError"], json!(false), "{perceive_json}");
+
+        let exec_resp = http_post(
+            Arc::clone(&ctx),
+            "/mcp/codemode",
+            "",
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {
+                    "name": "wm_execute",
+                    "arguments": {
+                        "compact": true,
+                        "steps": [{ "tool": "memory.count", "args": {} }]
+                    }
+                }
+            }),
+        );
+        assert!(exec_resp.starts_with("HTTP/1.1 200 OK"), "{exec_resp}");
+        let exec_json = response_json(&exec_resp);
+        assert_eq!(exec_json["result"]["isError"], json!(false), "{exec_json}");
+        let exec_text = exec_json["result"]["content"][0]["text"]
+            .as_str()
+            .expect("exec text");
+        let exec_payload: Value = serde_json::from_str(exec_text).expect("exec payload json");
+        assert_eq!(exec_payload["ok"], json!(true));
+        assert_eq!(exec_payload["steps_executed"], json!(1));
+        assert!(exec_payload.get("results").is_none());
+
+        // Readonly strictly preserved on /mcp/codemode for mutating calls
+        let mutate_resp = http_post(
+            Arc::clone(&ctx),
+            "/mcp/codemode",
+            "",
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "tools/call",
+                "params": {
+                    "name": "wm_execute",
+                    "arguments": {
+                        "steps": [{ "tool": "memory.create", "args": { "content": "forbidden" } }]
+                    }
+                }
+            }),
+        );
+        let mutate_json = response_json(&mutate_resp);
+        assert_eq!(mutate_json["result"]["isError"], json!(true), "{mutate_json}");
+        assert!(
+            mutate_json["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or("")
+                .contains("readonly_blocked")
+        );
+
+        let peer_resp = http_post(
+            Arc::clone(&ctx),
+            "/mcp/codemode",
+            "",
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 5,
+                "method": "tools/call",
+                "params": {
+                    "name": "wm_execute",
+                    "arguments": {
+                        "steps": [{
+                            "tool": "legion.summon",
+                            "args": { "edict": "test", "peer": "127.0.0.1:7369" }
+                        }]
+                    }
+                }
+            }),
+        );
+        let peer_json = response_json(&peer_resp);
+        assert_eq!(peer_json["result"]["isError"], json!(true), "{peer_json}");
+        assert!(
+            peer_json["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or("")
+                .contains("readonly_blocked")
+        );
+
+        // Fail-closed 400 Bad Request for invalid / conflicting profile overrides
+        for (target, headers) in [
+            ("/mcp?profile=bogus", ""),
+            ("/mcp", "X-WM-Profile: bogus\r\n"),
+            ("/mcp?profile=full", "X-WM-Profile: codemode\r\n"),
+            ("/mcp/codemode?profile=full", ""),
+        ] {
+            let bad = http_post(Arc::clone(&ctx), target, headers, &list_req);
+            assert!(
+                bad.starts_with("HTTP/1.1 400 Bad Request"),
+                "expected 400 for {target} {headers}, got: {bad}"
+            );
+            let bad_json = response_json(&bad);
+            assert!(bad_json["error"].is_string(), "{bad_json}");
+        }
+
+        drop(ctx);
+        std::fs::remove_dir_all(store).expect("remove isolated multi-profile fixture");
     }
 }

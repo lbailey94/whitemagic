@@ -5,6 +5,16 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [11.3.0] — 2026-11-23
+
+### Added
+- **`ghrr_algebra` algebraic retrieval & canonicalization**: Added `Qfhrr64` quantized Fourier HRR phase fingerprints, non-commutative `SO(4)^16` (`GhrrBlockSo4x16`) ordered phrase/causal binding, AGMI zero-width and confusable-homoglyph canonicalization (`canonicalize_for_noise_check`), and `Catuṣkoṭi` `(E+, E-)` preference polarity scoring (`evaluate_preference_polarity`).
+- **`adversarial_guard` stuffing defense**: Added `median + 2` term-frequency stuffing cap (`stuffing_cap_from_tf_counts`) and log-quadratic dampening (`dampen_stuffed_tf`, `score_with_stuffing_cap`) to resist adversarial keyword-stuffing bursts.
+- **`rerank_spore` CPU late-interaction scorer**: Added `WM7D` (`WM7D\x02`–`WM7D\x04`) quantized CPU `ColBERT MaxSim` + bi-encoder reranker loaded via `WM_GEN3_RERANK_SPORE`.
+- **`ops.rs` + `static-scout` static semantic scout**: Added optional `model2vec-rs` (`potion-base-8M` / `32M`) pure-Rust CPU semantic scout forwarded through `wm-gen3-harness` default features while keeping `--no-default-features --features system05` pure-Rust zero-DLL compatible.
+- **`McpProfile::CodeMode` 2-tool PRAY profile**: Added `"codemode" | "code-mode" | "pray"` exposing `wm_perceive` and `wm_execute` with `$prev`/`$vars` pipeline substitution, `compact=true` output flag, and strict `readonly` + `legion.summon` peer enforcement.
+- **`session_checkpoint` bijective UUID & HTTP profile negotiation**: Bound `session_checkpoint` records bijectively via `get_or_create_uuid` and added zero-RAM single-process HTTP per-request profile negotiation (`/mcp/codemode`, `?profile=`, `X-WM-Profile`, fail-closed `400` on invalid or conflicting profile overrides).
+
 ## [11.2.1] — 2026-11-12
 
 ### Added

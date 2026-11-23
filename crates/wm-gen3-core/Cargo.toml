@@ -8,10 +8,12 @@ authors.workspace = true
 description = "WhiteMagic Gen3 — minimal substrate skeleton (Phase 1 first slice)"
 
 [features]
-default = ["fastembed"]
+default = ["fastembed", "static-scout"]
 # Optional local ONNX embedding engine; disable (`--no-default-features`) for pure-Rust
 # zero-DLL minimal builds (e.g. Windows x86_64, static musl, Intel macOS).
 fastembed = ["dep:fastembed"]
+# Optional local pure-Rust Model2Vec static semantic scout (`potion-base-8M` / `32M`).
+static-scout = ["dep:model2vec-rs", "model2vec-rs/fancy-regex"]
 # Operator-side construction paths (e.g. RatifiedChannel::mint). Never enabled by
 # the adaptive layer; see docs/DEPENDENCY_MANIFEST.md.
 operator = []
@@ -99,6 +101,7 @@ required-features = ["operator"]
 
 [dependencies]
 fastembed = { version = "7.5.0", optional = true }
+model2vec-rs = { version = "0.3.0", default-features = false, features = ["local-only"], optional = true }
 lmdb = "0.8"
 rmp-serde = "1"
 serde = { version = "1", features = ["derive"] }

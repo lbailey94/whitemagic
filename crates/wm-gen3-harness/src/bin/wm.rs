@@ -1625,8 +1625,9 @@ fn profile_tool_count(profile: McpProfile) -> usize {
 /// Runtime-derived `--profile` help so advertised tool counts cannot drift.
 fn profile_help_text() -> String {
     format!(
-        "Active MCP tool profile: 'cyberbrain' ({} lean tools, default) or 'full' ({} curated tools)",
+        "Active MCP tool profile: 'cyberbrain' ({} lean tools, default), 'codemode' ({} PRAY tools; aliases: 'code-mode', 'pray'), or 'full' ({} curated tools)",
         profile_tool_count(McpProfile::Cyberbrain),
+        profile_tool_count(McpProfile::CodeMode),
         profile_tool_count(McpProfile::Full)
     )
 }
@@ -14233,12 +14234,16 @@ mod cli_truth_tests {
     #[test]
     fn advertised_profile_counts_match_runtime_tool_lists() {
         let cyberbrain = profile_tool_count(McpProfile::Cyberbrain);
+        let codemode = profile_tool_count(McpProfile::CodeMode);
         let full = profile_tool_count(McpProfile::Full);
         assert!(cyberbrain > 0, "cyberbrain profile must expose tools");
+        assert_eq!(codemode, 2, "codemode profile must expose 2 PRAY tools");
         assert!(full > cyberbrain, "full profile must be a superset");
 
         let help = profile_help_text();
         assert!(help.contains(&format!("{cyberbrain} lean tools")), "{help}");
+        assert!(help.contains("'codemode'"), "{help}");
+        assert!(help.contains(&format!("{codemode} PRAY tools")), "{help}");
         assert!(help.contains(&format!("{full} curated tools")), "{help}");
 
         let manifest = build_contract_manifest(WM_VERSION);
@@ -14256,6 +14261,8 @@ mod cli_truth_tests {
             .expect("profile arg");
         let wired_help = profile_arg.get_help().expect("profile help").to_string();
         assert!(wired_help.contains(&format!("{cyberbrain} lean tools")));
+        assert!(wired_help.contains("'codemode'"));
+        assert!(wired_help.contains(&format!("{codemode} PRAY tools")));
         assert!(wired_help.contains(&format!("{full} curated tools")));
     }
 

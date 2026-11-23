@@ -24,7 +24,7 @@ The `latest` and `next` dist-tags are independent selectors controlled by
 release health; neither is a permanent alias for a generation.
 
 ```bash
-npx -y whitemagic-mcp@11.2.1 serve --profile cyberbrain
+npx -y whitemagic-mcp@11.3.0 serve --profile cyberbrain
 ```
 
 MCP client config:
@@ -34,7 +34,7 @@ MCP client config:
   "mcpServers": {
     "whitemagic": {
       "command": "npx",
-      "args": ["-y", "whitemagic-mcp@11.2.1", "serve", "--profile", "cyberbrain"]
+      "args": ["-y", "whitemagic-mcp@11.3.0", "serve", "--profile", "cyberbrain"]
     }
   }
 }
@@ -43,14 +43,14 @@ MCP client config:
 Or try the binary directly:
 
 ```bash
-npx -y whitemagic-mcp@11.2.1 selftest   # invariant self-test + host diagnostics
-npx -y whitemagic-mcp@11.2.1 --version  # wm 11.2.1
-npx -y whitemagic-mcp@11.2.1 grimoire --plan  # preview detected client config targets
+npx -y whitemagic-mcp@11.3.0 selftest   # invariant self-test + host diagnostics
+npx -y whitemagic-mcp@11.3.0 --version  # wm 11.3.0
+npx -y whitemagic-mcp@11.3.0 grimoire --plan  # preview detected client config targets
 ```
 
 The binary is cached under `~/.cache/whitemagic/bin/<release-tag>/`
 (respects `XDG_CACHE_HOME`). Pin the exact published
-release with `whitemagic-mcp@11.2.1`, or override the release
+release with `whitemagic-mcp@11.3.0`, or override the release
 tag with `WHITEMAGIC_RELEASE`.
 
 ## Try it without installing (hosted read-only lane)

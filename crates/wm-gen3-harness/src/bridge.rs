@@ -53,6 +53,8 @@ pub enum McpProfile {
     Cyberbrain,
     /// 37 tools: complete curated memory hierarchy, receipts, session continuity, and Mandala.
     Full,
+    /// 2-tool PRAY Code Mode profile (`wm_perceive`, `wm_execute`).
+    CodeMode,
 }
 
 impl FromStr for McpProfile {
@@ -61,8 +63,9 @@ impl FromStr for McpProfile {
         match s.to_ascii_lowercase().as_str() {
             "cyberbrain" | "lean" | "minimal" => Ok(McpProfile::Cyberbrain),
             "full" | "curated" | "enterprise" => Ok(McpProfile::Full),
+            "codemode" | "code-mode" | "pray" => Ok(McpProfile::CodeMode),
             other => Err(format!(
-                "Unknown MCP profile '{other}'. Supported profiles: 'cyberbrain', 'full'"
+                "Unknown MCP profile '{other}'. Supported profiles: 'cyberbrain', 'full', 'codemode'"
             )),
         }
     }
@@ -271,6 +274,7 @@ pub fn get_tools_list_for_profile(profile: McpProfile, readonly: bool) -> Value 
     match profile {
         McpProfile::Cyberbrain => get_cyberbrain_tools_list(readonly),
         McpProfile::Full => get_full_curated_tools_list(readonly),
+        McpProfile::CodeMode => get_codemode_tools_list(readonly),
     }
 }
 
@@ -278,6 +282,7 @@ fn profile_label(profile: McpProfile) -> &'static str {
     match profile {
         McpProfile::Cyberbrain => "cyberbrain",
         McpProfile::Full => "full",
+        McpProfile::CodeMode => "codemode",
     }
 }
 
@@ -290,6 +295,8 @@ fn profile_label(profile: McpProfile) -> &'static str {
 fn canonical_route(name: &str) -> Option<&'static str> {
     Some(match name {
         "wm" | "whitemagic" => "wm",
+        "wm_perceive" | "wm.perceive" => "wm_perceive",
+        "wm_execute" | "wm.execute" => "wm_execute",
         // Q34 18 Hanzi Logoglyphic Routes
         "记" => "memory.create",
         "忆" => "memory.search",
@@ -422,6 +429,7 @@ fn advertised_profile_keys(profile: McpProfile) -> HashSet<&'static str> {
 fn allowed_profile_keys(profile: McpProfile) -> &'static HashSet<&'static str> {
     static CYBERBRAIN: OnceLock<HashSet<&'static str>> = OnceLock::new();
     static FULL: OnceLock<HashSet<&'static str>> = OnceLock::new();
+    static CODEMODE: OnceLock<HashSet<&'static str>> = OnceLock::new();
     match profile {
         McpProfile::Cyberbrain => CYBERBRAIN.get_or_init(|| {
             let mut keys = advertised_profile_keys(McpProfile::Cyberbrain);
@@ -477,6 +485,9 @@ fn allowed_profile_keys(profile: McpProfile) -> &'static HashSet<&'static str> {
             keys.insert("seed.status");
             keys
         }),
+        McpProfile::CodeMode => {
+            CODEMODE.get_or_init(|| advertised_profile_keys(McpProfile::CodeMode))
+        }
     }
 }
 
@@ -651,6 +662,8 @@ pub const TOOL_ARGUMENTS: &[(&str, &[&str])] = &[
         &["inquiry", "full_round", "evidence_ids", "has_conflict"],
     ),
     ("dhumavati.check", &["query"]),
+    ("wm_perceive", &["scope", "query", "limit"]),
+    ("wm_execute", &["codon", "args", "steps", "compact"]),
 ];
 
 /// Consumed-argument list for a canonical tool route, if declared.
@@ -910,6 +923,7 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
                 "properties": {
                     "query": { "type": "string", "description": "Search query terms or phrase" },
                     "limit": { "type": "integer", "description": "Maximum number of results to return (default: 10)" },
+                    "max_content_bytes": { "type": "integer", "description": "Maximum UTF-8 bytes per result content preview (default: 1024; max: 65536)" },
                     "historical": { "type": "boolean", "description": "Include superseded or historical records (default: false)" },
                     "scope": { "type": "string", "description": "Optional recall scope filter" }
                 },
@@ -1832,6 +1846,68 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
     tools
 }
 
+/// 2-Tool PRAY Code Mode Profile (`wm_perceive`, `wm_execute`, <3,600 bytes).
+pub fn get_codemode_tools_list(readonly: bool) -> Value {
+    let mode_hint = if readonly {
+        " (READ-ONLY: mutating steps/codons refused)"
+    } else {
+        ""
+    };
+    json!([
+        {
+            "name": "wm_perceive",
+            "title": "PRAY Perceive",
+            "description": "Discover routes, 28 Ganas with curated PRAY skills, Sutra mudras, memory recall, or session continuity.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "scope": {
+                        "type": "string",
+                        "enum": ["routes", "ganas", "mudras", "memory", "continuity", "all"],
+                        "description": "Discovery scope (default: all)"
+                    },
+                    "query": { "type": "string", "description": "Optional filter or recall query" },
+                    "limit": { "type": "integer", "minimum": 1, "maximum": 25, "description": "Max items (default: 10, max: 25)" }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "wm_execute",
+            "title": "PRAY Execute",
+            "description": format!("Execute a Sutra codon/mudra or 1..=8 sequential steps with $prev/$vars substitution.{mode_hint}"),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "codon": { "type": "string", "description": "Sutra codon or Taoist mudra sequence" },
+                    "args": { "type": "object", "description": "Optional arguments for codon execution" },
+                    "steps": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 8,
+                        "description": "Sequential tool steps with $prev/$vars substitution",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "tool": { "type": "string" },
+                                "args": { "type": "object" },
+                                "save_as": { "type": "string" }
+                            },
+                            "required": ["tool"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "compact": {
+                        "type": "boolean",
+                        "description": "Omit per-step results and return only final + step count"
+                    }
+                },
+                "additionalProperties": false
+            }
+        }
+    ])
+}
+
 /// Hybrid Dispatch Router — dispatches any Gen2 or Gen3 tool invocation
 /// into the sovereign Substrate with bijective UUID <-> u64 identity handling.
 #[cfg(feature = "systemone")]
@@ -1864,6 +1940,8 @@ pub fn execute_hybrid_tool_call(
     match name {
         // ── Unified WhiteMagic Router ──────────────────────────────────────
         "wm" | "whitemagic" => handle_wm_router(args, substrate, store_path, readonly, profile),
+        "wm_perceive" | "wm.perceive" => handle_wm_perceive(args, substrate, store_path),
+        "wm_execute" | "wm.execute" => handle_wm_execute(args, substrate, store_path, readonly),
 
         // ── Memory Operations ──────────────────────────────────────────────
         "memory.create" | "memory_create" | "memory_remember" | "remember" => {
@@ -2022,7 +2100,7 @@ pub fn execute_hybrid_tool_call(
 
         // ── General Agentic System (GAS) Legion & Cho-Han Operations ──────────
         "legion.summon" | "legion_summon" | "sutra.legion" | "sutra_legion" => {
-            handle_legion_summon(args, store_path)
+            handle_legion_summon(args, store_path, readonly)
         }
         "chohan.settle" | "chohan_settle" | "sutra.chohan" | "sutra_chohan" => {
             handle_chohan_settle(args)
@@ -2354,6 +2432,541 @@ fn handle_wm_router(
     }))
 }
 
+// ── PRAY Code Mode Handlers ────────────────────────────────────────────────
+
+fn is_readonly_safe_route(canonical: &str) -> bool {
+    matches!(
+        canonical,
+        "wm_perceive"
+            | "memory.search"
+            | "memory.recall_evidence"
+            | "memory.read"
+            | "memory.list"
+            | "memory.count"
+            | "memory.stats"
+            | "memory.revisions"
+            | "memory.associations"
+            | "memory.tags"
+            | "memory.aggregate"
+            | "memory.query"
+            | "memory.temporal_query"
+            | "session.continuity"
+            | "session.list"
+            | "session.recall"
+            | "session.replay"
+            | "receipts.verify"
+            | "mandala.status"
+            | "mandala.triage"
+            | "inspect"
+            | "gnosis.status"
+            | "gnosis.portal"
+            | "sangha.status"
+            | "sangha.inbox"
+            | "sangha.occupied"
+            | "sangha.rooms"
+            | "galaxy.list"
+            | "galaxy.chart"
+            | "galaxy.navigate"
+            | "sanctuary.status"
+            | "sutra.compile"
+            | "sutra.canon"
+            | "sutra.list"
+            | "sutra.hexagram"
+            | "sutra.route"
+            | "sutra.contract"
+            | "council.deliberate"
+            | "dhumavati.check"
+            | "satkona.solve"
+            | "valkyrie.pulse"
+            | "chohan.settle"
+            | "legion.summon"
+            | "wave2.benchmark"
+            | "wave3.benchmark"
+            | "longmemeval.benchmark"
+            | "seed.status"
+    )
+}
+
+fn perceive_routes(query_lc: Option<&str>, limit: usize) -> (usize, Vec<Value>) {
+    let mut entries: Vec<Value> = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+    if let Some(arr) = get_full_curated_tools_list(false).as_array() {
+        for tool in arr {
+            let Some(name) = tool.get("name").and_then(Value::as_str) else {
+                continue;
+            };
+            let route = canonical_route(name).unwrap_or(name);
+            if !seen.insert(route.to_string()) {
+                continue;
+            }
+            let desc = tool
+                .get("description")
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            if let Some(q) = query_lc {
+                if !route.to_ascii_lowercase().contains(q)
+                    && !name.to_ascii_lowercase().contains(q)
+                    && !desc.to_ascii_lowercase().contains(q)
+                {
+                    continue;
+                }
+            }
+            entries.push(json!({
+                "route": route,
+                "readonly_safe": is_readonly_safe_route(route),
+                "description": desc,
+            }));
+        }
+    }
+    let total = entries.len();
+    entries.truncate(limit);
+    (total, entries)
+}
+
+fn perceive_ganas(query_lc: Option<&str>, limit: usize) -> Vec<Value> {
+    wm_gen3_core::pray_combinatorics::GANA_CATALOG
+        .iter()
+        .filter_map(|g| {
+            let domain = format!("{:?}", g.quadrant);
+            if let Some(q) = query_lc {
+                let matches = g.slug.to_ascii_lowercase().contains(q)
+                    || g.name_en.to_ascii_lowercase().contains(q)
+                    || g.name_zh.contains(q)
+                    || domain.to_ascii_lowercase().contains(q)
+                    || g.curated_pray_skill.to_ascii_lowercase().contains(q);
+                if !matches {
+                    return None;
+                }
+            }
+            Some(json!({
+                "index": g.id,
+                "slug": g.slug,
+                "name": g.name_en,
+                "name_zh": g.name_zh,
+                "domain": domain,
+                "curated_pray_skill": g.curated_pray_skill,
+            }))
+        })
+        .take(limit)
+        .collect()
+}
+
+fn perceive_mudras(query_lc: Option<&str>, limit: usize) -> Vec<Value> {
+    CANONICAL_MUDRAS
+        .iter()
+        .filter_map(|m| {
+            if let Some(q) = query_lc {
+                let matches = m.name.to_ascii_lowercase().contains(q)
+                    || m.taoist_formula.contains(q)
+                    || m.primary_skeleton.to_ascii_lowercase().contains(q)
+                    || m.description.to_ascii_lowercase().contains(q);
+                if !matches {
+                    return None;
+                }
+            }
+            Some(json!({
+                "name": m.name,
+                "taoist_formula": m.taoist_formula,
+                "primary_skeleton": m.primary_skeleton,
+                "requires_store_write": m.requires_store_write,
+                "description": m.description,
+            }))
+        })
+        .take(limit)
+        .collect()
+}
+
+fn handle_wm_perceive(
+    args: &Value,
+    substrate: &mut Substrate,
+    store_path: &Path,
+) -> Result<Value, String> {
+    reject_unknown_args("wm_perceive", args)?;
+    let scope = args
+        .get("scope")
+        .and_then(Value::as_str)
+        .unwrap_or("all")
+        .trim();
+    let query_raw = args
+        .get("query")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let query_lc_owned = query_raw.map(str::to_ascii_lowercase);
+    let query_lc = query_lc_owned.as_deref();
+    let limit = args
+        .get("limit")
+        .and_then(Value::as_u64)
+        .map(|v| v as usize)
+        .unwrap_or(10)
+        .clamp(1, 25);
+
+    match scope {
+        "routes" => {
+            let (total, routes) = perceive_routes(query_lc, limit);
+            Ok(json!({
+                "scope": "routes",
+                "total_matching": total,
+                "count": routes.len(),
+                "routes": routes,
+            }))
+        }
+        "ganas" => {
+            let ganas = perceive_ganas(query_lc, limit);
+            Ok(json!({
+                "scope": "ganas",
+                "count": ganas.len(),
+                "ganas": ganas,
+            }))
+        }
+        "mudras" => {
+            let mudras = perceive_mudras(query_lc, limit);
+            Ok(json!({
+                "scope": "mudras",
+                "count": mudras.len(),
+                "mudras": mudras,
+            }))
+        }
+        "memory" => {
+            let Some(q) = query_raw else {
+                return Ok(json!({
+                    "scope": "memory",
+                    "results": [],
+                    "note": "provide non-empty query for memory recall",
+                }));
+            };
+            let mut out = handle_memory_search(&json!({"query": q, "limit": limit}), substrate)?;
+            if let Value::Object(ref mut map) = out {
+                map.insert("scope".to_string(), json!("memory"));
+            }
+            Ok(out)
+        }
+        "continuity" => {
+            let mut out = handle_session_continuity(&json!({"n": limit}), substrate, store_path)?;
+            if let Value::Object(ref mut map) = out {
+                map.insert("scope".to_string(), json!("continuity"));
+            }
+            Ok(out)
+        }
+        "all" => {
+            let (routes_count, routes) = perceive_routes(query_lc, limit);
+            let ganas = perceive_ganas(query_lc, limit);
+            let mudras = perceive_mudras(query_lc, limit);
+            Ok(json!({
+                "scope": "all",
+                "routes_count": routes_count,
+                "routes": routes,
+                "ganas": ganas,
+                "mudras": mudras,
+            }))
+        }
+        other => Err(format!(
+            "wm_perceive unknown scope '{other}' (expected routes|ganas|mudras|memory|continuity|all)"
+        )),
+    }
+}
+
+fn unwrap_mcp_json_payload(val: &Value) -> Cow<'_, Value> {
+    if let Some(text) = val
+        .get("content")
+        .and_then(Value::as_array)
+        .and_then(|arr| arr.first())
+        .and_then(|item| item.get("text"))
+        .and_then(Value::as_str)
+    {
+        if let Ok(parsed) = serde_json::from_str::<Value>(text) {
+            return Cow::Owned(parsed);
+        }
+    }
+    Cow::Borrowed(val)
+}
+
+fn traverse_dot_path<'a>(mut cur: &'a Value, path: &str) -> Option<&'a Value> {
+    if path.is_empty() {
+        return Some(cur);
+    }
+    for seg in path.split('.') {
+        cur = match cur {
+            Value::Object(map) => map.get(seg)?,
+            Value::Array(arr) => {
+                let idx = seg.parse::<usize>().ok()?;
+                arr.get(idx)?
+            }
+            _ => return None,
+        };
+    }
+    Some(cur)
+}
+
+fn lookup_dot_path(root: &Value, path: &str) -> Option<Value> {
+    if let Some(found) = traverse_dot_path(root, path) {
+        return Some(found.clone());
+    }
+    let unwrapped = unwrap_mcp_json_payload(root);
+    if matches!(unwrapped, Cow::Owned(_)) {
+        return traverse_dot_path(unwrapped.as_ref(), path).cloned();
+    }
+    None
+}
+
+fn resolve_template_string(
+    s: &str,
+    prev: Option<&Value>,
+    vars: &HashMap<String, Value>,
+) -> Result<Value, String> {
+    if s == "$prev" {
+        let p = prev.ok_or_else(|| "template '$prev' referenced before any step completed".to_string())?;
+        return Ok(unwrap_mcp_json_payload(p).into_owned());
+    }
+    if let Some(rest) = s.strip_prefix("$prev.") {
+        let p = prev.ok_or_else(|| format!("template '{s}' referenced before any step completed"))?;
+        return lookup_dot_path(p, rest)
+            .ok_or_else(|| format!("template path '{s}' not found in previous step result"));
+    }
+    if let Some(var_expr) = s.strip_prefix("$vars.") {
+        let (var_name, sub_path) = match var_expr.split_once('.') {
+            Some((name, rest)) => (name, Some(rest)),
+            None => (var_expr, None),
+        };
+        if var_name.is_empty() {
+            return Err(format!("invalid variable reference '{s}'"));
+        }
+        let stored = vars
+            .get(var_name)
+            .ok_or_else(|| format!("template variable '$vars.{var_name}' is not defined"))?;
+        return match sub_path {
+            None => Ok(unwrap_mcp_json_payload(stored).into_owned()),
+            Some(rest) => lookup_dot_path(stored, rest)
+                .ok_or_else(|| format!("template path '{s}' not found in variable '{var_name}'")),
+        };
+    }
+    Ok(Value::String(s.to_string()))
+}
+
+fn resolve_template_value(
+    val: &Value,
+    prev: Option<&Value>,
+    vars: &HashMap<String, Value>,
+) -> Result<Value, String> {
+    match val {
+        Value::String(s) => resolve_template_string(s, prev, vars),
+        Value::Array(items) => {
+            let mut out = Vec::with_capacity(items.len());
+            for item in items {
+                out.push(resolve_template_value(item, prev, vars)?);
+            }
+            Ok(Value::Array(out))
+        }
+        Value::Object(map) => {
+            let mut out = serde_json::Map::with_capacity(map.len());
+            for (k, v) in map {
+                out.insert(k.clone(), resolve_template_value(v, prev, vars)?);
+            }
+            Ok(Value::Object(out))
+        }
+        other => Ok(other.clone()),
+    }
+}
+
+fn readonly_blocked_err(tool: &str, reason: &str) -> String {
+    json!({
+        "ok": false,
+        "readonly_blocked": true,
+        "tool": tool,
+        "error": reason,
+    })
+    .to_string()
+}
+
+fn wm_execute_step_error(
+    idx: usize,
+    tool: &str,
+    err_msg: String,
+    results: Vec<Value>,
+    compact: bool,
+) -> Value {
+    let mut err = json!({
+        "ok": false,
+        "failed_step": idx,
+        "tool": tool,
+        "error": err_msg,
+        "steps_executed": results.len(),
+    });
+    if !compact {
+        err["partial_results"] = Value::Array(results);
+    }
+    err
+}
+
+fn handle_wm_execute(
+    args: &Value,
+    substrate: &mut Substrate,
+    store_path: &Path,
+    readonly: bool,
+) -> Result<Value, String> {
+    reject_unknown_args("wm_execute", args)?;
+    let compact = match args.get("compact") {
+        Some(v) => v
+            .as_bool()
+            .ok_or_else(|| "wm_execute 'compact' must be a boolean".to_string())?,
+        None => false,
+    };
+
+    if let Some(steps_val) = args.get("steps") {
+        let steps = steps_val
+            .as_array()
+            .ok_or_else(|| "wm_execute 'steps' must be an array".to_string())?;
+        if steps.is_empty() || steps.len() > 8 {
+            return Err(format!(
+                "wm_execute 'steps' length {} out of bounds (allowed: 1..=8)",
+                steps.len()
+            ));
+        }
+
+        let mut prev: Option<Value> = None;
+        let mut vars: HashMap<String, Value> = HashMap::new();
+        let mut vars_keys: Vec<String> = Vec::new();
+        let mut results: Vec<Value> = Vec::with_capacity(steps.len());
+
+        for (idx, step) in steps.iter().enumerate() {
+            let obj = step
+                .as_object()
+                .ok_or_else(|| format!("step {idx} must be an object"))?;
+            let tool = obj
+                .get("tool")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or_else(|| format!("step {idx} missing non-empty 'tool'"))?;
+            let canon = canonical_route(tool).unwrap_or(tool);
+
+            if matches!(canon, "wm_execute" | "wm_perceive" | "wm") {
+                return Err("nested wm_execute/wm forbidden in CodeMode pipeline".to_string());
+            }
+
+            let raw_step_args = obj.get("args").cloned().unwrap_or_else(|| json!({}));
+            if !raw_step_args.is_object() {
+                return Err(format!("step {idx} 'args' must be an object"));
+            }
+            let resolved_args = resolve_template_value(&raw_step_args, prev.as_ref(), &vars)?;
+
+            if readonly {
+                let readonly_ok = if canon == "sutra.cast" {
+                    resolved_args.get("dry_run").and_then(Value::as_bool) == Some(true)
+                        && resolved_args.get("execute").and_then(Value::as_bool) != Some(true)
+                        && resolved_args.get("peer").is_none()
+                } else if canon == "legion.summon" {
+                    resolved_args.get("peer").is_none()
+                } else {
+                    is_readonly_safe_route(canon)
+                };
+                if !readonly_ok {
+                    return Err(readonly_blocked_err(
+                        tool,
+                        &format!("read-only mode: mutating step '{tool}' refused"),
+                    ));
+                }
+            }
+
+            let save_as = obj
+                .get("save_as")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string);
+
+            match execute_hybrid_tool_call(
+                tool,
+                &resolved_args,
+                substrate,
+                store_path,
+                readonly,
+                McpProfile::Full,
+            ) {
+                Ok(res) => {
+                    if res.get("isError").and_then(Value::as_bool) == Some(true) {
+                        let err_msg = res
+                            .get("error")
+                            .and_then(Value::as_str)
+                            .map(str::to_string)
+                            .unwrap_or_else(|| "step returned isError=true".to_string());
+                        return Ok(wm_execute_step_error(
+                            idx, tool, err_msg, results, compact,
+                        ));
+                    }
+                    if let Some(ref key) = save_as {
+                        if !vars.contains_key(key) {
+                            vars_keys.push(key.clone());
+                        }
+                        vars.insert(key.clone(), res.clone());
+                    }
+                    prev = Some(res.clone());
+                    results.push(json!({
+                        "step": idx,
+                        "tool": tool,
+                        "save_as": save_as,
+                        "result": res,
+                    }));
+                }
+                Err(err_msg) => {
+                    return Ok(wm_execute_step_error(
+                        idx, tool, err_msg, results, compact,
+                    ));
+                }
+            }
+        }
+
+        if compact {
+            return Ok(json!({
+                "ok": true,
+                "steps_executed": results.len(),
+                "final": prev,
+                "vars_keys": vars_keys,
+            }));
+        }
+
+        return Ok(json!({
+            "ok": true,
+            "steps_executed": results.len(),
+            "results": results,
+            "final": prev,
+            "vars_keys": vars_keys,
+        }));
+    }
+
+    if let Some(codon) = args
+        .get("codon")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        let mut sutra_args = match args.get("args") {
+            Some(Value::Object(m)) => Value::Object(m.clone()),
+            Some(_) => return Err("wm_execute 'args' must be an object".to_string()),
+            None => json!({}),
+        };
+        if let Value::Object(ref mut map) = sutra_args {
+            map.insert("codon".to_string(), json!(codon));
+            if readonly {
+                let is_dry = map.get("dry_run").and_then(Value::as_bool) == Some(true)
+                    && map.get("execute").and_then(Value::as_bool) != Some(true)
+                    && !map.contains_key("peer");
+                if !is_dry {
+                    return Err(readonly_blocked_err(
+                        "sutra.cast",
+                        "read-only mode: mutating codon execution refused",
+                    ));
+                }
+            } else if !map.contains_key("execute") && !map.contains_key("dry_run") {
+                map.insert("execute".to_string(), json!(true));
+            }
+        }
+        return handle_sutra_cast(&sutra_args, substrate, store_path, readonly);
+    }
+
+    Err("wm_execute requires either 'steps' (1..=8) or 'codon'".to_string())
+}
+
 // ── Memory Implementations ─────────────────────────────────────────────────
 
 fn handle_memory_create(
@@ -2508,13 +3121,19 @@ fn handle_memory_search(args: &Value, substrate: &mut Substrate) -> Result<Value
         .and_then(Value::as_bool)
         .unwrap_or(false);
     let scope = args.get("scope").and_then(Value::as_str).map(String::from);
-    let max_content_bytes = args
+    let explicit_max_bytes = args
         .get("max_content_bytes")
         .or_else(|| args.get("truncate_bytes"))
         .and_then(Value::as_u64)
-        .map(|v| v as usize)
-        .unwrap_or(2048)
-        .min(65536);
+        .map(|v| v as usize);
+    let max_content_bytes = explicit_max_bytes.unwrap_or(1024).min(65536);
+    // Keep default multi-result responses inline below MCP client 10 KB disk-spill thresholds
+    // unless the caller explicitly requests larger payloads.
+    let aggregate_content_cap = if explicit_max_bytes.is_some_and(|v| v > 2048) {
+        usize::MAX
+    } else {
+        7_200
+    };
 
     let resonance = args
         .get("resonance")
@@ -2542,17 +3161,20 @@ fn handle_memory_search(args: &Value, substrate: &mut Substrate) -> Result<Value
         .recall(&q)
         .map_err(|e| format!("Recall failed: {e}"))?;
 
+    let mut remaining_budget = aggregate_content_cap;
     let results: Vec<Value> = hits
         .iter()
         .map(|hit| {
             let uuid = substrate
                 .lookup_uuid_by_id(hit.id)
                 .unwrap_or_else(|| Uuid::new_v5(&Uuid::NAMESPACE_OID, &hit.id.to_be_bytes()));
-            let (content, truncated) = if hit.content.len() > max_content_bytes {
-                (truncate_utf8(&hit.content, max_content_bytes), true)
+            let effective_cap = max_content_bytes.min(remaining_budget.max(240));
+            let (content, truncated) = if hit.content.len() > effective_cap {
+                (truncate_utf8(&hit.content, effective_cap), true)
             } else {
                 (hit.content.clone(), false)
             };
+            remaining_budget = remaining_budget.saturating_sub(content.len());
             json!({
                 "id": uuid.to_string(),
                 "record_id": hit.id,
@@ -5207,6 +5829,7 @@ fn handle_session_checkpoint(
     let rec_id = substrate
         .session_checkpoint_enriched(&cp, &meta)
         .map_err(|e| format!("Failed to record checkpoint: {e}"))?;
+    let checkpoint_uuid = substrate.get_or_create_uuid(rec_id);
 
     let crystallized = if crystallize {
         Some(crystallize_session_to_codex(
@@ -5225,6 +5848,7 @@ fn handle_session_checkpoint(
         "status": "success",
         "session_id": session_id,
         "checkpoint_record_id": rec_id,
+        "uuid": checkpoint_uuid.to_string(),
         "checkpoint_type": checkpoint_type,
         "track": track,
         "commit": commit,
@@ -9252,7 +9876,7 @@ fn handle_sutra_cast(
     }))
 }
 
-fn handle_legion_summon(args: &Value, store_path: &Path) -> Result<Value, String> {
+fn handle_legion_summon(args: &Value, store_path: &Path, readonly: bool) -> Result<Value, String> {
     reject_unknown_args("legion.summon", args)?;
     let edict_str = args
         .get("edict")
@@ -9272,6 +9896,9 @@ fn handle_legion_summon(args: &Value, store_path: &Path) -> Result<Value, String
         .and_then(Value::as_str)
         .map(str::trim)
         .filter(|s| !s.is_empty());
+    if readonly && peer.is_some() {
+        return Err("read-only mode: legion.summon with 'peer' mesh handoff refused".to_string());
+    }
 
     use std::time::Instant;
     use wm_gen3_core::legion::ShadowLegion;
@@ -11627,6 +12254,7 @@ mod sutra_mcp_tests {
                 "clones": 16,
             }),
             &dir,
+            false,
         )
         .expect("legion summon");
         assert_eq!(res["status"], "success");
@@ -11659,6 +12287,7 @@ mod sutra_mcp_tests {
                 "invalid_extra_param": 42,
             }),
             &dir,
+            false,
         )
         .expect_err("refuse unknown argument");
         assert!(err.contains("refuses unknown argument 'invalid_extra_param'"));
@@ -13450,6 +14079,419 @@ mod v10_6_mcp_bridge_routes_tests {
         assert_eq!(repeat["novelty"]["is_novel"], false);
         assert_eq!(repeat["novelty"]["exact_duplicate"], true);
         assert_eq!(repeat["novelty"]["substrate_admitted"], false);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod codemode_tests {
+    use super::*;
+
+    fn test_substrate(tag: &str) -> (Substrate, std::path::PathBuf) {
+        let dir = std::env::temp_dir().join(format!("wm-codemode-{tag}-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("open substrate");
+        substrate.set_budget(1_000_000);
+        substrate.set_noise_enabled(false);
+        (substrate, dir)
+    }
+
+    #[test]
+    fn codemode_profile_has_two_tools_under_budget() {
+        assert_eq!(McpProfile::from_str("codemode"), Ok(McpProfile::CodeMode));
+        assert_eq!(McpProfile::from_str("code-mode"), Ok(McpProfile::CodeMode));
+        assert_eq!(McpProfile::from_str("pray"), Ok(McpProfile::CodeMode));
+        assert_eq!(profile_label(McpProfile::CodeMode), "codemode");
+
+        let tools = get_tools_list_for_profile(McpProfile::CodeMode, false);
+        let arr = tools.as_array().expect("tools array");
+        assert_eq!(arr.len(), 2, "CodeMode must expose exactly 2 tools");
+        let names: Vec<&str> = arr
+            .iter()
+            .filter_map(|t| t.get("name").and_then(Value::as_str))
+            .collect();
+        assert_eq!(names, vec!["wm_perceive", "wm_execute"]);
+
+        let encoded = serde_json::to_string(&tools).expect("serialize codemode tools");
+        assert!(
+            encoded.len() < 3600,
+            "CodeMode schema {} bytes exceeds 3600 byte ceiling",
+            encoded.len()
+        );
+
+        assert!(profile_allows_tool(McpProfile::CodeMode, "wm_perceive"));
+        assert!(profile_allows_tool(McpProfile::CodeMode, "wm_execute"));
+        assert!(!profile_allows_tool(McpProfile::CodeMode, "memory.create"));
+        assert!(!profile_allows_tool(McpProfile::CodeMode, "wm"));
+
+        let ro_tools = get_tools_list_for_profile(McpProfile::CodeMode, true);
+        let exec_desc = ro_tools[1]["description"].as_str().expect("wm_execute desc");
+        assert!(exec_desc.contains("READ-ONLY"), "{exec_desc}");
+    }
+
+    #[test]
+    fn codemode_perceive_ganas_and_routes() {
+        let (mut substrate, dir) = test_substrate("perceive");
+
+        let ganas = execute_hybrid_tool_call(
+            "wm_perceive",
+            &json!({"scope": "ganas", "query": "horn", "limit": 5}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::CodeMode,
+        )
+        .expect("perceive ganas");
+        assert_eq!(ganas["scope"], "ganas");
+        let gana_list = ganas["ganas"].as_array().expect("ganas array");
+        assert!(!gana_list.is_empty());
+        assert_eq!(gana_list[0]["index"], 1);
+        assert!(
+            gana_list[0]["curated_pray_skill"]
+                .as_str()
+                .is_some_and(|s| s.contains("P:") && s.contains("Y:")),
+            "missing curated PRAY skill: {:?}",
+            gana_list[0]
+        );
+
+        let mudras = execute_hybrid_tool_call(
+            "wm_perceive",
+            &json!({"scope": "mudras", "limit": 5}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::CodeMode,
+        )
+        .expect("perceive mudras");
+        assert_eq!(mudras["scope"], "mudras");
+        assert!(!mudras["mudras"].as_array().expect("mudras").is_empty());
+
+        let routes = execute_hybrid_tool_call(
+            "wm_perceive",
+            &json!({"scope": "routes", "query": "memory", "limit": 8}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::CodeMode,
+        )
+        .expect("perceive routes");
+        assert_eq!(routes["scope"], "routes");
+        let route_arr = routes["routes"].as_array().expect("routes array");
+        assert!(!route_arr.is_empty());
+        assert!(route_arr.iter().all(|r| r.get("readonly_safe").is_some()));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn codemode_execute_pipeline_and_readonly_guard() {
+        let (mut substrate, dir) = test_substrate("execute");
+
+        // 1) Multi-step pipeline with $prev and $vars substitution
+        let pipe = execute_hybrid_tool_call(
+            "wm_execute",
+            &json!({
+                "steps": [
+                    {
+                        "tool": "memory.create",
+                        "args": {"content": "CodeMode PRAY deterministic pipeline anchor", "tags": ["codemode"]},
+                        "save_as": "created"
+                    },
+                    {
+                        "tool": "memory.read",
+                        "args": {"id": "$prev.id"}
+                    },
+                    {
+                        "tool": "memory.read",
+                        "args": {"id": "$vars.created.id"}
+                    }
+                ]
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::CodeMode,
+        )
+        .expect("codemode pipeline");
+        assert_eq!(pipe["ok"], true);
+        assert_eq!(pipe["steps_executed"], 3);
+        assert_eq!(pipe["vars_keys"], json!(["created"]));
+        assert_eq!(
+            pipe["final"]["record"]["content"],
+            "CodeMode PRAY deterministic pipeline anchor"
+        );
+
+        // 2) MCP content-wrapper lookup helper works for $prev.<field> and $vars.<name>.<field>
+        let wrapped = json!({
+            "content": [{"type": "text", "text": "{\"nested\":{\"id\":42,\"items\":[{\"tag\":\"ok\"}]}}"}],
+            "isError": false
+        });
+        let mut vars = HashMap::new();
+        vars.insert("w".to_string(), wrapped.clone());
+        let resolved_prev = resolve_template_value(&json!("$prev.nested.items.0.tag"), Some(&wrapped), &vars)
+            .expect("unwrap $prev");
+        assert_eq!(resolved_prev, json!("ok"));
+        let resolved_var = resolve_template_value(&json!("$vars.w.nested.id"), None, &vars)
+            .expect("unwrap $vars");
+        assert_eq!(resolved_var, json!(42));
+
+        // 3) Reject >8 steps
+        let nine_steps: Vec<Value> = (0..9)
+            .map(|_| json!({"tool": "memory.count", "args": {}}))
+            .collect();
+        let too_many = execute_hybrid_tool_call(
+            "wm_execute",
+            &json!({"steps": nine_steps}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::CodeMode,
+        )
+        .expect_err(">8 steps must fail");
+        assert!(too_many.contains("out of bounds"), "{too_many}");
+
+        // 4) Reject nested wm_execute / wm
+        for nested in ["wm_execute", "wm"] {
+            let err = execute_hybrid_tool_call(
+                "wm_execute",
+                &json!({"steps": [{"tool": nested, "args": {}}]}),
+                &mut substrate,
+                &dir,
+                true,
+                McpProfile::CodeMode,
+            )
+            .expect_err("nested dispatch must fail");
+            assert!(
+                err.contains("nested wm_execute/wm forbidden"),
+                "got: {err}"
+            );
+        }
+
+        // 5) Readonly mode strictly blocks mutating steps
+        for mutating in ["memory_remember", "session_checkpoint"] {
+            let blocked = execute_hybrid_tool_call(
+                "wm_execute",
+                &json!({"steps": [{"tool": mutating, "args": {"content": "nope"}}]}),
+                &mut substrate,
+                &dir,
+                true,
+                McpProfile::CodeMode,
+            )
+            .expect_err("readonly must block mutating step");
+            let parsed: Value = serde_json::from_str(&blocked).expect("structured readonly error");
+            assert_eq!(parsed["readonly_blocked"], true);
+            assert_eq!(parsed["tool"], mutating);
+        }
+
+        // 6) Readonly mode blocks legion.summon with peer (mesh key / TCP side effect), while local simulation without peer stays allowed
+        let legion_peer_blocked = execute_hybrid_tool_call(
+            "wm_execute",
+            &json!({"steps": [{"tool": "legion.summon", "args": {"edict": "⟪ 通 · 照 · 合 · 證 ⟫", "peer": "127.0.0.1:7369"}}]}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::CodeMode,
+        )
+        .expect_err("readonly must block legion.summon with peer");
+        let parsed_legion: Value =
+            serde_json::from_str(&legion_peer_blocked).expect("structured readonly error");
+        assert_eq!(parsed_legion["readonly_blocked"], true);
+        assert_eq!(parsed_legion["tool"], "legion.summon");
+
+        let direct_legion_peer_err = execute_hybrid_tool_call(
+            "legion.summon",
+            &json!({"edict": "⟪ 通 · 照 · 合 · 證 ⟫", "peer": "127.0.0.1:7369"}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::Full,
+        )
+        .expect_err("direct readonly legion.summon with peer must fail");
+        assert!(
+            direct_legion_peer_err.contains("read-only mode"),
+            "{direct_legion_peer_err}"
+        );
+
+        let legion_local = execute_hybrid_tool_call(
+            "wm_execute",
+            &json!({"steps": [{"tool": "legion.summon", "args": {"edict": "⟪ 通 · 照 · 合 · 證 ⟫", "clones": 8}}]}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::CodeMode,
+        )
+        .expect("readonly local legion.summon without peer");
+        assert_eq!(legion_local["ok"], true);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn codemode_execute_compact_omits_results_and_validates_flag() {
+        let (mut substrate, dir) = test_substrate("compact");
+        let make_steps = |label: &str| {
+            json!([
+                {
+                    "tool": "memory.create",
+                    "args": {"content": format!("Compact PRAY response payload check [{label}]"), "tags": ["compact"]},
+                    "save_as": "created"
+                },
+                {
+                    "tool": "memory.read",
+                    "args": {"id": "$prev.id"}
+                },
+                {
+                    "tool": "memory.read",
+                    "args": {"id": "$vars.created.id"}
+                }
+            ])
+        };
+
+        let full_res = execute_hybrid_tool_call(
+            "wm_execute",
+            &json!({"steps": make_steps("fullrun"), "compact": false}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::CodeMode,
+        )
+        .expect("full wm_execute");
+        assert_eq!(full_res["ok"], true, "{full_res}");
+        assert!(full_res.get("results").is_some());
+
+        let compact_res = execute_hybrid_tool_call(
+            "wm_execute",
+            &json!({"steps": make_steps("compact"), "compact": true}),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::CodeMode,
+        )
+        .expect("compact wm_execute");
+        assert_eq!(compact_res["ok"], true, "{compact_res}");
+        assert_eq!(compact_res["steps_executed"], 3);
+        assert_eq!(compact_res["vars_keys"], json!(["created"]));
+        assert_eq!(
+            compact_res["final"]["record"]["content"],
+            "Compact PRAY response payload check [compact]"
+        );
+        assert!(
+            compact_res.get("results").is_none(),
+            "compact=true must omit per-step results: {compact_res}"
+        );
+
+        let full_bytes = serde_json::to_string(&full_res).expect("full json").len();
+        let compact_bytes = serde_json::to_string(&compact_res)
+            .expect("compact json")
+            .len();
+        assert!(
+            compact_bytes < full_bytes,
+            "compact payload ({compact_bytes}B) must be smaller than full ({full_bytes}B)"
+        );
+
+        let bad_flag = execute_hybrid_tool_call(
+            "wm_execute",
+            &json!({"steps": [{"tool": "memory.count", "args": {}}], "compact": "yes"}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::CodeMode,
+        )
+        .expect_err("non-boolean compact must be rejected");
+        assert!(bad_flag.contains("compact"), "{bad_flag}");
+
+        let step_err = execute_hybrid_tool_call(
+            "wm_execute",
+            &json!({
+                "compact": true,
+                "steps": [
+                    {"tool": "memory.count", "args": {}},
+                    {"tool": "memory.read", "args": {"id": 99999999}}
+                ]
+            }),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::CodeMode,
+        )
+        .expect("step error returns structured ok=false");
+        assert_eq!(step_err["ok"], false);
+        assert_eq!(step_err["failed_step"], 1);
+        assert_eq!(step_err["steps_executed"], 1);
+        assert!(step_err.get("error").is_some());
+        assert!(
+            step_err.get("partial_results").is_none(),
+            "compact error must omit partial_results: {step_err}"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn session_checkpoint_binds_uuid_for_memory_get_and_search() {
+        let (mut substrate, dir) = test_substrate("cp-uuid");
+        let cp = execute_hybrid_tool_call(
+            "session_checkpoint",
+            &json!({
+                "session_id": "wave3b-cp-uuid-session",
+                "summary": "UniqueWave3BCheckpointMarker bound cleanly to UUID"
+            }),
+            &mut substrate,
+            &dir,
+            false,
+            McpProfile::Full,
+        )
+        .expect("session_checkpoint");
+        let rec_id = cp["checkpoint_record_id"]
+            .as_u64()
+            .expect("checkpoint_record_id");
+        let uuid_str = cp["uuid"].as_str().expect("checkpoint uuid");
+        assert!(
+            Uuid::parse_str(uuid_str).is_ok(),
+            "checkpoint uuid must parse: {uuid_str}"
+        );
+
+        let fetched = execute_hybrid_tool_call(
+            "memory_get",
+            &json!({"id": uuid_str}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::Full,
+        )
+        .expect("memory_get by checkpoint uuid");
+        assert_eq!(fetched["record"]["record_id"], rec_id);
+        assert_eq!(fetched["record"]["uuid"], uuid_str);
+        assert_eq!(fetched["record"]["id"], uuid_str);
+
+        let search = execute_hybrid_tool_call(
+            "memory_search",
+            &json!({"query": "UniqueWave3BCheckpointMarker", "limit": 5}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::Full,
+        )
+        .expect("memory_search checkpoint");
+        let hits = search["results"].as_array().expect("search results");
+        let matching = hits
+            .iter()
+            .find(|h| h["record_id"] == rec_id)
+            .expect("checkpoint present in search results");
+        assert_eq!(matching["id"], uuid_str);
+
+        let via_search = execute_hybrid_tool_call(
+            "memory.read",
+            &json!({"id": matching["id"].clone()}),
+            &mut substrate,
+            &dir,
+            true,
+            McpProfile::Full,
+        )
+        .expect("memory.read via search hit id");
+        assert_eq!(via_search["record"]["record_id"], rec_id);
 
         let _ = std::fs::remove_dir_all(&dir);
     }

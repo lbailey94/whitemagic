@@ -129,6 +129,33 @@ pub struct StuffingScore {
     pub effective_term_weights: HashMap<String, f32>,
 }
 
+/// Compute the `median + 2` term-frequency stuffing cap (`[2, 8]`) from an existing TF map
+/// without re-allocating token strings.
+#[must_use]
+pub fn stuffing_cap_from_tf_counts(counts: &HashMap<String, usize>) -> usize {
+    if counts.is_empty() {
+        return 2;
+    }
+    let mut freqs: Vec<usize> = counts.values().copied().collect();
+    freqs.sort_unstable();
+    let median_tf = freqs[freqs.len() / 2];
+    (median_tf + 2).clamp(2, 8)
+}
+
+/// Dampen a raw term frequency `tf` that exceeds `cap` (`median + 2`) via
+/// `cap / (1 + ln(1 + excess)^2)` so keyword-stuffed bursts lose leverage.
+#[inline]
+#[must_use]
+pub fn dampen_stuffed_tf(tf: usize, cap: usize) -> f32 {
+    let excess = tf.saturating_sub(cap);
+    if excess == 0 {
+        (tf as f32).min(cap as f32)
+    } else {
+        let dampen = 1.0 / (1.0 + ((1.0 + excess as f32).ln()).powi(2));
+        (cap as f32) * dampen
+    }
+}
+
 /// Compute `median + 2` capped term weights to defeat adversarial keyword-stuffing bursts.
 #[must_use]
 pub fn score_with_stuffing_cap(tokens: &[String]) -> StuffingScore {
@@ -157,15 +184,10 @@ pub fn score_with_stuffing_cap(tokens: &[String]) -> StuffingScore {
     let mut effective_term_weights = HashMap::with_capacity(counts.len());
     let mut penalized = 0usize;
     for (tok, tf) in &counts {
-        let excess = tf.saturating_sub(cap);
-        let weight = if excess == 0 {
-            (*tf as f32).min(cap as f32)
-        } else {
+        if *tf > cap {
             penalized += 1;
-            let dampen = 1.0 / (1.0 + ((1.0 + excess as f32).ln()).powi(2));
-            (cap as f32) * dampen
-        };
-        effective_term_weights.insert(tok.clone(), weight);
+        }
+        effective_term_weights.insert(tok.clone(), dampen_stuffed_tf(*tf, cap));
     }
 
     StuffingScore {
