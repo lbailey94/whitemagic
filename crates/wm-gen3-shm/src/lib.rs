@@ -178,9 +178,17 @@ impl ShmSubstrate {
     }
 
     /// Attach directly from an inherited file descriptor (critical for Landlocked sandboxes).
+    ///
+    /// Duplicates `fd` with `F_DUPFD_CLOEXEC` so the returned [`ShmSubstrate`] owns an
+    /// independent descriptor and dropping it (or failing validation) never closes the
+    /// caller's descriptor.
     #[cfg(unix)]
     pub fn from_raw_fd(fd: RawFd, is_owner: bool) -> std::io::Result<Self> {
-        let file = unsafe { File::from_raw_fd(fd) };
+        let dup_fd = unsafe { libc::fcntl(fd, libc::F_DUPFD_CLOEXEC, 0) };
+        if dup_fd < 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+        let file = unsafe { File::from_raw_fd(dup_fd) };
         let mmap = unsafe { memmap2::MmapMut::map_mut(&file)? };
         let retained_fd = file.into_raw_fd();
 
@@ -499,5 +507,36 @@ impl ShmStigmergyField {
     /// Evaporate pheromones.
     pub fn evaporate(&self, now_ms: u64, threshold: f32) -> usize {
         self.substrate.stigmergy().evaporate(now_ms, threshold)
+    }
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_raw_fd_duplicates_descriptor_without_double_close() {
+        let shm_name = format!("/wm_dup_{}", &Uuid::new_v4().simple().to_string()[..8]);
+        let mut owner = ShmSubstrate::open_or_create(&shm_name).expect("create owner shm");
+        let owner_fd = owner.raw_fd().expect("owner has raw_fd");
+
+        let attached = ShmSubstrate::from_raw_fd(owner_fd, false).expect("attach via inherited fd");
+        assert_ne!(
+            attached.raw_fd(),
+            Some(owner_fd),
+            "attached substrate must own a duplicated descriptor, not alias owner_fd"
+        );
+        assert_eq!(attached.superblock().magic, SHM_MAGIC);
+
+        // Dropping the attached handle closes its duplicated FD only; owner_fd must remain valid.
+        drop(attached);
+        let owner_fd_flags = unsafe { libc::fcntl(owner_fd, libc::F_GETFD) };
+        assert!(
+            owner_fd_flags >= 0,
+            "owner descriptor must remain open after attached substrate drops"
+        );
+        assert_eq!(owner.superblock().magic, SHM_MAGIC);
+
+        let _ = owner.unlink();
     }
 }

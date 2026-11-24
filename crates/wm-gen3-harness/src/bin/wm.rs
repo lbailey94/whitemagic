@@ -8,7 +8,7 @@
 
 #![recursion_limit = "512"]
 
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use std::io::BufRead;
 use std::path::{Path, PathBuf};
@@ -65,6 +65,434 @@ struct Cli {
 
     #[command(subcommand)]
     command: Commands,
+}
+
+#[derive(Args)]
+struct RecallArgs {
+    /// Query string
+    query: String,
+    /// Maximum number of results to return (default: 10)
+    #[arg(long, default_value_t = 10)]
+    limit: usize,
+    /// Candidate search pool size (default: 100)
+    #[arg(long, default_value_t = 100)]
+    candidate_limit: usize,
+    /// Include superseded and archived records
+    #[arg(long)]
+    historical: bool,
+    /// Optional recall scope view filter
+    #[arg(long)]
+    scope: Option<String>,
+    /// Enable dense projection during recall (or set WM_GEN3_PROJECTION=1)
+    #[arg(long)]
+    projection: bool,
+    /// Output rich evidence bundle and diagnostics (Stage 3)
+    #[arg(long)]
+    evidence: bool,
+    /// Opt-in bounded adaptive expansion (Stage 3)
+    #[arg(long)]
+    adaptive: bool,
+    /// Opt-in calibrated associative resonance across graph edges (Stage 5)
+    #[arg(long)]
+    resonance: bool,
+    /// Maximum hop radius for associative resonance traversal (default: 2)
+    #[arg(long, default_value_t = 2)]
+    resonance_hops: usize,
+    /// Explicit inspection promise: content-only, no-audit, strict-zero-write (Stage 4)
+    #[arg(long)]
+    inspect_promise: Option<String>,
+}
+
+#[derive(Args)]
+struct EvidenceRecallArgs {
+    /// Raw JSON request payload
+    #[arg(long)]
+    request_json: Option<String>,
+    /// Query string (if not using request_json)
+    #[arg(long)]
+    query: Option<String>,
+    /// Maximum number of results to return (default: 10)
+    #[arg(long, default_value_t = 10)]
+    limit: usize,
+    /// Candidate search pool size (default: 100)
+    #[arg(long, default_value_t = 100)]
+    candidate_limit: usize,
+    /// Include superseded and archived records
+    #[arg(long)]
+    historical: bool,
+    /// Optional recall scope view filter
+    #[arg(long)]
+    scope: Option<String>,
+    /// Opt-in bounded adaptive expansion
+    #[arg(long)]
+    adaptive: bool,
+}
+
+#[derive(Args)]
+struct DreamArgs {
+    /// Quiescence level [0.0, 1.0] (default: 1.0 = deep incubation)
+    #[arg(long, default_value_t = 1.0)]
+    quiescence: f32,
+    /// Number of dream incubation cycles (default: 1)
+    #[arg(long)]
+    cycles: Option<usize>,
+    /// Mode: genuine (default), sham, baseline
+    #[arg(long, default_value = "genuine", value_parser = parse_incubation_mode_arg)]
+    mode: wm_gen3_core::dream::IncubationMode,
+    /// Optional path to write dream journal log (default: <store>/dream.jsonl)
+    #[arg(long)]
+    log_file: Option<PathBuf>,
+    /// Output a historical summary report of dream incubation cycles from dream.jsonl
+    #[arg(long)]
+    report: bool,
+    /// Output or inspect actionable synthetic dream insights
+    #[arg(long)]
+    insights: bool,
+    /// Run complete dual-phase sleep cycle (NREM structural compaction + REM associative dreaming; default: true)
+    #[arg(long, num_args = 0..=1, default_missing_value = "true")]
+    dual_phase: Option<bool>,
+    /// Disable dual-phase sleep cycle (REM-only or NREM-throttled execution)
+    #[arg(long)]
+    no_dual_phase: bool,
+    /// Enable homeostatic regulation of dream parameters (default: true)
+    #[arg(long, num_args = 0..=1, default_missing_value = "true")]
+    homeostatic: Option<bool>,
+    /// Disable homeostatic regulation of dream parameters
+    #[arg(long)]
+    no_homeostatic: bool,
+    /// Force dream incubation regardless of thermal or battery stress
+    #[arg(long)]
+    force: bool,
+    /// Crystallize multiple historical session turns into durable memory crystals (Stage 5)
+    #[arg(long)]
+    crystallize: bool,
+    /// Sweep all session chains across the entire store during crystallization (Wave 6)
+    #[arg(long)]
+    all: bool,
+    /// Maximum record sample depth for NREM consolidation scan (default: 500)
+    #[arg(long, default_value_t = 500)]
+    sample_depth: usize,
+    /// Scan live Product-Finsler constellations for 0-After-9 Curiosity Voids and register open loops (Horizon 2)
+    #[arg(long)]
+    curiosity_voids: bool,
+    /// Run cross-agent Sangha collective dreaming across all agent checkpoints
+    #[arg(long)]
+    sangha: bool,
+    /// Number of recent session checkpoints to sweep for collective dreaming (default: 20)
+    #[arg(long, default_value_t = 20)]
+    lookback: usize,
+}
+
+#[derive(Args)]
+struct GalaxyArgs {
+    /// Subcommand action: list (default), fork, create, or visualize
+    #[command(subcommand)]
+    action: Option<GalaxyAction>,
+    /// Output path for interactive HTML visualization (default: <store>/galaxy.html)
+    #[arg(long)]
+    output_html: Option<PathBuf>,
+    /// Output path for 6D coordinates JSON dataset (default: <store>/galaxy_6d.json)
+    #[arg(long)]
+    output_json: Option<PathBuf>,
+    /// Sample limit for visualization (default: 2000)
+    #[arg(long, default_value_t = 2000)]
+    limit: usize,
+}
+
+#[derive(Args)]
+struct MigrateArgs {
+    /// Path to the legacy Gen2 LMDB store directory containing data.mdb
+    #[arg(long)]
+    source: PathBuf,
+    /// Ingestion batch size (default: 100)
+    #[arg(long, default_value_t = 100)]
+    batch_size: usize,
+    /// Dry run mode (simulate migration without committing)
+    #[arg(long)]
+    dry_run: bool,
+    /// Allow noise patterns without filtering
+    #[arg(long)]
+    allow_noise: bool,
+    /// Skip SHA-256 hash validation
+    #[arg(long)]
+    skip_hash_validation: bool,
+    /// Optional path to write quarantine log (default: <store>/quarantine.jsonl)
+    #[arg(long)]
+    quarantine_file: Option<PathBuf>,
+    /// Optional path to write migration receipt (default: <store>/migration_receipt.json)
+    #[arg(long)]
+    receipt_file: Option<PathBuf>,
+}
+
+#[derive(Args)]
+struct MigrateAllArgs {
+    /// Root containing <project>/lmdb/data.mdb Gen2 stores
+    #[arg(long)]
+    source_root: PathBuf,
+    /// Root receiving one Gen3 store per project (<root>/<project>)
+    #[arg(long)]
+    target_root: PathBuf,
+    /// Comma-separated subset of project names to migrate
+    #[arg(long)]
+    only: Option<String>,
+    /// Ingestion batch size
+    #[arg(long, default_value_t = 100)]
+    batch_size: usize,
+    /// Census only; never opens or creates target stores
+    #[arg(long)]
+    dry_run: bool,
+}
+
+#[derive(Args)]
+struct ServeArgs {
+    #[arg(
+        long,
+        default_value = "cyberbrain",
+        value_parser = parse_profile_arg,
+        help = profile_help_text()
+    )]
+    profile: McpProfile,
+    /// Open store in read-only mode
+    #[arg(long)]
+    readonly: bool,
+    /// Enable cognitive sweep (default: true)
+    #[arg(long, num_args = 0..=1, default_missing_value = "true")]
+    sweep: Option<bool>,
+    /// Disable cognitive sweep
+    #[arg(long)]
+    no_sweep: bool,
+    /// Enable semantic projection
+    #[arg(long)]
+    projection: bool,
+    /// Semantic embedding cache directory
+    #[arg(long)]
+    embed_cache: Option<PathBuf>,
+    /// Enable dispersion
+    #[arg(long)]
+    dispersion: bool,
+    /// Enable noise filtration (default: true)
+    #[arg(long, num_args = 0..=1, default_missing_value = "true")]
+    noise: Option<bool>,
+    /// Disable noise filtration
+    #[arg(long)]
+    no_noise: bool,
+    /// Mount a legacy Gen2 LMDB store read-only (directory containing data.mdb)
+    /// instead of a Gen3 store; exposes memory.search/list/read/count/stats
+    #[arg(long)]
+    legacy_store: Option<PathBuf>,
+    /// Transport: 'stdio' (default), 'http' (streamable), or 'sse' (classic event stream)
+    #[arg(long, default_value = "stdio")]
+    transport: String,
+    /// Bind address for --transport http|sse (default: 127.0.0.1:18780)
+    #[arg(long, default_value = "127.0.0.1:18780")]
+    bind: String,
+    /// Harness compatibility flag (0 = unlimited)
+    #[arg(long, hide = true, default_value_t = 0)]
+    max_requests: u64,
+    /// Harness compatibility flag (0 = unlimited)
+    #[arg(long, hide = true, default_value_t = 0)]
+    rate_limit: u64,
+}
+
+#[cfg(feature = "system05")]
+#[derive(Args)]
+struct ShortlistArgs {
+    /// State file (text or JSON); reads stdin when omitted
+    #[arg(long)]
+    state_file: Option<PathBuf>,
+    /// Candidate routes JSON (object or utterances); default: resolved enriched catalog
+    #[arg(long)]
+    routes: Option<PathBuf>,
+    /// Number of candidates to return (default 5)
+    #[arg(long, default_value_t = 5)]
+    k: usize,
+    /// Margin below which the shortlist is reported as ambiguous (default 0.02)
+    #[arg(long, default_value_t = 0.02)]
+    margin_threshold: f64,
+    /// Automatically cascade to System 1.5 Deliberator if ambiguous
+    #[arg(long)]
+    cascade: bool,
+    /// Checkpoint directory (defaults to WM_GEN3_SYSTEM05_MODEL or discovered paths)
+    #[arg(long)]
+    model: Option<PathBuf>,
+    /// Emit the raw shortlist JSON
+    #[arg(long)]
+    json: bool,
+}
+
+#[cfg(any(feature = "systemone", feature = "system05"))]
+#[derive(Args)]
+struct OutcomeArgs {
+    /// Path to the subject receipt JSON
+    receipt: PathBuf,
+    /// Outcome: success | failure | corrected | unknown
+    #[arg(long)]
+    outcome: String,
+    /// Correct route when the outcome is 'corrected'
+    #[arg(long)]
+    corrected_route: Option<String>,
+    /// Free-form note
+    #[arg(long)]
+    note: Option<String>,
+    /// Session id
+    #[arg(long)]
+    session_id: Option<String>,
+    /// Tenant id
+    #[arg(long)]
+    tenant_id: Option<String>,
+    /// Emit raw JSON
+    #[arg(long)]
+    json: bool,
+}
+
+#[derive(Args)]
+struct SutraArgs {
+    #[command(subcommand)]
+    command: Option<SutraCommands>,
+    /// Direct codon string (legacy or shorthand invocation: e.g. "證 行 鏡")
+    #[arg(value_name = "CODON")]
+    codon: Option<String>,
+    /// Force dry run (default true unless --execute is passed)
+    #[arg(long)]
+    dry_run: bool,
+    /// Execute directly against the substrate
+    #[arg(long)]
+    execute: bool,
+    /// Strict precondition enforcement (fails if preconditions unmet)
+    #[arg(long, default_value_t = true)]
+    strict: bool,
+    /// Remote peer for cross-node handoff over Wire Protocol 7369 (e.g. 203.0.113.10:7369)
+    #[arg(long)]
+    peer: Option<String>,
+    /// Emit structured JSON output
+    #[arg(long)]
+    json: bool,
+}
+
+#[derive(Args)]
+struct SessionCheckpointArgs {
+    /// Session identifier (e.g. conversation ID, lane name)
+    #[arg(long)]
+    session_id: String,
+    /// Active agent identifier (e.g. antigravity, luna, opencode)
+    #[arg(long, default_value = "agent")]
+    agent_id: String,
+    /// Checkpoint type: turn, handoff, milestone, compact
+    #[arg(long, default_value = "handoff")]
+    checkpoint_type: String,
+    /// High-density summary of decisions, state, and findings
+    #[arg(long)]
+    summary: String,
+    /// Queued action items for next turn / next agent
+    #[arg(long)]
+    next_queue: Vec<String>,
+    /// Open flags, blockers, or warnings
+    #[arg(long)]
+    open_flags: Vec<String>,
+    /// Optional ContextCache token
+    #[arg(long)]
+    context_token: Option<String>,
+    /// Optional track slug persisted with the checkpoint
+    #[arg(long)]
+    track: Option<String>,
+    /// Commit hash persisted with the checkpoint
+    #[arg(long)]
+    commit: Option<String>,
+    /// Branch name persisted with the checkpoint
+    #[arg(long)]
+    branch: Option<String>,
+    /// Whether the test suite was green at checkpoint time
+    #[arg(long, num_args = 0..=1, default_missing_value = "true")]
+    tests_green: Option<bool>,
+    /// Claimed scope lease_id that remains held at this handoff
+    #[arg(long)]
+    lease_id: Option<String>,
+    /// Distilled episodic lessons from this session
+    #[arg(long = "lesson")]
+    lessons: Vec<String>,
+    /// Operator or tool corrections ledger
+    #[arg(long = "correction")]
+    corrections: Vec<String>,
+    /// Identity and behavioral invariants
+    #[arg(long = "identity-invariant")]
+    identity_invariants: Vec<String>,
+    /// Longitudinal relational context with the operator or peer agents
+    #[arg(long)]
+    relational_context: Option<String>,
+    /// Autonomously evolve action skeletons and consolidate dream insights after checkpoint (default: true)
+    #[arg(long, num_args = 0..=1, default_missing_value = "true")]
+    evolve: Option<bool>,
+    /// Disable autonomous post-checkpoint evolution and consolidation
+    #[arg(long)]
+    no_evolve: bool,
+}
+
+#[derive(Args)]
+struct MandalaIssuePassArgs {
+    /// Tenant ID
+    #[arg(long)]
+    tenant_id: String,
+    /// Slot ID
+    #[arg(long, default_value = "slot-default")]
+    slot_id: String,
+    /// Agent ID
+    #[arg(long)]
+    agent_id: String,
+    /// Pass ID
+    #[arg(long)]
+    pass_id: String,
+    /// Allowed operations (comma-separated, default: all)
+    #[arg(long)]
+    allowed: Option<String>,
+    /// Denied operations (comma-separated)
+    #[arg(long)]
+    denied: Option<String>,
+    /// Time-to-live in seconds (default: 3600)
+    #[arg(long, default_value_t = 3600)]
+    ttl: u64,
+    /// Max operations budget (default: 100)
+    #[arg(long, default_value_t = 100)]
+    max_ops: u32,
+    /// Max compute budget in milliseconds (default: 300000)
+    #[arg(long, default_value_t = 300000)]
+    max_compute_ms: u64,
+    /// Max memory budget in MB (default: 1024)
+    #[arg(long, default_value_t = 1024)]
+    max_memory_mb: u64,
+    /// Network restricted (default: false)
+    #[arg(long)]
+    network_restricted: bool,
+    /// Output path to save the issued pass JSON
+    #[arg(long)]
+    out: Option<PathBuf>,
+}
+
+#[derive(Args)]
+struct MandalaEvaluateArgs {
+    /// Candidate mutation identifier
+    #[arg(long, default_value = "cand-001")]
+    candidate_id: String,
+    /// Parent lineage identifier
+    #[arg(long, default_value = "root")]
+    parent_id: String,
+    /// Proposer DID
+    #[arg(long, default_value = "did:key:proposer_maker")]
+    proposer: String,
+    /// Proposed actions (comma-separated, default: "cargo check,cargo test")
+    #[arg(long, default_value = "cargo check,cargo test")]
+    actions: String,
+    /// Mutation kind: vanguard, heavy, or step (default: step)
+    #[arg(long, default_value = "step")]
+    mutation: String,
+    /// Expected utility [0.0, 1.0]
+    #[arg(long, default_value_t = 0.85)]
+    utility: f64,
+    /// Optional code payload string
+    #[arg(long)]
+    code: Option<String>,
+    /// Output path for signed ContinuityReceipt05 JSON
+    #[arg(long)]
+    out_receipt: Option<PathBuf>,
 }
 
 #[derive(Subcommand)]
@@ -161,64 +589,9 @@ enum Commands {
         request_json: String,
     },
     /// Recall memories matching a query string
-    Recall {
-        /// Query string
-        query: String,
-        /// Maximum number of results to return (default: 10)
-        #[arg(long, default_value_t = 10)]
-        limit: usize,
-        /// Candidate search pool size (default: 100)
-        #[arg(long, default_value_t = 100)]
-        candidate_limit: usize,
-        /// Include superseded and archived records
-        #[arg(long)]
-        historical: bool,
-        /// Optional recall scope view filter
-        #[arg(long)]
-        scope: Option<String>,
-        /// Enable dense projection during recall (or set WM_GEN3_PROJECTION=1)
-        #[arg(long)]
-        projection: bool,
-        /// Output rich evidence bundle and diagnostics (Stage 3)
-        #[arg(long)]
-        evidence: bool,
-        /// Opt-in bounded adaptive expansion (Stage 3)
-        #[arg(long)]
-        adaptive: bool,
-        /// Opt-in calibrated associative resonance across graph edges (Stage 5)
-        #[arg(long)]
-        resonance: bool,
-        /// Maximum hop radius for associative resonance traversal (default: 2)
-        #[arg(long, default_value_t = 2)]
-        resonance_hops: usize,
-        /// Explicit inspection promise: content-only, no-audit, strict-zero-write (Stage 4)
-        #[arg(long)]
-        inspect_promise: Option<String>,
-    },
+    Recall(Box<RecallArgs>),
     /// Recall memories with complete evidence bundle and diagnostics (Stage 3)
-    EvidenceRecall {
-        /// Raw JSON request payload
-        #[arg(long)]
-        request_json: Option<String>,
-        /// Query string (if not using request_json)
-        #[arg(long)]
-        query: Option<String>,
-        /// Maximum number of results to return (default: 10)
-        #[arg(long, default_value_t = 10)]
-        limit: usize,
-        /// Candidate search pool size (default: 100)
-        #[arg(long, default_value_t = 100)]
-        candidate_limit: usize,
-        /// Include superseded and archived records
-        #[arg(long)]
-        historical: bool,
-        /// Optional recall scope view filter
-        #[arg(long)]
-        scope: Option<String>,
-        /// Opt-in bounded adaptive expansion
-        #[arg(long)]
-        adaptive: bool,
-    },
+    EvidenceRecall(Box<EvidenceRecallArgs>),
     /// Consult the local System Two generative model (opt-in, loopback by default)
     System2 {
         #[command(subcommand)]
@@ -227,59 +600,7 @@ enum Commands {
     /// Run an explicit cognitive think sweep pass
     Sweep,
     /// Run a passive cognitive dream incubation cycle (associative consolidation)
-    Dream {
-        /// Quiescence level [0.0, 1.0] (default: 1.0 = deep incubation)
-        #[arg(long, default_value_t = 1.0)]
-        quiescence: f32,
-        /// Number of dream incubation cycles (default: 1)
-        #[arg(long)]
-        cycles: Option<usize>,
-        /// Mode: genuine (default), sham, baseline
-        #[arg(long, default_value = "genuine", value_parser = parse_incubation_mode_arg)]
-        mode: wm_gen3_core::dream::IncubationMode,
-        /// Optional path to write dream journal log (default: <store>/dream.jsonl)
-        #[arg(long)]
-        log_file: Option<PathBuf>,
-        /// Output a historical summary report of dream incubation cycles from dream.jsonl
-        #[arg(long)]
-        report: bool,
-        /// Output or inspect actionable synthetic dream insights
-        #[arg(long)]
-        insights: bool,
-        /// Run complete dual-phase sleep cycle (NREM structural compaction + REM associative dreaming; default: true)
-        #[arg(long, num_args = 0..=1, default_missing_value = "true")]
-        dual_phase: Option<bool>,
-        /// Disable dual-phase sleep cycle (REM-only or NREM-throttled execution)
-        #[arg(long)]
-        no_dual_phase: bool,
-        /// Enable homeostatic regulation of dream parameters (default: true)
-        #[arg(long, num_args = 0..=1, default_missing_value = "true")]
-        homeostatic: Option<bool>,
-        /// Disable homeostatic regulation of dream parameters
-        #[arg(long)]
-        no_homeostatic: bool,
-        /// Force dream incubation regardless of thermal or battery stress
-        #[arg(long)]
-        force: bool,
-        /// Crystallize multiple historical session turns into durable memory crystals (Stage 5)
-        #[arg(long)]
-        crystallize: bool,
-        /// Sweep all session chains across the entire store during crystallization (Wave 6)
-        #[arg(long)]
-        all: bool,
-        /// Maximum record sample depth for NREM consolidation scan (default: 500)
-        #[arg(long, default_value_t = 500)]
-        sample_depth: usize,
-        /// Scan live Product-Finsler constellations for 0-After-9 Curiosity Voids and register open loops (Horizon 2)
-        #[arg(long)]
-        curiosity_voids: bool,
-        /// Run cross-agent Sangha collective dreaming across all agent checkpoints
-        #[arg(long)]
-        sangha: bool,
-        /// Number of recent session checkpoints to sweep for collective dreaming (default: 20)
-        #[arg(long, default_value_t = 20)]
-        lookback: usize,
-    },
+    Dream(Box<DreamArgs>),
     /// Cognitive router triage: evaluate dispatch tier for inquiry with dream-assisted fast path
     Route {
         /// The inquiry or task description to route
@@ -289,20 +610,7 @@ enum Commands {
         utility: f64,
     },
     /// Manage sovereign memory galaxies (list, fork, create, visualize)
-    Galaxy {
-        /// Subcommand action: list (default), fork, create, or visualize
-        #[command(subcommand)]
-        action: Option<GalaxyAction>,
-        /// Output path for interactive HTML visualization (default: <store>/galaxy.html)
-        #[arg(long)]
-        output_html: Option<PathBuf>,
-        /// Output path for 6D coordinates JSON dataset (default: <store>/galaxy_6d.json)
-        #[arg(long)]
-        output_json: Option<PathBuf>,
-        /// Sample limit for visualization (default: 2000)
-        #[arg(long, default_value_t = 2000)]
-        limit: usize,
-    },
+    Galaxy(Box<GalaxyArgs>),
     /// Inspect substrate invariants, active constitution view, and self-model state
     Inspect {
         /// Inspection scope: all (default), invariants, balance, calibration, apotheosis, verification
@@ -327,47 +635,9 @@ enum Commands {
         path: PathBuf,
     },
     /// Migrate a legacy Gen2 LMDB store into Gen3 via sovereign pulses
-    Migrate {
-        /// Path to the legacy Gen2 LMDB store directory containing data.mdb
-        #[arg(long)]
-        source: PathBuf,
-        /// Ingestion batch size (default: 100)
-        #[arg(long, default_value_t = 100)]
-        batch_size: usize,
-        /// Dry run mode (simulate migration without committing)
-        #[arg(long)]
-        dry_run: bool,
-        /// Allow noise patterns without filtering
-        #[arg(long)]
-        allow_noise: bool,
-        /// Skip SHA-256 hash validation
-        #[arg(long)]
-        skip_hash_validation: bool,
-        /// Optional path to write quarantine log (default: <store>/quarantine.jsonl)
-        #[arg(long)]
-        quarantine_file: Option<PathBuf>,
-        /// Optional path to write migration receipt (default: <store>/migration_receipt.json)
-        #[arg(long)]
-        receipt_file: Option<PathBuf>,
-    },
+    Migrate(Box<MigrateArgs>),
     /// Migrate every Gen2 store under a projects root into per-project Gen3 targets
-    MigrateAll {
-        /// Root containing <project>/lmdb/data.mdb Gen2 stores
-        #[arg(long)]
-        source_root: PathBuf,
-        /// Root receiving one Gen3 store per project (<root>/<project>)
-        #[arg(long)]
-        target_root: PathBuf,
-        /// Comma-separated subset of project names to migrate
-        #[arg(long)]
-        only: Option<String>,
-        /// Ingestion batch size
-        #[arg(long, default_value_t = 100)]
-        batch_size: usize,
-        /// Census only; never opens or creates target stores
-        #[arg(long)]
-        dry_run: bool,
-    },
+    MigrateAll(Box<MigrateAllArgs>),
     /// Review a migration quarantine log (JSONL) with reason grouping
     Quarantine {
         /// Path to the quarantine JSONL file written by a migration
@@ -399,55 +669,7 @@ enum Commands {
     },
     /// Run the JSON-RPC / MCP stdio server (sidecar for Claude Code, Antigravity, Opencode)
     #[command(alias = "mcp")]
-    Serve {
-        #[arg(
-            long,
-            default_value = "cyberbrain",
-            value_parser = parse_profile_arg,
-            help = profile_help_text()
-        )]
-        profile: McpProfile,
-        /// Open store in read-only mode
-        #[arg(long)]
-        readonly: bool,
-        /// Enable cognitive sweep (default: true)
-        #[arg(long, num_args = 0..=1, default_missing_value = "true")]
-        sweep: Option<bool>,
-        /// Disable cognitive sweep
-        #[arg(long)]
-        no_sweep: bool,
-        /// Enable semantic projection
-        #[arg(long)]
-        projection: bool,
-        /// Semantic embedding cache directory
-        #[arg(long)]
-        embed_cache: Option<PathBuf>,
-        /// Enable dispersion
-        #[arg(long)]
-        dispersion: bool,
-        /// Enable noise filtration (default: true)
-        #[arg(long, num_args = 0..=1, default_missing_value = "true")]
-        noise: Option<bool>,
-        /// Disable noise filtration
-        #[arg(long)]
-        no_noise: bool,
-        /// Mount a legacy Gen2 LMDB store read-only (directory containing data.mdb)
-        /// instead of a Gen3 store; exposes memory.search/list/read/count/stats
-        #[arg(long)]
-        legacy_store: Option<PathBuf>,
-        /// Transport: 'stdio' (default), 'http' (streamable), or 'sse' (classic event stream)
-        #[arg(long, default_value = "stdio")]
-        transport: String,
-        /// Bind address for --transport http|sse (default: 127.0.0.1:18780)
-        #[arg(long, default_value = "127.0.0.1:18780")]
-        bind: String,
-        /// Harness compatibility flag (0 = unlimited)
-        #[arg(long, hide = true, default_value_t = 0)]
-        max_requests: u64,
-        /// Harness compatibility flag (0 = unlimited)
-        #[arg(long, hide = true, default_value_t = 0)]
-        rate_limit: u64,
-    },
+    Serve(Box<ServeArgs>),
     /// Mandala P2P Mesh & Sovereign Synchronization
     Mesh {
         #[command(subcommand)]
@@ -519,29 +741,7 @@ enum Commands {
     },
     /// Rank a shortlist of candidate routes for a state via local static embeddings
     #[cfg(feature = "system05")]
-    Shortlist {
-        /// State file (text or JSON); reads stdin when omitted
-        #[arg(long)]
-        state_file: Option<PathBuf>,
-        /// Candidate routes JSON (object or utterances); default: resolved enriched catalog
-        #[arg(long)]
-        routes: Option<PathBuf>,
-        /// Number of candidates to return (default 5)
-        #[arg(long, default_value_t = 5)]
-        k: usize,
-        /// Margin below which the shortlist is reported as ambiguous (default 0.02)
-        #[arg(long, default_value_t = 0.02)]
-        margin_threshold: f64,
-        /// Automatically cascade to System 1.5 Deliberator if ambiguous
-        #[arg(long)]
-        cascade: bool,
-        /// Checkpoint directory (defaults to WM_GEN3_SYSTEM05_MODEL or discovered paths)
-        #[arg(long)]
-        model: Option<PathBuf>,
-        /// Emit the raw shortlist JSON
-        #[arg(long)]
-        json: bool,
-    },
+    Shortlist(Box<ShortlistArgs>),
     /// Deliberate over ambiguous candidate routes using grammar-constrained local SLM
     Deliberate {
         /// Intent or state text
@@ -567,28 +767,7 @@ enum Commands {
     },
     /// Record an outcome for a dispatched receipt (signs and journals it)
     #[cfg(any(feature = "systemone", feature = "system05"))]
-    Outcome {
-        /// Path to the subject receipt JSON
-        receipt: PathBuf,
-        /// Outcome: success | failure | corrected | unknown
-        #[arg(long)]
-        outcome: String,
-        /// Correct route when the outcome is 'corrected'
-        #[arg(long)]
-        corrected_route: Option<String>,
-        /// Free-form note
-        #[arg(long)]
-        note: Option<String>,
-        /// Session id
-        #[arg(long)]
-        session_id: Option<String>,
-        /// Tenant id
-        #[arg(long)]
-        tenant_id: Option<String>,
-        /// Emit raw JSON
-        #[arg(long)]
-        json: bool,
-    },
+    Outcome(Box<OutcomeArgs>),
     /// Manage pluggable cyberbrain organs (neural micro-models, rerankers, embeddings)
     Organ {
         #[command(subcommand)]
@@ -636,28 +815,7 @@ enum Commands {
         command: AtRestCommands,
     },
     /// Parse, decode, compile, and dispatch sovereign Logoglyphic Sutras and Taoist Mudras
-    Sutra {
-        #[command(subcommand)]
-        command: Option<SutraCommands>,
-        /// Direct codon string (legacy or shorthand invocation: e.g. "證 行 鏡")
-        #[arg(value_name = "CODON")]
-        codon: Option<String>,
-        /// Force dry run (default true unless --execute is passed)
-        #[arg(long)]
-        dry_run: bool,
-        /// Execute directly against the substrate
-        #[arg(long)]
-        execute: bool,
-        /// Strict precondition enforcement (fails if preconditions unmet)
-        #[arg(long, default_value_t = true)]
-        strict: bool,
-        /// Remote peer for cross-node handoff over Wire Protocol 7369 (e.g. 203.0.113.10:7369)
-        #[arg(long)]
-        peer: Option<String>,
-        /// Emit structured JSON output
-        #[arg(long)]
-        json: bool,
-    },
+    Sutra(Box<SutraArgs>),
     /// Inspect bioelectric resting potential, hardware vitals, and homeostatic regime
     Homeostasis {
         /// Emit structured JSON output
@@ -994,65 +1152,9 @@ enum VaultCommands {
 }
 
 #[derive(Subcommand)]
-#[allow(clippy::large_enum_variant)]
 enum SessionCommands {
     /// Ingest a structured compounding session checkpoint
-    Checkpoint {
-        /// Session identifier (e.g. conversation ID, lane name)
-        #[arg(long)]
-        session_id: String,
-        /// Active agent identifier (e.g. antigravity, luna, opencode)
-        #[arg(long, default_value = "agent")]
-        agent_id: String,
-        /// Checkpoint type: turn, handoff, milestone, compact
-        #[arg(long, default_value = "handoff")]
-        checkpoint_type: String,
-        /// High-density summary of decisions, state, and findings
-        #[arg(long)]
-        summary: String,
-        /// Queued action items for next turn / next agent
-        #[arg(long)]
-        next_queue: Vec<String>,
-        /// Open flags, blockers, or warnings
-        #[arg(long)]
-        open_flags: Vec<String>,
-        /// Optional ContextCache token
-        #[arg(long)]
-        context_token: Option<String>,
-        /// Optional track slug persisted with the checkpoint
-        #[arg(long)]
-        track: Option<String>,
-        /// Commit hash persisted with the checkpoint
-        #[arg(long)]
-        commit: Option<String>,
-        /// Branch name persisted with the checkpoint
-        #[arg(long)]
-        branch: Option<String>,
-        /// Whether the test suite was green at checkpoint time
-        #[arg(long, num_args = 0..=1, default_missing_value = "true")]
-        tests_green: Option<bool>,
-        /// Claimed scope lease_id that remains held at this handoff
-        #[arg(long)]
-        lease_id: Option<String>,
-        /// Distilled episodic lessons from this session
-        #[arg(long = "lesson")]
-        lessons: Vec<String>,
-        /// Operator or tool corrections ledger
-        #[arg(long = "correction")]
-        corrections: Vec<String>,
-        /// Identity and behavioral invariants
-        #[arg(long = "identity-invariant")]
-        identity_invariants: Vec<String>,
-        /// Longitudinal relational context with the operator or peer agents
-        #[arg(long)]
-        relational_context: Option<String>,
-        /// Autonomously evolve action skeletons and consolidate dream insights after checkpoint (default: true)
-        #[arg(long, num_args = 0..=1, default_missing_value = "true")]
-        evolve: Option<bool>,
-        /// Disable autonomous post-checkpoint evolution and consolidation
-        #[arg(long)]
-        no_evolve: bool,
-    },
+    Checkpoint(Box<SessionCheckpointArgs>),
     /// Ingest an arbitrary session note or log
     Record {
         #[arg(long)]
@@ -1459,44 +1561,7 @@ enum MandalaCommands {
         epoch: Option<u64>,
     },
     /// Issue a new cryptographically signed MandalaPass
-    IssuePass {
-        /// Tenant ID
-        #[arg(long)]
-        tenant_id: String,
-        /// Slot ID
-        #[arg(long, default_value = "slot-default")]
-        slot_id: String,
-        /// Agent ID
-        #[arg(long)]
-        agent_id: String,
-        /// Pass ID
-        #[arg(long)]
-        pass_id: String,
-        /// Allowed operations (comma-separated, default: all)
-        #[arg(long)]
-        allowed: Option<String>,
-        /// Denied operations (comma-separated)
-        #[arg(long)]
-        denied: Option<String>,
-        /// Time-to-live in seconds (default: 3600)
-        #[arg(long, default_value_t = 3600)]
-        ttl: u64,
-        /// Max operations budget (default: 100)
-        #[arg(long, default_value_t = 100)]
-        max_ops: u32,
-        /// Max compute budget in milliseconds (default: 300000)
-        #[arg(long, default_value_t = 300000)]
-        max_compute_ms: u64,
-        /// Max memory budget in MB (default: 1024)
-        #[arg(long, default_value_t = 1024)]
-        max_memory_mb: u64,
-        /// Network restricted (default: false)
-        #[arg(long)]
-        network_restricted: bool,
-        /// Output path to save the issued pass JSON
-        #[arg(long)]
-        out: Option<PathBuf>,
-    },
+    IssuePass(Box<MandalaIssuePassArgs>),
     /// Record a Mandala continuity receipt into WhiteMagic Gen3 store via CommitCapability
     RecordReceipt {
         /// Path to receipt JSON file
@@ -1525,32 +1590,7 @@ enum MandalaCommands {
         threshold: f64,
     },
     /// Evaluate a candidate mutation through the Sovereign Evolutionary Software Factory
-    Evaluate {
-        /// Candidate mutation identifier
-        #[arg(long, default_value = "cand-001")]
-        candidate_id: String,
-        /// Parent lineage identifier
-        #[arg(long, default_value = "root")]
-        parent_id: String,
-        /// Proposer DID
-        #[arg(long, default_value = "did:key:proposer_maker")]
-        proposer: String,
-        /// Proposed actions (comma-separated, default: "cargo check,cargo test")
-        #[arg(long, default_value = "cargo check,cargo test")]
-        actions: String,
-        /// Mutation kind: vanguard, heavy, or step (default: step)
-        #[arg(long, default_value = "step")]
-        mutation: String,
-        /// Expected utility [0.0, 1.0]
-        #[arg(long, default_value_t = 0.85)]
-        utility: f64,
-        /// Optional code payload string
-        #[arg(long)]
-        code: Option<String>,
-        /// Output path for signed ContinuityReceipt05 JSON
-        #[arg(long)]
-        out_receipt: Option<PathBuf>,
-    },
+    Evaluate(Box<MandalaEvaluateArgs>),
     /// Inspect the Mandala replay ledger, revoked tenants, and consumed JTIs
     Status,
 }
@@ -2059,19 +2099,20 @@ fn main() {
                 }
             }
         }
-        Commands::Recall {
-            query,
-            limit,
-            candidate_limit,
-            historical,
-            scope,
-            projection,
-            evidence,
-            adaptive,
-            resonance,
-            resonance_hops,
-            inspect_promise,
-        } => {
+        Commands::Recall(args) => {
+            let RecallArgs {
+                query,
+                limit,
+                candidate_limit,
+                historical,
+                scope,
+                projection,
+                evidence,
+                adaptive,
+                resonance,
+                resonance_hops,
+                inspect_promise,
+            } = *args;
             let journal_path = store_path.join("journal.jsonl");
             let mut substrate = match inspect_promise {
                 Some(promise_str) => {
@@ -2236,15 +2277,16 @@ fn main() {
                 }
             }
         }
-        Commands::EvidenceRecall {
-            request_json,
-            query,
-            limit,
-            candidate_limit,
-            historical,
-            scope,
-            adaptive,
-        } => {
+        Commands::EvidenceRecall(args) => {
+            let EvidenceRecallArgs {
+                request_json,
+                query,
+                limit,
+                candidate_limit,
+                historical,
+                scope,
+                adaptive,
+            } = *args;
             let journal_path = store_path.join("journal.jsonl");
             let mut substrate =
                 match Substrate::open_readonly(&store_path, Some(&journal_path), default_view()) {
@@ -2372,25 +2414,26 @@ fn main() {
             println!("Execution Time:           {} ms", stats.took_ms);
             println!("==================================================");
         }
-        Commands::Dream {
-            quiescence,
-            cycles,
-            mode,
-            log_file,
-            report,
-            insights,
-            dual_phase,
-            no_dual_phase,
-            homeostatic,
-            no_homeostatic,
-            force,
-            crystallize,
-            all,
-            sample_depth,
-            curiosity_voids,
-            sangha,
-            lookback,
-        } => {
+        Commands::Dream(args) => {
+            let DreamArgs {
+                quiescence,
+                cycles,
+                mode,
+                log_file,
+                report,
+                insights,
+                dual_phase,
+                no_dual_phase,
+                homeostatic,
+                no_homeostatic,
+                force,
+                crystallize,
+                all,
+                sample_depth,
+                curiosity_voids,
+                sangha,
+                lookback,
+            } = *args;
             if sangha {
                 println!("==================================================");
                 println!("     WhiteMagic Sangha Collective Dreaming        ");
@@ -3086,12 +3129,13 @@ fn main() {
             }
             println!("==================================================");
         }
-        Commands::Galaxy {
-            action,
-            output_html,
-            output_json,
-            limit,
-        } => {
+        Commands::Galaxy(args) => {
+            let GalaxyArgs {
+                action,
+                output_html,
+                output_json,
+                limit,
+            } = *args;
             let journal_path = store_path.join("journal.jsonl");
             match action {
                 Some(GalaxyAction::Fork { source, target }) => {
@@ -4126,22 +4170,23 @@ fn main() {
                 std::process::exit(1);
             }
         }
-        Commands::Serve {
-            profile,
-            readonly,
-            sweep,
-            no_sweep,
-            projection,
-            embed_cache,
-            dispersion,
-            noise,
-            no_noise,
-            legacy_store,
-            transport,
-            bind,
-            max_requests: _,
-            rate_limit: _,
-        } => {
+        Commands::Serve(args) => {
+            let ServeArgs {
+                profile,
+                readonly,
+                sweep,
+                no_sweep,
+                projection,
+                embed_cache,
+                dispersion,
+                noise,
+                no_noise,
+                legacy_store,
+                transport,
+                bind,
+                max_requests: _,
+                rate_limit: _,
+            } = *args;
             let parsed_profile = profile;
             let sweep_enabled = sweep.unwrap_or(true) && !no_sweep;
             let noise_enabled = noise.unwrap_or(true) && !no_noise;
@@ -4269,15 +4314,16 @@ fn main() {
                 }
             }
         }
-        Commands::Migrate {
-            source,
-            batch_size,
-            dry_run,
-            allow_noise,
-            skip_hash_validation,
-            quarantine_file,
-            receipt_file,
-        } => {
+        Commands::Migrate(args) => {
+            let MigrateArgs {
+                source,
+                batch_size,
+                dry_run,
+                allow_noise,
+                skip_hash_validation,
+                quarantine_file,
+                receipt_file,
+            } = *args;
             run_migration(
                 &source,
                 &store_path,
@@ -4289,13 +4335,14 @@ fn main() {
                 receipt_file,
             );
         }
-        Commands::MigrateAll {
-            source_root,
-            target_root,
-            only,
-            batch_size,
-            dry_run,
-        } => {
+        Commands::MigrateAll(args) => {
+            let MigrateAllArgs {
+                source_root,
+                target_root,
+                only,
+                batch_size,
+                dry_run,
+            } = *args;
             run_migrate_all(
                 &source_root,
                 &target_root,
@@ -4358,24 +4405,27 @@ fn main() {
             json,
         } => run_decision_command(state_file, &questions, model, json),
         #[cfg(feature = "system05")]
-        Commands::Shortlist {
-            state_file,
-            routes,
-            k,
-            margin_threshold,
-            cascade,
-            model,
-            json,
-        } => run_shortlist_command(
-            state_file,
-            routes,
-            k,
-            margin_threshold,
-            cascade,
-            model,
-            json,
-            &store_path,
-        ),
+        Commands::Shortlist(args) => {
+            let ShortlistArgs {
+                state_file,
+                routes,
+                k,
+                margin_threshold,
+                cascade,
+                model,
+                json,
+            } = *args;
+            run_shortlist_command(
+                state_file,
+                routes,
+                k,
+                margin_threshold,
+                cascade,
+                model,
+                json,
+                &store_path,
+            )
+        }
         Commands::Deliberate {
             intent,
             candidates,
@@ -4386,24 +4436,27 @@ fn main() {
             run_verify_receipt_command(&path, &store_path, json);
         }
         #[cfg(any(feature = "systemone", feature = "system05"))]
-        Commands::Outcome {
-            receipt,
-            outcome,
-            corrected_route,
-            note,
-            session_id,
-            tenant_id,
-            json,
-        } => run_outcome_command(
-            &receipt,
-            &outcome,
-            corrected_route,
-            note,
-            session_id,
-            tenant_id,
-            &store_path,
-            json,
-        ),
+        Commands::Outcome(args) => {
+            let OutcomeArgs {
+                receipt,
+                outcome,
+                corrected_route,
+                note,
+                session_id,
+                tenant_id,
+                json,
+            } = *args;
+            run_outcome_command(
+                &receipt,
+                &outcome,
+                corrected_route,
+                note,
+                session_id,
+                tenant_id,
+                &store_path,
+                json,
+            )
+        }
         Commands::Organ { command } => run_organ_command(command, &store_path),
         Commands::Peer { command } => run_peer_command(command, &store_path),
         Commands::Sentinel { command } => run_sentinel_command(command, &store_path),
@@ -4481,85 +4534,88 @@ fn main() {
                 std::process::exit(1);
             }
         }
-        Commands::Sutra {
-            command,
-            codon,
-            dry_run,
-            execute,
-            strict,
-            peer,
-            json,
-        } => match command {
-            Some(SutraCommands::Canon { json: j }) => {
-                run_sutra_canon(j || json);
-            }
-            Some(SutraCommands::List { json: j }) => {
-                run_sutra_list(j || json);
-            }
-            Some(SutraCommands::Compile { query, json: j }) => {
-                run_sutra_compile(&query, j || json);
-            }
-            Some(SutraCommands::Cast {
-                codon: c,
-                dry_run: dr,
-                execute: ex,
-                strict: st,
-                peer: p,
-                json: j,
-            }) => {
-                let actual_dry_run = if ex { false } else { dr || !ex };
-                run_sutra_cast(&c, actual_dry_run, st, p.as_deref(), j, &store_path);
-            }
-            Some(SutraCommands::Hexagram {
-                query,
-                mutate_line,
-                json: j,
-            }) => {
-                run_sutra_hexagram(&query, mutate_line, j || json, &store_path);
-            }
-            Some(SutraCommands::Legion {
-                edict,
-                clones,
+        Commands::Sutra(args) => {
+            let SutraArgs {
+                command,
+                codon,
+                dry_run,
+                execute,
+                strict,
                 peer,
-                json: j,
-            }) => {
-                run_sutra_legion(&edict, clones, peer.as_deref(), j || json, &store_path);
-            }
-            Some(SutraCommands::Chohan {
-                payload,
-                proof,
-                bid,
-                json: j,
-            }) => {
-                run_sutra_chohan(&payload, proof.as_deref(), bid, j || json);
-            }
-            Some(SutraCommands::Valkyrie {
-                inquiry,
-                benchmark,
-                digest,
-                json: j,
-            }) => {
-                run_sutra_valkyrie(&inquiry, benchmark, digest, j || json);
-            }
-            Some(SutraCommands::Deliberator { inquiry, json: j }) => {
-                run_sutra_deliberator(&inquiry, j || json);
-            }
-            None => {
-                if let Some(c) = codon {
-                    let actual_dry_run = if execute { false } else { dry_run || !execute };
-                    run_sutra_cast(
-                        &c,
-                        actual_dry_run,
-                        strict,
-                        peer.as_deref(),
-                        json,
-                        &store_path,
-                    );
-                } else {
-                    run_sutra_canon(json);
+                json,
+            } = *args;
+            match command {
+                Some(SutraCommands::Canon { json: j }) => {
+                    run_sutra_canon(j || json);
+                }
+                Some(SutraCommands::List { json: j }) => {
+                    run_sutra_list(j || json);
+                }
+                Some(SutraCommands::Compile { query, json: j }) => {
+                    run_sutra_compile(&query, j || json);
+                }
+                Some(SutraCommands::Cast {
+                    codon: c,
+                    dry_run: dr,
+                    execute: ex,
+                    strict: st,
+                    peer: p,
+                    json: j,
+                }) => {
+                    let actual_dry_run = if ex { false } else { dr || !ex };
+                    run_sutra_cast(&c, actual_dry_run, st, p.as_deref(), j, &store_path);
+                }
+                Some(SutraCommands::Hexagram {
+                    query,
+                    mutate_line,
+                    json: j,
+                }) => {
+                    run_sutra_hexagram(&query, mutate_line, j || json, &store_path);
+                }
+                Some(SutraCommands::Legion {
+                    edict,
+                    clones,
+                    peer,
+                    json: j,
+                }) => {
+                    run_sutra_legion(&edict, clones, peer.as_deref(), j || json, &store_path);
+                }
+                Some(SutraCommands::Chohan {
+                    payload,
+                    proof,
+                    bid,
+                    json: j,
+                }) => {
+                    run_sutra_chohan(&payload, proof.as_deref(), bid, j || json);
+                }
+                Some(SutraCommands::Valkyrie {
+                    inquiry,
+                    benchmark,
+                    digest,
+                    json: j,
+                }) => {
+                    run_sutra_valkyrie(&inquiry, benchmark, digest, j || json);
+                }
+                Some(SutraCommands::Deliberator { inquiry, json: j }) => {
+                    run_sutra_deliberator(&inquiry, j || json);
+                }
+                None => {
+                    if let Some(c) = codon {
+                        let actual_dry_run = if execute { false } else { dry_run || !execute };
+                        run_sutra_cast(
+                            &c,
+                            actual_dry_run,
+                            strict,
+                            peer.as_deref(),
+                            json,
+                            &store_path,
+                        );
+                    } else {
+                        run_sutra_canon(json);
+                    }
                 }
             }
-        },
+        }
         Commands::Homeostasis { json } => {
             run_homeostasis_command(json);
         }
@@ -9277,26 +9333,27 @@ fn run_at_rest_migrate(
 fn run_session_command(cmd: SessionCommands, store_path: &Path) {
     let journal_path = store_path.join("journal.jsonl");
     match cmd {
-        SessionCommands::Checkpoint {
-            session_id,
-            agent_id,
-            checkpoint_type,
-            summary,
-            next_queue,
-            open_flags,
-            context_token,
-            track,
-            commit,
-            branch,
-            tests_green,
-            lease_id,
-            lessons,
-            corrections,
-            identity_invariants,
-            relational_context,
-            evolve,
-            no_evolve,
-        } => {
+        SessionCommands::Checkpoint(args) => {
+            let SessionCheckpointArgs {
+                session_id,
+                agent_id,
+                checkpoint_type,
+                summary,
+                next_queue,
+                open_flags,
+                context_token,
+                track,
+                commit,
+                branch,
+                tests_green,
+                lease_id,
+                lessons,
+                corrections,
+                identity_invariants,
+                relational_context,
+                evolve,
+                no_evolve,
+            } = *args;
             let evolve = evolve.unwrap_or(true) && !no_evolve;
             let mut substrate =
                 match Substrate::open(store_path, Some(&journal_path), default_view()) {
@@ -9761,20 +9818,21 @@ fn run_mandala_command(cmd: MandalaCommands, store_path: &Path) {
                 }
             }
         }
-        MandalaCommands::IssuePass {
-            tenant_id,
-            slot_id,
-            agent_id,
-            pass_id,
-            allowed,
-            denied,
-            ttl,
-            max_ops,
-            max_compute_ms,
-            max_memory_mb,
-            network_restricted,
-            out,
-        } => {
+        MandalaCommands::IssuePass(args) => {
+            let MandalaIssuePassArgs {
+                tenant_id,
+                slot_id,
+                agent_id,
+                pass_id,
+                allowed,
+                denied,
+                ttl,
+                max_ops,
+                max_compute_ms,
+                max_memory_mb,
+                network_restricted,
+                out,
+            } = *args;
             let (signing_key, pubkey) = match resolve_or_create_mandala_gate_key(store_path) {
                 Ok(k) => k,
                 Err(e) => {
@@ -9990,16 +10048,17 @@ fn run_mandala_command(cmd: MandalaCommands, store_path: &Path) {
             println!("Evaluation Latency:  {} ns (<30ns envelope)", elapsed_ns);
             println!("==================================================");
         }
-        MandalaCommands::Evaluate {
-            candidate_id,
-            parent_id,
-            proposer,
-            actions,
-            mutation,
-            utility,
-            code,
-            out_receipt,
-        } => {
+        MandalaCommands::Evaluate(args) => {
+            let MandalaEvaluateArgs {
+                candidate_id,
+                parent_id,
+                proposer,
+                actions,
+                mutation,
+                utility,
+                code,
+                out_receipt,
+            } = *args;
             let action_steps: Vec<String> = actions
                 .split(',')
                 .map(|s| s.trim().to_string())
@@ -13985,20 +14044,20 @@ mod session_cli_tests {
         .expect("parse checkpoint metadata");
         match cli.command {
             Commands::Session {
-                command:
-                    SessionCommands::Checkpoint {
-                        track,
-                        commit,
-                        branch,
-                        tests_green,
-                        lease_id,
-                        lessons,
-                        corrections,
-                        identity_invariants,
-                        relational_context,
-                        ..
-                    },
+                command: SessionCommands::Checkpoint(args),
             } => {
+                let SessionCheckpointArgs {
+                    track,
+                    commit,
+                    branch,
+                    tests_green,
+                    lease_id,
+                    lessons,
+                    corrections,
+                    identity_invariants,
+                    relational_context,
+                    ..
+                } = *args;
                 assert_eq!(track.as_deref(), Some("mission-a"));
                 assert_eq!(commit.as_deref(), Some("abc123"));
                 assert_eq!(branch.as_deref(), Some("feat/mcp-truth"));
@@ -14038,37 +14097,31 @@ mod session_cli_tests {
         ])
         .expect("parse galaxy navigate");
         match nav.command {
-            Commands::Galaxy {
-                action:
-                    Some(GalaxyAction::Navigate {
-                        query,
-                        via,
-                        hops,
-                        json,
-                        ..
-                    }),
-                ..
-            } => {
-                assert_eq!(query, "landlock sandbox confinement");
-                assert_eq!(via.as_deref(), Some("觀-界-證"));
-                assert_eq!(hops, 2);
-                assert!(json);
-            }
+            Commands::Galaxy(args) => match args.action {
+                Some(GalaxyAction::Navigate {
+                    query,
+                    via,
+                    hops,
+                    json,
+                    ..
+                }) => {
+                    assert_eq!(query, "landlock sandbox confinement");
+                    assert_eq!(via.as_deref(), Some("觀-界-證"));
+                    assert_eq!(hops, 2);
+                    assert!(json);
+                }
+                _ => panic!("expected galaxy navigate command"),
+            },
             _ => panic!("expected galaxy navigate command"),
         }
 
         let dream = Cli::try_parse_from(["wm", "dream", "--crystallize", "--all", "--force"])
             .expect("parse dream --crystallize --all");
         match dream.command {
-            Commands::Dream {
-                crystallize,
-                all,
-                force,
-                ..
-            } => {
-                assert!(crystallize);
-                assert!(all);
-                assert!(force);
+            Commands::Dream(args) => {
+                assert!(args.crystallize);
+                assert!(args.all);
+                assert!(args.force);
             }
             _ => panic!("expected dream command"),
         }
@@ -14082,13 +14135,13 @@ mod session_cli_tests {
         ])
         .expect("parse sutra deliberator");
         match delib.command {
-            Commands::Sutra {
-                command: Some(SutraCommands::Deliberator { inquiry, json }),
-                ..
-            } => {
-                assert_eq!(inquiry, "synthesize holographic constellations");
-                assert!(json);
-            }
+            Commands::Sutra(args) => match args.command {
+                Some(SutraCommands::Deliberator { inquiry, json }) => {
+                    assert_eq!(inquiry, "synthesize holographic constellations");
+                    assert!(json);
+                }
+                _ => panic!("expected sutra deliberator command"),
+            },
             _ => panic!("expected sutra deliberator command"),
         }
     }
@@ -14270,17 +14323,11 @@ mod cli_truth_tests {
     fn boolean_flags_default_on_and_can_be_disabled() {
         let cli = Cli::try_parse_from(["wm", "dream"]).expect("parse dream defaults");
         match cli.command {
-            Commands::Dream {
-                dual_phase,
-                no_dual_phase,
-                homeostatic,
-                no_homeostatic,
-                ..
-            } => {
-                assert_eq!(dual_phase, None);
-                assert!(!no_dual_phase);
-                assert_eq!(homeostatic, None);
-                assert!(!no_homeostatic);
+            Commands::Dream(args) => {
+                assert_eq!(args.dual_phase, None);
+                assert!(!args.no_dual_phase);
+                assert_eq!(args.homeostatic, None);
+                assert!(!args.no_homeostatic);
             }
             _ => panic!("expected dream command"),
         }
@@ -14288,13 +14335,9 @@ mod cli_truth_tests {
         let cli = Cli::try_parse_from(["wm", "dream", "--no-dual-phase", "--no-homeostatic"])
             .expect("parse dream disables");
         match cli.command {
-            Commands::Dream {
-                no_dual_phase,
-                no_homeostatic,
-                ..
-            } => {
-                assert!(no_dual_phase);
-                assert!(no_homeostatic);
+            Commands::Dream(args) => {
+                assert!(args.no_dual_phase);
+                assert!(args.no_homeostatic);
             }
             _ => panic!("expected dream command"),
         }
@@ -14302,17 +14345,11 @@ mod cli_truth_tests {
         let cli = Cli::try_parse_from(["wm", "serve", "--no-sweep", "--no-noise"])
             .expect("parse serve disables");
         match cli.command {
-            Commands::Serve {
-                sweep,
-                no_sweep,
-                noise,
-                no_noise,
-                ..
-            } => {
-                assert_eq!(sweep, None);
-                assert!(no_sweep);
-                assert_eq!(noise, None);
-                assert!(no_noise);
+            Commands::Serve(args) => {
+                assert_eq!(args.sweep, None);
+                assert!(args.no_sweep);
+                assert_eq!(args.noise, None);
+                assert!(args.no_noise);
             }
             _ => panic!("expected serve command"),
         }
@@ -14330,16 +14367,22 @@ mod cli_truth_tests {
         .expect("parse checkpoint disable");
         match cli.command {
             Commands::Session {
-                command:
-                    SessionCommands::Checkpoint {
-                        evolve, no_evolve, ..
-                    },
+                command: SessionCommands::Checkpoint(args),
             } => {
-                assert_eq!(evolve, None);
-                assert!(no_evolve);
+                assert_eq!(args.evolve, None);
+                assert!(args.no_evolve);
             }
             _ => panic!("expected session checkpoint command"),
         }
+    }
+
+    #[test]
+    fn commands_enum_size_fits_debug_stack() {
+        let size = std::mem::size_of::<Commands>();
+        assert!(
+            size <= 192,
+            "Commands enum grew to {size} bytes; box large variants to prevent debug stack overflow"
+        );
     }
 
     #[test]
