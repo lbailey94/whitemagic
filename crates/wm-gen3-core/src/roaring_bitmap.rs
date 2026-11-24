@@ -107,14 +107,13 @@ impl ChunkContainer {
             ChunkContainer::Array(v) => v.clone(),
             ChunkContainer::Bitset(words) => {
                 let mut res = Vec::with_capacity(self.cardinality());
-                for (w_idx, &w) in words.iter().enumerate() {
-                    if w == 0 {
-                        continue;
-                    }
-                    for b in 0..64 {
-                        if (w & (1u64 << b)) != 0 {
-                            res.push(((w_idx << 6) | b) as u16);
-                        }
+                for (w_idx, &word) in words.iter().enumerate() {
+                    let mut w = word;
+                    let base = (w_idx << 6) as u16;
+                    while w != 0 {
+                        let b = w.trailing_zeros() as u16;
+                        res.push(base | b);
+                        w &= w - 1;
                     }
                 }
                 res
@@ -125,7 +124,7 @@ impl ChunkContainer {
     pub fn intersect(&self, other: &Self) -> Self {
         match (self, other) {
             (ChunkContainer::Array(a), ChunkContainer::Array(b)) => {
-                let mut out = Vec::new();
+                let mut out = Vec::with_capacity(a.len().min(b.len()));
                 let (mut i, mut j) = (0, 0);
                 while i < a.len() && j < b.len() {
                     if a[i] == b[j] {
@@ -142,28 +141,41 @@ impl ChunkContainer {
             }
             (ChunkContainer::Bitset(wa), ChunkContainer::Bitset(wb)) => {
                 let mut words = vec![0u64; WORDS_PER_BITSET];
+                let mut card = 0usize;
                 for idx in 0..WORDS_PER_BITSET {
-                    words[idx] = wa[idx] & wb[idx];
+                    let w = wa[idx] & wb[idx];
+                    words[idx] = w;
+                    card += w.count_ones() as usize;
                 }
-                let mut container = ChunkContainer::Bitset(words);
-                if container.cardinality() < DENSE_THRESHOLD {
-                    container = ChunkContainer::Array(container.to_vec());
+                if card < DENSE_THRESHOLD {
+                    let mut out = Vec::with_capacity(card);
+                    for (w_idx, &word) in words.iter().enumerate() {
+                        let mut w = word;
+                        let base = (w_idx << 6) as u16;
+                        while w != 0 {
+                            let b = w.trailing_zeros() as u16;
+                            out.push(base | b);
+                            w &= w - 1;
+                        }
+                    }
+                    ChunkContainer::Array(out)
+                } else {
+                    ChunkContainer::Bitset(words)
                 }
-                container
             }
-            (ChunkContainer::Array(a), ChunkContainer::Bitset(_)) => {
-                let mut out = Vec::new();
+            (ChunkContainer::Array(a), ChunkContainer::Bitset(wb)) => {
+                let mut out = Vec::with_capacity(a.len());
                 for &val in a {
-                    if other.contains(val) {
+                    if (wb[(val >> 6) as usize] & (1u64 << (val & 0x3F))) != 0 {
                         out.push(val);
                     }
                 }
                 ChunkContainer::Array(out)
             }
-            (ChunkContainer::Bitset(_), ChunkContainer::Array(b)) => {
-                let mut out = Vec::new();
+            (ChunkContainer::Bitset(wa), ChunkContainer::Array(b)) => {
+                let mut out = Vec::with_capacity(b.len());
                 for &val in b {
-                    if self.contains(val) {
+                    if (wa[(val >> 6) as usize] & (1u64 << (val & 0x3F))) != 0 {
                         out.push(val);
                     }
                 }
@@ -175,30 +187,48 @@ impl ChunkContainer {
     pub fn union(&self, other: &Self) -> Self {
         match (self, other) {
             (ChunkContainer::Bitset(wa), ChunkContainer::Bitset(wb)) => {
-                let mut words = vec![0u64; WORDS_PER_BITSET];
-                for idx in 0..WORDS_PER_BITSET {
-                    words[idx] = wa[idx] | wb[idx];
-                }
+                let words: Vec<u64> = wa.iter().zip(wb.iter()).map(|(&a, &b)| a | b).collect();
                 ChunkContainer::Bitset(words)
             }
-            _ => {
-                let mut words = vec![0u64; WORDS_PER_BITSET];
-                for v in self.to_vec() {
-                    let word_idx = (v >> 6) as usize;
-                    let bit_idx = (v & 0x3F) as usize;
-                    words[word_idx] |= 1u64 << bit_idx;
+            (ChunkContainer::Array(a), ChunkContainer::Array(b)) => {
+                let mut out = Vec::with_capacity(a.len() + b.len());
+                let (mut i, mut j) = (0, 0);
+                while i < a.len() && j < b.len() {
+                    match a[i].cmp(&b[j]) {
+                        std::cmp::Ordering::Less => {
+                            out.push(a[i]);
+                            i += 1;
+                        }
+                        std::cmp::Ordering::Greater => {
+                            out.push(b[j]);
+                            j += 1;
+                        }
+                        std::cmp::Ordering::Equal => {
+                            out.push(a[i]);
+                            i += 1;
+                            j += 1;
+                        }
+                    }
                 }
-                for v in other.to_vec() {
-                    let word_idx = (v >> 6) as usize;
-                    let bit_idx = (v & 0x3F) as usize;
-                    words[word_idx] |= 1u64 << bit_idx;
-                }
-                let container = ChunkContainer::Bitset(words);
-                if container.cardinality() < DENSE_THRESHOLD {
-                    ChunkContainer::Array(container.to_vec())
+                out.extend_from_slice(&a[i..]);
+                out.extend_from_slice(&b[j..]);
+                if out.len() >= DENSE_THRESHOLD {
+                    let mut c = ChunkContainer::Array(out);
+                    c.convert_to_bitset();
+                    c
                 } else {
-                    container
+                    ChunkContainer::Array(out)
                 }
+            }
+            (ChunkContainer::Bitset(w), ChunkContainer::Array(a))
+            | (ChunkContainer::Array(a), ChunkContainer::Bitset(w)) => {
+                let mut words = w.clone();
+                for &val in a {
+                    let word_idx = (val >> 6) as usize;
+                    let bit_idx = (val & 0x3F) as usize;
+                    words[word_idx] |= 1u64 << bit_idx;
+                }
+                ChunkContainer::Bitset(words)
             }
         }
     }
@@ -272,8 +302,13 @@ impl RoaringBitmap {
 
     pub fn intersect(&self, other: &Self) -> Self {
         let mut out = BTreeMap::new();
-        for (&k, c1) in &self.chunks {
-            if let Some(c2) = other.chunks.get(&k) {
+        let (small, large) = if self.chunks.len() <= other.chunks.len() {
+            (self, other)
+        } else {
+            (other, self)
+        };
+        for (&k, c1) in &small.chunks {
+            if let Some(c2) = large.chunks.get(&k) {
                 let res = c1.intersect(c2);
                 if res.cardinality() > 0 {
                     out.insert(k, res);
@@ -317,7 +352,13 @@ impl RoaringMemoryIndex {
             _ => self.ring3.insert(record_id),
         };
         for t in tags {
-            self.tags.entry(t.clone()).or_default().insert(record_id);
+            if let Some(bm) = self.tags.get_mut(t.as_str()) {
+                bm.insert(record_id);
+            } else {
+                let mut bm = RoaringBitmap::new();
+                bm.insert(record_id);
+                self.tags.insert(t.clone(), bm);
+            }
         }
     }
 
@@ -326,33 +367,91 @@ impl RoaringMemoryIndex {
             return Vec::new();
         }
 
-        // Permitted rings union
-        let mut permitted = self.ring0.clone();
-        if max_ring >= 1 {
-            permitted = permitted.union(&self.ring1);
-        }
-        if max_ring >= 2 {
-            permitted = permitted.union(&self.ring2);
-        }
-        if max_ring >= 3 {
-            permitted = permitted.union(&self.ring3);
-        }
-
-        let mut matches: Option<RoaringBitmap> = None;
+        let mut tag_bms: Vec<&RoaringBitmap> = Vec::with_capacity(required_tags.len());
         for &tag in required_tags {
-            if let Some(tag_bm) = self.tags.get(tag) {
-                matches = Some(match matches {
-                    None => tag_bm.clone(),
-                    Some(m) => m.intersect(tag_bm),
-                });
-            } else {
-                return Vec::new(); // Required tag has zero records
+            match self.tags.get(tag) {
+                Some(bm) => tag_bms.push(bm),
+                None => return Vec::new(),
             }
         }
+        if tag_bms.len() > 1 {
+            tag_bms.sort_unstable_by_key(|bm| (bm.chunks.len(), bm.cardinality()));
+        }
 
-        matches
-            .map(|m| m.intersect(&permitted).to_vec())
-            .unwrap_or_default()
+        let owned_tags: RoaringBitmap;
+        let tag_hits: &RoaringBitmap = if tag_bms.len() == 1 {
+            tag_bms[0]
+        } else {
+            let mut acc = tag_bms[0].intersect(tag_bms[1]);
+            if acc.is_empty() {
+                return Vec::new();
+            }
+            for &bm in &tag_bms[2..] {
+                acc = acc.intersect(bm);
+                if acc.is_empty() {
+                    return Vec::new();
+                }
+            }
+            owned_tags = acc;
+            &owned_tags
+        };
+
+        let mut out = Vec::new();
+        for (&k, tag_chunk) in &tag_hits.chunks {
+            let mut ring_chunks: [&ChunkContainer; 4] = [tag_chunk; 4];
+            let mut ring_len = 0usize;
+            if let Some(c) = self.ring0.chunks.get(&k) {
+                ring_chunks[ring_len] = c;
+                ring_len += 1;
+            }
+            if max_ring >= 1 {
+                if let Some(c) = self.ring1.chunks.get(&k) {
+                    ring_chunks[ring_len] = c;
+                    ring_len += 1;
+                }
+            }
+            if max_ring >= 2 {
+                if let Some(c) = self.ring2.chunks.get(&k) {
+                    ring_chunks[ring_len] = c;
+                    ring_len += 1;
+                }
+            }
+            if max_ring >= 3 {
+                if let Some(c) = self.ring3.chunks.get(&k) {
+                    ring_chunks[ring_len] = c;
+                    ring_len += 1;
+                }
+            }
+            if ring_len == 0 {
+                continue;
+            }
+
+            let base = (k as u32) << 16;
+            let active_rings = &ring_chunks[..ring_len];
+            match tag_chunk {
+                ChunkContainer::Array(arr) => {
+                    for &val in arr {
+                        if active_rings.iter().any(|c| c.contains(val)) {
+                            out.push(base | (val as u32));
+                        }
+                    }
+                }
+                ChunkContainer::Bitset(twords) => {
+                    for (w_idx, &word) in twords.iter().enumerate() {
+                        let mut w = word;
+                        let w_base = (w_idx << 6) as u16;
+                        while w != 0 {
+                            let val = w_base | (w.trailing_zeros() as u16);
+                            if active_rings.iter().any(|c| c.contains(val)) {
+                                out.push(base | (val as u32));
+                            }
+                            w &= w - 1;
+                        }
+                    }
+                }
+            }
+        }
+        out
     }
 }
 
@@ -433,5 +532,21 @@ mod tests {
         // Tag intersection: ["landlock", "sandbox"]
         let sandbox_hits = index.query_records(&["landlock", "sandbox"], 3);
         assert_eq!(sandbox_hits, vec![1, 3]);
+
+        // Missing tag short-circuit & Array+Array union crossing DENSE_THRESHOLD
+        assert!(
+            index
+                .query_records(&["landlock", "nonexistent"], 3)
+                .is_empty()
+        );
+        let mut evens = ChunkContainer::new();
+        let mut odds = ChunkContainer::new();
+        for i in 0..2_500u16 {
+            evens.insert(i * 2);
+            odds.insert(i * 2 + 1);
+        }
+        let merged = evens.union(&odds);
+        assert_eq!(merged.cardinality(), 5_000);
+        assert!(matches!(merged, ChunkContainer::Bitset(_)));
     }
 }

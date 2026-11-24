@@ -279,25 +279,37 @@ impl KekkaiSanitizer {
         }
         // Scrub email addresses
         if out.contains('@') {
-            let mut words = Vec::new();
+            let mut words: Vec<&str> = Vec::new();
             for word in out.split_whitespace() {
                 if word.contains('@') && word.contains('.') && !word.starts_with('/') {
-                    words.push("[KEKKAI_REDACTED_EMAIL]".to_string());
+                    words.push("[KEKKAI_REDACTED_EMAIL]");
                     scrubbed += 1;
                 } else {
-                    words.push(word.to_string());
+                    words.push(word);
                 }
             }
             out = words.join(" ");
         }
         let filler = ["good morning!", "hey there", "haha", "lol"];
         let mut filler_count = 0usize;
-        for f in filler {
-            if out.to_lowercase().contains(f) {
-                filler_count += 1;
+        if out.is_ascii() {
+            let bytes = out.as_bytes();
+            for f in filler {
+                let fb = f.as_bytes();
+                if bytes.windows(fb.len()).any(|w| w.eq_ignore_ascii_case(fb)) {
+                    filler_count += 1;
+                }
+            }
+        } else {
+            let lower = out.to_lowercase();
+            for f in filler {
+                if lower.contains(f) {
+                    filler_count += 1;
+                }
             }
         }
-        let clean_verified = !Self::FORBIDDEN_MARKERS.iter().any(|m| out.contains(m));
+        let clean_verified =
+            scrubbed == 0 || !Self::FORBIDDEN_MARKERS.iter().any(|m| out.contains(m));
         (out, scrubbed + filler_count, clean_verified)
     }
 }

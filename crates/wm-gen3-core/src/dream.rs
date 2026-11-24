@@ -779,13 +779,21 @@ pub fn execute_nrem_compaction_phase_opts(
                     .and_modify(|max_id| *max_id = (*max_id).max(id))
                     .or_insert(id);
             } else if src.starts_with("session:") {
-                let parts: Vec<&str> = src.split(':').collect();
-                let s_id = parts.get(1).copied().unwrap_or("default").to_string();
-                let count = session_counts.entry(s_id.clone()).or_insert(0);
-                *count += 1;
-                session_records.entry(s_id).or_default().push(id);
+                let s_id = src.split(':').nth(1).unwrap_or("default");
+                let new_count = if let Some(count) = session_counts.get_mut(s_id) {
+                    *count += 1;
+                    *count
+                } else {
+                    session_counts.insert(s_id.to_string(), 1);
+                    1
+                };
+                if let Some(ids) = session_records.get_mut(s_id) {
+                    ids.push(id);
+                } else {
+                    session_records.insert(s_id.to_string(), vec![id]);
+                }
                 // If a session has multiple checkpoint records, intermediate ones are superseded
-                if *count > 1 {
+                if new_count > 1 {
                     superseded_count += 1;
                 }
             }

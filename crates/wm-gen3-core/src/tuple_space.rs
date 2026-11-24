@@ -4,7 +4,10 @@
 //! via atomic operations on typed data tuples (`out`, `in`, `rd`) residing in memory or `/dev/shm`,
 //! bypassing natural language chat serialization for operational handshakes.
 
+use serde::ser::{SerializeSeq, SerializeStruct};
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
@@ -539,38 +542,342 @@ impl TuplePattern {
     }
 }
 
-/// The Linda associative tuple space.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+/// The Linda associative tuple space with secondary indexes and O(1) FIFO tombstone head.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(from = "TupleSpaceSerde")]
 pub struct TupleSpace {
+    slots: Vec<Option<Tuple>>,
+    live_count: usize,
+    head: usize,
+    by_resource: BTreeMap<String, Vec<usize>>,
+    by_task_id: HashMap<Uuid, Vec<usize>>,
+    by_tag: HashMap<String, Vec<usize>>,
+}
+
+#[derive(Deserialize)]
+struct TupleSpaceSerde {
     tuples: Vec<Tuple>,
+}
+
+struct LiveTuples<'a>(&'a [Option<Tuple>]);
+
+impl Serialize for LiveTuples<'_> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let count = self.0.iter().filter(|s| s.is_some()).count();
+        let mut seq = serializer.serialize_seq(Some(count))?;
+        for t in self.0.iter().flatten() {
+            seq.serialize_element(t)?;
+        }
+        seq.end()
+    }
+}
+
+impl Serialize for TupleSpace {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut st = serializer.serialize_struct("TupleSpace", 1)?;
+        let slice = self.slots.get(self.head..).unwrap_or(&[]);
+        st.serialize_field("tuples", &LiveTuples(slice))?;
+        st.end()
+    }
+}
+
+impl From<TupleSpaceSerde> for TupleSpace {
+    fn from(raw: TupleSpaceSerde) -> Self {
+        let mut space = Self {
+            slots: raw.tuples.into_iter().map(Some).collect(),
+            live_count: 0,
+            head: 0,
+            by_resource: BTreeMap::new(),
+            by_task_id: HashMap::new(),
+            by_tag: HashMap::new(),
+        };
+        space.live_count = space.slots.len();
+        for idx in 0..space.slots.len() {
+            space.index_slot(idx);
+        }
+        space
+    }
 }
 
 impl TupleSpace {
     /// Creates an empty tuple space.
     pub fn new() -> Self {
-        Self { tuples: Vec::new() }
+        Self {
+            slots: Vec::new(),
+            live_count: 0,
+            head: 0,
+            by_resource: BTreeMap::new(),
+            by_task_id: HashMap::new(),
+            by_tag: HashMap::new(),
+        }
+    }
+
+    fn insert_resource_index(
+        by_resource: &mut BTreeMap<String, Vec<usize>>,
+        key: &str,
+        idx: usize,
+    ) {
+        if let Some(bucket) = by_resource.get_mut(key) {
+            bucket.push(idx);
+        } else {
+            by_resource.insert(key.to_owned(), vec![idx]);
+        }
+    }
+
+    fn insert_tag_index(by_tag: &mut HashMap<String, Vec<usize>>, key: &str, idx: usize) {
+        if let Some(bucket) = by_tag.get_mut(key) {
+            bucket.push(idx);
+        } else {
+            by_tag.insert(key.to_owned(), vec![idx]);
+        }
+    }
+
+    fn index_slot(&mut self, idx: usize) {
+        let Some(tuple) = self.slots[idx].as_ref() else {
+            return;
+        };
+        match &tuple.kind {
+            TupleKind::Claim { resource, .. } | TupleKind::PheromoneSync { resource, .. } => {
+                Self::insert_resource_index(&mut self.by_resource, resource, idx);
+            }
+            TupleKind::Task {
+                task_id, target, ..
+            } => {
+                Self::insert_resource_index(&mut self.by_resource, target, idx);
+                self.by_task_id.entry(*task_id).or_default().push(idx);
+            }
+            TupleKind::AuthorityGrant { task_id, .. } | TupleKind::ResultNotice { task_id, .. } => {
+                self.by_task_id.entry(*task_id).or_default().push(idx);
+            }
+            TupleKind::Generic { tag, .. } => {
+                Self::insert_tag_index(&mut self.by_tag, tag, idx);
+            }
+        }
+    }
+
+    fn advance_head(&mut self) {
+        while self.slots.get(self.head).is_some_and(Option::is_none) {
+            self.head += 1;
+        }
+    }
+
+    fn reset_empty(&mut self) {
+        self.slots.clear();
+        self.live_count = 0;
+        self.head = 0;
+        self.by_resource.clear();
+        self.by_task_id.clear();
+        self.by_tag.clear();
+    }
+
+    fn compact(&mut self) {
+        if self.live_count == 0 {
+            self.reset_empty();
+            return;
+        }
+        let mut compacted = Vec::with_capacity(self.live_count);
+        for slot in self.slots.drain(self.head..) {
+            if slot.is_some() {
+                compacted.push(slot);
+            }
+        }
+        self.slots = compacted;
+        self.head = 0;
+        self.by_resource.clear();
+        self.by_task_id.clear();
+        self.by_tag.clear();
+        for idx in 0..self.slots.len() {
+            self.index_slot(idx);
+        }
+    }
+
+    fn can_use_resource_index(pattern: &TuplePattern) -> bool {
+        pattern.resource_match.is_some()
+            && matches!(
+                pattern.kind_filter.as_deref(),
+                Some("Claim" | "Task" | "PheromoneSync")
+            )
+    }
+
+    fn can_use_task_id_index(pattern: &TuplePattern) -> bool {
+        pattern.task_id_match.is_some()
+            && matches!(
+                pattern.kind_filter.as_deref(),
+                Some("Task" | "AuthorityGrant" | "ResultNotice")
+            )
+    }
+
+    fn can_use_tag_index(pattern: &TuplePattern) -> bool {
+        pattern.tag_match.is_some() && pattern.kind_filter.as_deref() == Some("Generic")
     }
 
     /// Linda `out(tuple)`: Non-blocking atomic deposit of a tuple into the space.
     pub fn out(&mut self, tuple: Tuple) -> Uuid {
         let id = tuple.id;
-        self.tuples.push(tuple);
+        let idx = self.slots.len();
+        self.slots.push(Some(tuple));
+        self.live_count += 1;
+        self.index_slot(idx);
         id
     }
 
     /// Linda `in(pattern)`: Atomically extracts and removes the first matching unexpired tuple.
     pub fn in_matching(&mut self, pattern: &TuplePattern, now_ms: u64) -> Option<Tuple> {
-        let idx = self
-            .tuples
-            .iter()
-            .position(|t| !t.is_expired(now_ms) && pattern.matches(t))?;
-        Some(self.tuples.remove(idx))
+        let found_idx = if Self::can_use_resource_index(pattern) {
+            let rm = pattern.resource_match.as_deref().unwrap_or("");
+            let mut best: Option<usize> = None;
+            for (_, indices) in self
+                .by_resource
+                .range::<str, _>((Bound::Included(rm), Bound::Unbounded))
+                .take_while(|(k, _)| k.starts_with(rm))
+            {
+                for &idx in indices {
+                    if let Some(best_idx) = best {
+                        if idx >= best_idx {
+                            break;
+                        }
+                    }
+                    if let Some(t) = self.slots.get(idx).and_then(Option::as_ref) {
+                        if !t.is_expired(now_ms) && pattern.matches(t) {
+                            best = Some(idx);
+                            break;
+                        }
+                    }
+                }
+            }
+            best
+        } else if Self::can_use_task_id_index(pattern) {
+            pattern.task_id_match.and_then(|tid| {
+                self.by_task_id.get(&tid).and_then(|indices| {
+                    indices.iter().copied().find(|&idx| {
+                        self.slots
+                            .get(idx)
+                            .and_then(Option::as_ref)
+                            .is_some_and(|t| !t.is_expired(now_ms) && pattern.matches(t))
+                    })
+                })
+            })
+        } else if Self::can_use_tag_index(pattern) {
+            pattern.tag_match.as_deref().and_then(|tag| {
+                self.by_tag.get(tag).and_then(|indices| {
+                    indices.iter().copied().find(|&idx| {
+                        self.slots
+                            .get(idx)
+                            .and_then(Option::as_ref)
+                            .is_some_and(|t| !t.is_expired(now_ms) && pattern.matches(t))
+                    })
+                })
+            })
+        } else {
+            self.slots
+                .iter()
+                .enumerate()
+                .skip(self.head)
+                .find_map(|(idx, slot)| {
+                    slot.as_ref()
+                        .filter(|t| !t.is_expired(now_ms) && pattern.matches(t))
+                        .map(|_| idx)
+                })
+        }?;
+
+        let taken = self.slots[found_idx].take()?;
+        self.live_count -= 1;
+        if found_idx == self.head {
+            self.advance_head();
+        }
+        if self.live_count == 0 {
+            self.reset_empty();
+        } else if self.slots.len() > 2048 && self.live_count * 4 < self.slots.len() {
+            self.compact();
+        }
+        Some(taken)
     }
 
     /// Linda `rd(pattern)`: Non-destructively reads all unexpired tuples matching the pattern.
     pub fn rd_matching(&self, pattern: &TuplePattern, now_ms: u64) -> Vec<Tuple> {
-        self.tuples
+        if Self::can_use_resource_index(pattern) {
+            let rm = pattern.resource_match.as_deref().unwrap_or("");
+            let mut matched_buckets = self
+                .by_resource
+                .range::<str, _>((Bound::Included(rm), Bound::Unbounded))
+                .take_while(|(k, _)| k.starts_with(rm))
+                .map(|(_, indices)| indices);
+            let Some(first_bucket) = matched_buckets.next() else {
+                return Vec::new();
+            };
+            if let Some(second_bucket) = matched_buckets.next() {
+                let mut matched_indices = Vec::new();
+                for bucket in std::iter::once(first_bucket)
+                    .chain(std::iter::once(second_bucket))
+                    .chain(matched_buckets)
+                {
+                    for &idx in bucket {
+                        if let Some(t) = self.slots.get(idx).and_then(Option::as_ref) {
+                            if !t.is_expired(now_ms) && pattern.matches(t) {
+                                matched_indices.push(idx);
+                            }
+                        }
+                    }
+                }
+                matched_indices.sort_unstable();
+                return matched_indices
+                    .into_iter()
+                    .filter_map(|idx| self.slots[idx].clone())
+                    .collect();
+            }
+            return first_bucket
+                .iter()
+                .filter_map(|&idx| {
+                    self.slots
+                        .get(idx)
+                        .and_then(Option::as_ref)
+                        .filter(|t| !t.is_expired(now_ms) && pattern.matches(t))
+                        .cloned()
+                })
+                .collect();
+        }
+        if Self::can_use_task_id_index(pattern) {
+            return pattern
+                .task_id_match
+                .and_then(|tid| self.by_task_id.get(&tid))
+                .map(|indices| {
+                    indices
+                        .iter()
+                        .filter_map(|&idx| {
+                            self.slots
+                                .get(idx)
+                                .and_then(Option::as_ref)
+                                .filter(|t| !t.is_expired(now_ms) && pattern.matches(t))
+                                .cloned()
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+        }
+        if Self::can_use_tag_index(pattern) {
+            return pattern
+                .tag_match
+                .as_deref()
+                .and_then(|tag| self.by_tag.get(tag))
+                .map(|indices| {
+                    indices
+                        .iter()
+                        .filter_map(|&idx| {
+                            self.slots
+                                .get(idx)
+                                .and_then(Option::as_ref)
+                                .filter(|t| !t.is_expired(now_ms) && pattern.matches(t))
+                                .cloned()
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+        }
+        self.slots
+            .get(self.head..)
+            .unwrap_or(&[])
             .iter()
+            .filter_map(|slot| slot.as_ref())
             .filter(|t| !t.is_expired(now_ms) && pattern.matches(t))
             .cloned()
             .collect()
@@ -578,27 +885,94 @@ impl TupleSpace {
 
     /// Counts active matching tuples.
     pub fn count(&self, pattern: &TuplePattern, now_ms: u64) -> usize {
-        self.tuples
+        if Self::can_use_resource_index(pattern) {
+            let rm = pattern.resource_match.as_deref().unwrap_or("");
+            let mut n = 0usize;
+            for (_, indices) in self
+                .by_resource
+                .range::<str, _>((Bound::Included(rm), Bound::Unbounded))
+                .take_while(|(k, _)| k.starts_with(rm))
+            {
+                for &idx in indices {
+                    if let Some(t) = self.slots.get(idx).and_then(Option::as_ref) {
+                        if !t.is_expired(now_ms) && pattern.matches(t) {
+                            n += 1;
+                        }
+                    }
+                }
+            }
+            return n;
+        }
+        if Self::can_use_task_id_index(pattern) {
+            return pattern
+                .task_id_match
+                .and_then(|tid| self.by_task_id.get(&tid))
+                .map(|indices| {
+                    indices
+                        .iter()
+                        .filter(|&&idx| {
+                            self.slots
+                                .get(idx)
+                                .and_then(Option::as_ref)
+                                .is_some_and(|t| !t.is_expired(now_ms) && pattern.matches(t))
+                        })
+                        .count()
+                })
+                .unwrap_or(0);
+        }
+        if Self::can_use_tag_index(pattern) {
+            return pattern
+                .tag_match
+                .as_deref()
+                .and_then(|tag| self.by_tag.get(tag))
+                .map(|indices| {
+                    indices
+                        .iter()
+                        .filter(|&&idx| {
+                            self.slots
+                                .get(idx)
+                                .and_then(Option::as_ref)
+                                .is_some_and(|t| !t.is_expired(now_ms) && pattern.matches(t))
+                        })
+                        .count()
+                })
+                .unwrap_or(0);
+        }
+        self.slots
+            .get(self.head..)
+            .unwrap_or(&[])
             .iter()
+            .filter_map(|slot| slot.as_ref())
             .filter(|t| !t.is_expired(now_ms) && pattern.matches(t))
             .count()
     }
 
     /// Purges all expired tuples.
     pub fn purge_expired(&mut self, now_ms: u64) -> usize {
-        let before = self.tuples.len();
-        self.tuples.retain(|t| !t.is_expired(now_ms));
-        before - self.tuples.len()
+        let mut purged = 0usize;
+        for slot in self.slots.get_mut(self.head..).unwrap_or(&mut []) {
+            if let Some(t) = slot.as_ref() {
+                if t.is_expired(now_ms) {
+                    *slot = None;
+                    purged += 1;
+                }
+            }
+        }
+        if purged > 0 {
+            self.live_count -= purged;
+            self.compact();
+        }
+        purged
     }
 
     /// Returns the total number of tuples currently in the space.
     pub fn len(&self) -> usize {
-        self.tuples.len()
+        self.live_count
     }
 
     /// Checks if the space is empty.
     pub fn is_empty(&self) -> bool {
-        self.tuples.is_empty()
+        self.live_count == 0
     }
 
     /// Serializes to JSON.
@@ -773,5 +1147,64 @@ mod tests {
         let bytes = space.to_msgpack().expect("serialization should succeed");
         let decoded = TupleSpace::from_msgpack(&bytes).expect("deserialization should succeed");
         assert_eq!(decoded.len(), 1);
+    }
+
+    #[test]
+    fn test_indexed_prefix_fifo_and_unfiltered_fallback() {
+        let now = 10_000;
+        let mut space = TupleSpace::new();
+        space.out(Tuple {
+            id: Uuid::from_u128(1),
+            kind: TupleKind::Claim {
+                resource: "crates/a/z.rs".into(),
+                holder: "opencode".into(),
+                ttl_ms: 60_000,
+            },
+            created_at_ms: now,
+            expires_at_ms: now + 60_000,
+        });
+        space.out(Tuple {
+            id: Uuid::from_u128(2),
+            kind: TupleKind::Generic {
+                tag: "note".into(),
+                payload: "{}".into(),
+            },
+            created_at_ms: now,
+            expires_at_ms: now + 60_000,
+        });
+        space.out(Tuple {
+            id: Uuid::from_u128(3),
+            kind: TupleKind::Claim {
+                resource: "crates/a/a.rs".into(),
+                holder: "opencode".into(),
+                ttl_ms: 60_000,
+            },
+            created_at_ms: now,
+            expires_at_ms: now + 60_000,
+        });
+
+        // Prefix match across multiple keys preserves exact FIFO insertion order (z.rs before a.rs)
+        let pref = TuplePattern::claim_for("crates/a/");
+        let rds = space.rd_matching(&pref, now);
+        assert_eq!(rds.len(), 2);
+        assert_eq!(rds[0].id, Uuid::from_u128(1));
+        assert_eq!(rds[1].id, Uuid::from_u128(3));
+
+        // JSON + MessagePack round-trip preserves indexes and counts
+        let j = space.to_json().expect("json");
+        let mut rt = TupleSpace::from_json(&j).expect("from json");
+        assert_eq!(rt.count(&TuplePattern::claim_for("crates/a/"), now), 2);
+        let mp = space.to_msgpack().expect("msgpack");
+        let rt_mp = TupleSpace::from_msgpack(&mp).expect("from msgpack");
+        assert_eq!(rt_mp.count(&TuplePattern::claim_for("crates/a/"), now), 2);
+        let first_pop = rt.in_matching(&TuplePattern::claim_for("crates/a/"), now);
+        assert_eq!(first_pop.map(|t| t.id), Some(Uuid::from_u128(1)));
+
+        // Pattern without kind_filter still matches Generic tuples identically to TuplePattern::matches
+        let kindless = TuplePattern {
+            resource_match: Some("crates/".into()),
+            ..Default::default()
+        };
+        assert_eq!(space.count(&kindless, now), 3);
     }
 }

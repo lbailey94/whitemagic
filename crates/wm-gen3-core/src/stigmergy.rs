@@ -201,10 +201,29 @@ impl Pheromone {
     }
 }
 
-/// An environmental field of active pheromones.
+/// An environmental field of active pheromones indexed by target path.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(from = "StigmergicFieldSerde")]
 pub struct StigmergicField {
     pheromones: Vec<Pheromone>,
+    #[serde(skip)]
+    by_target: HashMap<String, Vec<usize>>,
+}
+
+#[derive(Deserialize)]
+struct StigmergicFieldSerde {
+    pheromones: Vec<Pheromone>,
+}
+
+impl From<StigmergicFieldSerde> for StigmergicField {
+    fn from(raw: StigmergicFieldSerde) -> Self {
+        let mut field = Self {
+            pheromones: raw.pheromones,
+            by_target: HashMap::new(),
+        };
+        field.rebuild_index();
+        field
+    }
 }
 
 impl StigmergicField {
@@ -212,11 +231,30 @@ impl StigmergicField {
     pub fn new() -> Self {
         Self {
             pheromones: Vec::new(),
+            by_target: HashMap::new(),
+        }
+    }
+
+    fn rebuild_index(&mut self) {
+        self.by_target.clear();
+        for (idx, p) in self.pheromones.iter().enumerate() {
+            if let Some(bucket) = self.by_target.get_mut(p.target_path.as_str()) {
+                bucket.push(idx);
+            } else {
+                self.by_target.insert(p.target_path.clone(), vec![idx]);
+            }
         }
     }
 
     /// Emits a new pheromone into the environment.
     pub fn emit(&mut self, pheromone: Pheromone) {
+        let idx = self.pheromones.len();
+        if let Some(bucket) = self.by_target.get_mut(pheromone.target_path.as_str()) {
+            bucket.push(idx);
+        } else {
+            self.by_target
+                .insert(pheromone.target_path.clone(), vec![idx]);
+        }
         self.pheromones.push(pheromone);
     }
 
@@ -227,7 +265,11 @@ impl StigmergicField {
         let before = self.pheromones.len();
         self.pheromones
             .retain(|p| !p.is_evaporated(now_ms, threshold));
-        before - self.pheromones.len()
+        let removed = before - self.pheromones.len();
+        if removed > 0 {
+            self.rebuild_index();
+        }
+        removed
     }
 
     /// Returns a slice of all active pheromones.
@@ -248,7 +290,11 @@ impl StigmergicField {
         ignore_issuer: Option<&str>,
     ) -> Vec<(&Pheromone, f64)> {
         let mut conflicts = Vec::new();
-        for p in &self.pheromones {
+        let Some(indices) = self.by_target.get(target_path) else {
+            return conflicts;
+        };
+        for &idx in indices {
+            let p = &self.pheromones[idx];
             if let Some(issuer) = ignore_issuer {
                 if p.issuer == issuer {
                     continue;
@@ -266,12 +312,19 @@ impl StigmergicField {
 
     /// Computes aggregated heat score per target file for visualization and badge rendering.
     pub fn aggregate_file_heatmaps(&self, now_ms: u64) -> HashMap<String, f64> {
-        let mut heatmap = HashMap::new();
-        for p in &self.pheromones {
-            let intensity = p.current_intensity(now_ms);
-            if intensity > 0.001 {
-                let entry = heatmap.entry(p.target_path.clone()).or_insert(0.0);
-                *entry += intensity;
+        let mut heatmap = HashMap::with_capacity(self.by_target.len());
+        for (path, indices) in &self.by_target {
+            let mut sum = 0.0f64;
+            let mut any_active = false;
+            for &idx in indices {
+                let intensity = self.pheromones[idx].current_intensity(now_ms);
+                if intensity > 0.001 {
+                    sum += intensity;
+                    any_active = true;
+                }
+            }
+            if any_active {
+                heatmap.insert(path.clone(), sum);
             }
         }
         heatmap
@@ -432,5 +485,31 @@ mod tests {
         let purged = field.evaporate(now + 150_000, 0.05);
         assert_eq!(purged, 1);
         assert_eq!(field.all().len(), 0);
+
+        // 6. JSON round-trip rebuilds target index cleanly
+        let mut rt_field = StigmergicField::new();
+        let mut p_rt = Pheromone::new(
+            "crates/wm-gen3-core/src/ops.rs",
+            vec!["fn:recall".into()],
+            PheromoneKind::Refactoring,
+            0.95,
+            60_000,
+            "opencode",
+        );
+        p_rt.emitted_at_ms = now;
+        rt_field.emit(p_rt);
+        let serialized = rt_field.to_json().expect("serialize");
+        let restored = StigmergicField::from_json(&serialized).expect("deserialize");
+        let rt_hits = restored.sense_conflicts(
+            "crates/wm-gen3-core/src/ops.rs",
+            &["fn:recall".into()],
+            None,
+            0.1,
+            now + 5_000,
+            Some("antigravity"),
+        );
+        assert_eq!(rt_hits.len(), 1);
+        let hm = restored.aggregate_file_heatmaps(now + 5_000);
+        assert!(hm.contains_key("crates/wm-gen3-core/src/ops.rs"));
     }
 }

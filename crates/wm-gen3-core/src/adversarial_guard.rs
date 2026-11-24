@@ -13,6 +13,9 @@ use std::collections::{HashMap, HashSet, VecDeque};
 #[inline]
 #[must_use]
 pub fn fold_confusable_char(ch: char) -> Option<char> {
+    if ch.is_ascii() {
+        return Some(ch);
+    }
     if matches!(
         ch,
         '\u{00AD}'
@@ -159,9 +162,9 @@ pub fn dampen_stuffed_tf(tf: usize, cap: usize) -> f32 {
 /// Compute `median + 2` capped term weights to defeat adversarial keyword-stuffing bursts.
 #[must_use]
 pub fn score_with_stuffing_cap(tokens: &[String]) -> StuffingScore {
-    let mut counts: HashMap<String, usize> = HashMap::new();
+    let mut counts: HashMap<&str, usize> = HashMap::with_capacity(tokens.len().min(256));
     for t in tokens {
-        *counts.entry(t.clone()).or_insert(0) += 1;
+        *counts.entry(t.as_str()).or_insert(0) += 1;
     }
     if counts.is_empty() {
         return StuffingScore {
@@ -187,7 +190,7 @@ pub fn score_with_stuffing_cap(tokens: &[String]) -> StuffingScore {
         if *tf > cap {
             penalized += 1;
         }
-        effective_term_weights.insert(tok.clone(), dampen_stuffed_tf(*tf, cap));
+        effective_term_weights.insert((*tok).to_owned(), dampen_stuffed_tf(*tf, cap));
     }
 
     StuffingScore {

@@ -1413,14 +1413,15 @@ pub fn run_live_curiosity_void_and_cladistics_pass(
     let raw_voids = scan_topological_voids(&centroids, 4);
     let mut voids_discovered = Vec::new();
     for v in raw_voids.into_iter().take(4) {
-        let parts: Vec<&str> = v.void_id.split('-').collect();
+        let mut parts = v.void_id.split('-');
+        let _ = parts.next();
         let idx_a = parts
-            .get(1)
+            .next()
             .and_then(|s| s.parse::<usize>().ok())
             .and_then(|i| centroids.get(i).map(|c| c.0))
             .unwrap_or(0);
         let idx_b = parts
-            .get(2)
+            .next()
             .and_then(|s| s.parse::<usize>().ok())
             .and_then(|i| centroids.get(i).map(|c| c.0))
             .unwrap_or(4);
