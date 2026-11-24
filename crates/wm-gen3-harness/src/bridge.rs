@@ -2715,11 +2715,13 @@ fn resolve_template_string(
     vars: &HashMap<String, Value>,
 ) -> Result<Value, String> {
     if s == "$prev" {
-        let p = prev.ok_or_else(|| "template '$prev' referenced before any step completed".to_string())?;
+        let p = prev
+            .ok_or_else(|| "template '$prev' referenced before any step completed".to_string())?;
         return Ok(unwrap_mcp_json_payload(p).into_owned());
     }
     if let Some(rest) = s.strip_prefix("$prev.") {
-        let p = prev.ok_or_else(|| format!("template '{s}' referenced before any step completed"))?;
+        let p =
+            prev.ok_or_else(|| format!("template '{s}' referenced before any step completed"))?;
         return lookup_dot_path(p, rest)
             .ok_or_else(|| format!("template path '{s}' not found in previous step result"));
     }
@@ -2890,9 +2892,7 @@ fn handle_wm_execute(
                             .and_then(Value::as_str)
                             .map(str::to_string)
                             .unwrap_or_else(|| "step returned isError=true".to_string());
-                        return Ok(wm_execute_step_error(
-                            idx, tool, err_msg, results, compact,
-                        ));
+                        return Ok(wm_execute_step_error(idx, tool, err_msg, results, compact));
                     }
                     if let Some(ref key) = save_as {
                         if !vars.contains_key(key) {
@@ -2909,9 +2909,7 @@ fn handle_wm_execute(
                     }));
                 }
                 Err(err_msg) => {
-                    return Ok(wm_execute_step_error(
-                        idx, tool, err_msg, results, compact,
-                    ));
+                    return Ok(wm_execute_step_error(idx, tool, err_msg, results, compact));
                 }
             }
         }
@@ -5206,22 +5204,50 @@ fn resolve_continuity_session_lane(
         return Some(current.to_string());
     }
 
-    all_turns
-        .iter()
-        .rev()
-        .map(|turn| turn.session_id.as_str())
-        .find(|lane| {
-            !lane.is_empty() && Some(*lane) != current_session && !is_daemon_session_id(lane)
+    let norm_ms = |ts: u64| -> u64 {
+        if ts < 10_000_000_000 {
+            ts.saturating_mul(1000)
+        } else {
+            ts
+        }
+    };
+    let best_turn_lane = |allow_daemon: bool| -> Option<(u64, String)> {
+        all_turns
+            .iter()
+            .enumerate()
+            .filter(|(_, turn)| {
+                let lane = turn.session_id.as_str();
+                !lane.is_empty()
+                    && Some(lane) != current_session
+                    && (allow_daemon || !is_daemon_session_id(lane))
+            })
+            .max_by_key(|(idx, turn)| (norm_ms(turn.timestamp), *idx))
+            .map(|(_, turn)| (norm_ms(turn.timestamp), turn.session_id.clone()))
+    };
+
+    let best_turn = best_turn_lane(false).or_else(|| best_turn_lane(true));
+    let best_cp = substrate
+        .and_then(|s| s.session_continuity(None).ok().flatten())
+        .filter(|view| {
+            let sid = view.session_id.as_str();
+            !sid.is_empty() && Some(sid) != current_session && !is_daemon_session_id(sid)
         })
-        .map(str::to_string)
-        .or_else(|| {
-            all_turns
-                .iter()
-                .rev()
-                .map(|turn| turn.session_id.as_str())
-                .find(|lane| !lane.is_empty() && Some(*lane) != current_session)
-                .map(str::to_string)
-        })
+        .map(|view| {
+            let cp_ms = view
+                .timestamp_iso
+                .as_deref()
+                .and_then(|ts| parse_rfc3339_utc(ts).ok())
+                .map(|dt| (dt.unix_timestamp().max(0) as u64).saturating_mul(1000))
+                .unwrap_or(0);
+            (cp_ms, view.session_id)
+        });
+
+    match (best_turn, best_cp) {
+        (Some((t_ms, _)), Some((cp_ms, cp_sid))) if cp_ms > t_ms => Some(cp_sid),
+        (Some((_, t_sid)), _) => Some(t_sid),
+        (None, Some((_, cp_sid))) => Some(cp_sid),
+        (None, None) => None,
+    }
 }
 
 fn handle_session_continuity(
@@ -13471,6 +13497,44 @@ mod diaml_and_salience_refinement_tests {
     }
 
     #[test]
+    fn session_continuity_prefers_chronologically_newest_lane_over_append_order() {
+        let dir = std::env::temp_dir().join(format!("wm-cont-ts-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let mut substrate = Substrate::open(&dir, None, wm_gen3_core::constitution::default_view())
+            .expect("open substrate");
+
+        // Record a newer session first, then append a stale backfilled session at the tail of session_log.jsonl.
+        std::fs::write(
+            dir.join("session_log.jsonl"),
+            "{\"turn_id\":\"t-newer\",\"session_id\":\"sess-newer\",\"role\":\"assistant\",\"turn_type\":\"decision\",\"content\":\"Newest decision from tonight.\",\"importance\":0.8,\"timestamp\":1750000000000}\n\
+             {\"turn_id\":\"t-stale\",\"session_id\":\"sess-stale-backfill\",\"role\":\"assistant\",\"turn_type\":\"message\",\"content\":\"Older backfilled turn appended later.\",\"importance\":0.5,\"timestamp\":1700000000000}\n",
+        )
+        .expect("write session log");
+
+        let cont =
+            handle_session_continuity(&json!({}), &substrate, &dir).expect("default continuity");
+        assert_eq!(cont["session_id"], "sess-newer");
+
+        handle_session_checkpoint(
+            &json!({
+                "session_id": "sess-cp-newer",
+                "summary": "Newer checkpoint must override older tail turn."
+            }),
+            &mut substrate,
+            &dir,
+            false,
+        )
+        .expect("checkpoint newer");
+
+        let cont_cp =
+            handle_session_continuity(&json!({}), &substrate, &dir).expect("checkpoint continuity");
+        assert_eq!(cont_cp["session_id"], "sess-cp-newer");
+        assert!(cont_cp["checkpoint"].is_object());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn continuity_core_survives_overcrowd_and_track_only_checkpoint_resume() {
         let dir = std::env::temp_dir().join(format!("wm-cont-core-{}", Uuid::new_v4()));
         std::fs::create_dir_all(&dir).expect("temp dir");
@@ -14127,7 +14191,9 @@ mod codemode_tests {
         assert!(!profile_allows_tool(McpProfile::CodeMode, "wm"));
 
         let ro_tools = get_tools_list_for_profile(McpProfile::CodeMode, true);
-        let exec_desc = ro_tools[1]["description"].as_str().expect("wm_execute desc");
+        let exec_desc = ro_tools[1]["description"]
+            .as_str()
+            .expect("wm_execute desc");
         assert!(exec_desc.contains("READ-ONLY"), "{exec_desc}");
     }
 
@@ -14230,11 +14296,12 @@ mod codemode_tests {
         });
         let mut vars = HashMap::new();
         vars.insert("w".to_string(), wrapped.clone());
-        let resolved_prev = resolve_template_value(&json!("$prev.nested.items.0.tag"), Some(&wrapped), &vars)
-            .expect("unwrap $prev");
+        let resolved_prev =
+            resolve_template_value(&json!("$prev.nested.items.0.tag"), Some(&wrapped), &vars)
+                .expect("unwrap $prev");
         assert_eq!(resolved_prev, json!("ok"));
-        let resolved_var = resolve_template_value(&json!("$vars.w.nested.id"), None, &vars)
-            .expect("unwrap $vars");
+        let resolved_var =
+            resolve_template_value(&json!("$vars.w.nested.id"), None, &vars).expect("unwrap $vars");
         assert_eq!(resolved_var, json!(42));
 
         // 3) Reject >8 steps
@@ -14263,10 +14330,7 @@ mod codemode_tests {
                 McpProfile::CodeMode,
             )
             .expect_err("nested dispatch must fail");
-            assert!(
-                err.contains("nested wm_execute/wm forbidden"),
-                "got: {err}"
-            );
+            assert!(err.contains("nested wm_execute/wm forbidden"), "got: {err}");
         }
 
         // 5) Readonly mode strictly blocks mutating steps

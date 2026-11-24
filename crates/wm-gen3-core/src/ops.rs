@@ -55,15 +55,27 @@ use crate::store::Store;
 use crate::sweep::{LIFECYCLE_AGE_SWEEPS, SWEEP_PROFILE_V1, SweepOutcome, UsageSnapshotIssuer};
 use crate::sweep_planner::{SweepPlanInputs, plan_sweep};
 
-/// Corpus, file, and spec imports are documents, not dialogue turns.
+/// Corpus, file, and spec imports are documents, not dialogue turns, unless
+/// tagged with an explicit conversational role (`:user`, `:assistant`, `:system`)
+/// without ingest/v9db metadata.
 fn is_non_conversational_doc_source(source: &str) -> bool {
     let lower = source.trim().to_ascii_lowercase();
-    lower.starts_with("corpus:")
+    if lower.contains(",ingest:")
+        || lower.contains(",v9db:")
         || lower.starts_with("doc:")
         || lower.starts_with("file:")
         || lower.starts_with("spec:")
-        || lower.contains(",ingest:")
-        || lower.contains(",v9db:")
+    {
+        return true;
+    }
+    if lower.starts_with("corpus:") {
+        let prefix = lower.split(',').next().unwrap_or(&lower).trim();
+        let is_conv_role = prefix.ends_with(":user")
+            || prefix.ends_with(":assistant")
+            || prefix.ends_with(":system");
+        return !is_conv_role;
+    }
+    false
 }
 
 /// Session id from a conversational `role,session` source.
@@ -3647,8 +3659,7 @@ impl Substrate {
         if !potion_ranked.is_empty() {
             if projection_ran {
                 let take_n = if open_pref_q { 28 } else { 16 };
-                let floor_c =
-                    stage4a_potion_floor(projection_ran, open_pref_q, counts.is_empty());
+                let floor_c = stage4a_potion_floor(projection_ran, open_pref_q, counts.is_empty());
                 for &(id, c) in potion_ranked.iter().take(take_n) {
                     if c < floor_c {
                         break;
@@ -3667,8 +3678,7 @@ impl Substrate {
                 }
             } else {
                 let take_n = 28;
-                let floor_c =
-                    stage4a_potion_floor(projection_ran, open_pref_q, counts.is_empty());
+                let floor_c = stage4a_potion_floor(projection_ran, open_pref_q, counts.is_empty());
                 for &(id, c) in potion_ranked.iter().take(take_n) {
                     if c < floor_c {
                         break;
@@ -4054,8 +4064,7 @@ impl Substrate {
                         if is_non_conversational_doc_source(next_rec.source()) {
                             continue;
                         }
-                        let next_sess =
-                            conversational_session_id(next_rec.source()).unwrap_or("");
+                        let next_sess = conversational_session_id(next_rec.source()).unwrap_or("");
                         let ntxt = next_rec.content();
                         let nlow = ntxt.to_lowercase();
                         let is_clarify = nlow.contains("need a bit more information")
@@ -4125,8 +4134,7 @@ impl Substrate {
                         if is_non_conversational_doc_source(adj_rec.source()) {
                             continue;
                         }
-                        let adj_sess =
-                            conversational_session_id(adj_rec.source()).unwrap_or("");
+                        let adj_sess = conversational_session_id(adj_rec.source()).unwrap_or("");
                         if adj_sess != seed_sess {
                             continue;
                         }
@@ -4672,6 +4680,7 @@ impl Substrate {
 
                 for (pos, f) in feats.into_iter().enumerate() {
                     let s_idx = pool_indices[pos];
+                    let doc_source = is_non_conversational_doc_source(&cand_records[pos].1);
                     let cb = colbert_raw[pos];
                     if !cb.is_finite() {
                         continue;
@@ -4685,31 +4694,36 @@ impl Substrate {
                     };
                     let is_v4 = spore.version() >= 4;
                     let delta_mlp = if is_v3 && f.raw_logit.is_finite() {
-                        (0.12 * f.raw_logit).clamp(-0.03, 0.03)
-                    } else {
-                        0.0
-                    };
-                    let delta_pref_v4 = if is_v4 && is_open_pref_q && f.pref_logit.is_finite() {
-                        let raw_d = f.pref_logit - mean_pref;
-                        if raw_d > 0.0 {
-                            // Multiplicative TopicRelevance x UserStance gate:
-                            // Off-topic emotive user turns cannot hijack on-topic turns via
-                            // additive stance cues alone.
-                            let topic_rel = inputs[pos]
-                                .sem_support
-                                .max(inputs[pos].fast_bi_cos)
-                                .max(scored[s_idx].6);
-                            let topic_gate = ((topic_rel - 0.16) / 0.34).clamp(0.12, 1.0);
-                            (0.45 * raw_d * topic_gate).clamp(0.0, 0.24)
+                        if doc_source && is_v4 {
+                            (0.42 * f.raw_logit).clamp(-0.10, 0.10)
                         } else {
-                            (0.55 * raw_d).clamp(-0.30, 0.0)
+                            (0.12 * f.raw_logit).clamp(-0.03, 0.03)
                         }
                     } else {
                         0.0
                     };
+                    let delta_pref_v4 =
+                        if !doc_source && is_v4 && is_open_pref_q && f.pref_logit.is_finite() {
+                            let raw_d = f.pref_logit - mean_pref;
+                            if raw_d > 0.0 {
+                                // Multiplicative TopicRelevance x UserStance gate:
+                                // Off-topic emotive user turns cannot hijack on-topic turns via
+                                // additive stance cues alone.
+                                let topic_rel = inputs[pos]
+                                    .sem_support
+                                    .max(inputs[pos].fast_bi_cos)
+                                    .max(scored[s_idx].6);
+                                let topic_gate = ((topic_rel - 0.16) / 0.34).clamp(0.12, 1.0);
+                                (0.45 * raw_d * topic_gate).clamp(0.0, 0.24)
+                            } else {
+                                (0.55 * raw_d).clamp(-0.30, 0.0)
+                            }
+                        } else {
+                            0.0
+                        };
                     let content_low = cand_records[pos].0.to_lowercase();
                     let has_asst_sep = content_low.contains("\nassistant:");
-                    let speaker_delta = if !is_asst_q {
+                    let speaker_delta = if !doc_source && !is_asst_q {
                         if f.tag_asst > 0.5 || (has_asst_sep && f.is_asst_styled) {
                             if f.quotes_user_entity && !f.is_asst_styled && f.is_question_turn < 0.5
                             {
@@ -4724,13 +4738,13 @@ impl Substrate {
                         } else {
                             0.0
                         }
-                    } else if f.tag_asst > 0.5 {
+                    } else if !doc_source && f.tag_asst > 0.5 {
                         if f.unanswered_q_trap >= 0.8 {
                             -0.09
                         } else {
                             0.12
                         }
-                    } else if f.tag_user > 0.5 {
+                    } else if !doc_source && f.tag_user > 0.5 {
                         -0.06
                     } else {
                         0.0
@@ -4760,7 +4774,9 @@ impl Substrate {
                             || content_low.contains("can you help me understand how")
                             || (q_low.starts_with("do i have ")
                                 && content_low.contains("do i have ")));
-                    let qtrap_delta = if !is_asst_q && !is_open_pref_q {
+                    let qtrap_delta = if doc_source {
+                        0.0
+                    } else if !is_asst_q && !is_open_pref_q {
                         if f.is_meta_clarify
                             || f.unanswered_q_trap >= 0.85
                             || echoes_query_question
@@ -4861,72 +4877,75 @@ impl Substrate {
                         0.0
                     };
                     let mut atype_delta = 0.0_f32;
-                    if !is_asst_q
-                        && !is_previous_q
-                        && (content_low.contains("actually, i ")
-                            || content_low.contains("i actually have ")
-                            || content_low.contains("i actually need ")
-                            || content_low.contains("i've actually found ")
-                            || content_low.contains("to correct myself")
-                            || content_low.contains("i've accumulated enough"))
-                    {
-                        atype_delta += 0.075;
-                    }
-                    if is_money_q {
-                        if f.facts.has_dollar {
-                            atype_delta += 0.095;
-                        } else if f.facts.has_digit {
-                            atype_delta += 0.03;
-                        } else if f.is_question_turn >= 0.8 || is_solicitation {
-                            atype_delta -= 0.075;
-                        } else {
-                            atype_delta -= 0.045;
+                    if !doc_source {
+                        if !is_asst_q
+                            && !is_previous_q
+                            && (content_low.contains("actually, i ")
+                                || content_low.contains("i actually have ")
+                                || content_low.contains("i actually need ")
+                                || content_low.contains("i've actually found ")
+                                || content_low.contains("to correct myself")
+                                || content_low.contains("i've accumulated enough"))
+                        {
+                            atype_delta += 0.075;
                         }
-                    } else if is_count_q {
-                        if (f.facts.has_digit && !f.facts.has_dollar) || f.facts.has_num_word {
-                            atype_delta += 0.065;
-                        } else if f.is_question_turn >= 0.8 || is_solicitation {
-                            atype_delta -= 0.095;
-                        } else {
-                            atype_delta -= 0.055;
-                        }
-                    } else if is_time_q {
-                        if q_low.contains("how long") {
-                            if f.facts.has_explicit_duration {
-                                atype_delta += 0.115;
+                        if is_money_q {
+                            if f.facts.has_dollar {
+                                atype_delta += 0.095;
+                            } else if f.facts.has_digit {
+                                atype_delta += 0.03;
+                            } else if f.is_question_turn >= 0.8 || is_solicitation {
+                                atype_delta -= 0.075;
+                            } else {
+                                atype_delta -= 0.045;
+                            }
+                        } else if is_count_q {
+                            if (f.facts.has_digit && !f.facts.has_dollar) || f.facts.has_num_word {
+                                atype_delta += 0.065;
+                            } else if f.is_question_turn >= 0.8 || is_solicitation {
+                                atype_delta -= 0.095;
+                            } else {
+                                atype_delta -= 0.055;
+                            }
+                        } else if is_time_q {
+                            if q_low.contains("how long") {
+                                if f.facts.has_explicit_duration {
+                                    atype_delta += 0.115;
+                                } else if f.facts.has_month_or_date {
+                                    atype_delta += 0.05;
+                                } else if f.facts.has_digit || f.facts.has_num_word {
+                                    atype_delta += 0.03;
+                                } else {
+                                    atype_delta -= 0.11;
+                                }
+                            } else if f.facts.has_explicit_duration {
+                                atype_delta += 0.07;
                             } else if f.facts.has_month_or_date {
                                 atype_delta += 0.05;
                             } else if f.facts.has_digit || f.facts.has_num_word {
-                                atype_delta += 0.03;
+                                atype_delta += 0.025;
+                            } else if f.is_question_turn >= 0.8 {
+                                atype_delta -= 0.05;
                             } else {
-                                atype_delta -= 0.11;
+                                atype_delta -= 0.03;
                             }
-                        } else if f.facts.has_explicit_duration {
-                            atype_delta += 0.07;
-                        } else if f.facts.has_month_or_date {
-                            atype_delta += 0.05;
-                        } else if f.facts.has_digit || f.facts.has_num_word {
-                            atype_delta += 0.025;
-                        } else if f.is_question_turn >= 0.8 {
-                            atype_delta -= 0.05;
-                        } else {
-                            atype_delta -= 0.03;
-                        }
-                    } else if is_where_q {
-                        if f.facts.proper_noun_count >= 1 {
-                            atype_delta += if f.facts.has_role_or_venue_prep {
-                                0.085
+                        } else if is_where_q {
+                            if f.facts.proper_noun_count >= 1 {
+                                atype_delta += if f.facts.has_role_or_venue_prep {
+                                    0.085
+                                } else {
+                                    0.055
+                                };
+                            } else if f.is_question_turn >= 0.8 || f.unanswered_q_trap >= 0.8 {
+                                atype_delta -= 0.18;
                             } else {
-                                0.055
-                            };
-                        } else if f.is_question_turn >= 0.8 || f.unanswered_q_trap >= 0.8 {
-                            atype_delta -= 0.18;
-                        } else {
-                            atype_delta -= 0.095;
+                                atype_delta -= 0.095;
+                            }
                         }
                     }
                     let eff_coref = inputs[pos].session_coref_lex.max(scored[s_idx].6);
-                    let coref_delta = if !is_recency_tie_q
+                    let coref_delta = if !doc_source
+                        && !is_recency_tie_q
                         && eff_coref >= 0.40
                         && f.facts.density >= 0.18
                         && f.unanswered_q_trap < 0.5
@@ -4936,7 +4955,8 @@ impl Substrate {
                         0.0
                     };
                     let recency_margin = 0.22;
-                    let recency_tie_delta = if is_recency_tie_q
+                    let recency_tie_delta = if !doc_source
+                        && is_recency_tie_q
                         && (top1_key - scored[s_idx].0) <= recency_margin
                         && (scored[s_idx].6 >= 0.14 || inputs[pos].fast_bi_cos >= 0.45)
                     {
@@ -4949,7 +4969,8 @@ impl Substrate {
                             }
                         }
                         rt
-                    } else if is_previous_q
+                    } else if !doc_source
+                        && is_previous_q
                         && (top1_key - scored[s_idx].0) <= 0.22
                         && (scored[s_idx].6 >= 0.14 || inputs[pos].fast_bi_cos >= 0.45)
                     {
@@ -10646,7 +10667,16 @@ mod tests {
             );
             assert_eq!(super::conversational_session_id(src), None, "{src}");
         }
-        assert!(!super::is_non_conversational_doc_source("role:user,session_9"));
+        assert!(!super::is_non_conversational_doc_source(
+            "role:user,session_9"
+        ));
+        assert!(!super::is_non_conversational_doc_source(
+            "corpus:codex:user,session_001"
+        ));
+        assert_eq!(
+            super::conversational_session_id("corpus:codex:user,session_001"),
+            Some("session_001")
+        );
         assert_eq!(
             super::conversational_session_id("role:user, session_9"),
             Some("session_9")
@@ -10656,11 +10686,117 @@ mod tests {
     }
 
     #[test]
+    fn stage7d_rerank_does_not_penalize_markdown_corpus_docs() {
+        let mut s = substrate("stage7d-corpus-markdown");
+        s.set_noise_enabled(false);
+        s.set_stage4a_scoring(true);
+
+        // Construct minimal valid WM7D v4 spore (version 4, zeroed preference/MLP heads).
+        let vocab = [
+            "[PAD]",
+            "[UNK]",
+            "[CLS]",
+            "[SEP]",
+            "receipt",
+            "verify",
+            "signature",
+            "faq",
+        ];
+        let vocab_blob = vocab.join("\n").into_bytes();
+        let vs = vocab.len();
+        let d = 96usize;
+        let bn = 24usize;
+        let md = 40usize;
+        let hidden = 64usize;
+        let pref_hidden = 48usize;
+        let mut raw = Vec::new();
+        raw.extend_from_slice(crate::rerank_spore::WM7D_V4_MAGIC);
+        for &v in &[
+            vs as u32,
+            d as u32,
+            bn as u32,
+            3u32,
+            md as u32,
+            hidden as u32,
+            28u32,
+            128u32,
+            vocab_blob.len() as u32,
+        ] {
+            raw.extend_from_slice(&v.to_le_bytes());
+        }
+        raw.extend_from_slice(&vocab_blob);
+        let mut emb_i8 = vec![0i8; vs * d];
+        emb_i8[4 * d] = 100;
+        emb_i8[5 * d] = 100;
+        emb_i8[6 * d] = 100;
+        emb_i8[7 * d] = 100;
+        for b in emb_i8 {
+            raw.push(b as u8);
+        }
+        let push_f32s = |buf: &mut Vec<u8>, vals: &[f32]| {
+            for &x in vals {
+                buf.extend_from_slice(&x.to_le_bytes());
+            }
+        };
+        push_f32s(&mut raw, &vec![0.01f32; vs]);
+        push_f32s(&mut raw, &vec![0.0f32; d * 3]);
+        push_f32s(&mut raw, &vec![0.0f32; bn * d]);
+        push_f32s(&mut raw, &vec![0.0f32; d * bn]);
+        push_f32s(&mut raw, &vec![0.0f32; d * 3]);
+        push_f32s(&mut raw, &vec![0.0f32; bn * d]);
+        push_f32s(&mut raw, &vec![0.0f32; d * bn]);
+        push_f32s(&mut raw, &vec![0.0f32; d + 2]);
+        push_f32s(&mut raw, &[0.0f32]);
+        push_f32s(&mut raw, &[1.0f32]);
+        push_f32s(&mut raw, &vec![0.0f32; md]);
+        push_f32s(&mut raw, &vec![1.0f32; md]);
+        push_f32s(&mut raw, &vec![0.0f32; md]);
+        push_f32s(&mut raw, &vec![0.0f32; hidden * md]);
+        push_f32s(&mut raw, &vec![0.0f32; hidden * d]);
+        push_f32s(&mut raw, &vec![0.0f32; hidden]);
+        push_f32s(&mut raw, &vec![0.0f32; hidden]);
+        push_f32s(&mut raw, &[0.0f32]);
+        push_f32s(&mut raw, &vec![0.0f32; d + 1]);
+        push_f32s(&mut raw, &vec![0.0f32; d + 1]);
+        push_f32s(&mut raw, &vec![0.0f32; d * d]);
+        push_f32s(&mut raw, &vec![0.0f32; d * d]);
+        raw.extend_from_slice(&(pref_hidden as u32).to_le_bytes());
+        push_f32s(&mut raw, &vec![0.0f32; md]);
+        push_f32s(&mut raw, &vec![0.0f32; pref_hidden * md]);
+        push_f32s(&mut raw, &vec![0.0f32; pref_hidden * d]);
+        push_f32s(&mut raw, &vec![0.0f32; pref_hidden]);
+        push_f32s(&mut raw, &vec![0.0f32; pref_hidden]);
+        push_f32s(&mut raw, &[0.0f32]);
+
+        let spore = std::sync::Arc::new(
+            crate::rerank_spore::Wm7dRerankSpore::from_bytes(&raw).expect("synthetic v4 spore"),
+        );
+        s.set_rerank_spore(Some(spore));
+
+        let canonical_guide = "\n### How to Verify Receipt Signatures\n**1. Canonical steps**\n* Verify receipt signature and digest chain.\n* Confirm receipt verification completes.\n";
+        let plain_faq = "FAQ glossary note mentions verify receipt briefly.";
+        let ids = s.remember_batch(&[
+            item_src(
+                canonical_guide,
+                "corpus:guide:guide/how-to-verify-receipts.md#0",
+            ),
+            item_src(plain_faq, "corpus:guide:guide/faq.md#1"),
+        ]);
+        let guide_id = *ids[0].as_ref().unwrap();
+        let hits = s.recall_expect(&q("how to verify receipt signature"));
+        assert_eq!(
+            hits[0].id, guide_id,
+            "structured Markdown corpus guide must not receive -0.20 speaker penalty: {hits:?}"
+        );
+    }
+
+    #[test]
     fn stage4a_does_not_diffuse_adjacent_corpus_doc_sources() {
         let mut s = substrate("stage4a-corpus-nodiffuse");
         s.set_noise_enabled(false);
         s.set_stage4a_scoring(true);
-        let unrelated = "The quarterly ledger lists oak furniture shipments and linen tariffs only.";
+        let unrelated =
+            "The quarterly ledger lists oak furniture shipments and linen tariffs only.";
         let mut assistant =
             String::from("I'd be happy to recommend zircon teapot glaze for the kiln.\n");
         while assistant.len() < 180 {

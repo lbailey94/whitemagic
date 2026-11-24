@@ -678,8 +678,8 @@ fn dispatch_http_json_with_profile(
             crate::receipt_verify::parse_strict_json(body).map_err(|error| error.to_string())
         });
     let Ok(request) = parsed else {
-        let response =
-            dispatch_json_with_profile(backend, body, profile_override).unwrap_or_else(|| "{}".into());
+        let response = dispatch_json_with_profile(backend, body, profile_override)
+            .unwrap_or_else(|| "{}".into());
         return ("400 Bad Request".into(), response);
     };
     let version_header = headers.get("mcp-protocol-version").map(String::as_str);
@@ -2502,7 +2502,12 @@ mod tests {
         std::fs::remove_dir_all(store).expect("remove isolated firebreak fixture");
     }
 
-    fn http_post(ctx: Arc<ServerCtx>, target: &str, extra_headers: &str, payload: &Value) -> String {
+    fn http_post(
+        ctx: Arc<ServerCtx>,
+        target: &str,
+        extra_headers: &str,
+        payload: &Value,
+    ) -> String {
         let body = payload.to_string();
         let req = format!(
             "POST {target} HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\n{extra_headers}Content-Length: {}\r\n\r\n{body}",
@@ -2513,10 +2518,8 @@ mod tests {
 
     #[test]
     fn http_multi_profile_negotiation_and_readonly_preservation() {
-        let store = std::env::temp_dir().join(format!(
-            "wm-http-multiprofile-{}",
-            uuid::Uuid::new_v4()
-        ));
+        let store =
+            std::env::temp_dir().join(format!("wm-http-multiprofile-{}", uuid::Uuid::new_v4()));
         let substrate = Substrate::open(&store, None, wm_gen3_core::constitution::default_view())
             .expect("open isolated multi-profile fixture");
         let backend = McpBackend::gen3(substrate, &store, McpProfile::Full, true);
@@ -2561,7 +2564,10 @@ mod tests {
             ("/mcp", "X-WM-Profile: codemode\r\n"),
         ] {
             let resp = http_post(Arc::clone(&ctx), target, headers, &list_req);
-            assert!(resp.starts_with("HTTP/1.1 200 OK"), "{target} {headers}: {resp}");
+            assert!(
+                resp.starts_with("HTTP/1.1 200 OK"),
+                "{target} {headers}: {resp}"
+            );
             let body = response_json(&resp);
             assert_eq!(body["result"]["_meta"]["profile"], json!("codemode"));
             let tools = body["result"]["tools"].as_array().expect("tools array");
@@ -2587,9 +2593,16 @@ mod tests {
                 }
             }),
         );
-        assert!(perceive_resp.starts_with("HTTP/1.1 200 OK"), "{perceive_resp}");
+        assert!(
+            perceive_resp.starts_with("HTTP/1.1 200 OK"),
+            "{perceive_resp}"
+        );
         let perceive_json = response_json(&perceive_resp);
-        assert_eq!(perceive_json["result"]["isError"], json!(false), "{perceive_json}");
+        assert_eq!(
+            perceive_json["result"]["isError"],
+            json!(false),
+            "{perceive_json}"
+        );
 
         let exec_resp = http_post(
             Arc::clone(&ctx),
@@ -2637,7 +2650,11 @@ mod tests {
             }),
         );
         let mutate_json = response_json(&mutate_resp);
-        assert_eq!(mutate_json["result"]["isError"], json!(true), "{mutate_json}");
+        assert_eq!(
+            mutate_json["result"]["isError"],
+            json!(true),
+            "{mutate_json}"
+        );
         assert!(
             mutate_json["result"]["content"][0]["text"]
                 .as_str()
