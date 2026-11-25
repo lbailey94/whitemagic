@@ -394,14 +394,15 @@ pub fn classify_hardware_tier(caps: &HostCapabilities) -> HardwareTier {
 /// Auto-select the strongest qualified Mandala confinement tier for the probed host.
 #[must_use]
 pub fn select_confinement_plan(caps: &HostCapabilities) -> ConfinementPlan {
-    let landlock_ready = caps.landlock_active
-        && caps.landlock_abi_est.unwrap_or(0) >= 4
-        && caps.has_wm_sandbox;
+    let landlock_ready =
+        caps.landlock_active && caps.landlock_abi_est.unwrap_or(0) >= 4 && caps.has_wm_sandbox;
 
     if landlock_ready && caps.has_bwrap {
         ConfinementPlan {
             tier: ConfinementTier::BwrapLandlock,
-            runner_profile: ConfinementTier::BwrapLandlock.runner_profile_id().to_string(),
+            runner_profile: ConfinementTier::BwrapLandlock
+                .runner_profile_id()
+                .to_string(),
             burst_runner_profile: Some(
                 ConfinementTier::LandlockDirect
                     .runner_profile_id()
@@ -561,8 +562,14 @@ pub fn analyze_telemetry_and_tune(
             }
             if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
                 summary.squeezed_cmds += 1;
-                summary.squeeze_raw_bytes += v.get("raw").and_then(serde_json::Value::as_u64).unwrap_or(0);
-                summary.squeeze_out_bytes += v.get("out").and_then(serde_json::Value::as_u64).unwrap_or(0);
+                summary.squeeze_raw_bytes += v
+                    .get("raw")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or(0);
+                summary.squeeze_out_bytes += v
+                    .get("out")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or(0);
             }
         }
         if summary.squeeze_raw_bytes > 0 {
@@ -628,7 +635,10 @@ pub fn analyze_telemetry_and_tune(
                 .to_string(),
         );
     }
-    if tier != HardwareTier::Micro && suite.tricameral_spores.is_empty() && suite.wm_models.is_some() {
+    if tier != HardwareTier::Micro
+        && suite.tricameral_spores.is_empty()
+        && suite.wm_models.is_some()
+    {
         summary.recommendations.push(format!(
             "Host qualifies for {} tier; run `wm-models pull {}` for $0 local routing & Kekkai gates",
             tier.as_str(),
@@ -667,7 +677,11 @@ pub fn synthesize_model_tuning(
             ModelFamily::Claude4
         } else if low.contains("grok") {
             ModelFamily::Grok4
-        } else if low.contains("gpt") || low.contains("codex") || low.contains("o3") || low.contains("o4") {
+        } else if low.contains("gpt")
+            || low.contains("codex")
+            || low.contains("o3")
+            || low.contains("o4")
+        {
             ModelFamily::OpenAiCodex
         } else {
             ModelFamily::LocalSmall
@@ -788,23 +802,16 @@ fn compute_single_writer_plan(specs: &[ClientSpec]) -> (Option<String>, Vec<Stri
     let mut turbo_hosts = Vec::new();
 
     for spec in specs {
-        match spec.id {
-            "antigravity" => {
-                if !turbo_hosts.iter().any(|h| h == "agy") {
-                    turbo_hosts.push("agy".to_string());
-                }
+        let host_key = match spec.id {
+            "antigravity" => Some("agy"),
+            "cursor" => Some("cursor"),
+            "codex" => Some("codex"),
+            _ => None,
+        };
+        if let Some(key) = host_key {
+            if !turbo_hosts.iter().any(|h| h == key) {
+                turbo_hosts.push(key.to_string());
             }
-            "cursor" => {
-                if !turbo_hosts.iter().any(|h| h == "cursor") {
-                    turbo_hosts.push("cursor".to_string());
-                }
-            }
-            "codex" => {
-                if !turbo_hosts.iter().any(|h| h == "codex") {
-                    turbo_hosts.push("codex".to_string());
-                }
-            }
-            _ => {}
         }
         if primary.is_none() && setup::has_active_writable_whitemagic_server(spec) {
             primary = Some(spec.label.to_string());
@@ -849,8 +856,7 @@ fn write_profile_atomic(home: Option<&Path>, profile: &GrimoireProfile) -> Resul
         .map_err(|e| format!("profile serialization failed: {e}"))?;
     std::fs::write(&tmp, format!("{body}\n"))
         .map_err(|e| format!("failed writing {}: {e}", tmp.display()))?;
-    std::fs::rename(&tmp, &dst)
-        .map_err(|e| format!("failed committing {}: {e}", dst.display()))?;
+    std::fs::rename(&tmp, &dst).map_err(|e| format!("failed committing {}: {e}", dst.display()))?;
     Ok(dst)
 }
 
@@ -974,32 +980,36 @@ pub fn run_grimoire_with_home_and_options(
     // ----------------------------------------------------
     let t_conf = Instant::now();
     let confinement = select_confinement_plan(&caps);
-    let (conf_status, conf_summary, conf_detail) = if let Some(ref deg) = confinement.degraded_reason {
-        (
-            StepStatus::Warn,
-            format!("Confinement profile: {} (degraded)", confinement.runner_profile),
-            deg.clone(),
-        )
-    } else {
-        let burst = confinement
-            .burst_runner_profile
-            .as_deref()
-            .map(|b| format!(" · burst fast-path: {b}"))
-            .unwrap_or_default();
-        (
-            StepStatus::Ok,
-            format!("Confinement profile: {}", confinement.runner_profile),
-            format!(
-                "Landlock={} (ABI≈{}) · bwrap={} · wm-sandbox={} · kvm={}{}",
-                caps.landlock_active,
-                caps.landlock_abi_est.unwrap_or(0),
-                caps.has_bwrap,
-                caps.has_wm_sandbox,
-                caps.has_kvm,
-                burst
-            ),
-        )
-    };
+    let (conf_status, conf_summary, conf_detail) =
+        if let Some(ref deg) = confinement.degraded_reason {
+            (
+                StepStatus::Warn,
+                format!(
+                    "Confinement profile: {} (degraded)",
+                    confinement.runner_profile
+                ),
+                deg.clone(),
+            )
+        } else {
+            let burst = confinement
+                .burst_runner_profile
+                .as_deref()
+                .map(|b| format!(" · burst fast-path: {b}"))
+                .unwrap_or_default();
+            (
+                StepStatus::Ok,
+                format!("Confinement profile: {}", confinement.runner_profile),
+                format!(
+                    "Landlock={} (ABI≈{}) · bwrap={} · wm-sandbox={} · kvm={}{}",
+                    caps.landlock_active,
+                    caps.landlock_abi_est.unwrap_or(0),
+                    caps.has_bwrap,
+                    caps.has_wm_sandbox,
+                    caps.has_kvm,
+                    burst
+                ),
+            )
+        };
     steps.push(GrimoireStep {
         name: "confinement",
         status: conf_status,
@@ -1156,7 +1166,10 @@ pub fn run_grimoire_with_home_and_options(
             if seeded > 0 {
                 format!("Genesis seed initialized with {seeded} foundational guide records.")
             } else {
-                format!("Existing guide galaxy verified with {} records.", g.record_count)
+                format!(
+                    "Existing guide galaxy verified with {} records.",
+                    g.record_count
+                )
             },
         )
     } else if opts.plan_configs {
@@ -1571,7 +1584,10 @@ mod tests {
         assert_eq!(classify_hardware_tier(&base_caps), HardwareTier::Standard);
         let c1 = select_confinement_plan(&base_caps);
         assert_eq!(c1.tier, ConfinementTier::BwrapLandlock);
-        assert_eq!(c1.burst_runner_profile.as_deref(), Some("landlock-wm-direct-v1"));
+        assert_eq!(
+            c1.burst_runner_profile.as_deref(),
+            Some("landlock-wm-direct-v1")
+        );
         assert!(c1.degraded_reason.is_none());
 
         let mut no_bwrap = base_caps.clone();
@@ -1594,11 +1610,13 @@ mod tests {
         assert!(c3.degraded_reason.is_some());
 
         let empty_tel = TelemetryTuningSummary::default();
-        let t_local = synthesize_model_tuning(ModelFamily::LocalSmall, HardwareTier::Micro, &empty_tel);
+        let t_local =
+            synthesize_model_tuning(ModelFamily::LocalSmall, HardwareTier::Micro, &empty_tel);
         assert_eq!(t_local.clamp_read_lines, 120);
         assert_eq!(t_local.recommended_mcp_profile, "minimal");
 
-        let t_grok = synthesize_model_tuning(ModelFamily::Grok4, HardwareTier::Sovereign, &empty_tel);
+        let t_grok =
+            synthesize_model_tuning(ModelFamily::Grok4, HardwareTier::Sovereign, &empty_tel);
         assert_eq!(t_grok.context_warn_tokens, 250_000);
     }
 

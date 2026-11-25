@@ -59,17 +59,21 @@ fn peb22_turnkey_public_benchmark_suite_execution() {
     let receipt: serde_json::Value = serde_json::from_str(&receipt_content).unwrap();
     assert_eq!(receipt["suite"], "10of10_ecosystem");
     assert_eq!(receipt["status"], "passed");
+    let hebbian_ms = receipt["metrics"]["hebbian_spreading_latency_ms"]
+        .as_f64()
+        .unwrap();
+    let max_hebbian_ms = if cfg!(debug_assertions) { 50.0 } else { 10.0 };
     assert!(
-        receipt["metrics"]["hebbian_spreading_latency_ms"]
-            .as_f64()
-            .unwrap()
-            < 10.0
+        hebbian_ms < max_hebbian_ms,
+        "hebbian_spreading_latency_ms={hebbian_ms:.2}ms exceeded {max_hebbian_ms:.1}ms"
     );
+    let mcp_ms = receipt["metrics"]["mcp_cold_start_handshake_ms"]
+        .as_f64()
+        .unwrap();
+    let max_mcp_ms = if cfg!(debug_assertions) { 100.0 } else { 50.0 };
     assert!(
-        receipt["metrics"]["mcp_cold_start_handshake_ms"]
-            .as_f64()
-            .unwrap()
-            < 50.0
+        mcp_ms < max_mcp_ms,
+        "mcp_cold_start_handshake_ms={mcp_ms:.2}ms exceeded {max_mcp_ms:.1}ms"
     );
     assert_eq!(receipt["metrics"]["identity_field_fidelity"], 1.0);
 

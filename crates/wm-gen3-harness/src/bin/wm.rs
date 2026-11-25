@@ -1848,13 +1848,14 @@ fn main() {
                 suite_mode: suite,
                 write_mode: write,
             };
-            let report = match wm_gen3_harness::grimoire::run_grimoire_with_options(&store_path, &opts) {
-                Ok(r) => r,
-                Err(e) => {
-                    eprintln!("Grimoire run failed: {e}");
-                    std::process::exit(1);
-                }
-            };
+            let report =
+                match wm_gen3_harness::grimoire::run_grimoire_with_options(&store_path, &opts) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        eprintln!("Grimoire run failed: {e}");
+                        std::process::exit(1);
+                    }
+                };
             if write {
                 if let Err(e) =
                     wm_gen3_harness::setup::run_setup(&store_path, None, true, false, false, json)

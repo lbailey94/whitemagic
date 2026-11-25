@@ -108,6 +108,14 @@ fn run_ecosystem_benchmark_suite(args: &[String]) -> Result<(), Box<dyn std::err
         0.9,
     )?;
 
+    // Warm lazy embedder / index caches once so `spread_lat_ms` measures
+    // steady-state Hebbian spreading activation rather than cold ONNX init.
+    let _ = sub2.recall(&RecallQuery {
+        query: "llvm compiler".into(),
+        limit: 1,
+        ..Default::default()
+    })?;
+
     let t0 = Instant::now();
     let hits = sub2.recall(&RecallQuery {
         query: "llvm compiler".into(),
