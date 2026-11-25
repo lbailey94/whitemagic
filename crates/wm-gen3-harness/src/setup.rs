@@ -113,7 +113,13 @@ pub fn specs_in(home: Option<&Path>) -> Vec<ClientSpec> {
         },
         ClientSpec {
             id: "antigravity",
-            label: "Antigravity CLI",
+            label: "Antigravity",
+            config_path: h.join(".gemini/config/mcp_config.json"),
+            kind: ConfigKind::McpServersJson,
+        },
+        ClientSpec {
+            id: "antigravity-legacy",
+            label: "Antigravity CLI (legacy)",
             config_path: h.join(".gemini/antigravity-cli/settings.json"),
             kind: ConfigKind::McpServersJson,
         },
@@ -137,6 +143,13 @@ pub fn installed(spec: &ClientSpec) -> bool {
 pub fn installed_in(home: Option<&Path>, spec: &ClientSpec) -> bool {
     if spec.config_path.exists() {
         return true;
+    }
+    if spec.id == "antigravity-legacy" {
+        return false;
+    }
+    if spec.id == "antigravity" {
+        let h = home_in(home);
+        return h.join(".gemini/config").exists() || h.join(".gemini/antigravity-cli").exists();
     }
     if spec.id == "claude" {
         return home_in(home).join(".claude").exists();
@@ -967,7 +980,7 @@ fn entry_matches(spec: &ClientSpec, exe: &Path, store_path: &Path, readonly: boo
     }
 }
 
-fn has_active_writable_whitemagic_server(spec: &ClientSpec) -> bool {
+pub(crate) fn has_active_writable_whitemagic_server(spec: &ClientSpec) -> bool {
     let Ok(raw) = std::fs::read_to_string(&spec.config_path) else {
         return false;
     };

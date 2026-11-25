@@ -239,22 +239,32 @@ fi
 
 echo "Installing to ${INSTALL_DIR}..."
 mkdir -p "$INSTALL_DIR"
-mv "${BINARY_PATH}" "${INSTALL_DIR}/wm"
-chmod +x "${INSTALL_DIR}/wm"
+cp "${BINARY_PATH}" "${INSTALL_DIR}/wm.tmp.$$"
+chmod +x "${INSTALL_DIR}/wm.tmp.$$"
+mv -f "${INSTALL_DIR}/wm.tmp.$$" "${INSTALL_DIR}/wm"
+rm -f "${BINARY_PATH}"
 
-# Install command shims. The WM launcher resolves Sangha from an explicit
-# script path instead of dispatching back through this `sangha` shim.
-cat << 'EOF' > "${INSTALL_DIR}/sangha"
+# Install command shims non-destructively. Preserve existing symlinks or standalone
+# executables (e.g. a symlink to Sangha) unless WM_FORCE_SHIMS=1 is explicitly set.
+install_shim() {
+    local name="$1"
+    local subcmd="$2"
+    local target="${INSTALL_DIR}/${name}"
+    if [ "${WM_FORCE_SHIMS:-0}" != "1" ] && { [ -L "$target" ] || [ -e "$target" ]; }; then
+        if ! grep -q "exec \"\$(dirname \"\$0\")/wm\" ${subcmd}" "$target" 2>/dev/null; then
+            echo "[preserve] Existing ${target} left untouched (set WM_FORCE_SHIMS=1 to replace)"
+            return 0
+        fi
+    fi
+    cat << EOF > "${target}.tmp.$$"
 #!/bin/sh
-exec "$(dirname "$0")/wm" sangha "$@"
+exec "\$(dirname "\$0")/wm" ${subcmd} "\$@"
 EOF
-chmod +x "${INSTALL_DIR}/sangha"
-
-cat << 'EOF' > "${INSTALL_DIR}/cpr"
-#!/bin/sh
-exec "$(dirname "$0")/wm" cpr "$@"
-EOF
-chmod +x "${INSTALL_DIR}/cpr"
+    chmod +x "${target}.tmp.$$"
+    mv -f "${target}.tmp.$$" "$target"
+}
+install_shim sangha sangha
+install_shim cpr cpr
 
 # Local arrival marker (best effort; never fails the install).
 write_install_marker
@@ -276,7 +286,7 @@ echo "  wm --version"
 echo ""
 echo "Get started (in this order):"
 case "$VERSION" in
-    v10.*|10.*)
+    v10.*|10.*|v11.*|11.*|v12.*|12.*)
         echo "  1. \"${INSTALL_DIR}/wm\" --store \"\$HOME/.local/share/whitemagic/gen3\" grimoire --plan"
         echo "     # checks/initializes this isolated store; previews clients without editing their configs"
         echo "  2. \"${INSTALL_DIR}/wm\" --store \"\$HOME/.local/share/whitemagic/gen3\" serve --profile cyberbrain"

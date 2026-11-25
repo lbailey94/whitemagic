@@ -58,11 +58,15 @@ fn client_config_candidates(home: &Path) -> Vec<(&'static str, PathBuf)> {
         ("OpenCode", home.join(".config/opencode/opencode.jsonc")),
         ("Codex CLI", home.join(".codex/config.toml")),
         (
-            "Antigravity CLI",
+            "Antigravity",
+            home.join(".gemini/config/mcp_config.json"),
+        ),
+        (
+            "Antigravity CLI (legacy)",
             home.join(".gemini/antigravity-cli/settings.json"),
         ),
         (
-            "Antigravity",
+            "Antigravity (legacy)",
             home.join(".gemini/antigravity/mcp_config.json"),
         ),
     ]

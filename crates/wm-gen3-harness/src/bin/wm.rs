@@ -512,17 +512,26 @@ enum Commands {
         #[arg(long)]
         request_json: String,
     },
-    /// Run guided first-run onboarding pass, surface the starter guide galaxy, and verify setup
+    /// Run guided adaptive first-run onboarding pass, surface starter guide galaxy, and synthesize profile
     Grimoire {
         /// Output report as JSON for agent consumption
         #[arg(long)]
         json: bool,
-        /// Plan detected MCP client configuration changes without modifying any files
+        /// Plan detected MCP client and suite configuration changes without modifying any files
         #[arg(long)]
         plan: bool,
         /// Write detected MCP client configurations using backup-verified setup
         #[arg(long)]
         write: bool,
+        /// Target model family for adaptive tuning (auto, gemini4, claude4, openai-codex, grok4, local-small)
+        #[arg(long, default_value = "auto")]
+        model: String,
+        /// Highlight telemetry self-tuning recommendations from wm-squeeze/SIM/telemetry ledgers
+        #[arg(long)]
+        tune: bool,
+        /// Include WhiteMagic Turbo suite host wiring (agy/cursor/codex hooks, wm_fast, rules, agents)
+        #[arg(long)]
+        suite: bool,
     },
     /// Configure MCP clients safely with expanded paths, timestamped backups, and parse-back verification
     Setup {
@@ -1817,19 +1826,54 @@ fn main() {
     match cli.command {
         Commands::BuildInfo { json } => print_build_identity(json),
         Commands::AnswerContract { .. } => unreachable!("handled before store resolution"),
-        Commands::Grimoire { json, plan, write } => {
-            if let Err(e) =
-                wm_gen3_harness::grimoire::run_grimoire(&store_path, json, plan && !write)
-            {
-                eprintln!("Grimoire run failed: {e}");
-                std::process::exit(1);
-            }
+        Commands::Grimoire {
+            json,
+            plan,
+            write,
+            model,
+            tune,
+            suite,
+        } => {
+            let Some(model_family) = wm_gen3_harness::grimoire::ModelFamily::parse(&model) else {
+                eprintln!(
+                    "Unknown --model family '{model}' (expected: auto, gemini4, claude4, openai-codex, grok4, local-small)"
+                );
+                std::process::exit(2);
+            };
+            let opts = wm_gen3_harness::grimoire::GrimoireOptions {
+                json_mode: json,
+                plan_configs: plan && !write,
+                model_family,
+                tune_mode: tune,
+                suite_mode: suite,
+                write_mode: write,
+            };
+            let report = match wm_gen3_harness::grimoire::run_grimoire_with_options(&store_path, &opts) {
+                Ok(r) => r,
+                Err(e) => {
+                    eprintln!("Grimoire run failed: {e}");
+                    std::process::exit(1);
+                }
+            };
             if write {
                 if let Err(e) =
                     wm_gen3_harness::setup::run_setup(&store_path, None, true, false, false, json)
                 {
                     eprintln!("Grimoire setup --write failed: {e}");
                     std::process::exit(1);
+                }
+            }
+            if suite {
+                match wm_gen3_harness::grimoire::dispatch_suite_wiring(&report.profile, !write) {
+                    Ok(msg) => {
+                        if !json {
+                            println!("[suite] {msg}");
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Grimoire suite wiring failed: {e}");
+                        std::process::exit(1);
+                    }
                 }
             }
         }
