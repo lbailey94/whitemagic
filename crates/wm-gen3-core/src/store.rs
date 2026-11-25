@@ -16,6 +16,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use lmdb::{Cursor, Database, Transaction};
+pub use wm_gen3_shm::lmdb_readers::{ReaderSlotInfo, ReaderTableSnapshot};
 use zeroize::Zeroizing;
 
 use crate::at_rest::{
@@ -453,6 +454,33 @@ fn decode_record(bytes: &[u8]) -> Result<EvidenceRecord, StoreError> {
     ))
 }
 
+pub const DEFAULT_MAX_READERS: u32 = 1024;
+
+/// Maximum concurrent LMDB readers (`WM_MAX_READERS`, clamped `126..=32768`,
+/// defaulting to `1024` vs liblmdb's default `126`).
+#[must_use]
+pub fn configured_max_readers() -> u32 {
+    if let Ok(raw) = std::env::var("WM_MAX_READERS") {
+        if let Ok(val) = raw.trim().parse::<u32>() {
+            return val.clamp(126, 32_768);
+        }
+    }
+    DEFAULT_MAX_READERS
+}
+
+pub(crate) fn begin_ro_txn_with_reclaim(
+    env: &lmdb::Environment,
+) -> Result<lmdb::RoTransaction<'_>, lmdb::Error> {
+    match env.begin_ro_txn() {
+        Ok(txn) => Ok(txn),
+        Err(lmdb::Error::ReadersFull) => {
+            let _ = wm_gen3_shm::lmdb_readers::clear_stale_readers(env);
+            env.begin_ro_txn()
+        }
+        Err(e) => Err(e),
+    }
+}
+
 fn configured_map_size() -> usize {
     if let Ok(gb_str) = std::env::var("WM_MAP_SIZE_GB") {
         if let Ok(gb) = gb_str.parse::<usize>() {
@@ -488,8 +516,13 @@ impl Store {
             Self::inspect_existing(path)?;
         }
         let mut builder = lmdb::Environment::new();
-        builder.set_max_dbs(16).set_map_size(configured_map_size());
+        builder
+            .set_max_dbs(16)
+            .set_max_readers(configured_max_readers())
+            .set_map_size(configured_map_size())
+            .set_flags(lmdb::EnvironmentFlags::NO_TLS);
         let env = builder.open_with_permissions(path, 0o600)?;
+        let _ = wm_gen3_shm::lmdb_readers::clear_stale_readers(&env);
         if fresh {
             Self::initialize_fresh(&env)?;
         }
@@ -504,6 +537,7 @@ impl Store {
         let mut builder = lmdb::Environment::new();
         builder
             .set_max_dbs(16)
+            .set_max_readers(configured_max_readers())
             .set_map_size(configured_map_size())
             .set_flags(lmdb::EnvironmentFlags::READ_ONLY | lmdb::EnvironmentFlags::NO_LOCK);
         let env = builder.open_with_permissions(path, 0o600)?;
@@ -528,15 +562,19 @@ impl Store {
                 lmdb::EnvironmentFlags::READ_ONLY | lmdb::EnvironmentFlags::NO_LOCK
             }
             InspectionPromise::ContentOnly | InspectionPromise::NoAudit => {
-                lmdb::EnvironmentFlags::READ_ONLY
+                lmdb::EnvironmentFlags::READ_ONLY | lmdb::EnvironmentFlags::NO_TLS
             }
         };
         let mut builder = lmdb::Environment::new();
         builder
             .set_max_dbs(16)
+            .set_max_readers(configured_max_readers())
             .set_map_size(configured_map_size())
             .set_flags(flags);
         let env = builder.open_with_permissions(path, 0o600)?;
+        if !matches!(promise, InspectionPromise::StrictZeroWrite) {
+            let _ = wm_gen3_shm::lmdb_readers::clear_stale_readers(&env);
+        }
         let mut store = Self::from_env(env, path, true)?;
         store.inspection_promise = Some(promise);
         Ok(store)
@@ -556,9 +594,11 @@ impl Store {
         let mut builder = lmdb::Environment::new();
         builder
             .set_max_dbs(16)
+            .set_max_readers(configured_max_readers())
             .set_map_size(configured_map_size())
-            .set_flags(lmdb::EnvironmentFlags::READ_ONLY);
+            .set_flags(lmdb::EnvironmentFlags::READ_ONLY | lmdb::EnvironmentFlags::NO_TLS);
         let env = builder.open_with_permissions(path, 0o600)?;
+        let _ = wm_gen3_shm::lmdb_readers::clear_stale_readers(&env);
         Self::validate_header(&env)
     }
 
@@ -645,7 +685,7 @@ impl Store {
 
     fn validate_header(env: &lmdb::Environment) -> Result<(), StoreError> {
         let default = env.open_db(None)?;
-        let txn = env.begin_ro_txn()?;
+        let txn = begin_ro_txn_with_reclaim(env)?;
         match txn.get(default, &META_INITIALIZING) {
             Ok(_) => return Err(StoreError::InterruptedInitialization),
             Err(lmdb::Error::NotFound) => {}
@@ -879,7 +919,7 @@ impl Store {
         // are re-read per batch below).
         let mut pending: Vec<u64> = Vec::new();
         {
-            let txn = self.env.begin_ro_txn()?;
+            let txn = self.begin_ro_txn()?;
             let mut cursor = txn.open_ro_cursor(self.records)?;
             for (key, value) in cursor.iter() {
                 report.scanned += 1;
@@ -973,8 +1013,32 @@ impl Store {
         self.readonly
     }
 
+    fn begin_ro_txn(&self) -> Result<lmdb::RoTransaction<'_>, StoreError> {
+        begin_ro_txn_with_reclaim(&self.env).map_err(StoreError::from)
+    }
+
+    /// Reclaim stale reader slots in this store's `lock.mdb` without disturbing active readers.
+    pub fn reclaim_stale_readers(&self) -> Result<usize, StoreError> {
+        wm_gen3_shm::lmdb_readers::clear_stale_readers(&self.env).map_err(StoreError::from)
+    }
+
+    /// Return the live/dead reader-slot breakdown for this handle's LMDB environment.
+    pub fn reader_table_snapshot(&self) -> Result<ReaderTableSnapshot, StoreError> {
+        wm_gen3_shm::lmdb_readers::inspect_readers(&self.env).map_err(StoreError::from)
+    }
+
+    /// Inspect `lock.mdb` reader slots at `path` without creating missing files.
+    pub fn inspect_reader_table(path: &Path) -> Result<Option<ReaderTableSnapshot>, StoreError> {
+        wm_gen3_shm::lmdb_readers::inspect_readers_at_path(path).map_err(StoreError::from)
+    }
+
+    /// Reclaim stale `lock.mdb` reader slots at `path` without stopping active processes.
+    pub fn reclaim_stale_readers_at_path(path: &Path) -> Result<usize, StoreError> {
+        wm_gen3_shm::lmdb_readers::reclaim_stale_readers_at_path(path).map_err(StoreError::from)
+    }
+
     pub fn realm_id(&self) -> Result<[u8; 16], StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let bytes = txn
             .get(self.default, &META_REALM_ID)
             .map_err(|_| StoreError::CorruptVersionHeader)?;
@@ -984,7 +1048,7 @@ impl Store {
     }
 
     pub fn epoch(&self) -> Result<u64, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let bytes = txn
             .get(self.default, &META_EPOCH)
             .map_err(|_| StoreError::CorruptVersionHeader)?;
@@ -997,7 +1061,7 @@ impl Store {
 
     /// Read the authority-relevant state together, with a private Store witness.
     pub(crate) fn authorization_snapshot(&self) -> Result<AuthorizationSnapshot, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let realm_id: [u8; 16] = txn
             .get(self.default, &META_REALM_ID)
             .map_err(|_| StoreError::CorruptVersionHeader)?
@@ -1020,7 +1084,7 @@ impl Store {
         &self,
         request: &IntakeRequest,
     ) -> Result<Option<CommitReceipt>, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let operation_id = request.operation_id();
         let key = operation_id.as_bytes();
         let receipt_bytes = match txn.get(self.receipts, key) {
@@ -1583,7 +1647,7 @@ impl Store {
     }
 
     pub fn get_record(&self, id: u64) -> Result<Option<EvidenceRecord>, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let db = self.records;
         match txn.get(db, &bytes_u64(id)) {
             Ok(bytes) => Ok(Some(self.decode_stored_record(id, bytes)?)),
@@ -1637,7 +1701,7 @@ impl Store {
     }
 
     pub fn iter_records(&self) -> Result<Vec<EvidenceRecord>, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let db = self.records;
         let mut cursor = txn.open_ro_cursor(db)?;
         let mut out = Vec::new();
@@ -1655,7 +1719,7 @@ impl Store {
         if limit == 0 {
             return Ok(Vec::new());
         }
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let db = self.records;
         let next_id = read_counter(&txn, self.default, META_NEXT_RECORD)?;
         let mut out = Vec::with_capacity(limit.min(next_id as usize));
@@ -1674,13 +1738,13 @@ impl Store {
     }
 
     pub fn record_count(&self) -> Result<usize, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let next_id = read_counter(&txn, self.default, META_NEXT_RECORD)?;
         Ok(next_id as usize)
     }
 
     pub fn postings(&self, term: &str) -> Result<Vec<u64>, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let db = self.postings;
         match txn.get(db, &term) {
             Ok(bytes) => Ok(rmp_serde::from_slice(bytes)?),
@@ -1714,7 +1778,7 @@ impl Store {
     }
 
     pub fn iter_relations(&self) -> Result<Vec<Relation>, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let db = self.relations;
         let mut cursor = txn.open_ro_cursor(db)?;
         let mut out = Vec::new();
@@ -1730,7 +1794,7 @@ impl Store {
     /// bump this in-store stamp in their own transaction instead. Missing
     /// (pre-stamp stores) reads as 0.
     fn read_relation_view_stamp(&self) -> Result<u64, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         match txn.get(self.default, &META_RELATION_VIEW) {
             Ok(bytes) if bytes.len() == 8 => Ok(u64::from_be_bytes(
                 bytes
@@ -1800,7 +1864,7 @@ impl Store {
     /// Tokenizer/format marker of the postings index, when the store carries
     /// one (absent on pre-marker stores and fresh environments).
     pub(crate) fn identity_index_marker(&self) -> Result<Option<String>, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         match txn.get(self.default, &META_IDENTITY_INDEX) {
             Ok(bytes) => Ok(Some(String::from_utf8_lossy(bytes).into_owned())),
             Err(lmdb::Error::NotFound) => Ok(None),
@@ -1933,7 +1997,7 @@ impl Store {
     }
 
     pub(crate) fn vector_state(&self, id: u64) -> Result<StoredVectorState, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let state: Result<StoredVectorState, StoreError> =
             match txn.get(self.embeddings, &bytes_u64(id)) {
                 Ok(bytes) => match decode_vector(bytes) {
@@ -1997,7 +2061,7 @@ impl Store {
         if max_records == 0 {
             return Ok((0, Vec::new(), after_record_id));
         }
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let start = match after_record_id {
             Some(id) => match id.checked_add(1) {
                 Some(next) => Some(bytes_u64(next)),
@@ -2063,7 +2127,7 @@ impl Store {
     }
 
     pub fn get_vector(&self, id: u64) -> Result<Option<Vec<f32>>, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         match txn.get(self.embeddings, &bytes_u64(id)) {
             Ok(bytes) => {
                 let Ok(vector) = decode_vector(bytes) else {
@@ -2086,7 +2150,7 @@ impl Store {
     }
 
     pub fn iter_vectors(&self) -> Result<Vec<(u64, Vec<f32>)>, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let mut cursor = txn.open_ro_cursor(self.embeddings)?;
         let mut out = Vec::new();
         for (key, bytes) in cursor.iter() {
@@ -2175,7 +2239,7 @@ impl Store {
         let mut to_remove: Vec<String> = Vec::new();
         let mut retained = 0usize;
         {
-            let txn = self.env.begin_ro_txn()?;
+            let txn = self.begin_ro_txn()?;
             let mut cursor = txn.open_ro_cursor(self.embed_cache)?;
             for (k, _) in cursor.iter() {
                 let key_str = String::from_utf8_lossy(k).into_owned();
@@ -2205,13 +2269,13 @@ impl Store {
     /// Number of derived cache entries (test/evidence helper; never canonical).
     #[cfg(test)]
     pub(crate) fn embedding_cache_len(&self) -> Result<usize, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let mut cursor = txn.open_ro_cursor(self.embed_cache)?;
         Ok(cursor.iter().count())
     }
 
     pub fn get_embedding_cache(&self, hash: &str) -> Result<Option<Vec<f32>>, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         match txn.get(self.embed_cache, &hash) {
             Ok(bytes) => Ok(Some(rmp_serde::from_slice(bytes)?)),
             Err(lmdb::Error::NotFound) => Ok(None),
@@ -2224,7 +2288,7 @@ impl Store {
     /// Read-only peek at the sweep counter. Disabled sweeps never allocate; they
     /// may still report the current counter value.
     pub(crate) fn peek_sweep_counter(&self) -> Result<u64, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         read_counter(&txn, self.default, META_SWEEP.as_bytes())
     }
 
@@ -2235,7 +2299,7 @@ impl Store {
         &self,
         limits: SweepLimits,
     ) -> Result<SweepPreflightData, StoreError> {
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let realm_id: [u8; 16] = txn
             .get(self.default, &META_REALM_ID)
             .map_err(|_| StoreError::CorruptVersionHeader)?
@@ -2664,7 +2728,7 @@ impl Store {
         operation_id: OperationId,
     ) -> Result<SweepOutcome, StoreError> {
         let key = operation_id.as_bytes();
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let bytes = match txn.get(self.receipts, key) {
             Ok(bytes) => bytes,
             Err(lmdb::Error::NotFound) => match txn.get(self.nullifiers, key) {
@@ -2737,7 +2801,7 @@ impl Store {
         operation_id: OperationId,
     ) -> Result<Option<SweepReceipt>, StoreError> {
         let key = operation_id.as_bytes();
-        let txn = self.env.begin_ro_txn()?;
+        let txn = self.begin_ro_txn()?;
         let bytes = match txn.get(self.receipts, key) {
             Ok(bytes) => bytes,
             Err(lmdb::Error::NotFound) => match txn.get(self.nullifiers, key) {
@@ -4298,6 +4362,27 @@ mod tests {
                 .get(&102)
                 .is_some_and(|edges| edges.iter().any(|(dst, _)| *dst == 101)),
             "associative edge from the other handle is observed too"
+        );
+    }
+
+    #[test]
+    fn store_sets_expanded_max_readers_and_no_tls_releases_slots() {
+        let tmp = TempStore::new("max-readers-no-tls");
+        let store = Store::open(&tmp.0).unwrap();
+        let before = store.reader_table_snapshot().unwrap();
+        assert_eq!(before.max_readers, configured_max_readers());
+        if std::env::var_os("WM_MAX_READERS").is_none() {
+            assert_eq!(before.max_readers, DEFAULT_MAX_READERS);
+        }
+        assert_eq!(before.occupied, 0);
+
+        let count = store.record_count().unwrap();
+        assert_eq!(count, 0);
+
+        let after = store.reader_table_snapshot().unwrap();
+        assert_eq!(
+            after.occupied, 0,
+            "NO_TLS must release reader slot as soon as RoTransaction drops"
         );
     }
 }

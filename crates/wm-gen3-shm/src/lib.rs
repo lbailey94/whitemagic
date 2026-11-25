@@ -5,12 +5,17 @@
 
 pub mod futex;
 pub mod layout;
+pub mod lmdb_readers;
 pub mod ring;
 pub mod stigmergy_matrix;
 pub mod tuple_table;
 
 pub use futex::{futex_wait, futex_wake};
 pub use layout::*;
+pub use lmdb_readers::{
+    ReaderSlotInfo, ReaderTableSnapshot, clear_stale_readers, inspect_readers,
+    inspect_readers_at_path, max_readers, reclaim_stale_readers_at_path,
+};
 pub use ring::{MpmcQueueHeader, ShmMpmcQueue};
 pub use stigmergy_matrix::{RawPheromone, ShmConflict, ShmStigmergyMatrix};
 pub use tuple_table::{RawTuple, ShmTupleTable};

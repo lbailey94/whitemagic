@@ -546,6 +546,9 @@ enum Commands {
         /// Output diagnostic report as JSON
         #[arg(long)]
         json: bool,
+        /// Reclaim stale LMDB reader slots from crashed processes without stopping live servers
+        #[arg(long)]
+        fix_readers: bool,
     },
     /// Initialize and provision a local WhiteMagic substrate store
     Init {
@@ -1849,14 +1852,16 @@ fn main() {
                 std::process::exit(1);
             }
         }
-        Commands::Doctor { json } => match wm_gen3_harness::doctor::run_doctor(&store_path, json) {
-            Ok(report) if !report.healthy => std::process::exit(1),
-            Ok(_) => {}
-            Err(e) => {
-                eprintln!("Doctor failed: {e}");
-                std::process::exit(1);
+        Commands::Doctor { json, fix_readers } => {
+            match wm_gen3_harness::doctor::run_doctor_with_options(&store_path, json, fix_readers) {
+                Ok(report) if !report.healthy => std::process::exit(1),
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!("Doctor failed: {e}");
+                    std::process::exit(1);
+                }
             }
-        },
+        }
         Commands::Init { force, bare } => {
             println!(
                 "Initializing WhiteMagic substrate at: {}",
@@ -1974,6 +1979,20 @@ fn main() {
                         configured_map_size_bytes(),
                     );
                     println!("Store Growth:     {}", render_store_size(&size_report));
+                    drop(substrate);
+                    if let Ok(Some(readers)) =
+                        wm_gen3_core::store::Store::inspect_reader_table(&store_path)
+                    {
+                        let warn = if readers.dead > 0 || readers.free == 0 {
+                            " [WARN: run 'wm doctor --fix-readers']"
+                        } else {
+                            ""
+                        };
+                        println!(
+                            "Reader Slots:     {} live / {} dead / {} max ({} free){warn}",
+                            readers.live, readers.dead, readers.max_readers, readers.free
+                        );
+                    }
                     println!("==================================================");
                 }
                 Err(e) => {

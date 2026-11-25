@@ -727,8 +727,7 @@ fn read_presence(env: &Environment) -> Result<KeyringPresence> {
             )));
         }
     };
-    let tx = env
-        .begin_ro_txn()
+    let tx = crate::store::begin_ro_txn_with_reclaim(env)
         .map_err(|e| mem_err(format!("LMDB ro_txn failed (at-rest keyring): {e}")))?;
     let presence = match tx.get(db, &KEYRING_META_KEY) {
         Ok(bytes) => match serde_json::from_slice::<KeyringMeta>(bytes) {
@@ -781,7 +780,7 @@ pub fn open_keyring_optional(env: &Environment) -> Result<Option<Database>> {
 /// Read-only status from a keyring DBI handle (never resolves the RK).
 pub fn read_status(env: &Environment, db: Database, store_dir: &Path) -> AtRestStatus {
     {
-        let tx = match env.begin_ro_txn() {
+        let tx = match crate::store::begin_ro_txn_with_reclaim(env) {
             Ok(tx) => tx,
             Err(e) => {
                 return AtRestStatus::Malformed {
@@ -1097,8 +1096,7 @@ fn unlock(
     meta: KeyringMeta,
 ) -> Result<AtRestState> {
     let rk = resolve_existing_root_key(store_dir, config, &meta)?;
-    let tx = env
-        .begin_ro_txn()
+    let tx = crate::store::begin_ro_txn_with_reclaim(env)
         .map_err(|e| mem_err(format!("LMDB ro_txn failed (at-rest unlock): {e}")))?;
 
     let check_blob = tx.get(db, &RK_CHECK_KEY).map_err(|e| {
@@ -1392,8 +1390,7 @@ const fn default_migration_ledger_version() -> u32 {
 /// row is the default (no migration has run); an unreadable row is a hard
 /// error (a corrupt ledger must never silently restart a migration).
 pub fn read_migration_ledger(env: &Environment, db: Database) -> Result<MigrationLedger> {
-    let tx = env
-        .begin_ro_txn()
+    let tx = crate::store::begin_ro_txn_with_reclaim(env)
         .map_err(|e| mem_err(format!("LMDB ro_txn failed (migration ledger): {e}")))?;
     let ledger = match tx.get(db, &MIGRATION_LEDGER_KEY) {
         Ok(bytes) => serde_json::from_slice::<MigrationLedger>(bytes).map_err(|e| {

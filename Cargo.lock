@@ -5076,6 +5076,8 @@ dependencies = [
  "bytemuck",
  "criterion",
  "libc",
+ "lmdb",
+ "lmdb-sys",
  "memmap2",
  "serde",
  "serde_json",

@@ -195,9 +195,25 @@ fn inspect_client_configs(home: Option<&Path>) -> DoctorCheck {
 
 /// Run a non-mutating diagnostic pass across store, embedding backend, client configs, and contract parity.
 pub fn run_doctor(store_path: &Path, json_mode: bool) -> Result<DoctorReport, String> {
+    run_doctor_with_options(store_path, json_mode, false)
+}
+
+/// Run diagnostics across store, LMDB reader table (optionally reclaiming stale slots),
+/// embedding backend, client configs, and contract parity.
+pub fn run_doctor_with_options(
+    store_path: &Path,
+    json_mode: bool,
+    fix_readers: bool,
+) -> Result<DoctorReport, String> {
     let home = std::env::var_os("HOME").map(PathBuf::from);
     let cache_dir = wm_gen3_core::embed_cache_dir();
-    run_doctor_with_home(store_path, json_mode, home.as_deref(), Some(&cache_dir))
+    run_doctor_with_home_and_options(
+        store_path,
+        json_mode,
+        home.as_deref(),
+        Some(&cache_dir),
+        fix_readers,
+    )
 }
 
 /// Testable core accepting explicit `home` and optional `embed_cache` directory.
@@ -206,6 +222,16 @@ pub fn run_doctor_with_home(
     json_mode: bool,
     home: Option<&Path>,
     embed_cache: Option<&Path>,
+) -> Result<DoctorReport, String> {
+    run_doctor_with_home_and_options(store_path, json_mode, home, embed_cache, false)
+}
+
+fn run_doctor_with_home_and_options(
+    store_path: &Path,
+    json_mode: bool,
+    home: Option<&Path>,
+    embed_cache: Option<&Path>,
+    fix_readers: bool,
 ) -> Result<DoctorReport, String> {
     let t_start = Instant::now();
     let mut checks = Vec::new();
@@ -257,6 +283,118 @@ pub fn run_doctor_with_home(
         }
     };
     checks.push(store_check);
+
+    // 1b. LMDB reader-lock table health & optional stale-slot reclamation.
+    let mut reclaimed_readers = 0usize;
+    let mut reclaim_err: Option<String> = None;
+    if fix_readers && store_path.join("lock.mdb").is_file() {
+        match wm_gen3_core::store::Store::reclaim_stale_readers_at_path(store_path) {
+            Ok(n) => reclaimed_readers = n,
+            Err(err) => reclaim_err = Some(err.to_string()),
+        }
+    }
+    let reader_check = if let Some(err) = reclaim_err {
+        DoctorCheck {
+            name: "reader_table",
+            status: DoctorStatus::Fail,
+            summary: "Failed reclaiming stale LMDB reader slots".to_string(),
+            detail: format!("Path: {} ({err})", store_path.display()),
+            hint: Some("Verify lock.mdb permissions and check active wm processes.".to_string()),
+        }
+    } else {
+        match wm_gen3_core::store::Store::inspect_reader_table(store_path) {
+            Ok(None) => DoctorCheck {
+                name: "reader_table",
+                status: DoctorStatus::Ok,
+                summary: "No LMDB lock table present yet".to_string(),
+                detail: format!("Path: {}", store_path.display()),
+                hint: None,
+            },
+            Ok(Some(snap)) => {
+                let reclaimed_note = if fix_readers {
+                    format!(", reclaimed {reclaimed_readers} stale slot(s)")
+                } else {
+                    String::new()
+                };
+                if snap.free == 0 {
+                    DoctorCheck {
+                        name: "reader_table",
+                        status: DoctorStatus::Fail,
+                        summary: format!(
+                            "LMDB reader table FULL ({}/{}, {} dead, 0 free)",
+                            snap.occupied, snap.max_readers, snap.dead
+                        ),
+                        detail: format!(
+                            "Path: {} (live={}, dead={}, max={}{reclaimed_note})",
+                            store_path.display(),
+                            snap.live,
+                            snap.dead,
+                            snap.max_readers
+                        ),
+                        hint: Some(
+                            "Run `wm doctor --fix-readers` to reclaim stale reader slots safely without stopping live servers."
+                                .to_string(),
+                        ),
+                    }
+                } else if snap.dead > 0
+                    || snap.occupied.saturating_mul(5)
+                        >= (snap.max_readers as usize).saturating_mul(4)
+                {
+                    DoctorCheck {
+                        name: "reader_table",
+                        status: DoctorStatus::Warn,
+                        summary: format!(
+                            "LMDB reader table pressure ({} live, {} dead, {}/{} free)",
+                            snap.live, snap.dead, snap.free, snap.max_readers
+                        ),
+                        detail: format!(
+                            "Path: {} (occupied={}/{}{reclaimed_note})",
+                            store_path.display(),
+                            snap.occupied,
+                            snap.max_readers
+                        ),
+                        hint: if snap.dead > 0 {
+                            Some(format!(
+                                "Run `wm doctor --fix-readers` to reclaim {} stale reader slot(s).",
+                                snap.dead
+                            ))
+                        } else {
+                            Some(
+                                "Raise WM_MAX_READERS (default 1024) or trim concurrent idle MCP servers."
+                                    .to_string(),
+                            )
+                        },
+                    }
+                } else {
+                    DoctorCheck {
+                        name: "reader_table",
+                        status: DoctorStatus::Ok,
+                        summary: format!(
+                            "LMDB reader table healthy ({} live, 0 dead, {}/{} free)",
+                            snap.live, snap.free, snap.max_readers
+                        ),
+                        detail: format!(
+                            "Path: {} (occupied={}/{}{reclaimed_note})",
+                            store_path.display(),
+                            snap.occupied,
+                            snap.max_readers
+                        ),
+                        hint: None,
+                    }
+                }
+            }
+            Err(err) => DoctorCheck {
+                name: "reader_table",
+                status: DoctorStatus::Warn,
+                summary: "Could not inspect LMDB reader table".to_string(),
+                detail: format!("Path: {} ({err})", store_path.display()),
+                hint: Some(
+                    "Check lock.mdb permissions or run `wm doctor --fix-readers`.".to_string(),
+                ),
+            },
+        }
+    };
+    checks.push(reader_check);
 
     // 2. Embedding backend & offline cache readiness.
     let fastembed_on = wm_gen3_core::projection::fastembed_compiled();
@@ -453,6 +591,38 @@ mod tests {
             .find(|c| c.name == "contract")
             .expect("contract check");
         assert_eq!(contract.status, DoctorStatus::Ok);
+        let rt1 = r1
+            .checks
+            .iter()
+            .find(|c| c.name == "reader_table")
+            .expect("reader_table check");
+        assert_eq!(rt1.status, DoctorStatus::Ok);
+        assert!(
+            !store.exists(),
+            "reader_table check must not create missing store"
+        );
+
+        std::fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn doctor_reports_healthy_reader_table_on_initialized_store() {
+        let root = std::env::temp_dir().join(format!("wm-doctor-rt-{}", uuid::Uuid::new_v4()));
+        let home = root.join("home");
+        let store_dir = root.join("store");
+        std::fs::create_dir_all(&home).expect("mkdir home");
+        let store = wm_gen3_core::store::Store::open(&store_dir).expect("open fresh store");
+        drop(store);
+
+        let report = run_doctor_with_home(&store_dir, false, Some(&home), None)
+            .expect("doctor on initialized store");
+        let rt = report
+            .checks
+            .iter()
+            .find(|c| c.name == "reader_table")
+            .expect("reader_table check");
+        assert_eq!(rt.status, DoctorStatus::Ok);
+        assert!(rt.summary.contains("0 dead"));
 
         std::fs::remove_dir_all(root).ok();
     }
