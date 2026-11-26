@@ -532,6 +532,12 @@ enum Commands {
         /// Include WhiteMagic Turbo suite host wiring (agy/cursor/codex hooks, wm_fast, rules, agents)
         #[arg(long)]
         suite: bool,
+        /// Load declarative `.wm-grimoire.toml` / `.json` overrides from an explicit path
+        #[arg(long)]
+        apply: Option<PathBuf>,
+        /// Set Mandala hook guard policy (`advisory`, `strict`, or `off`)
+        #[arg(long)]
+        guard_mode: Option<String>,
     },
     /// Configure MCP clients safely with expanded paths, timestamped backups, and parse-back verification
     Setup {
@@ -558,6 +564,9 @@ enum Commands {
         /// Reclaim stale LMDB reader slots from crashed processes without stopping live servers
         #[arg(long)]
         fix_readers: bool,
+        /// Include full WhiteMagic Suite diagnostics (hooks, sandbox --probe, sidecar, mandala, wm_fast, keys)
+        #[arg(long)]
+        suite: bool,
     },
     /// Initialize and provision a local WhiteMagic substrate store
     Init {
@@ -1833,6 +1842,8 @@ fn main() {
             model,
             tune,
             suite,
+            apply,
+            guard_mode,
         } => {
             let Some(model_family) = wm_gen3_harness::grimoire::ModelFamily::parse(&model) else {
                 eprintln!(
@@ -1840,6 +1851,8 @@ fn main() {
                 );
                 std::process::exit(2);
             };
+            let cwd_spec = PathBuf::from(".wm-grimoire.toml");
+            let apply_spec = apply.or_else(|| cwd_spec.is_file().then_some(cwd_spec));
             let opts = wm_gen3_harness::grimoire::GrimoireOptions {
                 json_mode: json,
                 plan_configs: plan && !write,
@@ -1847,6 +1860,8 @@ fn main() {
                 tune_mode: tune,
                 suite_mode: suite,
                 write_mode: write,
+                apply_spec,
+                guard_mode,
             };
             let report =
                 match wm_gen3_harness::grimoire::run_grimoire_with_options(&store_path, &opts) {
@@ -1897,8 +1912,17 @@ fn main() {
                 std::process::exit(1);
             }
         }
-        Commands::Doctor { json, fix_readers } => {
-            match wm_gen3_harness::doctor::run_doctor_with_options(&store_path, json, fix_readers) {
+        Commands::Doctor {
+            json,
+            fix_readers,
+            suite,
+        } => {
+            match wm_gen3_harness::doctor::run_doctor_with_suite(
+                &store_path,
+                json,
+                fix_readers,
+                suite,
+            ) {
                 Ok(report) if !report.healthy => std::process::exit(1),
                 Ok(_) => {}
                 Err(e) => {

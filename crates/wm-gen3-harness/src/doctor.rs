@@ -10,8 +10,11 @@
 #![forbid(unsafe_code)]
 
 use serde::{Deserialize, Serialize};
+use std::io::{Read, Write};
+use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
-use std::time::Instant;
+use std::process::Command;
+use std::time::{Duration, Instant};
 use wm_gen3_core::compat::Gen2Reader;
 use wm_gen3_core::constitution::default_view;
 use wm_gen3_core::ops::Substrate;
@@ -194,11 +197,6 @@ fn inspect_client_configs(home: Option<&Path>) -> DoctorCheck {
     }
 }
 
-/// Run a non-mutating diagnostic pass across store, embedding backend, client configs, and contract parity.
-pub fn run_doctor(store_path: &Path, json_mode: bool) -> Result<DoctorReport, String> {
-    run_doctor_with_options(store_path, json_mode, false)
-}
-
 /// Run diagnostics across store, LMDB reader table (optionally reclaiming stale slots),
 /// embedding backend, client configs, and contract parity.
 pub fn run_doctor_with_options(
@@ -206,33 +204,50 @@ pub fn run_doctor_with_options(
     json_mode: bool,
     fix_readers: bool,
 ) -> Result<DoctorReport, String> {
+    run_doctor_with_suite(store_path, json_mode, fix_readers, false)
+}
+pub fn run_doctor(store_path: &Path, json_mode: bool) -> Result<DoctorReport, String> {
+    run_doctor_with_options(store_path, json_mode, false)
+}
+
+/// Run diagnostics across store, LMDB reader table, embedding backend, client configs,
+/// contract parity, and optionally the WhiteMagic Suite (`--suite`).
+pub fn run_doctor_with_suite(
+    store_path: &Path,
+    json_mode: bool,
+    fix_readers: bool,
+    suite_mode: bool,
+) -> Result<DoctorReport, String> {
     let home = std::env::var_os("HOME").map(PathBuf::from);
     let cache_dir = wm_gen3_core::embed_cache_dir();
-    run_doctor_with_home_and_options(
+    run_doctor_with_home_and_suite(
         store_path,
         json_mode,
         home.as_deref(),
         Some(&cache_dir),
         fix_readers,
+        suite_mode,
     )
 }
 
-/// Testable core accepting explicit `home` and optional `embed_cache` directory.
+/// Testable core accepting explicit `home`, optional `embed_cache`, `fix_readers`, and `suite_mode`.
 pub fn run_doctor_with_home(
     store_path: &Path,
     json_mode: bool,
     home: Option<&Path>,
     embed_cache: Option<&Path>,
 ) -> Result<DoctorReport, String> {
-    run_doctor_with_home_and_options(store_path, json_mode, home, embed_cache, false)
+    run_doctor_with_home_and_suite(store_path, json_mode, home, embed_cache, false, false)
 }
 
-fn run_doctor_with_home_and_options(
+/// Testable core supporting optional `--suite` checks.
+pub fn run_doctor_with_home_and_suite(
     store_path: &Path,
     json_mode: bool,
     home: Option<&Path>,
     embed_cache: Option<&Path>,
     fix_readers: bool,
+    suite_mode: bool,
 ) -> Result<DoctorReport, String> {
     let t_start = Instant::now();
     let mut checks = Vec::new();
@@ -479,6 +494,10 @@ fn run_doctor_with_home_and_options(
     };
     checks.push(contract_check);
 
+    if suite_mode {
+        run_suite_checks(home, &mut checks);
+    }
+
     let healthy = checks.iter().all(|c| c.status != DoctorStatus::Fail);
     let report = DoctorReport {
         version: env!("CARGO_PKG_VERSION"),
@@ -523,6 +542,329 @@ fn run_doctor_with_home_and_options(
     }
 
     Ok(report)
+}
+
+fn find_suite_bin(name: &str, home: Option<&Path>) -> Option<PathBuf> {
+    if let Some(h) = home {
+        let local = h.join(".local/bin").join(name);
+        if local.is_file() {
+            return Some(local);
+        }
+    }
+    if let Some(paths) = std::env::var_os("PATH") {
+        for dir in std::env::split_paths(&paths) {
+            let cand = dir.join(name);
+            if cand.is_file() {
+                return Some(cand);
+            }
+        }
+    }
+    None
+}
+
+fn check_loopback_sidecar_health(disc_path: &Path) -> Option<(bool, String)> {
+    let raw = std::fs::read_to_string(disc_path).ok()?;
+    let val: serde_json::Value = serde_json::from_str(&raw).ok()?;
+    let port = val.get("port").and_then(serde_json::Value::as_u64)?;
+    if !(1..=65535).contains(&port) {
+        return None;
+    }
+    let addr: SocketAddr = format!("127.0.0.1:{port}").parse().ok()?;
+    let timeout = Duration::from_millis(250);
+    let mut stream = TcpStream::connect_timeout(&addr, timeout).ok()?;
+    let _ = stream.set_read_timeout(Some(timeout));
+    let _ = stream.set_write_timeout(Some(timeout));
+    let req = "GET /healthz HTTP/1.0\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n";
+    stream.write_all(req.as_bytes()).ok()?;
+    let _ = stream.flush();
+    let mut buf = Vec::new();
+    let _ = stream.take(16_384).read_to_end(&mut buf);
+    let text = String::from_utf8_lossy(&buf);
+    let first_line = text.lines().next().unwrap_or("");
+    Some((
+        first_line.contains(" 200 "),
+        format!("http://127.0.0.1:{port}"),
+    ))
+}
+
+fn run_suite_checks(home: Option<&Path>, checks: &mut Vec<DoctorCheck>) {
+    // S1: Hook configs across AGY, Codex, Cursor
+    let mut hook_ok = Vec::new();
+    let mut hook_warn = Vec::new();
+    let mut hook_fail = Vec::new();
+    if let Some(h) = home {
+        let targets = [
+            (
+                "AGY plugin",
+                h.join(".gemini"),
+                h.join(".gemini/config/plugins/whitemagic-agy-kit/plugin.json"),
+            ),
+            ("Codex hooks", h.join(".codex"), h.join(".codex/hooks.json")),
+            (
+                "Cursor hooks",
+                h.join(".cursor"),
+                h.join(".cursor/hooks.json"),
+            ),
+        ];
+        for (label, host_dir, file_path) in targets {
+            if !host_dir.exists() {
+                continue;
+            }
+            if !file_path.is_file() {
+                hook_warn.push(format!("{label}: missing {}", file_path.display()));
+                continue;
+            }
+            match std::fs::read_to_string(&file_path)
+                .ok()
+                .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+            {
+                Some(_) => hook_ok.push(label.to_string()),
+                None => hook_fail.push(format!(
+                    "{label}: malformed JSON at {}",
+                    file_path.display()
+                )),
+            }
+        }
+    }
+    checks.push(if !hook_fail.is_empty() {
+        DoctorCheck {
+            name: "suite_hooks",
+            status: DoctorStatus::Fail,
+            summary: format!(
+                "{} host hook config(s) contain malformed JSON",
+                hook_fail.len()
+            ),
+            detail: hook_fail.join("; "),
+            hint: Some(
+                "Re-run `install-suite.sh` or `whitemagic-agy-kit/install.sh` to repair host JSON."
+                    .to_string(),
+            ),
+        }
+    } else if !hook_warn.is_empty() {
+        DoctorCheck {
+            name: "suite_hooks",
+            status: DoctorStatus::Warn,
+            summary: format!("{} detected host(s) missing suite hooks", hook_warn.len()),
+            detail: hook_warn.join("; "),
+            hint: Some("Run `wm grimoire --suite --write` to wire detected hosts.".to_string()),
+        }
+    } else {
+        DoctorCheck {
+            name: "suite_hooks",
+            status: DoctorStatus::Ok,
+            summary: if hook_ok.is_empty() {
+                "No AGY/Codex/Cursor host directories detected".to_string()
+            } else {
+                format!("Suite hooks verified ({})", hook_ok.join(", "))
+            },
+            detail: "Checked detected host plugin & hook JSON files.".to_string(),
+            hint: None,
+        }
+    });
+
+    // S2: Live wm-sandbox --probe
+    checks.push(if let Some(sb_bin) = find_suite_bin("wm-sandbox", home) {
+        match Command::new(&sb_bin).arg("--probe").output() {
+            Ok(out) if out.status.success() => {
+                match serde_json::from_slice::<serde_json::Value>(&out.stdout) {
+                    Ok(v) => {
+                        let supported = v
+                            .get("landlock_supported")
+                            .and_then(serde_json::Value::as_bool)
+                            .unwrap_or(false);
+                        let abi = v
+                            .get("kernel_landlock_abi")
+                            .and_then(serde_json::Value::as_u64)
+                            .unwrap_or(0);
+                        let zero_egress = v
+                            .get("zero_egress_capable")
+                            .and_then(serde_json::Value::as_bool)
+                            .unwrap_or(false);
+                        if supported && abi >= 4 {
+                            DoctorCheck {
+                                name: "sandbox_probe",
+                                status: DoctorStatus::Ok,
+                                summary: format!("Landlock ABI {abi} active (zero_egress={zero_egress})"),
+                                detail: format!("Binary: {}", sb_bin.display()),
+                                hint: None,
+                            }
+                        } else {
+                            DoctorCheck {
+                                name: "sandbox_probe",
+                                status: DoctorStatus::Warn,
+                                summary: format!("Kernel Landlock limited/unsupported (supported={supported}, abi={abi})"),
+                                detail: format!("Binary: {}", sb_bin.display()),
+                                hint: Some("On non-Linux or older kernels, policy/VFS preflight remains active.".to_string()),
+                            }
+                        }
+                    }
+                    Err(e) => DoctorCheck {
+                        name: "sandbox_probe",
+                        status: DoctorStatus::Warn,
+                        summary: "wm-sandbox --probe returned invalid JSON".to_string(),
+                        detail: e.to_string(),
+                        hint: None,
+                    },
+                }
+            }
+            _ => DoctorCheck {
+                name: "sandbox_probe",
+                status: DoctorStatus::Warn,
+                summary: "wm-sandbox --probe failed to execute cleanly".to_string(),
+                detail: format!("Binary: {}", sb_bin.display()),
+                hint: Some("Rebuild wm3-tui (`cargo build --release`) to refresh wm-sandbox.".to_string()),
+            },
+        }
+    } else {
+        DoctorCheck {
+            name: "sandbox_probe",
+            status: DoctorStatus::Warn,
+            summary: "wm-sandbox binary not found on ~/.local/bin or PATH".to_string(),
+            detail: "Kernel Landlock probe skipped.".to_string(),
+            hint: Some("Install wm3-tui / whitemagic-suite to provide wm-sandbox.".to_string()),
+        }
+    });
+
+    // S3: Sidecar loopback /healthz
+    let cache_dir = std::env::var_os("WM_HANDOFF_CACHE_DIR")
+        .map(PathBuf::from)
+        .or_else(|| home.map(|h| h.join(".cache/wm-handoff")));
+    let disc_path = cache_dir.map(|d| d.join("sidecar.json"));
+    checks.push(match disc_path {
+        Some(ref p) if p.is_file() => match check_loopback_sidecar_health(p) {
+            Some((true, url)) => DoctorCheck {
+                name: "sidecar_bus",
+                status: DoctorStatus::Ok,
+                summary: format!("Sidecar loopback online ({url}/healthz)"),
+                detail: format!("Discovery: {}", p.display()),
+                hint: None,
+            },
+            _ => DoctorCheck {
+                name: "sidecar_bus",
+                status: DoctorStatus::Warn,
+                summary: "Sidecar discovery file present but /healthz unreachable".to_string(),
+                detail: format!("Discovery: {}", p.display()),
+                hint: Some(
+                    "Start sidecar via AGY or `python3 -S -B .../wm-sidecar/server.py`."
+                        .to_string(),
+                ),
+            },
+        },
+        _ => DoctorCheck {
+            name: "sidecar_bus",
+            status: DoctorStatus::Warn,
+            summary: "Sidecar offline (no active sidecar.json)".to_string(),
+            detail: "Local JSONL/crystal cache fallback remains operational for wm3-tui."
+                .to_string(),
+            hint: None,
+        },
+    });
+
+    // S4: Mandala gate-lite preflight
+    let inv = crate::grimoire::probe_suite_inventory(home);
+    checks.push(if let Some(ref ctl) = inv.mandala_gate_lite {
+        DoctorCheck {
+            name: "mandala_preflight",
+            status: DoctorStatus::Ok,
+            summary: "Mandala gate-lite controller present".to_string(),
+            detail: format!("Path: {ctl}"),
+            hint: None,
+        }
+    } else {
+        DoctorCheck {
+            name: "mandala_preflight",
+            status: DoctorStatus::Warn,
+            summary: "Mandala gate-lite controller not found".to_string(),
+            detail: "Checked suite_manifest.json, WM_MANDALA_DIR, and ~/.local/share/whitemagic/suite/.".to_string(),
+            hint: Some("Install whitemagic-suite or set WM_MANDALA_DIR to enable --mandala-guard confinement.".to_string()),
+        }
+    });
+
+    // S5: wm_fast MCP availability
+    let has_node = find_suite_bin("node", home).is_some();
+    checks.push(match (inv.wm_fast_mcp.as_ref(), has_node) {
+        (Some(p), true) => DoctorCheck {
+            name: "wm_fast_mcp",
+            status: DoctorStatus::Ok,
+            summary: "wm_fast MCP server & Node runtime ready".to_string(),
+            detail: format!("Script: {p}"),
+            hint: None,
+        },
+        (Some(p), false) => DoctorCheck {
+            name: "wm_fast_mcp",
+            status: DoctorStatus::Warn,
+            summary: "wm_fast script installed but `node` runtime not found".to_string(),
+            detail: format!("Script: {p}"),
+            hint: Some("Install Node.js to execute mcp-server.mjs.".to_string()),
+        },
+        (None, _) => DoctorCheck {
+            name: "wm_fast_mcp",
+            status: DoctorStatus::Warn,
+            summary: "wm_fast MCP server script not installed".to_string(),
+            detail: "Checked ~/.local/share/whitemagic/wm-fast-mcp/mcp-server.mjs.".to_string(),
+            hint: Some("Run `install-suite.sh` to deploy wm_fast MCP.".to_string()),
+        },
+    });
+
+    // S6: Key & secret file permission hygiene (<= 0o600 on Unix)
+    let mut insecure_keys = Vec::new();
+    if let Some(h) = home {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            for dir in [
+                h.join(".config/whitemagic"),
+                h.join(".local/share/whitemagic"),
+            ] {
+                let Ok(entries) = std::fs::read_dir(&dir) else {
+                    continue;
+                };
+                for ent in entries.flatten() {
+                    let p = ent.path();
+                    if !p.is_file() {
+                        continue;
+                    }
+                    let name = p
+                        .file_name()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("")
+                        .to_ascii_lowercase();
+                    if name.ends_with(".key")
+                        || name.ends_with(".pem")
+                        || name.contains("signing")
+                        || name.contains("hmac")
+                    {
+                        if let Ok(meta) = p.metadata() {
+                            let mode = meta.permissions().mode() & 0o777;
+                            if mode & 0o077 != 0 {
+                                insecure_keys.push(format!("{} (mode {:03o})", p.display(), mode));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    checks.push(if insecure_keys.is_empty() {
+        DoctorCheck {
+            name: "key_permissions",
+            status: DoctorStatus::Ok,
+            summary: "Signing/key file permissions clean (no group/world access)".to_string(),
+            detail: "Checked ~/.config/whitemagic and ~/.local/share/whitemagic.".to_string(),
+            hint: None,
+        }
+    } else {
+        DoctorCheck {
+            name: "key_permissions",
+            status: DoctorStatus::Warn,
+            summary: format!(
+                "{} key file(s) overly permissive (> 0600)",
+                insecure_keys.len()
+            ),
+            detail: insecure_keys.join("; "),
+            hint: Some("Restrict key files with `chmod 600 <path>`.".to_string()),
+        }
+    });
 }
 
 #[cfg(test)]
@@ -624,6 +966,46 @@ mod tests {
             .expect("reader_table check");
         assert_eq!(rt.status, DoctorStatus::Ok);
         assert!(rt.summary.contains("0 dead"));
+
+        std::fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn doctor_suite_checks_verify_hooks_mandala_wm_fast_and_key_perms() {
+        let root = std::env::temp_dir().join(format!("wm-doctor-suite-{}", uuid::Uuid::new_v4()));
+        let home = root.join("home");
+        let store = root.join("missing-store");
+        let data = home.join(".local/share/whitemagic");
+        std::fs::create_dir_all(home.join(".codex")).expect("mkdir codex");
+        std::fs::create_dir_all(home.join(".cursor")).expect("mkdir cursor");
+        std::fs::create_dir_all(data.join("wm-fast-mcp")).expect("mkdir wm_fast");
+        std::fs::create_dir_all(data.join("suite/mandala-gate-lite/gate_lite"))
+            .expect("mkdir mandala");
+        std::fs::write(home.join(".codex/hooks.json"), "{\"hooks\":{}}")
+            .expect("write codex hooks");
+        std::fs::write(home.join(".cursor/hooks.json"), "{\"version\":1}")
+            .expect("write cursor hooks");
+        std::fs::write(data.join("wm-fast-mcp/mcp-server.mjs"), "// ok\n").expect("write wm_fast");
+        std::fs::write(
+            data.join("suite/mandala-gate-lite/gate_lite/ctl.py"),
+            "# ctl\n",
+        )
+        .expect("write ctl");
+        let key_path = data.join("test_signing.key");
+        std::fs::write(&key_path, "secret").expect("write key");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            std::fs::set_permissions(&key_path, std::fs::Permissions::from_mode(0o644))
+                .expect("chmod 644");
+        }
+
+        let report = run_doctor_with_home_and_suite(&store, false, Some(&home), None, false, true)
+            .expect("doctor suite run");
+        let find = |n: &str| report.checks.iter().find(|c| c.name == n).unwrap();
+        assert_eq!(find("suite_hooks").status, DoctorStatus::Ok);
+        assert_eq!(find("mandala_preflight").status, DoctorStatus::Ok);
+        assert_eq!(find("key_permissions").status, DoctorStatus::Warn);
 
         std::fs::remove_dir_all(root).ok();
     }

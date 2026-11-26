@@ -14,6 +14,7 @@
 #![forbid(unsafe_code)]
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -93,6 +94,7 @@ pub struct HostCapabilities {
     pub has_node: bool,
     pub has_python3: bool,
     pub has_cargo: bool,
+    pub local_runtimes: Vec<String>,
 }
 
 /// Auto-selected Mandala confinement tier.
@@ -127,6 +129,7 @@ pub struct ConfinementPlan {
     pub tier: ConfinementTier,
     pub runner_profile: String,
     pub burst_runner_profile: Option<String>,
+    pub mandala_guard_mode: String,
     pub degraded_reason: Option<String>,
 }
 
@@ -194,6 +197,7 @@ pub struct SuiteInventory {
     pub wm_sandbox: Option<String>,
     pub muninn_engine: Option<String>,
     pub wm3_tui: Option<String>,
+    pub wm4_mcp: Option<String>,
     pub wm_fast_mcp: Option<String>,
     pub wm_handoff: Option<String>,
     pub wm_cpr_bridge: Option<String>,
@@ -218,6 +222,32 @@ pub struct TelemetryTuningSummary {
     pub recommendations: Vec<String>,
 }
 
+/// Resumable chapter progression tracked in `<data_dir>/grimoire_state.json`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChapterState {
+    pub id: &'static str,
+    pub roman: &'static str,
+    pub title: &'static str,
+    pub status: StepStatus,
+    pub detail: String,
+}
+
+/// Declarative per-machine or per-repo overrides loaded from `.wm-grimoire.toml` or `--apply`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct GrimoireSpec {
+    pub profile: Option<String>,
+    pub model: Option<String>,
+    pub mandala_guard: Option<String>,
+    pub confinement: Option<String>,
+    pub clients: Option<Vec<String>>,
+    pub readonly_clients: Option<Vec<String>>,
+    pub mcp_profile: Option<String>,
+    pub clamp_read_lines: Option<usize>,
+    pub max_unbounded_read_lines: Option<usize>,
+    pub wide_jsonl_lines: Option<usize>,
+    pub galaxy: Option<String>,
+}
+
 /// Full adaptive profile persisted to `<data_dir>/grimoire_profile.json` (when not `--plan`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GrimoireProfile {
@@ -228,6 +258,7 @@ pub struct GrimoireProfile {
     pub recommended_tricameral_profile: String,
     pub confinement: ConfinementPlan,
     pub model_tuning: AdaptiveModelTuning,
+    pub host_profiles: BTreeMap<String, AdaptiveModelTuning>,
     pub suite: SuiteInventory,
     pub primary_writer_client: Option<String>,
     pub secondary_readonly_clients: Vec<String>,
@@ -244,6 +275,8 @@ pub struct GrimoireOptions {
     pub tune_mode: bool,
     pub suite_mode: bool,
     pub write_mode: bool,
+    pub apply_spec: Option<PathBuf>,
+    pub guard_mode: Option<String>,
 }
 
 impl Default for GrimoireOptions {
@@ -255,6 +288,8 @@ impl Default for GrimoireOptions {
             tune_mode: false,
             suite_mode: false,
             write_mode: false,
+            apply_spec: None,
+            guard_mode: None,
         }
     }
 }
@@ -269,7 +304,10 @@ pub struct GrimoireReport {
     pub detected_clients: Vec<String>,
     pub planned_clients: Vec<String>,
     pub profile_path: Option<String>,
+    pub state_path: Option<String>,
+    pub spec_source: Option<String>,
     pub profile: GrimoireProfile,
+    pub chapters: Vec<ChapterState>,
     pub steps: Vec<GrimoireStep>,
     pub total_ms: u128,
 }
@@ -343,6 +381,50 @@ fn find_executable(name: &str, home: Option<&Path>) -> Option<PathBuf> {
     None
 }
 
+fn data_dir_in(home: Option<&Path>) -> Option<PathBuf> {
+    if home.is_none() {
+        if let Some(xdg) = std::env::var_os("XDG_DATA_HOME") {
+            if !xdg.is_empty() {
+                return Some(PathBuf::from(xdg).join("whitemagic"));
+            }
+        }
+    }
+    home.map(|h| h.join(".local/share/whitemagic"))
+}
+
+fn has_tricameral_spores(home: Option<&Path>) -> bool {
+    let models_dir = std::env::var_os("WM_MODELS_DIR")
+        .map(PathBuf::from)
+        .or_else(|| data_dir_in(home).map(|d| d.join("models")));
+    let Some(dir) = models_dir else {
+        return false;
+    };
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return false;
+    };
+    entries
+        .flatten()
+        .any(|e| e.path().extension().and_then(|s| s.to_str()) == Some("tm7b"))
+}
+
+fn probe_wm_sandbox_abi(bin: &Path) -> Option<(bool, u32)> {
+    let out = Command::new(bin).arg("--probe").output().ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let val: serde_json::Value = serde_json::from_slice(&out.stdout).ok()?;
+    let supported = val
+        .get("landlock_supported")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false);
+    let abi = val
+        .get("kernel_landlock_abi")
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|n| u32::try_from(n).ok())
+        .unwrap_or(0);
+    Some((supported, abi))
+}
+
 /// Probe host capabilities without unsafe syscalls or side effects.
 #[must_use]
 pub fn probe_host_capabilities(home: Option<&Path>) -> HostCapabilities {
@@ -354,8 +436,30 @@ pub fn probe_host_capabilities(home: Option<&Path>) -> HostCapabilities {
     let avx2 = has_avx2();
     let neon = arch == "aarch64";
     let lsm_raw = std::fs::read_to_string("/sys/kernel/security/lsm").unwrap_or_default();
-    let landlock_active = os == "linux" && lsm_raw.split(',').any(|s| s.trim() == "landlock");
-    let landlock_abi_est = estimate_landlock_abi(&os, &kernel_release, landlock_active);
+    let mut landlock_active = os == "linux" && lsm_raw.split(',').any(|s| s.trim() == "landlock");
+    let mut landlock_abi_est = estimate_landlock_abi(&os, &kernel_release, landlock_active);
+
+    let wm_sandbox_bin = find_executable("wm-sandbox", home);
+    if os == "linux" {
+        if let Some(ref sb) = wm_sandbox_bin {
+            if let Some((supported, abi)) = probe_wm_sandbox_abi(sb) {
+                landlock_active = supported;
+                if supported && abi > 0 {
+                    landlock_abi_est = Some(abi);
+                }
+            }
+        }
+    }
+
+    let mut local_runtimes = Vec::new();
+    for rt in ["ollama", "llama-server", "vllm", "lmstudio"] {
+        if find_executable(rt, home).is_some() {
+            local_runtimes.push(rt.to_string());
+        }
+    }
+    if find_executable("muninn-engine", home).is_some() || has_tricameral_spores(home) {
+        local_runtimes.push("muninn-engine".to_string());
+    }
 
     HostCapabilities {
         os,
@@ -368,13 +472,14 @@ pub fn probe_host_capabilities(home: Option<&Path>) -> HostCapabilities {
         landlock_active,
         landlock_abi_est,
         has_bwrap: find_executable("bwrap", home).is_some(),
-        has_wm_sandbox: find_executable("wm-sandbox", home).is_some(),
+        has_wm_sandbox: wm_sandbox_bin.is_some(),
         has_kvm: Path::new("/dev/kvm").exists(),
         has_firecracker: find_executable("firecracker", home).is_some(),
         has_podman: find_executable("podman", home).is_some(),
         has_node: find_executable("node", home).is_some(),
         has_python3: find_executable("python3", home).is_some(),
         has_cargo: find_executable("cargo", home).is_some(),
+        local_runtimes,
     }
 }
 
@@ -408,13 +513,17 @@ pub fn select_confinement_plan(caps: &HostCapabilities) -> ConfinementPlan {
                     .runner_profile_id()
                     .to_string(),
             ),
+            mandala_guard_mode: "advisory".to_string(),
             degraded_reason: None,
         }
     } else if landlock_ready {
         ConfinementPlan {
             tier: ConfinementTier::LandlockDirect,
-            runner_profile: ConfinementTier::LandlockDirect.runner_profile_id().to_string(),
+            runner_profile: ConfinementTier::LandlockDirect
+                .runner_profile_id()
+                .to_string(),
             burst_runner_profile: None,
+            mandala_guard_mode: "advisory".to_string(),
             degraded_reason: Some(
                 "bubblewrap (`bwrap`) not installed; `/tmp` scratch remains shared under standalone wm-sandbox"
                     .to_string(),
@@ -425,6 +534,7 @@ pub fn select_confinement_plan(caps: &HostCapabilities) -> ConfinementPlan {
             tier: ConfinementTier::Bwrap,
             runner_profile: ConfinementTier::Bwrap.runner_profile_id().to_string(),
             burst_runner_profile: None,
+            mandala_guard_mode: "advisory".to_string(),
             degraded_reason: Some(
                 "Landlock + wm-sandbox unavailable; using namespace-only Bubblewrap profile"
                     .to_string(),
@@ -435,6 +545,7 @@ pub fn select_confinement_plan(caps: &HostCapabilities) -> ConfinementPlan {
             tier: ConfinementTier::Firecracker,
             runner_profile: ConfinementTier::Firecracker.runner_profile_id().to_string(),
             burst_runner_profile: None,
+            mandala_guard_mode: "advisory".to_string(),
             degraded_reason: None,
         }
     } else if caps.has_podman {
@@ -442,6 +553,7 @@ pub fn select_confinement_plan(caps: &HostCapabilities) -> ConfinementPlan {
             tier: ConfinementTier::Podman,
             runner_profile: ConfinementTier::Podman.runner_profile_id().to_string(),
             burst_runner_profile: None,
+            mandala_guard_mode: "advisory".to_string(),
             degraded_reason: None,
         }
     } else {
@@ -451,6 +563,7 @@ pub fn select_confinement_plan(caps: &HostCapabilities) -> ConfinementPlan {
                 .runner_profile_id()
                 .to_string(),
             burst_runner_profile: None,
+            mandala_guard_mode: "advisory".to_string(),
             degraded_reason: Some(format!(
                 "No kernel sandbox runner found on {} (install `bwrap` and/or `wm-sandbox` on Linux for kernel-enforced isolation; pre-command + VFS policy gate active only)",
                 caps.os
@@ -459,22 +572,48 @@ pub fn select_confinement_plan(caps: &HostCapabilities) -> ConfinementPlan {
     }
 }
 
-/// Probe installed WhiteMagic Suite components under `home` and `$PATH`.
+fn manifest_path_field(manifest: Option<&serde_json::Value>, key: &str) -> Option<PathBuf> {
+    manifest?
+        .get(key)
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(PathBuf::from)
+}
+
+/// Probe installed WhiteMagic Suite components under `home`, `suite_manifest.json`, and `$PATH`.
 #[must_use]
 pub fn probe_suite_inventory(home: Option<&Path>) -> SuiteInventory {
-    let find_str = |bin: &str| find_executable(bin, home).map(|p| p.display().to_string());
+    let data_dir = data_dir_in(home);
+    let manifest: Option<serde_json::Value> = data_dir
+        .as_ref()
+        .and_then(|d| std::fs::read_to_string(d.join("suite_manifest.json")).ok())
+        .and_then(|s| serde_json::from_str(&s).ok());
 
-    let wm_fast_mcp = home
-        .map(|h| h.join(".local/share/whitemagic/wm-fast-mcp/mcp-server.mjs"))
+    let find_str = |bin: &str, manifest_key: Option<&str>| {
+        manifest_key
+            .and_then(|k| manifest_path_field(manifest.as_ref(), k))
+            .filter(|p| p.is_file())
+            .or_else(|| find_executable(bin, home))
+            .map(|p| p.display().to_string())
+    };
+
+    let wm_fast_mcp = manifest_path_field(manifest.as_ref(), "wm_fast_mcp")
         .filter(|p| p.is_file())
+        .or_else(|| {
+            data_dir
+                .as_ref()
+                .map(|d| d.join("wm-fast-mcp/mcp-server.mjs"))
+                .filter(|p| p.is_file())
+        })
         .map(|p| p.display().to_string());
 
     let mut spores = Vec::new();
-    if let Some(h) = home {
-        let models_dir = std::env::var_os("WM_MODELS_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| h.join(".local/share/whitemagic/models"));
-        if let Ok(entries) = std::fs::read_dir(&models_dir) {
+    let models_dir = std::env::var_os("WM_MODELS_DIR")
+        .map(PathBuf::from)
+        .or_else(|| data_dir.as_ref().map(|d| d.join("models")));
+    if let Some(dir) = models_dir {
+        if let Ok(entries) = std::fs::read_dir(&dir) {
             for ent in entries.flatten() {
                 let p = ent.path();
                 if p.extension().and_then(|e| e.to_str()) == Some("tm7b") {
@@ -487,39 +626,81 @@ pub fn probe_suite_inventory(home: Option<&Path>) -> SuiteInventory {
         }
     }
 
-    let agy_kit_installer = std::env::var_os("WM_AGY_KIT_DIR")
-        .map(|d| PathBuf::from(d).join("install.sh"))
+    let agy_kit_installer = manifest_path_field(manifest.as_ref(), "agy_kit_dir")
+        .map(|d| d.join("install.sh"))
         .filter(|p| p.is_file())
         .or_else(|| {
-            home.map(|h| h.join(".local/share/whitemagic/agy-kit/install.sh"))
+            std::env::var_os("WM_AGY_KIT_DIR")
+                .map(|d| PathBuf::from(d).join("install.sh"))
                 .filter(|p| p.is_file())
         })
         .or_else(|| {
-            home.map(|h| h.join(".local/share/whitemagic/suite/agy-kit/install.sh"))
+            data_dir
+                .as_ref()
+                .map(|d| d.join("suite/agy-kit/install.sh"))
+                .filter(|p| p.is_file())
+        })
+        .or_else(|| {
+            data_dir
+                .as_ref()
+                .map(|d| d.join("agy-kit/install.sh"))
                 .filter(|p| p.is_file())
         })
         .map(|p| p.display().to_string());
 
-    let mandala_gate_lite = std::env::var_os("WM_MANDALA_DIR")
-        .map(|d| PathBuf::from(d).join("gate-lite/gate_lite/ctl.py"))
-        .filter(|p| p.is_file())
+    let mandala_gate_lite = manifest_path_field(manifest.as_ref(), "mandala_dir")
+        .and_then(|d| {
+            let direct = d.join("gate_lite/ctl.py");
+            if direct.is_file() {
+                Some(direct)
+            } else {
+                let nested = d.join("gate-lite/gate_lite/ctl.py");
+                nested.is_file().then_some(nested)
+            }
+        })
         .or_else(|| {
-            home.map(|h| h.join(".local/share/whitemagic/mandala-gate-lite/gate_lite/ctl.py"))
-                .filter(|p| p.is_file())
+            std::env::var_os("WM_MANDALA_DIR").and_then(|d| {
+                let base = PathBuf::from(d);
+                let direct = base.join("gate_lite/ctl.py");
+                let nested = base.join("gate-lite/gate_lite/ctl.py");
+                if direct.is_file() {
+                    Some(direct)
+                } else if nested.is_file() {
+                    Some(nested)
+                } else {
+                    None
+                }
+            })
+        })
+        .or_else(|| {
+            data_dir.as_ref().and_then(|d| {
+                for rel in [
+                    "suite/mandala-gate-lite/gate_lite/ctl.py",
+                    "suite/mandala/gate-lite/gate_lite/ctl.py",
+                    "mandala-gate-lite/gate_lite/ctl.py",
+                ] {
+                    let cand = d.join(rel);
+                    if cand.is_file() {
+                        return Some(cand);
+                    }
+                }
+                None
+            })
         })
         .map(|p| p.display().to_string());
 
     SuiteInventory {
-        wm_squeeze: find_str("wm-squeeze"),
-        wm_codegraph: find_str("wm-codegraph"),
-        wm_sandbox: find_str("wm-sandbox"),
-        muninn_engine: find_str("muninn-engine"),
-        wm3_tui: find_str("wm3-tui"),
+        wm_squeeze: find_str("wm-squeeze", None),
+        wm_codegraph: find_str("wm-codegraph", None),
+        wm_sandbox: find_str("wm-sandbox", None),
+        muninn_engine: find_str("muninn-engine", None),
+        wm3_tui: find_str("wm3-tui", Some("wm3_tui_bin")),
+        wm4_mcp: find_str("wm4-mcp", Some("wm4_mcp_bin")),
         wm_fast_mcp,
-        wm_handoff: find_str("wm-handoff"),
-        wm_cpr_bridge: find_str("wm-cpr-bridge"),
-        wm_sim: find_str("wm-sim"),
-        wm_models: find_str("wm-models"),
+        wm_handoff: find_str("wm-handoff", None),
+        wm_cpr_bridge: find_str("wm-cpr-bridge", None),
+        wm_sim: find_str("wm-sim", None),
+        wm_models: find_str("wm-models", None),
         agy_kit_installer,
         mandala_gate_lite,
         tricameral_spores: spores,
@@ -660,42 +841,40 @@ pub fn analyze_telemetry_and_tune(
     summary
 }
 
-/// Resolve adaptive model tuning parameters for a requested model family (or auto-detect).
-#[must_use]
-pub fn synthesize_model_tuning(
+fn classify_model_name(raw: &str) -> ModelFamily {
+    let low = raw.to_ascii_lowercase();
+    if low.contains("gemini")
+        || low.contains("hydrogen")
+        || low.contains("neon")
+        || low.contains("carbon")
+    {
+        ModelFamily::Gemini4
+    } else if low.contains("claude")
+        || low.contains("opus")
+        || low.contains("sonnet")
+        || low.contains("haiku")
+    {
+        ModelFamily::Claude4
+    } else if low.contains("grok") {
+        ModelFamily::Grok4
+    } else if low.contains("gpt")
+        || low.contains("codex")
+        || low.contains("o3")
+        || low.contains("o4")
+        || low.contains("o1")
+    {
+        ModelFamily::OpenAiCodex
+    } else {
+        ModelFamily::LocalSmall
+    }
+}
+
+fn build_tuning_for_resolved(
     requested: ModelFamily,
-    tier: HardwareTier,
+    resolved: ModelFamily,
+    source: String,
     telemetry: &TelemetryTuningSummary,
 ) -> AdaptiveModelTuning {
-    let (resolved, source) = if requested != ModelFamily::Auto {
-        (requested, "explicit --model flag".to_string())
-    } else if let Some(ref obs) = telemetry.last_observed_model {
-        let low = obs.to_ascii_lowercase();
-        let fam = if low.contains("gemini") || low.contains("hydrogen") || low.contains("neon") {
-            ModelFamily::Gemini4
-        } else if low.contains("claude") || low.contains("opus") || low.contains("sonnet") {
-            ModelFamily::Claude4
-        } else if low.contains("grok") {
-            ModelFamily::Grok4
-        } else if low.contains("gpt")
-            || low.contains("codex")
-            || low.contains("o3")
-            || low.contains("o4")
-        {
-            ModelFamily::OpenAiCodex
-        } else {
-            ModelFamily::LocalSmall
-        };
-        (fam, format!("telemetry last_observed_model ({obs})"))
-    } else if tier == HardwareTier::Micro {
-        (
-            ModelFamily::LocalSmall,
-            "hardware tier fallback (micro)".to_string(),
-        )
-    } else {
-        (ModelFamily::Gemini4, "default frontier profile".to_string())
-    };
-
     // Tighten unbounded read clamp automatically if recent spills are elevated
     let spill_tighten = telemetry.recent_spills >= 3;
 
@@ -773,6 +952,360 @@ pub fn synthesize_model_tuning(
     }
 }
 
+/// Resolve adaptive model tuning parameters for a requested model family (or auto-detect).
+#[must_use]
+pub fn synthesize_model_tuning(
+    requested: ModelFamily,
+    tier: HardwareTier,
+    telemetry: &TelemetryTuningSummary,
+) -> AdaptiveModelTuning {
+    let (resolved, source) = if requested != ModelFamily::Auto {
+        (requested, "explicit --model flag".to_string())
+    } else if let Some(ref obs) = telemetry.last_observed_model {
+        (
+            classify_model_name(obs),
+            format!("telemetry last_observed_model ({obs})"),
+        )
+    } else if tier == HardwareTier::Micro {
+        (
+            ModelFamily::LocalSmall,
+            "hardware tier fallback (micro)".to_string(),
+        )
+    } else {
+        (ModelFamily::Gemini4, "default frontier profile".to_string())
+    };
+    build_tuning_for_resolved(requested, resolved, source, telemetry)
+}
+
+fn read_json_model_field(path: &Path) -> Option<String> {
+    let raw = std::fs::read_to_string(path).ok()?;
+    let val: serde_json::Value = serde_json::from_str(&raw).ok()?;
+    for ptr in ["/model", "/defaultModel", "/agent/model"] {
+        if let Some(s) = val.pointer(ptr).and_then(serde_json::Value::as_str) {
+            let t = s.trim();
+            if !t.is_empty() {
+                return Some(t.to_string());
+            }
+        }
+    }
+    None
+}
+
+fn read_toml_top_model_field(path: &Path) -> Option<String> {
+    let raw = std::fs::read_to_string(path).ok()?;
+    let mut in_section = false;
+    for line in raw.lines() {
+        let trimmed = line.split('#').next().unwrap_or("").trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            in_section = true;
+            continue;
+        }
+        if !in_section {
+            if let Some(rest) = trimmed.strip_prefix("model") {
+                let rest = rest.trim_start();
+                if let Some(val) = rest.strip_prefix('=') {
+                    let unquoted = val.trim().trim_matches('"').trim_matches('\'').trim();
+                    if !unquoted.is_empty() {
+                        return Some(unquoted.to_string());
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+fn read_jsonc_model_field(path: &Path) -> Option<String> {
+    let raw = std::fs::read_to_string(path).ok()?;
+    for line in raw.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("//") {
+            continue;
+        }
+        if let Some(idx) = trimmed.find("\"model\"") {
+            let after = &trimmed[idx + 7..];
+            if let Some(colon) = after.find(':') {
+                let val = after[colon + 1..].trim().trim_end_matches(',').trim();
+                let unquoted = val.trim_matches('"');
+                if !unquoted.is_empty() && !unquoted.starts_with('{') {
+                    return Some(unquoted.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Synthesize per-host adaptive model tuning across AGY, Codex, Cursor, OpenCode, Claude, and TUI.
+#[must_use]
+pub fn synthesize_host_profiles(
+    home: Option<&Path>,
+    requested: ModelFamily,
+    caps: &HostCapabilities,
+    tier: HardwareTier,
+    telemetry: &TelemetryTuningSummary,
+) -> BTreeMap<String, AdaptiveModelTuning> {
+    let has_local = !caps.local_runtimes.is_empty();
+    let hosts = ["agy", "codex", "cursor", "claude", "opencode", "tui"];
+    let mut map = BTreeMap::new();
+
+    for host in hosts {
+        let (resolved, source) = if requested != ModelFamily::Auto {
+            (requested, "explicit --model override".to_string())
+        } else {
+            match host {
+                "agy" => {
+                    if let Some(m) = home.and_then(|h| {
+                        read_json_model_field(&h.join(".gemini/antigravity-cli/settings.json"))
+                    }) {
+                        (classify_model_name(&m), format!("agy settings.json ({m})"))
+                    } else if let Some(ref obs) = telemetry.last_observed_model {
+                        (classify_model_name(obs), format!("telemetry ({obs})"))
+                    } else {
+                        (ModelFamily::Gemini4, "agy host default".to_string())
+                    }
+                }
+                "codex" => {
+                    if let Some(m) =
+                        home.and_then(|h| read_toml_top_model_field(&h.join(".codex/config.toml")))
+                    {
+                        (classify_model_name(&m), format!("codex config.toml ({m})"))
+                    } else {
+                        (ModelFamily::OpenAiCodex, "codex host default".to_string())
+                    }
+                }
+                "cursor" => {
+                    if let Some(m) =
+                        home.and_then(|h| read_json_model_field(&h.join(".cursor/cli-config.json")))
+                    {
+                        (classify_model_name(&m), format!("cursor cli-config ({m})"))
+                    } else if telemetry.recent_cursor_events > 0 {
+                        if let Some(ref obs) = telemetry.last_observed_model {
+                            (
+                                classify_model_name(obs),
+                                format!("cursor telemetry ({obs})"),
+                            )
+                        } else {
+                            (ModelFamily::Claude4, "cursor host default".to_string())
+                        }
+                    } else {
+                        (ModelFamily::Claude4, "cursor host default".to_string())
+                    }
+                }
+                "claude" => {
+                    if let Some(m) =
+                        home.and_then(|h| read_json_model_field(&h.join(".claude/settings.json")))
+                    {
+                        (classify_model_name(&m), format!("claude settings ({m})"))
+                    } else {
+                        (ModelFamily::Claude4, "claude host default".to_string())
+                    }
+                }
+                "opencode" => {
+                    if let Some(m) = home.and_then(|h| {
+                        read_jsonc_model_field(&h.join(".config/opencode/opencode.jsonc"))
+                    }) {
+                        (classify_model_name(&m), format!("opencode.jsonc ({m})"))
+                    } else if has_local || tier == HardwareTier::Micro {
+                        (
+                            ModelFamily::LocalSmall,
+                            "opencode local runtime fallback".to_string(),
+                        )
+                    } else {
+                        (ModelFamily::Claude4, "opencode host default".to_string())
+                    }
+                }
+                "tui" => {
+                    if has_local {
+                        (
+                            ModelFamily::LocalSmall,
+                            format!(
+                                "local runtime detected ({})",
+                                caps.local_runtimes.join(", ")
+                            ),
+                        )
+                    } else {
+                        (ModelFamily::Gemini4, "wm3-tui default".to_string())
+                    }
+                }
+                _ => (ModelFamily::Gemini4, "default".to_string()),
+            }
+        };
+        map.insert(
+            host.to_string(),
+            build_tuning_for_resolved(requested, resolved, source, telemetry),
+        );
+    }
+
+    map
+}
+
+fn strip_toml_comment(line: &str) -> String {
+    let mut out = String::new();
+    let mut in_quotes = false;
+    let mut escape = false;
+    for ch in line.chars() {
+        if escape {
+            out.push(ch);
+            escape = false;
+            continue;
+        }
+        if ch == '\\' && in_quotes {
+            out.push(ch);
+            escape = true;
+            continue;
+        }
+        if ch == '"' {
+            in_quotes = !in_quotes;
+            out.push(ch);
+            continue;
+        }
+        if ch == '#' && !in_quotes {
+            break;
+        }
+        out.push(ch);
+    }
+    out
+}
+
+fn parse_toml_string_array(raw: &str) -> Vec<String> {
+    let inner = raw.trim().trim_start_matches('[').trim_end_matches(']');
+    inner
+        .split(',')
+        .map(|part| part.trim().trim_matches('"').trim_matches('\'').trim())
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// Zero-dependency parser for `.wm-grimoire.toml` / `grimoire.toml` or `.json`.
+pub fn parse_grimoire_spec_str(raw: &str, is_json: bool) -> Result<GrimoireSpec, String> {
+    if is_json || raw.trim_start().starts_with('{') {
+        return serde_json::from_str::<GrimoireSpec>(raw)
+            .map_err(|e| format!("invalid Grimoire JSON spec: {e}"));
+    }
+
+    let mut spec = GrimoireSpec::default();
+    let mut buf = String::new();
+    for line in raw.lines() {
+        let clean = strip_toml_comment(line);
+        let trimmed = clean.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        buf.push_str(trimmed);
+        // Handle multi-line arrays like clients = [\n "cursor",\n]
+        let open_brackets = buf.matches('[').count();
+        let close_brackets = buf.matches(']').count();
+        if buf.contains('=') && open_brackets > close_brackets {
+            buf.push(' ');
+            continue;
+        }
+        let stmt = buf.trim().to_string();
+        buf.clear();
+
+        if stmt.starts_with('[') && stmt.ends_with(']') {
+            continue;
+        }
+        let Some((raw_k, raw_v)) = stmt.split_once('=') else {
+            continue;
+        };
+        let key = raw_k.trim();
+        let val = raw_v.trim();
+        let unquoted = val.trim_matches('"').trim_matches('\'').trim();
+
+        match key {
+            "profile" => spec.profile = (!unquoted.is_empty()).then(|| unquoted.to_string()),
+            "model" => spec.model = (!unquoted.is_empty()).then(|| unquoted.to_string()),
+            "mandala_guard" => {
+                spec.mandala_guard = (!unquoted.is_empty()).then(|| unquoted.to_string());
+            }
+            "confinement" => {
+                spec.confinement = (!unquoted.is_empty()).then(|| unquoted.to_string())
+            }
+            "clients" => spec.clients = Some(parse_toml_string_array(val)),
+            "readonly_clients" => spec.readonly_clients = Some(parse_toml_string_array(val)),
+            "mcp_profile" => {
+                spec.mcp_profile = (!unquoted.is_empty()).then(|| unquoted.to_string())
+            }
+            "clamp_read_lines" => spec.clamp_read_lines = unquoted.parse::<usize>().ok(),
+            "max_unbounded_read_lines" => {
+                spec.max_unbounded_read_lines = unquoted.parse::<usize>().ok();
+            }
+            "wide_jsonl_lines" => spec.wide_jsonl_lines = unquoted.parse::<usize>().ok(),
+            "galaxy" => spec.galaxy = (!unquoted.is_empty()).then(|| unquoted.to_string()),
+            _ => {}
+        }
+    }
+    Ok(spec)
+}
+
+fn load_grimoire_spec_from_path(path: &Path) -> Result<GrimoireSpec, String> {
+    let raw = std::fs::read_to_string(path)
+        .map_err(|e| format!("failed reading Grimoire spec {}: {e}", path.display()))?;
+    let is_json = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("json"));
+    parse_grimoire_spec_str(&raw, is_json)
+}
+
+fn write_json_atomic<T: Serialize>(
+    home: Option<&Path>,
+    filename: &str,
+    payload: &T,
+) -> Result<PathBuf, String> {
+    let dir = data_dir_in(home).ok_or_else(|| format!("cannot resolve data dir for {filename}"))?;
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| format!("failed to create {}: {e}", dir.display()))?;
+    let dst = dir.join(filename);
+    let tmp = dir.join(format!("{filename}.tmp.{}", std::process::id()));
+    let body =
+        serde_json::to_string_pretty(payload).map_err(|e| format!("JSON serialize failed: {e}"))?;
+    std::fs::write(&tmp, format!("{body}\n"))
+        .map_err(|e| format!("failed writing {}: {e}", tmp.display()))?;
+    std::fs::rename(&tmp, &dst).map_err(|e| format!("failed committing {}: {e}", dst.display()))?;
+    Ok(dst)
+}
+
+fn append_tune_sim_record(
+    home: Option<&Path>,
+    clamp: usize,
+    max_unbounded: usize,
+    recent_spills: usize,
+) {
+    let sim_path = std::env::var_os("WM_SIM_LEDGER")
+        .map(PathBuf::from)
+        .or_else(|| data_dir_in(home).map(|d| d.join("sim_ledger.jsonl")));
+    let Some(path) = sim_path else {
+        return;
+    };
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    let entry = serde_json::json!({
+        "ts": ts,
+        "event": "grimoire_tune",
+        "domain": "grimoire-self-tune",
+        "status": "kept",
+        "observed": format!("clamp_read_lines={clamp}, max_unbounded_read_lines={max_unbounded}, recent_spills={recent_spills}"),
+    });
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+    {
+        use std::io::Write as _;
+        let _ = writeln!(f, "{entry}");
+    }
+}
+
 /// Detects known AI coding agent configurations on the local machine using the canonical registry.
 #[must_use]
 pub fn detect_coding_agents() -> Vec<(&'static str, PathBuf)> {
@@ -843,21 +1376,7 @@ pub fn plan_client_configs(agents: &[(&'static str, PathBuf)]) -> Vec<String> {
 }
 
 fn write_profile_atomic(home: Option<&Path>, profile: &GrimoireProfile) -> Result<PathBuf, String> {
-    let h = home
-        .map(Path::to_path_buf)
-        .or_else(|| std::env::var_os("HOME").map(PathBuf::from))
-        .ok_or_else(|| "cannot resolve HOME for grimoire_profile.json".to_string())?;
-    let dir = h.join(".local/share/whitemagic");
-    std::fs::create_dir_all(&dir)
-        .map_err(|e| format!("failed to create {}: {e}", dir.display()))?;
-    let dst = dir.join("grimoire_profile.json");
-    let tmp = dir.join(format!("grimoire_profile.json.tmp.{}", std::process::id()));
-    let body = serde_json::to_string_pretty(profile)
-        .map_err(|e| format!("profile serialization failed: {e}"))?;
-    std::fs::write(&tmp, format!("{body}\n"))
-        .map_err(|e| format!("failed writing {}: {e}", tmp.display()))?;
-    std::fs::rename(&tmp, &dst).map_err(|e| format!("failed committing {}: {e}", dst.display()))?;
-    Ok(dst)
+    write_json_atomic(home, "grimoire_profile.json", profile)
 }
 
 /// Optional dispatch of `whitemagic-agy-kit/install.sh --hosts <detected>` when `--write --suite` is used.
@@ -979,7 +1498,37 @@ pub fn run_grimoire_with_home_and_options(
     // Step 2: Mandala Confinement Capability Selection
     // ----------------------------------------------------
     let t_conf = Instant::now();
-    let confinement = select_confinement_plan(&caps);
+    let mut confinement = select_confinement_plan(&caps);
+    let spec_opt = if let Some(ref spec_path) = opts.apply_spec {
+        Some((
+            spec_path.display().to_string(),
+            load_grimoire_spec_from_path(spec_path)?,
+        ))
+    } else {
+        None
+    };
+
+    if let Some(ref gmode) = opts.guard_mode {
+        let gm = gmode.trim().to_ascii_lowercase();
+        if matches!(gm.as_str(), "advisory" | "strict" | "off") {
+            confinement.mandala_guard_mode = gm;
+        }
+    } else if let Some((_, ref spec)) = spec_opt {
+        if let Some(ref gm) = spec.mandala_guard {
+            let low = gm.trim().to_ascii_lowercase();
+            if matches!(low.as_str(), "advisory" | "strict" | "off") {
+                confinement.mandala_guard_mode = low;
+            }
+        }
+    }
+    if let Some((_, ref spec)) = spec_opt {
+        if let Some(ref conf) = spec.confinement {
+            let c = conf.trim();
+            if !c.is_empty() {
+                confinement.runner_profile = c.to_string();
+            }
+        }
+    }
     let (conf_status, conf_summary, conf_detail) =
         if let Some(ref deg) = confinement.degraded_reason {
             (
@@ -1246,16 +1795,75 @@ pub fn run_grimoire_with_home_and_options(
     // ----------------------------------------------------
     let t_adapt = Instant::now();
     let telemetry = analyze_telemetry_and_tune(home, hw_tier, &suite, &confinement);
-    let model_tuning = synthesize_model_tuning(opts.model_family, hw_tier, &telemetry);
+    let effective_requested = if opts.model_family != ModelFamily::Auto {
+        opts.model_family
+    } else if let Some((_, ref spec)) = spec_opt {
+        spec.model
+            .as_deref()
+            .and_then(ModelFamily::parse)
+            .unwrap_or(ModelFamily::Auto)
+    } else {
+        ModelFamily::Auto
+    };
+    let mut model_tuning = synthesize_model_tuning(effective_requested, hw_tier, &telemetry);
+    let mut host_profiles =
+        synthesize_host_profiles(home, effective_requested, &caps, hw_tier, &telemetry);
+
+    if let Some((_, ref spec)) = spec_opt {
+        let apply_overrides = |t: &mut AdaptiveModelTuning| {
+            if let Some(v) = spec.clamp_read_lines {
+                t.clamp_read_lines = v.clamp(20, 1000);
+            }
+            if let Some(v) = spec.max_unbounded_read_lines {
+                t.max_unbounded_read_lines = v.clamp(50, 2000);
+            }
+            if let Some(v) = spec.wide_jsonl_lines {
+                t.wide_jsonl_lines = v.clamp(10, 500);
+            }
+            if let Some(ref p) = spec.mcp_profile {
+                t.recommended_mcp_profile = p.clone();
+            }
+        };
+        apply_overrides(&mut model_tuning);
+        for val in host_profiles.values_mut() {
+            apply_overrides(val);
+        }
+    }
+
+    if opts.tune_mode && opts.write_mode && !opts.plan_configs && telemetry.recent_spills >= 3 {
+        let tighten = |t: &mut AdaptiveModelTuning| {
+            t.clamp_read_lines = t
+                .clamp_read_lines
+                .saturating_mul(3)
+                .saturating_div(4)
+                .max(80);
+            t.max_unbounded_read_lines = t
+                .max_unbounded_read_lines
+                .saturating_mul(4)
+                .saturating_div(5)
+                .max(150);
+        };
+        tighten(&mut model_tuning);
+        for val in host_profiles.values_mut() {
+            tighten(val);
+        }
+        append_tune_sim_record(
+            home,
+            model_tuning.clamp_read_lines,
+            model_tuning.max_unbounded_read_lines,
+            telemetry.recent_spills,
+        );
+    }
 
     let profile = GrimoireProfile {
-        schema: "wm-grimoire-profile/1.0",
+        schema: "wm-grimoire-profile/1.1",
         grimoire_version: env!("CARGO_PKG_VERSION"),
         capabilities: caps,
         hardware_tier: hw_tier,
         recommended_tricameral_profile: hw_tier.recommended_tricameral_profile().to_string(),
         confinement,
         model_tuning: model_tuning.clone(),
+        host_profiles,
         suite,
         primary_writer_client: primary_writer,
         secondary_readonly_clients: secondary_readonly,
@@ -1266,10 +1874,9 @@ pub fn run_grimoire_with_home_and_options(
     let profile_path = if opts.plan_configs {
         None
     } else {
-        match write_profile_atomic(home, &profile) {
-            Ok(p) => Some(p.display().to_string()),
-            Err(_) => None,
-        }
+        write_profile_atomic(home, &profile)
+            .ok()
+            .map(|p| p.display().to_string())
     };
 
     steps.push(GrimoireStep {
@@ -1375,7 +1982,7 @@ pub fn run_grimoire_with_home_and_options(
     steps.push(GrimoireStep {
         name: "verification",
         status: verif_status,
-        summary: verif_summary,
+        summary: verif_summary.clone(),
         detail: verif_detail,
         elapsed_ms: t4.elapsed().as_millis(),
     });
@@ -1386,6 +1993,124 @@ pub fn run_grimoire_with_home_and_options(
         }
     }
 
+    let chapters = vec![
+        ChapterState {
+            id: "awakening",
+            roman: "I",
+            title: "Awakening",
+            status: if present_count >= 4 {
+                StepStatus::Ok
+            } else {
+                StepStatus::Warn
+            },
+            detail: format!(
+                "{} {} ({} suite components detected)",
+                profile.capabilities.os, profile.capabilities.arch, present_count
+            ),
+        },
+        ChapterState {
+            id: "binding",
+            roman: "II",
+            title: "Binding",
+            status: if detected_names.is_empty() {
+                StepStatus::Skip
+            } else {
+                StepStatus::Ok
+            },
+            detail: if detected_names.is_empty() {
+                "No client configs found yet".to_string()
+            } else {
+                format!(
+                    "{} client(s) detected; turbo={:?}",
+                    detected_names.len(),
+                    profile.turbo_hosts
+                )
+            },
+        },
+        ChapterState {
+            id: "memory",
+            roman: "III",
+            title: "Memory",
+            status: verif_status,
+            detail: verif_summary.clone(),
+        },
+        ChapterState {
+            id: "library",
+            roman: "IV",
+            title: "Library",
+            status: if initial_count > 0 || seeded > 0 || guide_galaxy.is_some() {
+                StepStatus::Ok
+            } else {
+                guide_status
+            },
+            detail: format!(
+                "{} records across {} galaxy/galaxies",
+                initial_count.max(seeded),
+                galaxies.len()
+            ),
+        },
+        ChapterState {
+            id: "ward",
+            roman: "V",
+            title: "Ward",
+            status: conf_status,
+            detail: format!(
+                "{} (guard={})",
+                profile.confinement.runner_profile, profile.confinement.mandala_guard_mode
+            ),
+        },
+        ChapterState {
+            id: "mirror",
+            roman: "VI",
+            title: "Mirror",
+            status: if profile.suite.wm_cpr_bridge.is_some() {
+                StepStatus::Ok
+            } else {
+                StepStatus::Warn
+            },
+            detail: if profile.suite.wm_cpr_bridge.is_some() {
+                "wm-cpr-bridge + atomic setup backups ready".to_string()
+            } else {
+                "wm-cpr-bridge not installed yet".to_string()
+            },
+        },
+        ChapterState {
+            id: "pulse",
+            roman: "VII",
+            title: "Pulse",
+            status: if telemetry.recent_spills >= 3 {
+                StepStatus::Warn
+            } else {
+                StepStatus::Ok
+            },
+            detail: format!(
+                "{} squeezed cmds ({:.1}% saved), {} spills",
+                telemetry.squeezed_cmds, telemetry.squeeze_saved_pct, telemetry.recent_spills
+            ),
+        },
+        ChapterState {
+            id: "renewal",
+            roman: "VIII",
+            title: "Renewal",
+            status: if profile_path.is_some() {
+                StepStatus::Ok
+            } else {
+                StepStatus::Skip
+            },
+            detail: profile_path
+                .clone()
+                .unwrap_or_else(|| "Preview (--plan)".to_string()),
+        },
+    ];
+
+    let state_path = if opts.plan_configs {
+        None
+    } else {
+        write_json_atomic(home, "grimoire_state.json", &chapters)
+            .ok()
+            .map(|p| p.display().to_string())
+    };
+
     let report = GrimoireReport {
         version: env!("CARGO_PKG_VERSION"),
         ready,
@@ -1394,7 +2119,10 @@ pub fn run_grimoire_with_home_and_options(
         detected_clients: detected_names,
         planned_clients,
         profile_path,
+        state_path,
+        spec_source: spec_opt.map(|(p, _)| p),
         profile,
+        chapters,
         steps,
         total_ms: start_all.elapsed().as_millis(),
     };
@@ -1422,9 +2150,18 @@ fn print_grimoire_terminal(report: &GrimoireReport, opts: &GrimoireOptions) {
         report.profile.recommended_tricameral_profile
     );
     println!(
-        "Confinement:      {}",
-        report.profile.confinement.runner_profile
+        "Confinement:      {} (mandala guard: {})",
+        report.profile.confinement.runner_profile, report.profile.confinement.mandala_guard_mode
     );
+    if !report.profile.capabilities.local_runtimes.is_empty() {
+        println!(
+            "Local Runtimes:   {}",
+            report.profile.capabilities.local_runtimes.join(", ")
+        );
+    }
+    if let Some(ref src) = report.spec_source {
+        println!("Declarative Spec: {src}");
+    }
     println!(
         "Model Profile:    {} (read clamp >{}L -> {}L)",
         report.profile.model_tuning.resolved_family.as_str(),
@@ -1580,6 +2317,7 @@ mod tests {
             has_node: true,
             has_python3: true,
             has_cargo: true,
+            local_runtimes: Vec::new(),
         };
         assert_eq!(classify_hardware_tier(&base_caps), HardwareTier::Standard);
         let c1 = select_confinement_plan(&base_caps);
@@ -1692,6 +2430,129 @@ mod tests {
         assert!(turbo.contains(&"cursor".to_string()));
         assert!(turbo.contains(&"codex".to_string()));
         assert!(turbo.contains(&"agy".to_string()));
+
+        std::fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn grimoire_toml_spec_parses_and_overrides_profile() {
+        let toml = r#"
+# Project Grimoire declaration
+profile = "developer"
+model = "claude4"
+mandala_guard = "strict"
+confinement = "landlock-wm-direct-v1"
+clients = ["cursor", "codex"]
+readonly_clients = ["codex"]
+mcp_profile = "minimal"
+clamp_read_lines = 160
+max_unbounded_read_lines = 260
+wide_jsonl_lines = 40
+"#;
+        let spec = parse_grimoire_spec_str(toml, false).expect("parse toml spec");
+        assert_eq!(spec.model.as_deref(), Some("claude4"));
+        assert_eq!(spec.mandala_guard.as_deref(), Some("strict"));
+        assert_eq!(spec.clamp_read_lines, Some(160));
+        assert_eq!(
+            spec.clients.as_deref(),
+            Some(&["cursor".to_string(), "codex".to_string()][..])
+        );
+
+        let root = std::env::temp_dir().join(format!("wm-grimoire-spec-{}", uuid::Uuid::new_v4()));
+        let home = root.join("home");
+        let store = root.join("store");
+        std::fs::create_dir_all(&home).expect("mkdir home");
+        let spec_file = root.join(".wm-grimoire.toml");
+        std::fs::write(&spec_file, toml).expect("write spec");
+
+        let opts = GrimoireOptions {
+            apply_spec: Some(spec_file),
+            ..Default::default()
+        };
+        let report =
+            run_grimoire_with_home_and_options(&store, Some(&home), &opts).expect("run with spec");
+        assert_eq!(report.profile.confinement.mandala_guard_mode, "strict");
+        assert_eq!(
+            report.profile.confinement.runner_profile,
+            "landlock-wm-direct-v1"
+        );
+        assert_eq!(
+            report.profile.model_tuning.resolved_family,
+            ModelFamily::Claude4
+        );
+        assert_eq!(report.profile.model_tuning.clamp_read_lines, 160);
+        assert_eq!(report.chapters.len(), 8);
+        assert!(
+            home.join(".local/share/whitemagic/grimoire_state.json")
+                .is_file()
+        );
+
+        std::fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn per_host_profiles_and_suite_manifest_and_tune_write_work() {
+        let root = std::env::temp_dir().join(format!("wm-grimoire-hosts-{}", uuid::Uuid::new_v4()));
+        let home = root.join("home");
+        let store = root.join("store");
+        let data = home.join(".local/share/whitemagic");
+        let suite_dir = data.join("suite");
+        std::fs::create_dir_all(suite_dir.join("agy-kit")).expect("mkdir agy");
+        std::fs::create_dir_all(suite_dir.join("mandala-gate-lite/gate_lite"))
+            .expect("mkdir mandala");
+        std::fs::write(suite_dir.join("agy-kit/install.sh"), "#!/bin/sh\n").expect("write install");
+        std::fs::write(
+            suite_dir.join("mandala-gate-lite/gate_lite/ctl.py"),
+            "# ctl\n",
+        )
+        .expect("write ctl");
+        std::fs::write(
+            data.join("suite_manifest.json"),
+            serde_json::json!({
+                "agy_kit_dir": suite_dir.join("agy-kit"),
+                "mandala_dir": suite_dir.join("mandala-gate-lite"),
+            })
+            .to_string(),
+        )
+        .expect("write suite_manifest");
+
+        std::fs::create_dir_all(home.join(".codex")).expect("mkdir codex");
+        std::fs::write(
+            home.join(".codex/config.toml"),
+            "model = \"gpt-5.4-codex\"\n",
+        )
+        .expect("write codex");
+        std::fs::create_dir_all(home.join(".gemini/antigravity-cli")).expect("mkdir agy cli");
+        std::fs::write(
+            home.join(".gemini/antigravity-cli/settings.json"),
+            r#"{"model":"gemini-4-neon"}"#,
+        )
+        .expect("write agy settings");
+        std::fs::write(
+            data.join("agy_telemetry.jsonl"),
+            "{\"event\":\"tool_spill\"}\n{\"event\":\"tool_spill\"}\n{\"event\":\"tool_spill\"}\n",
+        )
+        .expect("write spills");
+
+        let opts = GrimoireOptions {
+            tune_mode: true,
+            write_mode: true,
+            ..Default::default()
+        };
+        let report =
+            run_grimoire_with_home_and_options(&store, Some(&home), &opts).expect("run tune write");
+        assert!(report.profile.suite.agy_kit_installer.is_some());
+        assert!(report.profile.suite.mandala_gate_lite.is_some());
+        assert_eq!(
+            report.profile.host_profiles["codex"].resolved_family,
+            ModelFamily::OpenAiCodex
+        );
+        assert_eq!(
+            report.profile.host_profiles["agy"].resolved_family,
+            ModelFamily::Gemini4
+        );
+        // 3 spills -> 200L -> tightened by 25% under --tune --write => 150L
+        assert_eq!(report.profile.model_tuning.clamp_read_lines, 150);
 
         std::fs::remove_dir_all(root).ok();
     }
