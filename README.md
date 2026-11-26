@@ -1,6 +1,7 @@
 # WhiteMagic
 
 [![whitemagic.agent](https://dmv.agentcommunity.org/badge?id=UNIT-FA2-46DL)](https://dmv.agentcommunity.org/c/UNIT-FA2-46DL/whitemagic)
+[![AAO Grade A (Report #2, 2026-11-25)](https://api.agentauditoffice.com/v1/badge/8453:96639.svg)](https://agentauditoffice.com/#grade-a)
 
 A local-first memory layer for MCP agents.
 
@@ -42,6 +43,8 @@ a receipt signature does *not* establish. Security posture in
 | **Valkyrie-2 Tricameral CPU Organ** | 512-D Sutra Canon + 653 real 384-D X bookmarks (`29.16 KB` model) | **100.0%** Sutra / **98.8%** Choice / **91.1%** 384-D accuracy at **~10 µs (`10,310 ns`)** mean CPU latency |
 | **Strict Zero-Write Inspection (`StrictZeroWrite`)** | `wm inspect --promise strict-zero-write` on 2.23 GiB store (`419,510` records) | **0** bytes modified (`data.mdb` and `lock.mdb` pre/post SHA-256 identical; runs on `chmod 0555` mounts) |
 | **Third-Party Signed MCP Baseline** | Dominion Observatory (`dominion.capture.v1`, [Issue #28](https://github.com/lbailey94/whitemagic/issues/28)) | Independent Ed25519-signed 57-tool manifest witness (`a067fe1a...`) |
+| **Agent Audit Office (AAO) Ratings** | Base ERC-8004 [`8453:96639`](https://agentauditoffice.com/#grade-a) ([methodology](https://github.com/AgentAuditOffice/agent-audit-office/blob/main/methodology.md), CC BY 4.0) | **Grade A** across two consecutive weekly reports (Report #1 Nov 18 & Report #2 Nov 25, 2026) |
+| **Independent Paid x402 Check (`a-un`)** | `POST https://api.whitemagic.dev/notarize` ([public receipt `rc_91789472b866c27b`](https://a-upgradenet.com/verified/rc_91789472b866c27b)) | Real Base USDC (`0.002 USDC`) paid delivery verified `HTTP 200` with valid JSON (Nov 23, 2026) |
 
 The separate 2 November controlled answer trial used 24 fresh questions, native
 candidate `7f37a368`, and Qwen2.5-0.5B Q4_K_M. Required evidence was present in all
