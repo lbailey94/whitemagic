@@ -104,7 +104,14 @@ class SanghaTruthGuardTests(unittest.TestCase):
         installer = INSTALL_SH.read_text(encoding="utf-8")
         self.assertNotIn('Command::new("sangha")', source)
         self.assertIn('WHITEMAGIC_SANGHA_SCRIPT', source)
-        self.assertIn('exec "$(dirname "$0")/wm" sangha "$@"', installer)
+        self.assertTrue(
+            'exec "$(dirname "$0")/wm" sangha "$@"' in installer
+            or (
+                'exec "\\$(dirname "\\$0")/wm" ${subcmd} "\\$@"' in installer
+                and "install_shim sangha sangha" in installer
+            ),
+            "installer must dispatch sangha via sibling wm binary rather than PATH",
+        )
         self.assertNotIn("/home/lucas/SharedWorkspace/sangha.py", source)
         self.assertNotIn("/home/lucas/Desktop/front burner/repos/WHITEMAGIC/worktrees/continuity-receipt", source)
         self.assertIn("WHITEMAGIC_CPR_ROOT", source)
