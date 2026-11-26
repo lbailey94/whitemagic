@@ -1122,11 +1122,15 @@ mod tests {
     use std::sync::mpsc;
 
     fn temp_path(prefix: &str, ext: &str) -> PathBuf {
-        let nanos = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_nanos())
-            .unwrap_or(0);
-        std::env::temp_dir().join(format!("{prefix}-{}-{nanos}.{ext}", std::process::id()))
+        static NEXT_TEST_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let seq = NEXT_TEST_ID.fetch_add(1, Ordering::Relaxed);
+        let short_prefix: String = prefix.chars().take(18).collect();
+        let path =
+            std::env::temp_dir().join(format!("{short_prefix}-{}-{seq}.{ext}", std::process::id()));
+        if path.exists() {
+            let _ = std::fs::remove_file(&path);
+        }
+        path
     }
 
     struct TestNode {
