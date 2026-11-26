@@ -172,6 +172,14 @@ impl ModelFamily {
     }
 }
 
+const fn default_neon_warn_tokens() -> u64 {
+    100_000
+}
+
+const fn default_neon_rollover_tokens() -> u64 {
+    120_000
+}
+
 /// Model-family adaptive tuning parameters consumed by `wm-squeeze`, hooks, and handoffs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdaptiveModelTuning {
@@ -183,6 +191,10 @@ pub struct AdaptiveModelTuning {
     pub wide_jsonl_lines: usize,
     pub context_warn_tokens: u64,
     pub context_cliff_tokens: u64,
+    #[serde(default = "default_neon_warn_tokens")]
+    pub neon_warn_tokens: u64,
+    #[serde(default = "default_neon_rollover_tokens")]
+    pub neon_rollover_tokens: u64,
     pub turn0_brief_max_bytes: usize,
     pub enable_flip_guard: bool,
     pub recommended_mcp_profile: String,
@@ -877,6 +889,7 @@ fn build_tuning_for_resolved(
 ) -> AdaptiveModelTuning {
     // Tighten unbounded read clamp automatically if recent spills are elevated
     let spill_tighten = telemetry.recent_spills >= 3;
+    let is_neon = source.to_ascii_lowercase().contains("neon");
 
     match resolved {
         ModelFamily::Gemini4 | ModelFamily::Auto => AdaptiveModelTuning {
@@ -886,12 +899,18 @@ fn build_tuning_for_resolved(
             max_unbounded_read_lines: if spill_tighten { 300 } else { 400 },
             clamp_read_lines: if spill_tighten { 200 } else { 250 },
             wide_jsonl_lines: 50,
-            context_warn_tokens: 120_000,
-            context_cliff_tokens: 200_000,
+            context_warn_tokens: if is_neon { 100_000 } else { 120_000 },
+            context_cliff_tokens: if is_neon { 120_000 } else { 200_000 },
+            neon_warn_tokens: 100_000,
+            neon_rollover_tokens: 120_000,
             turn0_brief_max_bytes: 2_550,
             enable_flip_guard: true,
             recommended_mcp_profile: "cyberbrain".to_string(),
-            notes: "Immutable Turn-0 prefix cache discipline, ping-pong flip guard (>=2 flips), never fork >=80k.".to_string(),
+            notes: if is_neon {
+                "Neon-only discipline: 100k warn / 120k rollover target, <30s KV TTL cadence, immutable Turn-0, never fork >=80k.".to_string()
+            } else {
+                "Immutable Turn-0 prefix cache discipline, ping-pong flip guard (>=2 flips), never fork >=80k.".to_string()
+            },
         },
         ModelFamily::Claude4 => AdaptiveModelTuning {
             requested_family: requested,
@@ -902,6 +921,8 @@ fn build_tuning_for_resolved(
             wide_jsonl_lines: 50,
             context_warn_tokens: 100_000,
             context_cliff_tokens: 170_000,
+            neon_warn_tokens: 100_000,
+            neon_rollover_tokens: 120_000,
             turn0_brief_max_bytes: 2_550,
             enable_flip_guard: false,
             recommended_mcp_profile: "cyberbrain".to_string(),
@@ -916,6 +937,8 @@ fn build_tuning_for_resolved(
             wide_jsonl_lines: 50,
             context_warn_tokens: 100_000,
             context_cliff_tokens: 180_000,
+            neon_warn_tokens: 100_000,
+            neon_rollover_tokens: 120_000,
             turn0_brief_max_bytes: 2_200,
             enable_flip_guard: false,
             recommended_mcp_profile: "cyberbrain".to_string(),
@@ -930,6 +953,8 @@ fn build_tuning_for_resolved(
             wide_jsonl_lines: 60,
             context_warn_tokens: 250_000,
             context_cliff_tokens: 400_000,
+            neon_warn_tokens: 100_000,
+            neon_rollover_tokens: 120_000,
             turn0_brief_max_bytes: 2_550,
             enable_flip_guard: false,
             recommended_mcp_profile: "cyberbrain".to_string(),
@@ -944,6 +969,8 @@ fn build_tuning_for_resolved(
             wide_jsonl_lines: 30,
             context_warn_tokens: 24_000,
             context_cliff_tokens: 48_000,
+            neon_warn_tokens: 100_000,
+            neon_rollover_tokens: 120_000,
             turn0_brief_max_bytes: 1_450,
             enable_flip_guard: false,
             recommended_mcp_profile: "minimal".to_string(),
@@ -2550,6 +2577,22 @@ wide_jsonl_lines = 40
         assert_eq!(
             report.profile.host_profiles["agy"].resolved_family,
             ModelFamily::Gemini4
+        );
+        assert_eq!(
+            report.profile.host_profiles["agy"].context_warn_tokens,
+            100_000
+        );
+        assert_eq!(
+            report.profile.host_profiles["agy"].context_cliff_tokens,
+            120_000
+        );
+        assert_eq!(
+            report.profile.host_profiles["agy"].neon_warn_tokens,
+            100_000
+        );
+        assert_eq!(
+            report.profile.host_profiles["agy"].neon_rollover_tokens,
+            120_000
         );
         // 3 spills -> 200L -> tightened by 25% under --tune --write => 150L
         assert_eq!(report.profile.model_tuning.clamp_read_lines, 150);
